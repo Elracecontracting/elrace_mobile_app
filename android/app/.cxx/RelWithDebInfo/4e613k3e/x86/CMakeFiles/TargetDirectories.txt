@@ -1,0 +1,2 @@
+/home/hossam/Documents/Teleoceans/el_race/android/app/.cxx/RelWithDebInfo/4e613k3e/x86/CMakeFiles/edit_cache.dir
+/home/hossam/Documents/Teleoceans/el_race/android/app/.cxx/RelWithDebInfo/4e613k3e/x86/CMakeFiles/rebuild_cache.dir

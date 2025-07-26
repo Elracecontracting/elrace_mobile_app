@@ -1,0 +1,395 @@
+import 'dart:io';
+import 'package:el_race/report_module/core/constants/text_styles.dart';
+import 'package:el_race/report_module/data/models/report_item_model.dart';
+import 'package:el_race/report_module/data/models/report_model.dart';
+import 'package:el_race/report_module/data/provider/reports_provider.dart';
+import 'package:el_race/report_module/data/repositories/company_repository.dart';
+import 'package:el_race/report_module/presentation/screens/report_detail/pdf_history_screen.dart';
+import 'package:el_race/report_module/core/constants/colors.dart';
+import 'package:el_race/report_module/presentation/bottom_sheets/show_option_sheet.dart';
+import 'package:el_race/report_module/presentation/screens/report_detail/add_cover_screen.dart';
+import 'package:el_race/report_module/presentation/screens/report_detail/add_new_item.dart';
+import 'package:el_race/report_module/presentation/screens/report_detail/camera_screen.dart';
+import 'package:el_race/report_module/presentation/widgets/bottom_appbar.dart';
+import 'package:el_race/report_module/presentation/widgets/report_item.dart';
+import 'package:el_race/report_module/presentation/widgets/square_button.dart';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:skeletonizer/skeletonizer.dart';
+import '../../../data/models/report_detail_model.dart';
+import '../../widgets/cover_page.dart';
+
+class ReportDetailScreen extends StatefulWidget {
+  final ReportModel report;
+  const ReportDetailScreen({super.key, required this.report});
+
+  @override
+  State<ReportDetailScreen> createState() => _ReportDetailScreenState();
+}
+
+class _ReportDetailScreenState extends State<ReportDetailScreen> {
+  ReportDetailModel? reportDetail;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUpdatedRecord();
+  }
+
+  bool _loading = true;
+  String loadingText = "";
+
+  Future<void> _loadUpdatedRecord() async {
+    loadingText = "";
+    _loading = true;
+    setState(() {});
+    reportDetail = ReportDetailModel(
+      report: widget.report,
+      coverPage: null,
+      reportItems: [],
+    );
+
+    reportDetail = await reportProvider.getReportDetail(widget.report);
+    _loading = false;
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: CustomColors.white,
+      appBar: AppBar(
+        automaticallyImplyLeading: false,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: CustomColors.white,
+        centerTitle: true,
+        leadingWidth: 70,
+        leading: SquareButton(
+          icon: Icons.keyboard_backspace,
+          color: CustomColors.white,
+          borderColor: CustomColors.black,
+          onPressed: ()=> Navigator.pop(context),
+        ),
+        title: Image.asset(
+          CompanyRepository.company!.logo,
+          height: 60,
+        ),
+        bottom: getBottomAppBar(context, report: reportDetail),
+        actions: [
+          SquareButton(
+            icon: Icons.share_outlined,
+            color: CustomColors.maroon,
+            borderColor: CustomColors.white,
+            onPressed: () async {
+              await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => PdfCreationScreen(
+                            reportDetailModel: reportDetail!,
+                          )));
+            },
+          ),
+          const SizedBox(width: 10),
+        ],
+      ),
+      floatingActionButton: SquareButton(
+        icon: Icons.add,
+        color: CustomColors.maroon,
+        borderColor: CustomColors.white,
+        onPressed: _showAddOptions,
+      ),
+      body: reportDetail != null
+          ? Stack(
+              children: [
+                ListView(
+                  padding: const EdgeInsets.only(bottom: 50),
+                  children: [
+                    if (reportDetail!.coverPage != null)
+                      CoverPageTile(
+                        data: reportDetail!.coverPage!,
+                        onMoreClicked: () async {
+                          int status = await showEditOptions(context,
+                              options: ["Edit", "Delete"]);
+                          if (status == 0) {
+                            _addNewCover();
+                            return;
+                          }
+                          if (status == 1) {
+                            if (!context.mounted) return;
+                            int status = await showEditOptions(context,
+                                options: ["Confirm Delete", "Cancel"]);
+                            if (status == 0) {
+                              setState(() {});
+                              bool status =
+                                  await reportProvider.deleteCoverPage(
+                                      reportDetail!.coverPage!.id!);
+                              if (status) {
+                                reportDetail =
+                                    reportDetail!.copyWith(coverPage: null);
+                              }
+                              return;
+                            }
+                          }
+                        },
+                      ),
+                    ReorderableList(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemBuilder: (context, index) => ReportItem(
+                            key: Key(reportDetail!.reportItems[index].id),
+                            item: reportDetail!.reportItems[index],
+                            index: index,
+                            onTap: () {
+                              _openItemDetail(reportDetail!.reportItems[index]);
+                            },
+                            onMoreClicked: () async {
+                              await _deleteItems(
+                                  reportDetail!.reportItems[index]);
+                            }),
+                        itemCount: reportDetail!.reportItems.length,
+                        onReorder: (int oldIndex, int newIndex) async {
+                          // setState(() {
+                          //   if (newIndex > oldIndex) {
+                          //     newIndex -= 1;
+                          //   }
+                          //   final ReportDetailItem movedItem =
+                          //       reportDetail!.items.removeAt(oldIndex);
+                          //   reportDetail!.items.insert(newIndex, movedItem);
+                          // });
+                          // await reportRepository.updateReportDetail(reportDetail!);
+                          //todo update report item index
+                          // _loadUpdatedRecord();
+                        }),
+                    if (_loading && loadingText == "") ...[
+                      ...List.generate(
+                          6,
+                          (e) => Skeletonizer(
+                                enabled: true,
+                                child: ReportItem(
+                                  item: ReportItemModel(
+                                      id: "0",
+                                      reportId: "reportId",
+                                      type: "text",
+                                      image: "text",
+                                      location: "location",
+                                      description: "description",
+                                      createdAt: DateTime.now(),
+                                      updatedAt: DateTime.now()),
+                                  onMoreClicked: () {},
+                                  onTap: () {},
+                                  index: 0,
+                                ),
+                              ))
+                    ]
+                  ],
+                ),
+                if (_loading && loadingText != "")
+                  Center(
+                    child: Container(
+                      margin: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                          color: CustomColors.maroon,
+                          borderRadius: BorderRadius.circular(8)),
+                      height: 80,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          LinearProgressIndicator(
+                            color: CustomColors.blue,
+                          ),
+                          Text(
+                            loadingText,
+                            style: CustomTextStyle.reportHeader,
+                          ),
+                          LinearProgressIndicator(
+                            color: CustomColors.blue,
+                          ),
+                        ],
+                      ),
+                      // width: 600,
+                    ),
+                  )
+              ],
+            )
+          : const Center(
+              child: CircularProgressIndicator(),
+            ),
+    );
+  }
+
+  //adding options for report start
+  _showAddOptions([bool insideSection = false]) async {
+    List<String> options = [
+      "Image From Gallery",
+      "Image From Camera",
+      // "Add New Section",
+      "Add Text Block",
+      "Add Cover Page",
+    ];
+    if (insideSection) {
+      options = [
+        "Image From Gallery",
+        "Image From Camera",
+        "Add Text Block",
+      ];
+    }
+
+    int selectedOptionIndex = await showEditOptions(context, options: options);
+    if (selectedOptionIndex == 0) {
+      _addGalleryImage();
+      return;
+    }
+    if (selectedOptionIndex == 1) {
+      _addCameraImage();
+      return;
+    }
+    if (selectedOptionIndex == 2) {
+      _addNewText();
+      return;
+    }
+    if (selectedOptionIndex == 3) {
+      _addNewCover();
+      return;
+    }
+  }
+
+  Future<void> _addNewCover() async {
+    var result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => AddCoverScreen(reportDetail: reportDetail!)));
+    if (result != null) {
+      reportDetail = reportDetail!.copyWith(coverPage: result);
+    }
+    setState(() {});
+    await _loadUpdatedRecord();
+  }
+
+  Future<void> _addCameraImage() async {
+    var result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => const CustomCameraScreen(
+                  onePicture: false,
+                )));
+
+    if (result.isNotEmpty) {
+      loadingText = "";
+
+      _loading = true;
+      setState(() {});
+      for (XFile image in result) {
+        loadingText =
+            "${result.indexWhere((e) => image == e)} of ${result.length} images is uploading";
+        ReportItemModel? reportItem = await reportProvider.addReportItem(
+          reportId: widget.report.id,
+          type: "image",
+          imageFile: File(image.path),
+          location: "",
+          description: "",
+        );
+
+        if (reportItem != null) {
+          List<ReportItemModel> items = reportDetail!.reportItems;
+          items.add(reportItem);
+          reportDetail = reportDetail!.copyWith(reportItems: items);
+          setState(() {});
+        }
+      }
+      _loading = false;
+      setState(() {});
+      await _loadUpdatedRecord();
+    }
+  }
+
+  Future<void> _addGalleryImage() async {
+    ImagePicker imagePicker = ImagePicker();
+    List<XFile>? result = await imagePicker.pickMultiImage(imageQuality: 60);
+    if (result.isNotEmpty) {
+      _loading = true;
+      setState(() {});
+      for (XFile image in result) {
+        loadingText =
+            "${result.indexWhere((e) => image == e)} of ${result.length} images is uploading";
+        ReportItemModel? reportItem = await reportProvider.addReportItem(
+          reportId: widget.report.id,
+          type: "image",
+          imageFile: File(image.path),
+          location: "",
+          description: "",
+        );
+
+        if (reportItem != null) {
+          List<ReportItemModel> items = reportDetail!.reportItems;
+          items.add(reportItem);
+          reportDetail = reportDetail!.copyWith(reportItems: items);
+          setState(() {});
+        }
+      }
+      _loading = false;
+      loadingText = "";
+
+      setState(() {});
+      await _loadUpdatedRecord();
+    }
+  }
+
+  Future<void> _addNewText() async {
+    ReportItemModel? item = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => AddNewItem(
+                  report: reportDetail!,
+                )));
+    if (item != null) {
+      List<ReportItemModel> items = reportDetail!.reportItems;
+      items.add(item);
+      reportDetail = reportDetail!.copyWith(reportItems: items);
+      setState(() {});
+    }
+    await _loadUpdatedRecord();
+  }
+
+  _openItemDetail(ReportItemModel item) async {
+    ReportItemModel? updatedItem = await Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (context) => AddNewItem(
+                  report: reportDetail!,
+                  item: item,
+                )));
+
+    if (updatedItem != null) {
+      List<ReportItemModel> items = reportDetail!.reportItems;
+      int index = items.indexWhere((e) => e.id == item.id);
+      if (index != -1) {
+        items[index] = updatedItem;
+        reportDetail = reportDetail!.copyWith(reportItems: items);
+        setState(() {});
+      }
+    }
+
+    await _loadUpdatedRecord();
+  }
+
+  _deleteItems(ReportItemModel item) async {
+    int deleteStatus =
+        await showEditOptions(context, options: ['Delete', 'Cancel']);
+    if (!mounted || deleteStatus == 1) return;
+    int deleteCodeStatus =
+        await showEditOptions(context, options: ['Confirm Delete', 'Cancel']);
+    if (deleteCodeStatus == 0) {
+      bool status =
+          await reportProvider.deleteReportItem(item.id, item.reportId);
+
+      if (status) {
+        List<ReportItemModel> items = reportDetail!.reportItems;
+        items.removeWhere((e) => e.id == item.id);
+        reportDetail = reportDetail!.copyWith(reportItems: items);
+        setState(() {});
+      }
+      await _loadUpdatedRecord();
+      return;
+    }
+  }
+}

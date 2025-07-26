@@ -1,0 +1,72 @@
+{
+  "home": {
+    "my_widgets": "My Widgets",
+    "edit": "Edit",
+    "check_out": "CHECK OUT",
+    "see_all": "See All",
+    "attendance": "ATTENDANCE",
+    "your_monthly_attendance": "Your monthly attendance",
+    "time_sheet": "TIME SHEET",
+    "waiting_approve": "Waiting Approve",
+    "my_request": "MY REQUEST",
+    "all_request": "All request",
+    "rejected": "Rejected",
+    "petty_cash": "Petty Cash",
+    "my_report": "My Report"
+  },
+  "profile": {
+    "english": "English",
+    "arabic": "Arabic",
+    "mute_notifications": "Mute notifications",
+    "dark_mode": "Dark Mode",
+    "logout": "Logout",
+    "name_not_available": "Name not available",
+    "job_id_not_available": "Job ID not available",
+    "id_not_available": "ID not available"
+  },
+  "common": {
+    "ok": "OK",
+    "sign_out": "SIGN OUT",
+    "description": "DESCRIPTION",
+    "reason": "REASON",
+    "balance_leave": "BALANCE LEAVE : 0",
+    "late_days": "LATE DAYS : {days}"
+  },
+  "notification": {
+    "pending_approval": "Please be aware that this request will remain in pending status until it receives approval from all departments.",
+    "job_mission_notice": "Please be aware that you have to take your manager's approval on the same day or your request will be canceled.",
+    "annual_leave_notice": "Please be aware that you have to submit your annual leave 20 days prior your leave start date."
+  },
+  "request_permission": {
+    "tomorrow": "Tomorrow",
+    "date": "DATE : ",
+    "max_words": "Max words"
+  },
+  "request_effective_date": {
+    "late_days_notice": "Please be aware that any late days will be deducted from your salary."
+  },
+  "notification_screen": {
+    "circulars": "CIRCULARS",
+    "stay_updated": "Stay updated with Elrace's recent accomplishments, groundbreaking initiatives, and construction milestones through our engaging circulars.",
+    "center": "NOTIFICATION CENTER"
+  },
+  "custom_swipe_button": {
+    "search_project": "Search Project...",
+    "search_branch": "Search Branch...",
+    "no_projects_or_branches": "No projects or branches found.",
+    "no_project_associated": "No project is associated, that's why branches are shown.",
+    "branch": "Branch",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "swipe_to_check_out": "SWIPE TO CHECK OUT",
+    "swipe_to_check_in": "SWIPE TO CHECK IN"
+  },
+  "news_banner": {
+    "announcements": "ANNOUNCEMENTS",
+    "project_completion": "THE MUCH-ANTICIPATED PROJECT HAS OFFICIALLY REACHED COMPLETION",
+    "date": "11/12/2024",
+    "announce_completion": "We are pleased to announce the completion of our latest construction project. After months of hard work and dedication, our team has successfully realized this vision by developing a fully integrated sports building for Al Ain Club.",
+    "facility_commitment": "This state-of-the-art facility reflects our commitment to excellence and innovation in construction, blending modern architectural design with functionality to support athletes and the community. Equipped with cutting-edge technology and premium materials, the building includes training areas, administrative offices, locker rooms, and recreational spaces that meet international standards.",
+    "sustainability": "The sports building was designed with sustainability in mind, incorporating energy-efficient systems and eco-friendly practices to reduce environmental impact. From the foundation to the finishing touches, every aspect of the building has been carefully planned to provide a top-tier experience for athletes and visitors alike."
+  }
+} 
