@@ -14,3 +14,9 @@ final class CheckOutET extends HomeEvent {}
 final class FetchLastMonthAttendanceSummary extends HomeEvent {
   const FetchLastMonthAttendanceSummary();
 }
+
+
+class ChangeCurrentIndex extends HomeEvent{
+  final int index;
+  const ChangeCurrentIndex({required this.index});
+}

@@ -9,9 +9,8 @@ import 'package:location/location.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 
 class CustomSwipeButton extends StatefulWidget {
-  final LoginResponseModel loginResponseModel;
 
-  const CustomSwipeButton({Key? key, required this.loginResponseModel}) : super(key: key);
+  const CustomSwipeButton({Key? key,}) : super(key: key);
 
   @override
   State<CustomSwipeButton> createState() => _CustomSwipeButtonState();
@@ -78,7 +77,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton> with TickerProvid
       animateTo(targetOffset, () {
         _showLeftToRightPopupClean(
           context: context,
-          loginResponseModel: widget.loginResponseModel,
+          loginResponseModel: SharedPref.getLoginData(),
           isCheckedIn: isCheckedIn,
           onConfirmed: () {
             setState(() {
@@ -168,7 +167,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton> with TickerProvid
                 .toList();
 
             final List<dynamic> branchIds =
-                widget.loginResponseModel.result?.data?.userBranches?.allowedBranch ?? <dynamic>[];
+                SharedPref.getLoginData().result?.data?.userBranches?.allowedBranch ?? <dynamic>[];
 
             return Dialog(
               shape: RoundedRectangleBorder(

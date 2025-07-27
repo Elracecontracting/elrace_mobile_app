@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
+import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -18,7 +21,6 @@ class HeaderWidget extends StatefulWidget {
 
 class _HeaderWidgetState extends State<HeaderWidget> {
   String _imageBase64 = '';
-  LoginResponseModel? _loginResponse;
 
   @override
   void initState() {
@@ -27,15 +29,9 @@ class _HeaderWidgetState extends State<HeaderWidget> {
   }
 
   Future<void> _loadUserData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final userJson = prefs.getString('loginResponse');
-    if (userJson != null) {
-      final parsed = json.decode(userJson);
-      _loginResponse = LoginResponseModel.fromJson(parsed);
-      setState(() {
-        _imageBase64 = _loginResponse?.result?.data?.image_url ?? '';
-      });
-    }
+    if(!SharedPref.isUserAuthenticated())return;
+    final data = SharedPref.getLoginData();
+    _imageBase64 = data.result?.data?.image_url ?? '';
   }
 
   bool _isValidBase64(String str) {
@@ -92,11 +88,11 @@ class _HeaderWidgetState extends State<HeaderWidget> {
 // Approval Icon with Badge and Click
               GestureDetector(
                 onTap: () {
-                  if (_loginResponse != null) {
+                  if (SharedPref.isUserAuthenticated()) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ApprovalsScreen(loginResponseModel: _loginResponse!),
+                        builder: (_) => const ApprovalsScreen(),
                       ),
                     );
                   }
@@ -140,11 +136,11 @@ class _HeaderWidgetState extends State<HeaderWidget> {
 // Bell Icon with Badge and Click
               GestureDetector(
                 onTap: () {
-                  if (_loginResponse != null) {
+                  if (SharedPref.isUserAuthenticated()) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => NotificationScreen(loginResponseModel: _loginResponse!),
+                        builder: (_) => const NotificationScreen(),
                       ),
                     );
                   }
@@ -189,7 +185,12 @@ class _HeaderWidgetState extends State<HeaderWidget> {
               // Profile Picture
               GestureDetector(
                 onTap: () {
+                  if(!SharedPref.isUserAuthenticated()){
+                    Util.pushPage(const SignInScreen(), context);
+                    return;
+                  }
                   Provider.of<ProfileBoxProvider>(context, listen: false).toggleProfileBox();
+
                 },
                 child: Container(
                   width: 34,

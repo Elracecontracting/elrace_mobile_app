@@ -2,7 +2,6 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/custom_swipe_button.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/list_view_widgets.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/timer_controller.dart';
-import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart' as widget;
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:flutter/material.dart';
@@ -66,95 +65,101 @@ class WidgetContainer extends StatelessWidget {
                   ),
                 ),
 
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.symmetric(vertical: 10),
-                  padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    image: const DecorationImage(
-                      image: AssetImage('assets/png/gray_card.png'), // ✅ Update to your image path
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      // Swipe button
-                      CustomSwipeButton(loginResponseModel: widget.loginResponseModel),
-
-                      const SizedBox(height: 10),
-
-                      // Timer
-                      Obx(() {
-                        final timer = Get.find<TimerController>().timeLeft.value;
-                        final formatted = timer.toString().split('.').first.padLeft(8, "0");
-
-                        return Text(
-                          formatted,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: appFontColor,
-                          ),
-                        );
-                      }),
-
-                      const SizedBox(height: 16),
-
-                      // Check-in / Check-out bar
-                      if(SharedPref().getPreferenceBoolean('isCheckedIn'))
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'CHECK IN',
-                            style: GoogleFonts.koulen(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1A1A53),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Container(
-                            width: 13,
-                            height: 13,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: SharedPref().getPreferenceBoolean('isCheckedIn') ? Colors.green : Colors.transparent,
-                              border: Border.all(color: Colors.green, width: 2),
-                            ),
-                          ),
-                          Container(
-                            width: 130, // ⬅️ fixed width here
-                            height: 5,
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(2),
-                            ),
-                          ),
-                          Container(
-                            width: 13,
-                            height: 13,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: !SharedPref().getPreferenceBoolean('isCheckedIn') ? Colors.red : Colors.transparent,
-                              border: Border.all(color: Colors.red, width: 2),
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            translate('home.check_out'),
-                            style: GoogleFonts.koulen(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: const Color(0xFF1A1A53),
-                            ),
-                          ),
-                        ],
+                Opacity(
+                  opacity: !SharedPref.isUserAuthenticated()? 0.5 : 1,
+                  child: Container(
+                    width: double.infinity,
+                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      image: const DecorationImage(
+                        image: AssetImage('assets/png/gray_card.png'), // ✅ Update to your image path
+                        fit: BoxFit.cover,
                       ),
-                    ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Swipe button
+                        IgnorePointer(
+                          ignoring: !SharedPref.isUserAuthenticated(),
+                          child: const CustomSwipeButton(),
+                        ),
+                  
+                        const SizedBox(height: 10),
+                  
+                        // Timer
+                        Obx(() {
+                          final timer = Get.find<TimerController>().timeLeft.value;
+                          final formatted = timer.toString().split('.').first.padLeft(8, "0");
+                  
+                          return Text(
+                            formatted,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: appFontColor,
+                            ),
+                          );
+                        }),
+                  
+                        const SizedBox(height: 16),
+                  
+                        // Check-in / Check-out bar
+                        if(SharedPref().getPreferenceBoolean('isCheckedIn'))
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'CHECK IN',
+                              style: GoogleFonts.koulen(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1A1A53),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              width: 13,
+                              height: 13,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: SharedPref().getPreferenceBoolean('isCheckedIn') ? Colors.green : Colors.transparent,
+                                border: Border.all(color: Colors.green, width: 2),
+                              ),
+                            ),
+                            Container(
+                              width: 130, // ⬅️ fixed width here
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            Container(
+                              width: 13,
+                              height: 13,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: !SharedPref().getPreferenceBoolean('isCheckedIn') ? Colors.red : Colors.transparent,
+                                border: Border.all(color: Colors.red, width: 2),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              translate('home.check_out'),
+                              style: GoogleFonts.koulen(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1A1A53),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  
                   ),
-
                 ),
 
 

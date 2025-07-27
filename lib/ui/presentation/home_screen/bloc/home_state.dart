@@ -32,3 +32,7 @@ class LastMonthAttendanceSummaryError extends HomeState {
   @override
   List<Object> get props => [message];
 }
+
+
+class ChangeIndexLoading extends HomeState {}
+class ChangeIndexSuccess extends HomeState {}

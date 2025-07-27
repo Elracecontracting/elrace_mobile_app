@@ -1,7 +1,6 @@
 import 'package:el_race/ui/widgets/back_icon.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:flutter/material.dart';
-import 'package:el_race/ui/presentation/signin/data/model.dart';
 import '../../widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/ui/presentation/Attendace_list/attendance_page.dart';
@@ -9,9 +8,8 @@ import 'package:flutter_translate/flutter_translate.dart';
 
 
 class NotificationScreen extends StatefulWidget {
-  final LoginResponseModel loginResponseModel;
 
-  const NotificationScreen({super.key, required this.loginResponseModel});
+  const NotificationScreen({super.key,});
 
   @override
   State<NotificationScreen> createState() => _NotificationScreenState();

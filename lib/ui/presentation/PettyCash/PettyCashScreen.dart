@@ -171,8 +171,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => PettyCashAddExpense(
-                            loginResponseModel: SharedPref.getLoginData()),
+                        builder: (context) => const PettyCashAddExpense(),
                       ),
                     );
                   },

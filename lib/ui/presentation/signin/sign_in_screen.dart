@@ -145,7 +145,12 @@ class _SignInScreenState extends State<SignInScreen> {
                             deviceId: '776655', 
                           ));
                         }),
-                        SizedBox(height: SizeConfig().getHeight(40)),
+                        const SizedBox(height: 15,),
+                        InkWell(
+                          onTap: ()=> Util.pushPageAndRemoveRoutes(const HomeScreen(), context),
+                          child: const Text('Continue as a Guest',style: const TextStyle(decoration: TextDecoration.underline),),
+                        ),
+                        SizedBox(height: SizeConfig().getHeight(70)),
                         Text('Contact Support', style: TextStyle(fontSize: SizeConfig().getTextSize(18))),
                       ],
                     ),

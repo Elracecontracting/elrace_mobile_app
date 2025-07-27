@@ -1,5 +1,4 @@
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/News%20Banner/banner.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/widget_container.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
@@ -7,6 +6,7 @@ import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -20,9 +20,7 @@ class MainHomeContentWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final sliderProvider = Provider.of<SliderProvider>(context);
     return RefreshIndicator(
-      onRefresh: () async{
-        await Util.fetchHomeScreenData(context);
-      },
+      onRefresh: () async => await Util.fetchHomeScreenData(context),
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         child: Column(
@@ -54,7 +52,7 @@ class MainHomeContentWidget extends StatelessWidget {
                       itemCount: sliderProvider.sliderImages.length,
                       itemBuilder: (BuildContext context, int itemIndex, int pageViewIndex) {
                         return GestureDetector(
-                          onTap: () => Util.pushPage(ProjectAnnouncementPage(loginResponseModel: SharedPref.getLoginData(),),context),
+                          onTap: () => Util.pushPage(const ProjectAnnouncementPage(),context),
                           child: Padding(
                             padding: EdgeInsets.symmetric(horizontal: SizeConfig().getWidth(7)),
                             child: Container(
@@ -165,7 +163,7 @@ class MainHomeContentWidget extends StatelessWidget {
                   child: Align(
                     alignment: Alignment.centerRight,
                     child: GestureDetector(
-                      onTap: () => Util.pushPage(ProjectAnnouncementPage(loginResponseModel: SharedPref.getLoginData(),), context),
+                      onTap: () => Util.pushPage(const ProjectAnnouncementPage(), context),
                       child: Text(
                         translate('home.see_all'),
                         style: GoogleFonts.inter(
@@ -184,6 +182,7 @@ class MainHomeContentWidget extends StatelessWidget {
             const SizedBox(height: 10),
       
             const WidgetContainer(),
+            SizedBox(height: 120.h),
           ],
         ),
       ),

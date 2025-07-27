@@ -8,9 +8,8 @@ import 'package:http/http.dart' as http;
 import '../Attendace_list/repository/attendance_repository.dart';
 
 class PettyCashAddExpense extends StatefulWidget {
-  final dynamic loginResponseModel;
 
-  const PettyCashAddExpense({Key? key, required this.loginResponseModel}) : super(key: key);
+  const PettyCashAddExpense({Key? key}) : super(key: key);
 
   @override
   _PettyCashAddExpenseState createState() => _PettyCashAddExpenseState();

@@ -618,7 +618,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => PettyCashAddExpense(loginResponseModel: widget.loginResponseModel)),
+                        MaterialPageRoute(builder: (context) => const PettyCashAddExpense()),
                       );
                     },
                     child: Ink(

@@ -16,6 +16,16 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   HomeBloc() : super(HomeInitial()) {
     on<CheckInET>(checkedInMethod);
     on<FetchLastMonthAttendanceSummary>(_fetchLastMonthAttendanceSummary);
+    on<ChangeCurrentIndex>((event,emit){
+      changeCurrentIndex(event, emit);
+    });
+  }
+
+  int currentIndex = 1;
+  changeCurrentIndex(ChangeCurrentIndex event,emit){
+    emit(ChangeIndexLoading());
+    currentIndex = event.index;
+    emit(ChangeIndexSuccess());
   }
 
   FutureOr<void> checkedInMethod(CheckInET event, Emitter<HomeState> emit) {

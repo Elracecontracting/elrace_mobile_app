@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:el_race/ui/presentation/home_screen/screens/main_home_content_widget.dart';
+import 'package:el_race/ui/presentation/home_screen/screens/main_screens.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/profile_box_with_slide_animation.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/timer_controller.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -10,15 +11,24 @@ import 'package:el_race/providers/profile_box_provider.dart'; // Import the prov
 import 'package:el_race/ui/presentation/home_screen/bloc/location_bloc/location_bloc.dart';
 import 'package:location/location.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key,});
-
+class HomeScreen extends StatelessWidget{
+  const HomeScreen();
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  Widget build(BuildContext context) {
+    return const MainScreen();
+  }
 }
 
 
-class _HomeScreenState extends State<HomeScreen> {
+class HomeScreenPage extends StatefulWidget {
+  const HomeScreenPage({super.key,});
+
+  @override
+  State<HomeScreenPage> createState() => _HomeScreenState();
+}
+
+
+class _HomeScreenState extends State<HomeScreenPage> {
   // bool isMuted = false; // default value
   bool isCheckedIn = false;
   final _locationBloc = LocationBloc();

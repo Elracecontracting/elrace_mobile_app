@@ -3,16 +3,14 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/approve_card.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 
 
 class ApprovalsScreen extends StatefulWidget {
-  final LoginResponseModel loginResponseModel;
 
-  const ApprovalsScreen({Key? key, required this.loginResponseModel}) : super(key: key);
+  const ApprovalsScreen({Key? key, }) : super(key: key);
 
   @override
   State<ApprovalsScreen> createState() => _ApprovalsScreenState();

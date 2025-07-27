@@ -1,15 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:el_race/ui/presentation/signin/data/model.dart';
 import '../../widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart'; // Import global colors
 import 'package:flutter_translate/flutter_translate.dart';
 
 class ProjectAnnouncementPage extends StatelessWidget {
-  final LoginResponseModel loginResponseModel;
-
   const ProjectAnnouncementPage({
     super.key,
-    required this.loginResponseModel,
   });
 
   @override

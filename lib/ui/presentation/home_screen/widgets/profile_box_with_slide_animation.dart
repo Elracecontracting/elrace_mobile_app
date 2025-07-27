@@ -14,13 +14,18 @@ class ProfileBoxWithSlideAnimation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return  Consumer<ProfileBoxProvider>(
+    return  
+    SharedPref.isUserAuthenticated()==false?
+    const SizedBox.shrink():
+    Consumer<ProfileBoxProvider>(
       builder: (context, profileBoxProvider, child) {
         final screenWidth = MediaQuery.of(context).size.width;
         final drawerWidth = screenWidth * 0.75;
+        
 
         final base64Image = SharedPref().getUserBase64Image();
         final hasValidImage = base64Image.isNotEmpty && Util.isValidBase64(base64Image);
+        
 
         final loginData = SharedPref.getLoginData();
 
