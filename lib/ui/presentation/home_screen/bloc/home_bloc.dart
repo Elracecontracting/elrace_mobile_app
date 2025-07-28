@@ -19,12 +19,22 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<ChangeCurrentIndex>((event,emit){
       changeCurrentIndex(event, emit);
     });
+    on<ChangeVisiablityIcon>((event,emit){
+      changeBottomNavVisiblity(event, emit);
+    });
   }
 
   int currentIndex = 1;
   changeCurrentIndex(ChangeCurrentIndex event,emit){
     emit(ChangeIndexLoading());
     currentIndex = event.index;
+    emit(ChangeIndexSuccess());
+  }
+
+  bool enableBottomNav = true;
+  changeBottomNavVisiblity(ChangeVisiablityIcon event,emit){
+    emit(ChangeIndexLoading());
+    enableBottomNav = !enableBottomNav;
     emit(ChangeIndexSuccess());
   }
 

@@ -32,7 +32,7 @@ void main() async {
     Firebase.initializeApp(),
   ]);
   await FirebaseService.initialize();
-  debugPrint = (String? message, {int? wrapWidth}) {};
+  // debugPrint = (String? message, {int? wrapWidth}) {};
   // Get saved language from SharedPref
   final delegate = await LocalizationDelegate.create(
     fallbackLocale: 'en',
@@ -99,9 +99,8 @@ class MyApp extends StatelessWidget {
               supportedLocales: localizationDelegate.supportedLocales,
               locale:SharedPref().isArabic()? localizationDelegate.supportedLocales.last:localizationDelegate.supportedLocales.first,
               onGenerateRoute: onGeneratedRoutes.generatedRoutes,
-              home: SharedPref.isUserAuthenticated()
-                  ? const SplashScreen()
-                  : const SignInScreen(),
+              home:  const SplashScreen()
+                  // : const SignInScreen(),
             ),
           ),
         ),

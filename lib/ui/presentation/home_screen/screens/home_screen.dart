@@ -3,8 +3,10 @@ import 'package:el_race/ui/presentation/home_screen/screens/main_home_content_wi
 import 'package:el_race/ui/presentation/home_screen/screens/main_screens.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/profile_box_with_slide_animation.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/timer_controller.dart';
+import 'package:el_race/ui/presentation/home_screen/widgets/visibilty_icon.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 import 'package:el_race/providers/profile_box_provider.dart'; // Import the provider
@@ -105,13 +107,16 @@ class _HomeScreenState extends State<HomeScreenPage> {
             profileBoxProvider.hideProfileBox(); // Close the profile box
           }
         },
-        child: const Stack(
+        child: const  Stack(
           children: [
             // Main Content
             MainHomeContentWidget(),
     
             // Profile Box with Slide Animation
-           ProfileBoxWithSlideAnimation(),           
+           ProfileBoxWithSlideAnimation(),     
+
+
+            ArraowVisibalityBottomNav(),
           ],
         ),
       ),

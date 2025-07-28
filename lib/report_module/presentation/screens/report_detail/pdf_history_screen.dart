@@ -206,6 +206,8 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
       projectName: widget.reportDetailModel.report.name,
     );
 
+    print('file_by: $pdfBytes');
+
     bool status = await reportProvider.uploadReportPdf(
         empId: ReportProvider.empID,
         reportId: widget.reportDetailModel.report.id,

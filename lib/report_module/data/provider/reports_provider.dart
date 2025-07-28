@@ -346,6 +346,8 @@ class ReportProvider extends ChangeNotifier {
         'folder_id': folderId,
       },
     );
+    print('body: $empId $reportId $folderId');
+    print('fetchReports: ${response.body}');
     if (response.statusCode == 200) {
       final body = jsonDecode(response.body);
       final List<dynamic> data = body['data'];
@@ -363,7 +365,8 @@ class ReportProvider extends ChangeNotifier {
     required String folderId,
     required String fileName,
   }) async {
-    final url = Uri.parse('$baseUrl/api/upload_site_report');
+    final url = Uri.parse('$baseUrl/api/upload_site_report?folder_id=$folderId&file_name=$fileName');
+    print('folderId: $folderId,  file_name:$fileName, ');
 
     try {
       var request = http.MultipartRequest('POST', url)

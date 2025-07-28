@@ -194,6 +194,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
             // Top Category Tabs (Only HR for now)
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: categories.map((cat) {
@@ -219,7 +220,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                               categoryIcons[cat] ?? "assets/icons/default.png",
                               height: 25,
                               width: 25,
-                              color: isSelected ? Colors.white : Colors.black87,
+                              // color: isSelected ? Colors.white : Colors.black87,
                             ),
                             const SizedBox(width: 6),
                             Text(

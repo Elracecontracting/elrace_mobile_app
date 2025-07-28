@@ -1,12 +1,12 @@
 import 'dart:convert';
 
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/main.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_event.dart';
 import 'package:el_race/ui/widgets/custom_toast.dart';
+import 'package:el_race/utils/custom_navigate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart' show BlocProvider;
 import 'package:flutter_translate/flutter_translate.dart';
@@ -30,12 +30,15 @@ class Util {
   static pushPage(Widget route, BuildContext cxt) {
     return Navigator.push(
       cxt,
-      MaterialPageRoute(builder: (context) => route),
+      CustomPageRoute(child: route),
     );
   }
+
   static pushPageAndRemoveRoutes(Widget pushRoute, BuildContext cxt) {
-    Navigator.of(cxt).pushAndRemoveUntil(MaterialPageRoute(builder:
-        (BuildContext ctx) => pushRoute),(route)=>false);
+    Navigator.of(cxt).pushAndRemoveUntil(
+      CustomPageRoute(child: pushRoute),
+      (route) => false,
+    );
   }
 
 

@@ -1,5 +1,7 @@
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_event.dart';
+import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/utils/Util.dart';
@@ -17,9 +19,13 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void didChangeDependencies() {
   
-    Future.delayed(const Duration(seconds: 5), () {
+    Future.delayed(const Duration(seconds: 6), () {
       Util.fetchHomeScreenData(context);
-      Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
+      if(SharedPref.isUserAuthenticated()){
+        Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
+      }else{
+        Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
+      }
     });
     super.didChangeDependencies();
   }
@@ -27,11 +33,11 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
-        child: Image.asset(
-          'assets/png/logo.gif',
-          fit: BoxFit.cover,
-        ),
+      body: Image.asset(
+        'assets/mp4/intro.gif',
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
       ),
     );
   }

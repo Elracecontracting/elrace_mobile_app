@@ -12,7 +12,9 @@
     "all_request": "كل الطلبات",
     "rejected": "مرفوض",
     "petty_cash": "العهدة النقدية",
-    "my_report": "تقاريري"
+    "my_report": "تقاريري",
+    "documents":"ملفاتي",
+    "projects":"مشاريعي"
   },
   "profile": {
     "english": "الإنجليزية",

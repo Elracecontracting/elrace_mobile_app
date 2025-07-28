@@ -3,6 +3,7 @@ import 'package:el_race/report_module/presentation/screens/report_listing/report
 import 'package:el_race/ui/presentation/Attendace_list/attendance_page.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashScreen.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/card_tile.dart';
+import 'package:el_race/ui/presentation/home_screen/widgets/coming_soon_screen.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/custom_bullet_point.dart';
 import 'package:el_race/ui/presentation/my_request/MyRequestsPage.dart';
 import 'package:el_race/ui/presentation/task_sheet/task_sheet_screen.dart';
@@ -55,6 +56,81 @@ class ListViewWidgets extends StatelessWidget {
                   ),
                 ),);
               },
+            ),
+
+            const SizedBox(
+              height: 10,
+            ),
+
+            GrayCardComponent(
+              onClick: () => Util.pushPage(const ComingSoonScreen(), context),
+              mainIcon: 'assets/newapp/documents.png',
+              cardTitle: translate('home.documents'),
+              backgroundImagePath: 'assets/png/timesheet_new_bg.png', // ✅ Add this
+              childWidget: DefaultTextStyle(
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 10, // Set desired font size
+                  color: Color(0xFF1A1A53), // Ensure text color contrasts the background
+                ),
+                child: SizedBox(
+                  width: SizeConfig().getWidth(190),
+                  height: SizeConfig().getHeight(47),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Image.asset('assets/newapp/simple_cards.png'),
+                  ),
+                ),
+              ),
+            ),
+        
+        
+        
+            const SizedBox(
+              height: 10,
+            ),
+
+            GrayCardComponent(
+              onClick: () => Util.pushPage(const ComingSoonScreen(), context),
+              mainIcon: 'assets/newapp/my_projects.png',
+              cardTitle: translate('home.projects'),
+              backgroundImagePath: 'assets/png/timesheet_new_bg.png', // ✅ Add this
+              childWidget: DefaultTextStyle(
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 10, // Set desired font size
+                  color: Color(0xFF1A1A53), // Ensure text color contrasts the background
+                ),
+                child: SizedBox(
+                  width: SizeConfig().getWidth(190),
+                  height: SizeConfig().getHeight(70),
+                  child: const Column(
+                    children: [
+                       CustomBulletPoint(
+                        bulletColor: Colors.yellow,
+                        text: 'HR',
+                        textColor: const Color(0xFF1A1A53),
+                        countColor: const Color(0xFF1A1A53),
+                        count: '12',
+                      ),
+                      CustomBulletPoint(
+                        bulletColor: const Color(0xFFBA1719),
+                        text: 'Purchase',
+                        textColor: const Color(0xFF1A1A53),
+                        countColor: const Color(0xFF1A1A53),
+                        count: '08',
+                      ),
+                      CustomBulletPoint(
+                        bulletColor: Colors.green,
+                        text: 'Accountant',
+                        textColor: const Color(0xFF1A1A53),
+                        countColor: const Color(0xFF1A1A53),
+                        count: '08',
+                      ),
+                    ],
+                  )
+                ),
+              ),
             ),
         
         
@@ -242,41 +318,42 @@ class ListViewWidgets extends StatelessWidget {
               height: 20,
             ),
             //
-            // GrayCardComponent(
-            //   mainIcon: 'assets/png/my_notes.png',
-            //   cardTitle: 'MY NOTES',
-            //   isGrayCard: false,
-            //   childWidget: DefaultTextStyle(
-            //     style: const TextStyle(
-            //       fontSize: 10, // Set desired font size
-            //       fontWeight: FontWeight.w500,
-            //       color: Color(0xFF1A1A53), // Ensure text color contrasts the background
-            //     ),
-            //     child: SizedBox(
-            //       width: SizeConfig().getWidth(100),
-            //       height: SizeConfig().getHeight(67),
-            //       child: Column(
-            //         mainAxisAlignment: MainAxisAlignment.center,
-            //         children: const [
-            //           CustomBulletPoint(
-            //             bulletColor: Color(0xFF1A1A53),
-            //             text: 'Saved',
-            //             textColor: Color(0xFF1A1A53),
-            //             countColor: Color(0xFFBA1719),
-            //             count: "12",
-            //           ),
-            //           CustomBulletPoint(
-            //             bulletColor: Color(0xFFBA1719),
-            //             text: 'Draft ',
-            //             textColor: Color(0xFF1A1A53),
-            //             countColor: Color(0xFFBA1719),
-            //             count: "08",
-            //           ),
-            //         ],
-            //       ),
-            //     ),
-            //   ),
-            // ),
+            GrayCardComponent(
+              onClick: () => Util.pushPage(const ComingSoonScreen(), context),
+              backgroundImagePath: 'assets/png/notes_new_bg.png', // ✅ Add this
+              mainIcon: 'assets/png/my_notes.png',
+              cardTitle: 'MY NOTES',
+              childWidget: DefaultTextStyle(
+                style: const TextStyle(
+                  fontSize: 10, // Set desired font size
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF1A1A53), // Ensure text color contrasts the background
+                ),
+                child: SizedBox(
+                  width: SizeConfig().getWidth(100),
+                  height: SizeConfig().getHeight(67),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CustomBulletPoint(
+                        bulletColor: Color(0xFF1A1A53),
+                        text: 'Saved',
+                        textColor: Color(0xFF1A1A53),
+                        countColor: Color(0xFFBA1719),
+                        count: "12",
+                      ),
+                      CustomBulletPoint(
+                        bulletColor: Color(0xFFBA1719),
+                        text: 'Draft ',
+                        textColor: Color(0xFF1A1A53),
+                        countColor: Color(0xFFBA1719),
+                        count: "08",
+                      ),
+                    ],
+                  ),
+                ),
+              ), 
+            ),
         
             const SizedBox(
               height: 10,

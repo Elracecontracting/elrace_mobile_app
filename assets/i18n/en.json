@@ -12,7 +12,9 @@
     "all_request": "All request",
     "rejected": "Rejected",
     "petty_cash": "Petty Cash",
-    "my_report": "My Report"
+    "my_report": "My Report",
+    "documents":"My Documents",
+    "projects":"My Projects"
   },
   "profile": {
     "english": "English",

@@ -20,3 +20,8 @@ class ChangeCurrentIndex extends HomeEvent{
   final int index;
   const ChangeCurrentIndex({required this.index});
 }
+
+
+class ChangeVisiablityIcon extends HomeEvent{
+  const ChangeVisiablityIcon();
+}

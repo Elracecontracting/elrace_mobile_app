@@ -38,55 +38,58 @@ class CustomBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(50.r),
-        gradient: const LinearGradient(
-          colors: [Colors.white, Color(0xFFBEBEBE)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: const [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 10,
-            offset: Offset(0, 5),
-          )
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildNavItem(
-            context,
-            index: 0,
-            icon: AppImages.callIcon,
+    return BlocBuilder<HomeBloc, HomeState>(
+      builder: (ctx,state) {
+        var bloc = HomeBloc.get(ctx);
+        if(bloc.enableBottomNav==false)return const SizedBox.shrink();
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          margin: EdgeInsets.symmetric(horizontal: 20.w,),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(50.r),
+            gradient: const LinearGradient(
+              colors: [Colors.white, Color.fromARGB(255, 172, 169, 169)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: const [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 10,
+                offset: Offset(0, 5),
+              )
+            ],
           ),
-          _buildNavItem(
-            context,
-            index: 1,
-            icon: AppImages.homeIcon,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                context,
+                index: 0,
+                icon: AppImages.callIcon,
+              ),
+              _buildNavItem(
+                context,
+                index: 1,
+                icon: AppImages.homeIcon,
+              ),
+              _buildNavItem(
+                context,
+                index: 2,
+                icon: AppImages.chatIcon,
+              ),
+            ],
           ),
-          _buildNavItem(
-            context,
-            index: 2,
-            icon: AppImages.chatIcon,
-          ),
-        ],
-      ),
+        );
+      }
     );
   }
 
-  Widget _buildNavItem(BuildContext context,
-      {required int index, required String icon}) {
+  Widget _buildNavItem(BuildContext context,{required int index, required String icon}) {
     final bloc = HomeBloc.get(context);
     return IconButton(
-      onPressed: () {
-        bloc.add(ChangeCurrentIndex(index: index));
-      },
+      onPressed: () =>bloc.add(ChangeCurrentIndex(index: index)),
       icon: Image.asset(
         icon,
         width: 30.w,
