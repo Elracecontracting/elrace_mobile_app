@@ -15,12 +15,14 @@ import '../../widgets/custom_textfield.dart';
 
 class AddNewItem extends StatefulWidget {
   final ReportDetailModel report;
+  final String folderName;
   final ReportItemModel? item;
 
   const AddNewItem({
     super.key,
     required this.report,
     this.item,
+    required this.folderName,
   });
 
   @override
@@ -87,18 +89,19 @@ class _AddNewItemState extends State<AddNewItem> {
               color: CustomColors.white,
               borderColor: CustomColors.black,
               onPressed: () async {
-                if (widget.item!.type == "image") {
+                if (widget.report.reportItems[currentIndex].type == "image") {
                   var bytes = await Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) =>
-                              ImageEditingScreen(image: widget.item!.image)));
+                          builder: (context) => ImageEditingScreen(
+                              image: widget
+                                  .report.reportItems[currentIndex].image)));
                   if (bytes != null) {
                     imageLoading = true;
                     setState(() {});
                     ReportItemModel? item =
                         await reportProvider.updateReportItem(
-                      widget.item!,
+                      widget.report.reportItems[currentIndex],
                       imageFile: bytes,
                     );
                     if (item != null) {
@@ -116,7 +119,8 @@ class _AddNewItemState extends State<AddNewItem> {
             ),
           const SizedBox(width: 12)
         ],
-        bottom: getBottomAppBar(context, report: widget.report),
+        bottom: getBottomAppBar(context,
+            report: widget.report, folderName: widget.folderName),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -136,7 +140,8 @@ class _AddNewItemState extends State<AddNewItem> {
                           color: CustomColors.containerColor,
                           borderRadius: BorderRadius.circular(8)),
                       child: Image.network(
-                          key: const Key("image"), widget.item!.image),
+                          key: const Key("image"),
+                          widget.report.reportItems[currentIndex].image),
                     ),
                   ),
                   Positioned(
@@ -196,8 +201,9 @@ class _AddNewItemState extends State<AddNewItem> {
             onPressed: () async {
               _loading = true;
               setState(() {});
-              if (widget.item != null) {
-                ReportItemModel updatedItem = widget.item!.copyWith(
+              if (widget.report.reportItems[currentIndex] != null) {
+                ReportItemModel updatedItem =
+                    widget.report.reportItems[currentIndex].copyWith(
                   location: locationController.text,
                   description: descriptionController.text,
                 );
@@ -285,13 +291,14 @@ class _AddNewItemState extends State<AddNewItem> {
                           ? null
                           : () async {
                               currentIndex++;
-                              setState(() {});
                               locationController = TextEditingController(
                                   text: widget.report.reportItems[currentIndex]
                                       .location);
                               descriptionController = TextEditingController(
                                   text: widget.report.reportItems[currentIndex]
                                       .description);
+
+                              setState(() {});
                             },
                   height: 44,
                   color: CustomColors.blue,

@@ -20,7 +20,9 @@ import '../../widgets/custom_textfield.dart';
 
 class PdfCreationScreen extends StatefulWidget {
   final ReportDetailModel reportDetailModel;
-  const PdfCreationScreen({super.key, required this.reportDetailModel});
+  final String folderName;
+  const PdfCreationScreen(
+      {super.key, required this.reportDetailModel, required this.folderName});
 
   @override
   State<PdfCreationScreen> createState() => _PdfCreationScreenState();
@@ -77,7 +79,8 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
           CompanyRepository.company!.logo,
           height: 60,
         ),
-        bottom: getBottomAppBar(context, report: widget.reportDetailModel),
+        bottom: getBottomAppBar(context,
+            report: widget.reportDetailModel, folderName: widget.folderName),
         actions: const [],
       ),
       body: Column(

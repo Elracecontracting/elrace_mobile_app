@@ -9,6 +9,8 @@ import 'package:el_race/report_module/presentation/dialogs/rename_report_dialog.
 import 'package:el_race/report_module/presentation/screens/report_listing/report_app_home_screen.dart';
 import 'package:el_race/report_module/presentation/widgets/bottom_appbar.dart';
 import 'package:el_race/report_module/presentation/widgets/square_button.dart';
+import 'package:el_race/utils/color_utils.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../widgets/report_tile.dart';
@@ -26,13 +28,14 @@ class _FolderReportScreenState extends State<FolderReportScreen> {
   @override
   void initState() {
     super.initState();
-    _loadReports();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadReports();
+    });
   }
 
   Future<void> _loadReports() async {
     _loading = true;
     setState(() {});
-    await Future.delayed(const Duration(seconds: 1)); //todo remove
     await reportProvider.fetchAllReports(folderID: widget.folder.id.toString());
     print(widget.folder.id.toString());
     _loading = false;
@@ -79,61 +82,74 @@ class _FolderReportScreenState extends State<FolderReportScreen> {
             ),
           ),
         ],
-        bottom: getBottomAppBar(context),
+        bottom: getBottomAppBar(context, folderName: widget.folder.name),
       ),
       body: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            height: 20,
-            color: CustomColors.blue,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  widget.folder.name,
-                  style: CustomTextStyle.reportHeader,
-                ),
-              ],
-            ),
-          ),
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount:
-                  (_loading ? 10 : 0) + reportProviderListener.reports.length,
-              itemBuilder: (context, index) {
-                if (_loading) {
-                  return showFolderOrReportLoader();
-                } else {
-                  return ReportTile(
-                    report: reportProviderListener.reports[index],
-                    onMoreClicked: () async {
-                      int selectedOptionStatus = await showEditOptions(context,
-                          options: ['rename', 'delete']);
-
-                      if (selectedOptionStatus == 0) {
-                        if (!context.mounted) return;
-                        await showRenameReport(context,
-                            report: reportProviderListener.reports[index]);
+            child: !_loading && reportProviderListener.reports.length == 0
+                ? Center(
+                    child: CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: () async {
+                        await showAddNewReport(context,
+                            type: 1, folderID: widget.folder.id.toString());
+                        setState(() {});
                         return;
-                      }
-                      if (selectedOptionStatus == 1) {
-                        if (!context.mounted) return;
-                        int deleteCodeStatus = await showEditOptions(context,
-                            options: ['Confirm Delete', 'Cancel']);
-                        if (deleteCodeStatus == 0) {
-                          reportProvider.deleteReport(
-                              reportId:
-                                  reportProviderListener.reports[index].id);
-                          return;
-                        }
+                      },
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "New Report",
+                            style:
+                                CustomTextStyle.heading.copyWith(color: black),
+                          ),
+                          Image.asset("assets/png/icons/add_file.png")
+                        ],
+                      ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: (_loading ? 10 : 0) +
+                        reportProviderListener.reports.length,
+                    itemBuilder: (context, index) {
+                      if (_loading) {
+                        return showFolderOrReportLoader();
+                      } else {
+                        return ReportTile(
+                          folderName: widget.folder.name,
+                          report: reportProviderListener.reports[index],
+                          onMoreClicked: () async {
+                            int selectedOptionStatus = await showEditOptions(
+                                context,
+                                options: ['rename', 'delete']);
+
+                            if (selectedOptionStatus == 0) {
+                              if (!context.mounted) return;
+                              await showRenameReport(context,
+                                  report:
+                                      reportProviderListener.reports[index]);
+                              return;
+                            }
+                            if (selectedOptionStatus == 1) {
+                              if (!context.mounted) return;
+                              int deleteCodeStatus = await showEditOptions(
+                                  context,
+                                  options: ['Confirm Delete', 'Cancel']);
+                              if (deleteCodeStatus == 0) {
+                                reportProvider.deleteReport(
+                                    reportId: reportProviderListener
+                                        .reports[index].id);
+                                return;
+                              }
+                            }
+                          },
+                        );
                       }
                     },
-                  );
-                }
-              },
-            ),
+                  ),
           ),
         ],
       ),

@@ -7,9 +7,13 @@ import 'package:intl/intl.dart';
 
 class ReportTile extends StatelessWidget {
   final ReportModel report;
+  final String folderName;
   final VoidCallback onMoreClicked;
   const ReportTile(
-      {super.key, required this.report, required this.onMoreClicked});
+      {super.key,
+      required this.report,
+      required this.onMoreClicked,
+      required this.folderName});
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +22,10 @@ class ReportTile extends StatelessWidget {
         Navigator.push(
             context,
             MaterialPageRoute(
-                builder: (context) => ReportDetailScreen(report: report)));
+                builder: (context) => ReportDetailScreen(
+                      report: report,
+                      folderName: folderName,
+                    )));
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
@@ -41,10 +48,10 @@ class ReportTile extends StatelessWidget {
                         style: CustomTextStyle.reportTitle,
                       ),
                     ),
-                   InkWell(
-                    onTap: onMoreClicked,
-                    child: const Icon(Icons.more_vert_rounded),
-                   )
+                    InkWell(
+                      onTap: onMoreClicked,
+                      child: const Icon(Icons.more_vert_rounded),
+                    )
                   ],
                 ),
                 Text(

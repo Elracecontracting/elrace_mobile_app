@@ -13,6 +13,8 @@ import 'package:el_race/report_module/presentation/screens/report_detail/camera_
 import 'package:el_race/report_module/presentation/widgets/bottom_appbar.dart';
 import 'package:el_race/report_module/presentation/widgets/report_item.dart';
 import 'package:el_race/report_module/presentation/widgets/square_button.dart';
+import 'package:el_race/utils/color_utils.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -21,7 +23,9 @@ import '../../widgets/cover_page.dart';
 
 class ReportDetailScreen extends StatefulWidget {
   final ReportModel report;
-  const ReportDetailScreen({super.key, required this.report});
+  final String folderName;
+  const ReportDetailScreen(
+      {super.key, required this.report, required this.folderName});
 
   @override
   State<ReportDetailScreen> createState() => _ReportDetailScreenState();
@@ -68,13 +72,14 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           icon: Icons.keyboard_backspace,
           color: CustomColors.white,
           borderColor: CustomColors.black,
-          onPressed: ()=> Navigator.pop(context),
+          onPressed: () => Navigator.pop(context),
         ),
         title: Image.asset(
           CompanyRepository.company!.logo,
           height: 60,
         ),
-        bottom: getBottomAppBar(context, report: reportDetail),
+        bottom: getBottomAppBar(context,
+            folderName: widget.folderName, report: reportDetail),
         actions: [
           SquareButton(
             icon: Icons.share_outlined,
@@ -86,6 +91,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   MaterialPageRoute(
                       builder: (context) => PdfCreationScreen(
                             reportDetailModel: reportDetail!,
+                            folderName: widget.folderName,
                           )));
             },
           ),
@@ -183,6 +189,27 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     ]
                   ],
                 ),
+                if (!_loading &&
+                    reportDetail != null &&
+                    reportDetail!.coverPage == null &&
+                    reportDetail!.reportItems.isEmpty)
+                  Center(
+                    child: CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: _showAddOptions,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            "Add item to report",
+                            style:
+                                CustomTextStyle.heading.copyWith(color: black),
+                          ),
+                          Image.asset("assets/png/icons/add_image.png")
+                        ],
+                      ),
+                    ),
+                  ),
                 if (_loading && loadingText != "")
                   Center(
                     child: Container(
@@ -257,7 +284,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     var result = await Navigator.push(
         context,
         MaterialPageRoute(
-            builder: (context) => AddCoverScreen(reportDetail: reportDetail!)));
+            builder: (context) => AddCoverScreen(
+                  reportDetail: reportDetail!,
+                  folderName: widget.folderName,
+                )));
     if (result != null) {
       reportDetail = reportDetail!.copyWith(coverPage: result);
     }
@@ -340,6 +370,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         MaterialPageRoute(
             builder: (context) => AddNewItem(
                   report: reportDetail!,
+                  folderName: widget.folderName,
                 )));
     if (item != null) {
       List<ReportItemModel> items = reportDetail!.reportItems;
@@ -357,6 +388,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
             builder: (context) => AddNewItem(
                   report: reportDetail!,
                   item: item,
+                  folderName: widget.folderName,
                 )));
 
     if (updatedItem != null) {

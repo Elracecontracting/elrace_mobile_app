@@ -7,6 +7,7 @@ Future<int> showEditOptions(BuildContext context,
   int index = -1;
   await showModalBottomSheet(
     context: context,
+    useSafeArea: true,
     backgroundColor: CustomColors.containerColor,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(15)),

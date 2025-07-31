@@ -31,6 +31,8 @@ class _ImageEditingScreenState extends State<ImageEditingScreen> {
     ..style = PaintingStyle.stroke
     ..strokeCap = StrokeCap.round;
 
+  bool loading = false;
+
   @override
   void initState() {
     super.initState();
@@ -76,16 +78,20 @@ class _ImageEditingScreenState extends State<ImageEditingScreen> {
   }
 
   Future<void> sendFinalImageBack() async {
+    if (loading) return;
     if (backgroundImage == null) return;
     final imageSize = Size(
       backgroundImage!.width.toDouble(),
       backgroundImage!.height.toDouble(),
     );
-
+    loading = true;
+    setState(() {});
     final ui.Image renderedImage = await controller.renderImage(imageSize);
 
     final ByteData? byteData =
         await renderedImage.toByteData(format: ui.ImageByteFormat.png);
+    loading = false;
+    setState(() {});
     if (byteData != null) {
       final Uint8List pngBytes = byteData.buffer.asUint8List();
       // await File(widget.image.path).writeAsBytes(pngBytes);
@@ -139,18 +145,26 @@ class _ImageEditingScreenState extends State<ImageEditingScreen> {
                       onPressed: addText,
                     ),
                     const SizedBox(width: 4),
-                    SquareButton(
-                      icon: Icons.check,
-                      color: CustomColors.maroon,
-                      borderColor: CustomColors.white,
-                      onPressed: () {
-                        if (textFocusNode.hasFocus) {
-                          textFocusNode.unfocus();
-                          return;
-                        }
-                        sendFinalImageBack();
-                      },
-                    ),
+                    loading
+                        ? Container(
+                            padding: const EdgeInsets.all(8),
+                            height: 40,
+                            width: 40,
+                            child: const Center(
+                                child: CircularProgressIndicator()),
+                          )
+                        : SquareButton(
+                            icon: Icons.check,
+                            color: CustomColors.maroon,
+                            borderColor: CustomColors.white,
+                            onPressed: () {
+                              if (textFocusNode.hasFocus) {
+                                textFocusNode.unfocus();
+                                return;
+                              }
+                              sendFinalImageBack();
+                            },
+                          ),
                     const SizedBox(
                       width: 12,
                     )

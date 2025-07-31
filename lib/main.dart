@@ -74,34 +74,39 @@ class MyApp extends StatelessWidget {
           child: ScreenUtilInit(
             designSize: const Size(411.4, 843.4),
             child: MaterialApp(
-              debugShowCheckedModeBanner: false,
-              builder: (context, child) {
-                ScreenSizeUtil.context = context;
-                return child!;
-              },
-              navigatorKey: navKey,
-              title: 'El Race',
-              theme: ThemeData(
-                colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-                useMaterial3: true,
-                textTheme: TextTheme(
-                  displayLarge: GoogleFonts.koulen(fontSize: 28, fontWeight: FontWeight.w400),
-                  titleMedium: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
-                  bodyMedium: GoogleFonts.inter(fontSize: 14),
+                debugShowCheckedModeBanner: false,
+                builder: (context, child) {
+                  ScreenSizeUtil.context = context;
+                  return child!;
+                },
+                navigatorKey: navKey,
+                title: 'El Race',
+                theme: ThemeData(
+                  colorScheme:
+                      ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+                  useMaterial3: true,
+                  textTheme: TextTheme(
+                    displayLarge: GoogleFonts.koulen(
+                        fontSize: 28, fontWeight: FontWeight.w400),
+                    titleMedium: GoogleFonts.inter(
+                        fontSize: 16, fontWeight: FontWeight.w600),
+                    bodyMedium: GoogleFonts.inter(fontSize: 14),
+                  ),
                 ),
-              ),
-              localizationsDelegates: [
-                localizationDelegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: localizationDelegate.supportedLocales,
-              locale:SharedPref().isArabic()? localizationDelegate.supportedLocales.last:localizationDelegate.supportedLocales.first,
-              onGenerateRoute: onGeneratedRoutes.generatedRoutes,
-              home:  const SplashScreen()
-                  // : const SignInScreen(),
-            ),
+                localizationsDelegates: [
+                  localizationDelegate,
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                supportedLocales: localizationDelegate.supportedLocales,
+                locale: SharedPref().isArabic()
+                    ? localizationDelegate.supportedLocales.last
+                    : localizationDelegate.supportedLocales.first,
+                onGenerateRoute: onGeneratedRoutes.generatedRoutes,
+                home: const SplashScreen()
+                // : const SignInScreen(),
+                ),
           ),
         ),
       ),

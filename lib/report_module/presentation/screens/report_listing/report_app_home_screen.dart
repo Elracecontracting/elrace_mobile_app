@@ -9,6 +9,8 @@ import 'package:el_race/report_module/presentation/dialogs/add_report.dart';
 import 'package:el_race/report_module/presentation/screens/company/company_screen.dart';
 import 'package:el_race/report_module/presentation/widgets/bottom_appbar.dart';
 import 'package:el_race/report_module/presentation/widgets/square_button.dart';
+import 'package:el_race/utils/color_utils.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
@@ -28,7 +30,8 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       getData();
-    });  }
+    });
+  }
 
   getData() async {
     await CompanyRepository().getCompany(); // ✅ Ensure company is set
@@ -63,10 +66,9 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
         title: CompanyRepository.company == null
             ? const SizedBox(height: 60) // Or a placeholder
             : Image.asset(
-          CompanyRepository.company!.logo,
-          height: 60,
-        ),
-
+                CompanyRepository.company!.logo,
+                height: 60,
+              ),
         actions: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -107,42 +109,70 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                     CustomTextStyle.heading.copyWith(color: CustomColors.black),
               ),
             )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount:
-                  (isLoading ? 10 : 0) + reportProviderListener.folders.length,
-              itemBuilder: (context, index) {
-                return isLoading
-                    ? showFolderOrReportLoader()
-                    : FolderTile(
-                        folder: reportProviderListener.folders[index],
-                        onMoreClicked: () async {
-                          int selectedOptionStatus = await showEditOptions(
-                              context,
-                              options: ['rename', 'delete']);
-                          if (selectedOptionStatus == 0) {
-                            if (!context.mounted) return;
-                            showFlushBar(context,
-                                message:
-                                    "Rename function for folder is not available at the moment");
-                            return;
-                          }
-                          if (selectedOptionStatus == 1) {
-                            if (!context.mounted) return;
-                            int deleteCodeStatus = await showEditOptions(
-                                context,
-                                options: ['Confirm Delete', 'Cancel']);
-                            if (deleteCodeStatus == 0) {
-                              showFlushBar(context,
-                                  message:
-                                      "Delete function for folder is not available at the moment.");
-                              return;
-                            }
-                          }
-                        },
-                      );
-              },
-            ),
+          : !isLoading && reportProviderListener.folders.length == 0
+              ? Center(
+                  child: CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    onPressed: () async {
+                      int selectedOptionStatus = await showEditOptions(context,
+                          options: ['Add Folder']);
+
+                      if (selectedOptionStatus == 0) {
+                        if (!context.mounted) return;
+                        await showAddNewReport(context, type: 2);
+                        if (!mounted) return;
+                        setState(() {});
+                        return;
+                      }
+                    },
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          "New Folder",
+                          style: CustomTextStyle.heading.copyWith(color: black),
+                        ),
+                        Image.asset("assets/png/icons/add_folder.png")
+                      ],
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: (isLoading ? 10 : 0) +
+                      reportProviderListener.folders.length,
+                  itemBuilder: (context, index) {
+                    return isLoading
+                        ? showFolderOrReportLoader()
+                        : FolderTile(
+                            folder: reportProviderListener.folders[index],
+                            onMoreClicked: () async {
+                              int selectedOptionStatus = await showEditOptions(
+                                  context,
+                                  options: ['rename', 'delete']);
+                              if (selectedOptionStatus == 0) {
+                                if (!context.mounted) return;
+                                showFlushBar(context,
+                                    message:
+                                        "Rename function for folder is not available at the moment");
+                                return;
+                              }
+                              if (selectedOptionStatus == 1) {
+                                if (!context.mounted) return;
+                                int deleteCodeStatus = await showEditOptions(
+                                    context,
+                                    options: ['Confirm Delete', 'Cancel']);
+                                if (deleteCodeStatus == 0) {
+                                  showFlushBar(context,
+                                      message:
+                                          "Delete function for folder is not available at the moment.");
+                                  return;
+                                }
+                              }
+                            },
+                          );
+                  },
+                ),
     );
   }
 }

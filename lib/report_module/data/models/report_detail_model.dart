@@ -20,7 +20,7 @@ class ReportDetailModel {
           ? CoverPageModel.fromJson(json['cover_page'])
           : null,
       reportItems: (json['report_items'] as List<dynamic>)
-          .map((item) => ReportItemModel.fromJson(item))
+          .map((item) => ReportItemModel.fromJson(item, json['report']['id']))
           .toList(),
     );
   }

@@ -67,7 +67,7 @@ dependencies:
   http:
   url_launcher:
   device_info_plus:
-  geolocator:
+  geolocator: ^13.0.4
   permission_handler:
   local_auth:
   intl: ^0.20.2
@@ -135,6 +135,7 @@ flutter:
     - assets/logo/
     - assets/i18n/
     - assets/mp4/
+    - assets/fonts/arbicsupport.ttf
 
 
 

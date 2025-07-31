@@ -6,6 +6,7 @@ Future<int> showEditOptions(BuildContext context,
     {required List<String> options}) async {
   int index = -1;
   await showModalBottomSheet(
+    useSafeArea: true,
     context: context,
     backgroundColor: CustomColors.containerColor,
     shape: const RoundedRectangleBorder(

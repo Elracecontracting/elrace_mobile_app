@@ -21,13 +21,20 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
   bool _cameraInitilaized = false;
   bool _showCameraAccessDeniedView = false;
 
+  double _currentZoomLevel = 1.0;
+  double _minZoomLevel = 1.0;
+  double _maxZoomLevel = 1.0;
+
   _init() async {
     _cameras = await availableCameras();
-    controller = CameraController(_cameras[0], ResolutionPreset.high);
-    controller.initialize().then((_) {
+    controller = CameraController(_cameras[0], ResolutionPreset.max);
+    controller.initialize().then((_) async {
       if (!mounted) {
         return;
       }
+      _minZoomLevel = await controller.getMinZoomLevel();
+      _maxZoomLevel = await controller.getMaxZoomLevel();
+      _currentZoomLevel = _minZoomLevel;
       _cameraInitilaized = true;
       setState(() {});
     }).catchError((Object e) {
@@ -129,6 +136,48 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
                             height: constraint.maxHeight,
                             width: constraint.maxWidth,
                             child: CameraPreview(controller)),
+                        Positioned(
+                          top: 80,
+                          bottom: 100,
+                          right: 10,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              RotatedBox(
+                                quarterTurns: 3, // rotate slider to be vertical
+                                child: SliderTheme(
+                                  data: SliderTheme.of(context).copyWith(
+                                    thumbColor: Colors.white, // knob color
+                                    activeTrackColor: CustomColors.blue,
+                                    inactiveTrackColor:
+                                        Colors.white.withOpacity(0.3),
+                                    overlayColor: Colors.white.withOpacity(0.1),
+                                    thumbShape: const RoundSliderThumbShape(
+                                        enabledThumbRadius: 10),
+                                    trackHeight: 4,
+                                  ),
+                                  child: Slider(
+                                    min: _minZoomLevel,
+                                    max: _maxZoomLevel,
+                                    value: _currentZoomLevel,
+                                    onChanged: (value) async {
+                                      _currentZoomLevel = value;
+                                      await controller
+                                          .setZoomLevel(_currentZoomLevel);
+                                      setState(() {});
+                                    },
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "${_currentZoomLevel.toStringAsFixed(1)}x",
+                                style: const TextStyle(
+                                    color: Colors.white, fontSize: 14),
+                              ),
+                            ],
+                          ),
+                        ),
                         Positioned(
                           top: 5,
                           right: 0,

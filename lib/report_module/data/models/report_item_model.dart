@@ -19,10 +19,10 @@ class ReportItemModel {
     required this.updatedAt,
   });
 
-  factory ReportItemModel.fromJson(Map<String, dynamic> json) {
+  factory ReportItemModel.fromJson(Map<String, dynamic> json, var reportID) {
     return ReportItemModel(
-      id: json['item_id'].toString(),
-      reportId: json['report_id'].toString(),
+      id: (json['item_id'] ?? json['id']).toString(),
+      reportId: reportID.toString(),
       type: json['type'],
       image: json['item_data'],
       location: json['location'],
@@ -34,7 +34,7 @@ class ReportItemModel {
 
   Map<String, dynamic> toJson() {
     return {
-      'item_id': id,
+      'id': id,
       'report_id': reportId,
       'type': type,
       'item_data': image,

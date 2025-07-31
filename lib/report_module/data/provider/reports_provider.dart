@@ -1,6 +1,7 @@
 import 'package:el_race/report_module/data/models/folder_model.dart';
 import 'package:el_race/report_module/data/models/report_model.dart';
 import 'package:el_race/report_module/data/models/report_pdf_model.dart';
+import 'package:el_race/ui/presentation/call_screen/data/repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:el_race/main.dart';
 import 'package:el_race/report_module/core/utils/flush_bar.dart';
@@ -11,9 +12,6 @@ import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'dart:convert';
 import 'dart:io';
-
-
-import '../../../ui/presentation/call_screen/data/repository.dart';
 
 ReportProvider reportProvider =
     Provider.of<ReportProvider>(navKey.currentContext!, listen: false);
@@ -34,7 +32,8 @@ class ReportProvider extends ChangeNotifier {
 
   Future<void> init({required String base}) async {
     baseUrl = base;
-    empID = (await userRepo.getLoginResponse())!.result!.data!.emp_id.toString();
+    empID =
+        (await userRepo.getLoginResponse())!.result!.data!.emp_id.toString();
     companyId =
         (await userRepo.getLoginResponse())!.result!.data!.companyId.toString();
   }
@@ -48,6 +47,12 @@ class ReportProvider extends ChangeNotifier {
       {bool alwaysShowMessage = false}) async {
     final res = await response.stream.bytesToString();
     final jsonData = json.decode(res);
+
+    if (jsonData['status'] == "upcoming") {
+      showFlushBar(navKey.currentContext!, message: jsonData['message']);
+      return {};
+    }
+
     if (alwaysShowMessage ||
         (jsonData is Map && jsonData['status'] != "success")) {
       showFlushBar(navKey.currentContext!, message: jsonData['message']);
@@ -151,6 +156,7 @@ class ReportProvider extends ChangeNotifier {
       debugPrint(e.toString());
     }
   }
+
   Future<void> fetchAllFolders() async {
     // Ensure empID and companyId are initialized before proceeding
     if (empID.isEmpty || companyId.isEmpty) {
@@ -160,11 +166,11 @@ class ReportProvider extends ChangeNotifier {
     _setLoading(true);
     try {
       var request =
-      http.MultipartRequest('POST', Uri.parse('$baseUrl/reports/list'))
-        ..fields.addAll({
-          'emp_id': empID,
-          'company_id': companyId,
-        });
+          http.MultipartRequest('POST', Uri.parse('$baseUrl/reports/list'))
+            ..fields.addAll({
+              'emp_id': empID,
+              'company_id': companyId,
+            });
 
       final jsonData = await _handleResponse(await request.send());
 
@@ -178,7 +184,6 @@ class ReportProvider extends ChangeNotifier {
       _setLoading(false);
     }
   }
-
 
   Future<void> fetchAllReports({required String folderID}) async {
     _setLoading(true);
@@ -206,6 +211,7 @@ class ReportProvider extends ChangeNotifier {
           ..fields.addAll({
             'emp_id': empID,
             'report_id': report.id,
+            'folder_id': report.folderId
           });
 
     final jsonData = await _handleResponse(await request.send());
@@ -285,7 +291,7 @@ class ReportProvider extends ChangeNotifier {
       }
 
       final jsonData = await _handleResponse(await request.send());
-      return ReportItemModel.fromJson(jsonData['data'][0]);
+      return ReportItemModel.fromJson(jsonData['data'][0], reportId);
     } catch (e) {
       return null;
     }
@@ -308,12 +314,14 @@ class ReportProvider extends ChangeNotifier {
         request.files.add(
             await http.MultipartFile.fromPath('item_data', imageFile.path));
       }
+
       if (imageFile != null && imageFile is Uint8List) {
         request.files.add(http.MultipartFile.fromBytes('item_data', imageFile));
       }
-
       final jsonData = await _handleResponse(await request.send());
-      return ReportItemModel.fromJson(jsonData['data']);
+      if (jsonData.isEmpty) return null;
+
+      return ReportItemModel.fromJson(jsonData['data'], item.reportId);
     } catch (e) {
       debugPrint(e.toString());
     }
@@ -330,12 +338,13 @@ class ReportProvider extends ChangeNotifier {
           });
     final jsonData =
         await _handleResponse(await request.send(), alwaysShowMessage: true);
-
     return jsonData['status'] == "success";
   }
 
   Future<List<ReportPdfModel>> fetchReports(
-      {required String empId, required String reportId,required String folderId}) async {
+      {required String empId,
+      required String reportId,
+      required String folderId}) async {
     final url = Uri.parse('$baseUrl/api/get_report_list');
     final response = await http.post(
       headers: {"Content-Type": "application/x-www-form-urlencoded"},
@@ -358,6 +367,7 @@ class ReportProvider extends ChangeNotifier {
       return [];
     }
   }
+
   Future<bool> uploadReportPdf({
     required String empId,
     required Uint8List pdfBytes,
@@ -365,8 +375,9 @@ class ReportProvider extends ChangeNotifier {
     required String folderId,
     required String fileName,
   }) async {
-    final url = Uri.parse('$baseUrl/api/upload_site_report?folder_id=$folderId&file_name=$fileName');
-    print('folderId: $folderId,  file_name:$fileName, ');
+    final url = Uri.parse(
+        '$baseUrl/api/upload_site_report?folder_id=$folderId&file_name=$fileName');
+    // print('folderId: $folderId,  file_name:$fileName, ');
 
     try {
       var request = http.MultipartRequest('POST', url)
@@ -380,7 +391,7 @@ class ReportProvider extends ChangeNotifier {
             filename: fileName,
           ),
         );
-      print(folderId);
+      print(request.fields);
       print("Sending request to $url");
       final streamedResponse = await request.send();
 
@@ -402,5 +413,4 @@ class ReportProvider extends ChangeNotifier {
       return false;
     }
   }
-
 }

@@ -23,16 +23,19 @@ class PdfService {
 
     final imageMap = await loadReportImages(report.reportItems);
     Uint8List logo = await _loadAssetAsBytes(companyData.logo);
+    final supportedFont =
+        await rootBundle.load("assets/fonts/arbicsupport.ttf");
+    final notoSanArabic = pw.Font.ttf(supportedFont);
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
         margin:
             const pw.EdgeInsets.only(left: 32, right: 32, bottom: 20, top: 5),
-        header: (context) =>
-            _buildHeader(context, logo, report, projectName, subject),
+        header: (context) => _buildHeader(
+            context, logo, report, projectName, subject, notoSanArabic),
         footer: (context) => _buildFooter(context),
-        build: (context) =>
-            _buildBody(context, logo, report, imageMap, userData),
+        build: (context) => _buildBody(
+            context, logo, report, imageMap, userData, notoSanArabic),
       ),
     );
 
@@ -40,7 +43,7 @@ class PdfService {
   }
 
   _buildHeader(context, logo, ReportDetailModel report, String projectName,
-      String subject) {
+      String subject, pw.Font font) {
     CompanyModel companyData = CompanyRepository.company!;
     bool needToShowCover =
         (context.pageNumber == 1 && report.coverPage != null);
@@ -63,6 +66,7 @@ class PdfService {
                     "Site Report",
                     textAlign: pw.TextAlign.center,
                     style: pw.TextStyle(
+                      font: font,
                       fontSize: 18,
                       fontWeight: pw.FontWeight.bold,
                     ),
@@ -90,6 +94,7 @@ class PdfService {
                               textAlign: pw.TextAlign.center,
                               style: pw.TextStyle(
                                 fontSize: 13,
+                                font: font,
                                 fontWeight: pw.FontWeight.bold,
                               ),
                             ),
@@ -97,8 +102,13 @@ class PdfService {
                             pw.Text(
                               subject,
                               textAlign: pw.TextAlign.center,
+                              textDirection:
+                                  RegExp(r'[\u0600-\u06FF]').hasMatch(subject)
+                                      ? pw.TextDirection.rtl
+                                      : pw.TextDirection.ltr,
                               style: pw.TextStyle(
                                 fontSize: 13,
+                                font: font,
                                 fontWeight: pw.FontWeight.normal,
                               ),
                             ),
@@ -115,6 +125,7 @@ class PdfService {
                             textAlign: pw.TextAlign.center,
                             style: pw.TextStyle(
                               fontSize: 13,
+                              font: font,
                               fontWeight: pw.FontWeight.bold,
                             ),
                           ),
@@ -122,8 +133,13 @@ class PdfService {
                           pw.Text(
                             projectName,
                             textAlign: pw.TextAlign.center,
-                            style: const pw.TextStyle(
+                            textDirection:
+                                RegExp(r'[\u0600-\u06FF]').hasMatch(projectName)
+                                    ? pw.TextDirection.rtl
+                                    : pw.TextDirection.ltr,
+                            style: pw.TextStyle(
                               fontSize: 13,
+                              font: font,
                             ),
                           )
                         ]),
@@ -138,6 +154,7 @@ class PdfService {
                             textAlign: pw.TextAlign.center,
                             style: pw.TextStyle(
                               fontSize: 13,
+                              font: font,
                               fontWeight: pw.FontWeight.bold,
                             ),
                           ),
@@ -145,7 +162,8 @@ class PdfService {
                           pw.Text(
                             " ${DateFormat("dd//MM/yyyy").format(DateTime.now())}",
                             textAlign: pw.TextAlign.center,
-                            style: const pw.TextStyle(
+                            style: pw.TextStyle(
+                              font: font,
                               fontSize: 13,
                             ),
                           )
@@ -178,9 +196,10 @@ class PdfService {
   }
 
   _buildBody(pw.Context context, logo, ReportDetailModel reportDetail,
-      Map imageMap, LoginResponseModel? userData) {
+      Map imageMap, LoginResponseModel? userData, pw.Font font) {
     List<pw.Widget> content = [];
     // CompanyModel companyData = CompanyRepository.company!;
+
     bool needToShowCover = (reportDetail.coverPage != null);
 
     if (reportDetail.coverPage != null) {
@@ -221,14 +240,16 @@ class PdfService {
                                       textAlign: pw.TextAlign.center,
                                       style: pw.TextStyle(
                                         fontSize: 15,
+                                        font: font,
                                         fontWeight: pw.FontWeight.bold,
                                       ),
                                     ),
                                     pw.Text(
                                       " ${userData?.result?.data?.name}",
                                       textAlign: pw.TextAlign.center,
-                                      style: const pw.TextStyle(
+                                      style: pw.TextStyle(
                                         fontSize: 15,
+                                        font: font,
                                       ),
                                     ),
                                   ]),
@@ -252,14 +273,16 @@ class PdfService {
                                       textAlign: pw.TextAlign.center,
                                       style: pw.TextStyle(
                                         fontSize: 15,
+                                        font: font,
                                         fontWeight: pw.FontWeight.bold,
                                       ),
                                     ),
                                     pw.Text(
                                       " ${userData?.result?.data?.uid}",
                                       textAlign: pw.TextAlign.center,
-                                      style: const pw.TextStyle(
+                                      style: pw.TextStyle(
                                         fontSize: 15,
+                                        font: font,
                                       ),
                                     ),
                                   ]),
@@ -279,14 +302,16 @@ class PdfService {
                                 textAlign: pw.TextAlign.center,
                                 style: pw.TextStyle(
                                   fontSize: 15,
+                                  font: font,
                                   fontWeight: pw.FontWeight.bold,
                                 ),
                               ),
                               pw.Text(
                                 " ${userData?.result?.data?.username}",
                                 textAlign: pw.TextAlign.center,
-                                style: const pw.TextStyle(
+                                style: pw.TextStyle(
                                   fontSize: 15,
+                                  font: font,
                                 ),
                               ),
                             ]),
@@ -303,14 +328,16 @@ class PdfService {
                                 textAlign: pw.TextAlign.center,
                                 style: pw.TextStyle(
                                   fontSize: 15,
+                                  font: font,
                                   fontWeight: pw.FontWeight.bold,
                                 ),
                               ),
                               pw.Text(
                                 " ${reportDetail.report.name}",
                                 textAlign: pw.TextAlign.center,
-                                style: const pw.TextStyle(
+                                style: pw.TextStyle(
                                   fontSize: 15,
+                                  font: font,
                                 ),
                               )
                             ]),
@@ -327,13 +354,15 @@ class PdfService {
                                 textAlign: pw.TextAlign.center,
                                 style: pw.TextStyle(
                                   fontSize: 15,
+                                  font: font,
                                   fontWeight: pw.FontWeight.bold,
                                 ),
                               ),
                               pw.Text(
                                 " ${DateFormat("dd//MM/yyyy").format(DateTime.now())}",
                                 textAlign: pw.TextAlign.center,
-                                style: const pw.TextStyle(
+                                style: pw.TextStyle(
+                                  font: font,
                                   fontSize: 15,
                                 ),
                               )
@@ -346,18 +375,31 @@ class PdfService {
             ),
             pw.SizedBox(height: 20),
             pw.Text(reportDetail.coverPage!.title,
-                style:
-                    pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+                textDirection: RegExp(r'[\u0600-\u06FF]').hasMatch(
+                  reportDetail.coverPage!.title!,
+                )
+                    ? pw.TextDirection.rtl
+                    : pw.TextDirection.ltr,
+                style: pw.TextStyle(
+                    fontSize: 24, font: font, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 10),
             if (reportDetail.coverPage!.description != null)
               pw.Text(reportDetail.coverPage!.description!,
-                  style: const pw.TextStyle(fontSize: 15)),
+                  textDirection: RegExp(r'[\u0600-\u06FF]').hasMatch(
+                    reportDetail.coverPage!.description!,
+                  )
+                      ? pw.TextDirection.rtl
+                      : pw.TextDirection.ltr,
+                  style: pw.TextStyle(
+                    fontSize: 15,
+                    font: font,
+                  )),
           ],
         ),
       ));
       // content.add(pw.PageBreak());
     }
-    content.add(buildTableBody(reportDetail, imageMap));
+    content.add(buildTableBody(reportDetail, imageMap, font));
     return content;
   }
 
@@ -387,7 +429,8 @@ class PdfService {
     return data.buffer.asUint8List();
   }
 
-  pw.Widget buildTableBody(ReportDetailModel reportDetail, Map imageMap) {
+  pw.Widget buildTableBody(
+      ReportDetailModel reportDetail, Map imageMap, pw.Font font) {
     const double rowHeight = 200;
 
     return pw.Table(
@@ -418,7 +461,11 @@ class PdfService {
                 height: rowHeight,
                 alignment: pw.Alignment.center,
                 child: pw.Text(reportDetail.reportItems[i].location,
-                    style: const pw.TextStyle(fontSize: 13)),
+                    textDirection: RegExp(r'[\u0600-\u06FF]')
+                            .hasMatch(reportDetail.reportItems[i].location)
+                        ? pw.TextDirection.rtl
+                        : pw.TextDirection.ltr,
+                    style: pw.TextStyle(fontSize: 13, font: font)),
               ),
               // Content column with created date, title, and description.
               pw.Container(
@@ -433,7 +480,11 @@ class PdfService {
                       pw.SizedBox(height: 4),
                     if (reportDetail.reportItems[i].description != "")
                       pw.Text(reportDetail.reportItems[i].description,
-                          style: const pw.TextStyle(fontSize: 13)),
+                          textDirection: RegExp(r'[\u0600-\u06FF]').hasMatch(
+                                  reportDetail.reportItems[i].description)
+                              ? pw.TextDirection.rtl
+                              : pw.TextDirection.ltr,
+                          style: pw.TextStyle(fontSize: 13, font: font)),
                   ],
                 ),
               ),

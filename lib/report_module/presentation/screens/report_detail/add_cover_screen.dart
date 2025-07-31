@@ -11,10 +11,12 @@ import 'package:flutter/material.dart';
 
 class AddCoverScreen extends StatefulWidget {
   final ReportDetailModel reportDetail;
+  final String folderName;
 
   const AddCoverScreen({
     super.key,
     required this.reportDetail,
+    required this.folderName,
   });
 
   @override
@@ -65,7 +67,8 @@ class _AddCoverScreenState extends State<AddCoverScreen> {
           CompanyRepository.company!.logo,
           height: 60,
         ),
-        bottom: getBottomAppBar(context, report: widget.reportDetail),
+        bottom: getBottomAppBar(context,
+            report: widget.reportDetail, folderName: widget.folderName),
       ),
       body: Form(
         key: form,
