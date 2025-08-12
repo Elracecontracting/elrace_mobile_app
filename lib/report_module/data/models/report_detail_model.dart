@@ -1,10 +1,19 @@
-import 'package:el_race/report_module/data/models/cover_page_model.dart';
-import 'package:el_race/report_module/data/models/report_item_model.dart';
+import 'package:hive/hive.dart';
 import 'package:el_race/report_module/data/models/report_model.dart';
+import 'package:el_race/report_module/data/models/report_item_model.dart';
+import 'package:el_race/report_module/data/models/cover_page_model.dart';
 
-class ReportDetailModel {
+part 'report_detail_model.g.dart';
+
+@HiveType(typeId: 103) // <-- make sure this is unique across your app
+class ReportDetailModel extends HiveObject {
+  @HiveField(0)
   final ReportModel report;
+
+  @HiveField(1)
   final List<ReportItemModel> reportItems;
+
+  @HiveField(2)
   final CoverPageModel? coverPage;
 
   ReportDetailModel({
@@ -25,6 +34,12 @@ class ReportDetailModel {
     );
   }
 
+  Map<String, dynamic> toJson() => {
+        'report': report, // if ReportModel has toJson(), use report.toJson()
+        'cover_page': coverPage, // idem: coverPage?.toJson()
+        'report_items': reportItems, // map each to .toJson() if available
+      };
+
   ReportDetailModel copyWith({
     ReportModel? report,
     CoverPageModel? coverPage,
@@ -32,7 +47,7 @@ class ReportDetailModel {
   }) {
     return ReportDetailModel(
       report: report ?? this.report,
-      coverPage: coverPage ?? this.coverPage,
+      coverPage: coverPage,
       reportItems: reportItems ?? this.reportItems,
     );
   }

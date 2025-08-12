@@ -1,38 +1,39 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/utils/string_utils.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class FirebaseService {
-  static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  static final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
-  FlutterLocalNotificationsPlugin();
+  static final FirebaseMessaging _firebaseMessaging =
+      FirebaseMessaging.instance;
+  static final FlutterLocalNotificationsPlugin
+      _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
     // Request notification permission
-    NotificationSettings settings = await _firebaseMessaging.requestPermission();
+    NotificationSettings settings =
+        await _firebaseMessaging.requestPermission();
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('✅ Notification permission granted');
+      debugPrint('✅ Notification permission granted');
     } else {
-      print('❌ Notification permission declined');
+      debugPrint('❌ Notification permission declined');
     }
 
     // Initialize local notifications (for showing notifications in foreground)
     const AndroidInitializationSettings androidInitSettings =
-    AndroidInitializationSettings('@mipmap/ic_launcher');
+        AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const InitializationSettings initSettings =
-    InitializationSettings(android: androidInitSettings);
+        InitializationSettings(android: androidInitSettings);
 
     await _flutterLocalNotificationsPlugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         final payload = response.payload;
-        print("🔔 Notification tapped with payload: $payload");
-
+        debugPrint("🔔 Notification tapped with payload: $payload");
       },
     );
-
 
     // Handle foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -64,7 +65,8 @@ class FirebaseService {
     AndroidNotification? android = message.notification?.android;
 
     if (notification != null && android != null) {
-      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      const AndroidNotificationDetails androidDetails =
+          AndroidNotificationDetails(
         'high_importance_channel',
         'High Importance Notifications',
         importance: Importance.high,
@@ -72,7 +74,7 @@ class FirebaseService {
       );
 
       const NotificationDetails platformDetails =
-      NotificationDetails(android: androidDetails);
+          NotificationDetails(android: androidDetails);
 
       await _flutterLocalNotificationsPlugin.show(
         notification.hashCode,

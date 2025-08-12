@@ -1,11 +1,33 @@
-class ReportItemModel {
+import 'package:hive/hive.dart';
+
+part 'report_item_model.g.dart';
+
+@HiveType(typeId: 104) // <-- ensure this is unique across your app
+class ReportItemModel extends HiveObject {
+  @HiveField(0)
   final String id;
+
+  @HiveField(1)
   final String reportId;
+
+  @HiveField(2)
   final String type;
+
+  /// If this is a file path or base64 string, String is fine.
+  /// If you later switch to binary bytes, change to Uint8List.
+  @HiveField(3)
   final String image;
+
+  @HiveField(4)
   final String location;
+
+  @HiveField(5)
   final String description;
+
+  @HiveField(6)
   final DateTime createdAt;
+
+  @HiveField(7)
   final DateTime updatedAt;
 
   ReportItemModel({
@@ -19,12 +41,13 @@ class ReportItemModel {
     required this.updatedAt,
   });
 
-  factory ReportItemModel.fromJson(Map<String, dynamic> json, var reportID) {
+  factory ReportItemModel.fromJson(
+      Map<String, dynamic> json, dynamic reportID) {
     return ReportItemModel(
       id: (json['item_id'] ?? json['id']).toString(),
       reportId: reportID.toString(),
       type: json['type'],
-      image: json['item_data'],
+      image: json['image'],
       location: json['location'],
       description: json['description'],
       createdAt: DateTime.parse(json['created_at']),
@@ -37,7 +60,7 @@ class ReportItemModel {
       'id': id,
       'report_id': reportId,
       'type': type,
-      'item_data': image,
+      'image': image,
       'location': location,
       'description': description,
       'created_at': createdAt.toIso8601String(),
@@ -46,10 +69,10 @@ class ReportItemModel {
   }
 
   ReportItemModel copyWith({
-    String? itemId,
+    String? itemId, // backward-compatible alias for `id`
     String? reportId,
     String? type,
-    String? itemData,
+    String? image, // backward-compatible alias for `image`
     String? location,
     String? description,
     DateTime? createdAt,
@@ -59,7 +82,7 @@ class ReportItemModel {
       id: itemId ?? id,
       reportId: reportId ?? this.reportId,
       type: type ?? this.type,
-      image: itemData ?? image,
+      image: image ?? this.image,
       location: location ?? this.location,
       description: description ?? this.description,
       createdAt: createdAt ?? this.createdAt,

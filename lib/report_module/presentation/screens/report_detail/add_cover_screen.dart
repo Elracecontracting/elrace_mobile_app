@@ -97,29 +97,29 @@ class _AddCoverScreenState extends State<AddCoverScreen> {
             MaterialButton(
               onPressed: () async {
                 if (!form.currentState!.validate()) return;
-                CoverPageModel? updatedCover;
+                ReportDetailModel? _updatedReportCover;
                 if (widget.reportDetail.coverPage != null) {
-                  updatedCover = await reportProvider.editCoverPage(
-                    widget.reportDetail.coverPage!.copyWith(
-                      title: titleController.text,
-                      description: descriptionController.text,
-                    ),
-                  );
+                  _updatedReportCover = widget.reportDetail.copyWith(
+                      coverPage: widget.reportDetail.coverPage!.copyWith(
+                    title: titleController.text,
+                    description: descriptionController.text,
+                  ));
+                  await reportProvider.updateReportDetail(_updatedReportCover);
+                  Navigator.pop(context, _updatedReportCover);
+                  return;
                 } else {
-                  updatedCover = await reportProvider.addCoverPage(
-                    CoverPageModel(
-                      empId: ReportProvider.empID,
-                      title: titleController.text,
-                      description: descriptionController.text,
-                      createdAt: DateTime.now(),
-                      updatedAt: DateTime.now(),
-                    ),
-                    widget.reportDetail.report.id,
-                  );
-                }
+                  ReportDetailModel _updatedReportCover =
+                      widget.reportDetail.copyWith(
+                          coverPage: CoverPageModel(
+                    empId: ReportProvider.empID,
+                    title: titleController.text,
+                    description: descriptionController.text,
+                    createdAt: DateTime.now(),
+                    updatedAt: DateTime.now(),
+                  ));
 
-                if (updatedCover != null) {
-                  Navigator.pop(context, updatedCover);
+                  await reportProvider.updateReportDetail(_updatedReportCover);
+                  Navigator.pop(context, _updatedReportCover);
                   return;
                 }
 

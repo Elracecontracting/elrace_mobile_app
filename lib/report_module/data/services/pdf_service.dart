@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:el_race/report_module/data/models/company_model.dart';
 import 'package:el_race/report_module/data/models/report_detail_model.dart';
 import 'package:el_race/report_module/data/models/report_item_model.dart';
@@ -186,10 +188,8 @@ class PdfService {
     final Map<String, pw.MemoryImage> imageMap = {};
     for (final item in items) {
       if (item.type == 'image') {
-        final response = await get(Uri.parse(item.image));
-        if (response.statusCode == 200) {
-          imageMap[item.image] = pw.MemoryImage(response.bodyBytes);
-        }
+        imageMap[item.image] =
+            pw.MemoryImage(await File(item.image).readAsBytes());
       }
     }
     return imageMap;

@@ -1,6 +1,6 @@
 import 'package:el_race/report_module/core/utils/sharedpref.dart';
 import 'package:el_race/report_module/data/models/company_model.dart';
-import 'package:el_race/report_module/data/services/hive_service.dart';
+import 'package:el_race/report_module/data/services/report_hive_service.dart';
 import 'package:hive/hive.dart';
 
 class CompanyRepository {
@@ -10,7 +10,7 @@ class CompanyRepository {
 
   Future<Box<CompanyModel>> _getCompanyBox() async {
     if (_companyBox == null || !_companyBox!.isOpen) {
-      _companyBox = await HiveService.getCompanyBox();
+      _companyBox = await ReportHiveService.getCompanyBox();
     }
     return _companyBox!;
   }

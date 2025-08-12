@@ -1,9 +1,25 @@
-class CoverPageModel {
+import 'package:hive/hive.dart';
+
+part 'cover_page_model.g.dart'; // Needed for Hive type adapter generation
+
+@HiveType(typeId: 102) // Change typeId for each model you create
+class CoverPageModel extends HiveObject {
+  @HiveField(0)
   final String empId;
+
+  @HiveField(1)
   final String title;
+
+  @HiveField(2)
   final String? description;
+
+  @HiveField(3)
   final String? id; // for update
+
+  @HiveField(4)
   final DateTime? createdAt;
+
+  @HiveField(5)
   final DateTime? updatedAt;
 
   CoverPageModel({
@@ -16,8 +32,7 @@ class CoverPageModel {
   });
 
   factory CoverPageModel.fromJson(Map<String, dynamic> json) => CoverPageModel(
-        empId:
-            json['emp_id'] ?? '', // Updated to extract from JSON if available
+        empId: json['emp_id'] ?? '',
         title: json['title'],
         description: json['description'],
         id: json['id'],

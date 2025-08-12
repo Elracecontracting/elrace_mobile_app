@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
 import 'package:el_race/report_module/data/models/report_detail_model.dart';
@@ -8,7 +10,9 @@ import 'package:el_race/report_module/presentation/screens/report_detail/camera_
 import 'package:el_race/report_module/presentation/screens/report_detail/image_editing_screen.dart';
 import 'package:el_race/report_module/presentation/widgets/bottom_appbar.dart';
 import 'package:el_race/report_module/presentation/widgets/square_button.dart';
+import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 
 import '../../widgets/custom_textfield.dart';
@@ -59,6 +63,7 @@ class _AddNewItemState extends State<AddNewItem> {
     super.dispose();
   }
 
+  int _imageBust = 0;
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -77,9 +82,24 @@ class _AddNewItemState extends State<AddNewItem> {
             Navigator.pop(context);
           },
         ),
-        title: Image.asset(
-          CompanyRepository.company!.logo,
-          height: 60,
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "0/0",
+              style: CustomTextStyle.reportHeader.copyWith(color: black),
+            ),
+            Image.asset(
+              CompanyRepository.company!.logo,
+              height: 60,
+            ),
+            Opacity(
+                opacity: .0,
+                child: Text(
+                  "0/0",
+                  style: CustomTextStyle.reportHeader,
+                )),
+          ],
         ),
         actions: [
           if (currentIndex != -1 &&
@@ -99,16 +119,12 @@ class _AddNewItemState extends State<AddNewItem> {
                   if (bytes != null) {
                     imageLoading = true;
                     setState(() {});
-                    ReportItemModel? item =
-                        await reportProvider.updateReportItem(
-                      widget.report.reportItems[currentIndex],
-                      imageFile: bytes,
-                    );
-                    if (item != null) {
-                      List<ReportItemModel> items = widget.report.reportItems;
-                      items[currentIndex] = item;
-                      widget.report.copyWith(reportItems: items);
-                    }
+                    await File(widget.report.reportItems[currentIndex].image)
+                        .writeAsBytes(bytes);
+                    await FileImage(
+                            File(widget.report.reportItems[currentIndex].image))
+                        .evict();
+                    _imageBust++;
                     imageLoading = false;
                     setState(() {});
                   }
@@ -139,9 +155,9 @@ class _AddNewItemState extends State<AddNewItem> {
                       decoration: BoxDecoration(
                           color: CustomColors.containerColor,
                           borderRadius: BorderRadius.circular(8)),
-                      child: Image.network(
-                          key: const Key("image"),
-                          widget.report.reportItems[currentIndex].image),
+                      child: Image.file(
+                          key: Key(_imageBust.toString()),
+                          File(widget.report.reportItems[currentIndex].image)),
                     ),
                   ),
                   Positioned(
@@ -164,10 +180,15 @@ class _AddNewItemState extends State<AddNewItem> {
                           return;
                         }
 
-                        // widget.report.reportItems[currentIndex] =
-                        //     updatedItem;
-                        // await reportRepository
-                        //     .updateReportDetail(widget.reportDetailModel);
+                        await File(
+                                widget.report.reportItems[currentIndex].image)
+                            .writeAsBytes(
+                                await File(result[0].path).readAsBytes());
+                        await FileImage(File(
+                                widget.report.reportItems[currentIndex].image))
+                            .evict();
+                        _imageBust++;
+
                         setState(() {});
                       },
                     ),
@@ -201,36 +222,46 @@ class _AddNewItemState extends State<AddNewItem> {
             onPressed: () async {
               _loading = true;
               setState(() {});
-              if (widget.report.reportItems[currentIndex] != null) {
+
+              if (currentIndex > -1 &&
+                  widget.report.reportItems[currentIndex] != -1) {
                 ReportItemModel updatedItem =
                     widget.report.reportItems[currentIndex].copyWith(
                   location: locationController.text,
                   description: descriptionController.text,
                 );
-                ReportItemModel? reportItem =
-                    await reportProvider.updateReportItem(updatedItem);
+                List<ReportItemModel> itemsUpdated = widget.report.reportItems;
+                itemsUpdated[currentIndex] = updatedItem;
+                await reportProvider.updateReportDetail(
+                  widget.report.copyWith(reportItems: itemsUpdated),
+                );
 
                 if (!context.mounted) return;
                 _loading = false;
                 setState(() {});
-                // List<ReportItemModel> _items = widget.report.reportItems;
-                // _items[currentIndex] = reportItem!;
-                // widget.report.copyWith(reportItems: _items);
-                if (reportItem != null) Navigator.pop(context, reportItem);
+                Navigator.pop(context, updatedItem);
                 return;
               }
 
-              ReportItemModel? reportItem = await reportProvider.addReportItem(
-                reportId: widget.report.report.id,
-                type: "text",
-                location: locationController.text,
-                description: descriptionController.text,
-              );
+              ReportItemModel _newItem = ReportItemModel(
+                  id: DateTime.now().millisecondsSinceEpoch.toString(),
+                  reportId: widget.report.report.id,
+                  type: "text",
+                  image: "",
+                  location: locationController.text,
+                  description: descriptionController.text,
+                  createdAt: DateTime.now(),
+                  updatedAt: DateTime.now());
 
+              await reportProvider.updateReportDetail(
+                widget.report.copyWith(
+                  reportItems: [...widget.report.reportItems, _newItem],
+                ),
+              );
               if (!context.mounted) return;
               _loading = false;
               setState(() {});
-              Navigator.pop(context, reportItem);
+              Navigator.pop(context, _newItem);
             },
             height: 44,
             color: CustomColors.maroon,

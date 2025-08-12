@@ -1,5 +1,7 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
+import 'package:el_race/report_module/data/services/report_hive_service.dart';
+import 'package:el_race/report_module/presentation/screens/report_listing/report_app_home_screen.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/provider/slider_provider.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
@@ -29,6 +31,7 @@ void main() async {
     SharedPref().instantiatePreferences(),
     initDI(),
     HiveService.setupHive(),
+    ReportHiveService.setupHive(),
     Firebase.initializeApp(),
   ]);
   await FirebaseService.initialize();
@@ -104,7 +107,7 @@ class MyApp extends StatelessWidget {
                     ? localizationDelegate.supportedLocales.last
                     : localizationDelegate.supportedLocales.first,
                 onGenerateRoute: onGeneratedRoutes.generatedRoutes,
-                home: const SplashScreen()
+                home: const ReportAppHomeScreen()
                 // : const SignInScreen(),
                 ),
           ),

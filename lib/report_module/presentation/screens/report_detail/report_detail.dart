@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
+import 'package:el_race/report_module/core/utils/directory_operation.dart';
 import 'package:el_race/report_module/data/models/report_item_model.dart';
 import 'package:el_race/report_module/data/models/report_model.dart';
 import 'package:el_race/report_module/data/provider/reports_provider.dart';
@@ -53,7 +54,12 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       reportItems: [],
     );
 
-    reportDetail = await reportProvider.getReportDetail(widget.report);
+    reportDetail = await reportProvider.getReportDetail(widget.report) ??
+        ReportDetailModel(
+          report: widget.report,
+          coverPage: null,
+          reportItems: [],
+        );
     _loading = false;
     setState(() {});
   }
@@ -126,9 +132,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                                 options: ["Confirm Delete", "Cancel"]);
                             if (status == 0) {
                               setState(() {});
-                              bool status =
-                                  await reportProvider.deleteCoverPage(
-                                      reportDetail!.coverPage!.id!);
+                              bool status = await reportProvider
+                                  .deleteCoverPage(reportDetail!);
                               if (status) {
                                 reportDetail =
                                     reportDetail!.copyWith(coverPage: null);
@@ -154,17 +159,18 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                             }),
                         itemCount: reportDetail!.reportItems.length,
                         onReorder: (int oldIndex, int newIndex) async {
-                          // setState(() {
-                          //   if (newIndex > oldIndex) {
-                          //     newIndex -= 1;
-                          //   }
-                          //   final ReportDetailItem movedItem =
-                          //       reportDetail!.items.removeAt(oldIndex);
-                          //   reportDetail!.items.insert(newIndex, movedItem);
-                          // });
-                          // await reportRepository.updateReportDetail(reportDetail!);
-                          //todo update report item index
-                          // _loadUpdatedRecord();
+                          setState(() {
+                            if (newIndex > oldIndex) {
+                              newIndex -= 1;
+                            }
+                            final ReportItemModel movedItem =
+                                reportDetail!.reportItems.removeAt(oldIndex);
+                            reportDetail!.reportItems
+                                .insert(newIndex, movedItem);
+                          });
+                          await reportProvider
+                              .updateReportDetail(reportDetail!);
+                          _loadUpdatedRecord();
                         }),
                     if (_loading && loadingText == "") ...[
                       ...List.generate(
@@ -289,7 +295,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   folderName: widget.folderName,
                 )));
     if (result != null) {
-      reportDetail = reportDetail!.copyWith(coverPage: result);
+      reportDetail = result;
     }
     setState(() {});
     await _loadUpdatedRecord();
@@ -309,22 +315,29 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       _loading = true;
       setState(() {});
       for (XFile image in result) {
-        loadingText =
-            "${result.indexWhere((e) => image == e)} of ${result.length} images is uploading";
-        ReportItemModel? reportItem = await reportProvider.addReportItem(
-          reportId: widget.report.id,
-          type: "image",
-          imageFile: File(image.path),
-          location: "",
-          description: "",
-        );
+        loadingText = "images is uploading";
+        ReportItemModel _newItem = ReportItemModel(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            reportId: reportDetail!.report.id,
+            type: "image",
+            image: await saveImageToAppStorage(
+                File(image.path),
+                reportDetail!.report.folderId.toString() +
+                    reportDetail!.report.folderId.toString()),
+            location: "",
+            description: "",
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now());
 
-        if (reportItem != null) {
-          List<ReportItemModel> items = reportDetail!.reportItems;
-          items.add(reportItem);
-          reportDetail = reportDetail!.copyWith(reportItems: items);
-          setState(() {});
-        }
+        await reportProvider.updateReportDetail(
+          reportDetail!.copyWith(
+            reportItems: [...reportDetail!.reportItems, _newItem],
+          ),
+        );
+        reportDetail = reportDetail!.copyWith(
+          reportItems: [...reportDetail!.reportItems, _newItem],
+        );
+        setState(() {});
       }
       _loading = false;
       setState(() {});
@@ -341,20 +354,30 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       for (XFile image in result) {
         loadingText =
             "${result.indexWhere((e) => image == e)} of ${result.length} images is uploading";
-        ReportItemModel? reportItem = await reportProvider.addReportItem(
-          reportId: widget.report.id,
-          type: "image",
-          imageFile: File(image.path),
-          location: "",
-          description: "",
+
+        ReportItemModel _newItem = ReportItemModel(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            reportId: reportDetail!.report.id,
+            type: "image",
+            image: await saveImageToAppStorage(
+                File(image.path),
+                reportDetail!.report.folderId.toString() +
+                    reportDetail!.report.folderId.toString()),
+            location: "",
+            description: "",
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now());
+
+        await reportProvider.updateReportDetail(
+          reportDetail!.copyWith(
+            reportItems: [...reportDetail!.reportItems, _newItem],
+          ),
         );
 
-        if (reportItem != null) {
-          List<ReportItemModel> items = reportDetail!.reportItems;
-          items.add(reportItem);
-          reportDetail = reportDetail!.copyWith(reportItems: items);
-          setState(() {});
-        }
+        reportDetail = reportDetail!.copyWith(
+          reportItems: [...reportDetail!.reportItems, _newItem],
+        );
+        setState(() {});
       }
       _loading = false;
       loadingText = "";
@@ -382,7 +405,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   }
 
   _openItemDetail(ReportItemModel item) async {
-    ReportItemModel? updatedItem = await Navigator.push(
+    await Navigator.push(
         context,
         MaterialPageRoute(
             builder: (context) => AddNewItem(
@@ -390,36 +413,22 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                   item: item,
                   folderName: widget.folderName,
                 )));
-
-    if (updatedItem != null) {
-      List<ReportItemModel> items = reportDetail!.reportItems;
-      int index = items.indexWhere((e) => e.id == item.id);
-      if (index != -1) {
-        items[index] = updatedItem;
-        reportDetail = reportDetail!.copyWith(reportItems: items);
-        setState(() {});
-      }
-    }
-
     await _loadUpdatedRecord();
   }
 
   _deleteItems(ReportItemModel item) async {
     int deleteStatus =
         await showEditOptions(context, options: ['Delete', 'Cancel']);
-    if (!mounted || deleteStatus == 1) return;
+    if (!mounted || deleteStatus == 1 || deleteStatus == -1) return;
     int deleteCodeStatus =
         await showEditOptions(context, options: ['Confirm Delete', 'Cancel']);
     if (deleteCodeStatus == 0) {
-      bool status =
-          await reportProvider.deleteReportItem(item.id, item.reportId);
+      List<ReportItemModel> items = reportDetail!.reportItems;
+      items.removeWhere((e) => e.id == item.id);
+      reportDetail = reportDetail!.copyWith(reportItems: items);
+      await reportProvider.updateReportDetail(reportDetail!);
+      setState(() {});
 
-      if (status) {
-        List<ReportItemModel> items = reportDetail!.reportItems;
-        items.removeWhere((e) => e.id == item.id);
-        reportDetail = reportDetail!.copyWith(reportItems: items);
-        setState(() {});
-      }
       await _loadUpdatedRecord();
       return;
     }

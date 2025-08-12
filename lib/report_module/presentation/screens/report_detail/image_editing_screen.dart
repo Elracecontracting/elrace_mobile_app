@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -66,7 +68,7 @@ class _ImageEditingScreenState extends State<ImageEditingScreen> {
   }
 
   void initBackground() async {
-    final image = await NetworkImage(widget.image).image;
+    final image = await FileImage(File(widget.image)).image;
     setState(() {
       backgroundImage = image;
       controller.background = image.backgroundDrawable;

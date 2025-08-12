@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
 import 'package:el_race/report_module/data/models/report_item_model.dart';
@@ -54,62 +56,65 @@ class ReportItem extends StatelessWidget {
                                       height: 28,
                                       width: 28,
                                     ))
-                                  : Image.network(
-                                      item.image,
+                                  : Image.file(
+                                      File(item.image),
                                       fit: BoxFit.cover,
                                     ),
                             ),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                InkWell(
-                                    onTap: onMoreClicked,
-                                    child: const Icon(Icons.more_vert_rounded)),
-                                ReorderableDragStartListener(
-                                  index: index,
-                                  child: const Icon(Icons.drag_handle_rounded),
-                                )
-                              ],
-                            )
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          item.location,
+                                          style: CustomTextStyle.reportHeader
+                                              .copyWith(
+                                                  // fontWeight: FontWeight.w500,
+                                                  color: CustomColors.black),
+                                        ),
+                                      ),
+                                      const SizedBox(
+                                        width: 20,
+                                      )
+                                    ],
+                                  ),
+                                  if (item.description != "")
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        item.description,
+                                        style: CustomTextStyle.reportHeader
+                                            .copyWith(
+                                                fontWeight: FontWeight.normal,
+                                                color: CustomColors.black),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
                           ],
                         ),
                       ),
-                      // const SizedBox(width: 12),
-                      // Expanded(
-                      //   child: Column(
-                      //     crossAxisAlignment: CrossAxisAlignment.start,
-                      //     children: [
-                      //       Row(
-                      //         crossAxisAlignment: CrossAxisAlignment.start,
-                      //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      //         children: [
-                      //           Expanded(
-                      //             child: Text(
-                      //               item.location,
-                      //               style:
-                      //                   CustomTextStyle.reportHeader.copyWith(
-                      //                       // fontWeight: FontWeight.w500,
-                      //                       color: CustomColors.black),
-                      //             ),
-                      //           ),
-                      //           const SizedBox(
-                      //             width: 20,
-                      //           )
-                      //         ],
-                      //       ),
-                      //       if (item.description != "")
-                      //         Padding(
-                      //           padding: const EdgeInsets.only(top: 2),
-                      //           child: Text(
-                      //             item.description,
-                      //             style: CustomTextStyle.reportHeader.copyWith(
-                      //                 fontWeight: FontWeight.normal,
-                      //                 color: CustomColors.black),
-                      //           ),
-                      //         ),
-                      //     ],
-                      //   ),
-                      // ),
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          InkWell(
+                              onTap: onMoreClicked,
+                              child: const Icon(Icons.more_vert_rounded)),
+                          ReorderableDragStartListener(
+                            index: index,
+                            child: const Icon(Icons.drag_handle_rounded),
+                          )
+                        ],
+                      )
                     ],
                   ),
                   const SizedBox(height: 12),

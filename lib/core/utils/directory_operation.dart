@@ -36,12 +36,12 @@ Future<void> renameFile(String filePath, String newName) async {
     try {
       final newFilePath = p.join(file.parent.path, newName);
       await file.rename(newFilePath);
-      print('File renamed successfully to $newFilePath');
+      debugPrint('File renamed successfully to $newFilePath');
     } catch (e) {
-      print('Error renaming file: $e');
+      debugPrint('Error renaming file: $e');
     }
   } else {
-    print('File does not exist at $filePath');
+    debugPrint('File does not exist at $filePath');
   }
 }
 
@@ -49,6 +49,7 @@ Future<Directory> getAppDirectory() async {
   Directory appDocDir = await getApplicationDocumentsDirectory();
   return appDocDir;
 }
+
 Future<void> moveFromOneSectionToAnother(
     String reportID, String section, String updatedSection) async {
   final directory = await getApplicationDocumentsDirectory();
