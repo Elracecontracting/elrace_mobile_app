@@ -86,7 +86,7 @@ class _AddNewItemState extends State<AddNewItem> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "0/0",
+              "${currentIndex + 1}/${widget.report.reportItems.length}",
               style: CustomTextStyle.reportHeader.copyWith(color: black),
             ),
             Image.asset(
