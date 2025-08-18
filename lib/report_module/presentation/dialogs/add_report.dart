@@ -11,6 +11,8 @@ Future<bool> showAddNewReport(BuildContext context,
   GlobalKey<FormState> form = GlobalKey<FormState>();
   TextEditingController nameController = TextEditingController();
   TextEditingController descriptionController = TextEditingController();
+
+  bool cancel = true;
   await showDialog(
     context: context,
     barrierColor: Colors.black.withValues(alpha: 0.5),
@@ -75,6 +77,7 @@ Future<bool> showAddNewReport(BuildContext context,
                       child: MaterialButton(
                         onPressed: () {
                           if (form.currentState!.validate()) {
+                            cancel = false;
                             Navigator.pop(context);
                           }
                         },
@@ -100,7 +103,7 @@ Future<bool> showAddNewReport(BuildContext context,
       );
     },
   );
-  if (!form.currentState!.validate()) return false;
+  if (!form.currentState!.validate() || cancel) return false;
   ReportProvider provider =
       Provider.of<ReportProvider>(navKey.currentContext!, listen: false);
   if (type == 2) {
