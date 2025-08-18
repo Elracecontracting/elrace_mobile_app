@@ -34,10 +34,10 @@ class ReportProvider extends ChangeNotifier {
 
   Future<void> init({required String base}) async {
     baseUrl = base;
-    empID = "2721";
-    // (await userRepo.getLoginResponse())!.result!.data!.emp_id.toString();
-    companyId = "1";
-    // (await userRepo.getLoginResponse())!.result!.data!.companyId.toString();
+    empID =
+        (await userRepo.getLoginResponse())!.result!.data!.emp_id.toString();
+    companyId =
+        (await userRepo.getLoginResponse())!.result!.data!.companyId.toString();
   }
 
   void _setLoading(bool value) {
