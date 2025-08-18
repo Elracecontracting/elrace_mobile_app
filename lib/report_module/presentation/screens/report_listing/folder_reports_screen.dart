@@ -6,6 +6,7 @@ import 'package:el_race/report_module/data/repositories/company_repository.dart'
 import 'package:el_race/report_module/presentation/bottom_sheets/show_option_sheet.dart';
 import 'package:el_race/report_module/presentation/dialogs/add_report.dart';
 import 'package:el_race/report_module/presentation/dialogs/rename_report_dialog.dart';
+import 'package:el_race/report_module/presentation/screens/report_detail/report_detail.dart';
 import 'package:el_race/report_module/presentation/screens/report_listing/report_app_home_screen.dart';
 import 'package:el_race/report_module/presentation/widgets/bottom_appbar.dart';
 import 'package:el_race/report_module/presentation/widgets/square_button.dart';
@@ -74,8 +75,18 @@ class _FolderReportScreenState extends State<FolderReportScreen> {
               color: CustomColors.blue,
               borderColor: CustomColors.white,
               onPressed: () async {
-                await showAddNewReport(context,
+                bool status = await showAddNewReport(context,
                     type: 1, folderID: widget.folder.id.toString());
+
+                if (status)
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => ReportDetailScreen(
+                                report: reportProviderListener.reports.first,
+                                folderName: widget.folder.name,
+                              )));
+
                 setState(() {});
                 return;
               },

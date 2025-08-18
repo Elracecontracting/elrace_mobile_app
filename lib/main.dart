@@ -107,7 +107,7 @@ class MyApp extends StatelessWidget {
                     ? localizationDelegate.supportedLocales.last
                     : localizationDelegate.supportedLocales.first,
                 onGenerateRoute: onGeneratedRoutes.generatedRoutes,
-                home: const SplashScreen()
+                home: const ReportAppHomeScreen()
                 // : const SignInScreen(),
                 ),
           ),

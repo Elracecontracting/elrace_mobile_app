@@ -15,6 +15,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../../widgets/folder_tile.dart';
+import 'folder_reports_screen.dart';
 
 class ReportAppHomeScreen extends StatefulWidget {
   const ReportAppHomeScreen({super.key});
@@ -82,8 +83,15 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
 
                 if (selectedOptionStatus == 0) {
                   if (!context.mounted) return;
-                  await showAddNewReport(context, type: 2);
+                  bool status = await showAddNewReport(context, type: 2);
                   if (!mounted) return;
+
+                  if (status)
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => FolderReportScreen(
+                                folder: reportProviderListener.folders.first)));
                   setState(() {});
                   return;
                 }

@@ -6,7 +6,7 @@ import 'package:el_race/report_module/presentation/widgets/custom_textfield.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-Future<void> showAddNewReport(BuildContext context,
+Future<bool> showAddNewReport(BuildContext context,
     {required int type, String? folderID}) async {
   GlobalKey<FormState> form = GlobalKey<FormState>();
   TextEditingController nameController = TextEditingController();
@@ -100,14 +100,16 @@ Future<void> showAddNewReport(BuildContext context,
       );
     },
   );
-  if (!form.currentState!.validate()) return;
+  if (!form.currentState!.validate()) return false;
   ReportProvider provider =
       Provider.of<ReportProvider>(navKey.currentContext!, listen: false);
   if (type == 2) {
     await provider.createFolder(
         title: nameController.text, description: descriptionController.text);
+    return true;
   } else {
     await provider.createReport(
         title: nameController.text, folderID: folderID!);
+    return true;
   }
 }

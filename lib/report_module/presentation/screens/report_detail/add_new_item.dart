@@ -82,24 +82,9 @@ class _AddNewItemState extends State<AddNewItem> {
             Navigator.pop(context);
           },
         ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              "${currentIndex + 1}/${widget.report.reportItems.length}",
-              style: CustomTextStyle.reportHeader.copyWith(color: black),
-            ),
-            Image.asset(
-              CompanyRepository.company!.logo,
-              height: 60,
-            ),
-            Opacity(
-                opacity: .0,
-                child: Text(
-                  "0/0",
-                  style: CustomTextStyle.reportHeader,
-                )),
-          ],
+        title: Image.asset(
+          CompanyRepository.company!.logo,
+          height: 60,
         ),
         actions: [
           if (currentIndex != -1 &&
@@ -217,7 +202,14 @@ class _AddNewItemState extends State<AddNewItem> {
             maxLine: 4,
             hintText: "Description",
           ),
-          const SizedBox(height: 16),
+          // const SizedBox(height: 12),
+          Center(
+            child: Text(
+              "item no : ${currentIndex + 1}/${widget.report.reportItems.length}",
+              style: CustomTextStyle.reportHeader.copyWith(color: black),
+            ),
+          ),
+          const SizedBox(height: 12),
           MaterialButton(
             onPressed: () async {
               _loading = true;
