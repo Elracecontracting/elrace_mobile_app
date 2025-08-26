@@ -4,9 +4,8 @@ import '../../widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 
 class PettyCashList extends StatefulWidget {
-  final dynamic loginResponseModel;
 
-  PettyCashList({required this.loginResponseModel});
+  const PettyCashList({super.key});
 
   @override
   _PettyCashListState createState() => _PettyCashListState();
@@ -75,7 +74,7 @@ class _PettyCashListState extends State<PettyCashList> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => PettyCashPopUpScreen(loginResponseModel: widget.loginResponseModel),
+                          builder: (context) => const PettyCashPopUpScreen(),
                         ),
                       );
                     },

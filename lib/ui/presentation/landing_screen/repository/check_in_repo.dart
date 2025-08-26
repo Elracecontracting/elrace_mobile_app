@@ -21,7 +21,6 @@ class CheckInREpo {
     final loginResponse = await _userRepo.getLoginResponse();
 
     var token = loginResponse!.result!.token!;
-
     var userResponse = await _userRepo.getLoginResponse();
     var deviceInfo = await _userRepo.getDeviceInfo();
     try {

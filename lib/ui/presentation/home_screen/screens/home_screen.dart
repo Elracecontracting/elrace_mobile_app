@@ -1,20 +1,19 @@
 import 'dart:async';
 import 'package:el_race/ui/presentation/home_screen/screens/main_home_content_widget.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/main_screens.dart';
-import 'package:el_race/ui/presentation/home_screen/widgets/profile_box_with_slide_animation.dart';
+import 'package:el_race/ui/presentation/home_screen/widgets/check_in_widgets/face_recogenize_check.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/timer_controller.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/visibilty_icon.dart';
+import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:provider/provider.dart';
-import 'package:el_race/providers/profile_box_provider.dart'; // Import the provider
 import 'package:el_race/ui/presentation/home_screen/bloc/location_bloc/location_bloc.dart';
 import 'package:location/location.dart';
 
+
 class HomeScreen extends StatelessWidget{
-  const HomeScreen();
+  const HomeScreen({super.key});
   @override
   Widget build(BuildContext context) {
     return const MainScreen();
@@ -94,31 +93,22 @@ class _HomeScreenState extends State<HomeScreenPage> {
   Widget build(BuildContext context) {
     // final screenWidth = MediaQuery.of(context).size.width;
     // final drawerWidth = screenWidth * 0.75; // 75% of screen width
-    return Scaffold(
+    return const Scaffold(
+      appBar: HeaderWidget(),
       backgroundColor: lightGrey,
       // bottomNavigationBar: CustomBottomNavbar(
       //   currentIndex: _selectedIndex,
       //   onItemTapped: _onItemTapped,
       // ),
-      body: GestureDetector(
-        onTap: () {
-          final profileBoxProvider = Provider.of<ProfileBoxProvider>(context, listen: false);
-          if (profileBoxProvider.isProfileVisible) {
-            profileBoxProvider.hideProfileBox(); // Close the profile box
-          }
-        },
-        child: const  Stack(
-          children: [
-            // Main Content
-            MainHomeContentWidget(),
-    
-            // Profile Box with Slide Animation
-           ProfileBoxWithSlideAnimation(),     
-
-
-            ArraowVisibalityBottomNav(),
-          ],
-        ),
+      body: Stack(
+        children: [
+          // Main Content
+          MainHomeContentWidget(),
+          // Face Recognition Status Icon (top center)
+          FaceRecogenizeCheck(),
+          // Bottom Nav Arrow
+          ArraowVisibalityBottomNav(),
+        ],
       ),
     );
   }

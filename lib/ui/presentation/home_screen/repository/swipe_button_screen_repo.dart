@@ -45,7 +45,7 @@ class CustomSwipeButtonRepo{
       final response = await http.Response.fromStream(streamedResponse);
 
       print("📡 Response: ${response.statusCode}");
-      print("📦 Body: ${response.body}");
+      print("📦 Body: ${response.body}\nToken: $token");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

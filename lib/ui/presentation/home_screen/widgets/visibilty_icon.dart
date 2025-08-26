@@ -17,7 +17,7 @@ class ArraowVisibalityBottomNav extends StatelessWidget {
             onTap: ()=> bloc.add(const ChangeVisiablityIcon()),
             child: Container(
               height: 50.w,
-              margin: EdgeInsets.only(bottom: 100.w),
+              margin: EdgeInsets.only(bottom: 120.w),
               child: 
               !bloc.enableBottomNav?
               Image.asset("assets/newapp/arrow_appear.png",width: 50.w,):

@@ -91,10 +91,11 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: const HeaderWidget(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const HeaderWidget(),
+
 
           const SizedBox(height: 10),
           Padding(

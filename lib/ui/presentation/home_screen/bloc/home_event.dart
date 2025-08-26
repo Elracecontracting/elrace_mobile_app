@@ -7,9 +7,6 @@ sealed class HomeEvent extends Equatable {
   List<Object> get props => [];
 }
 
-final class CheckInET extends HomeEvent {}
-
-final class CheckOutET extends HomeEvent {}
 
 final class FetchLastMonthAttendanceSummary extends HomeEvent {
   const FetchLastMonthAttendanceSummary();
@@ -24,4 +21,20 @@ class ChangeCurrentIndex extends HomeEvent{
 
 class ChangeVisiablityIcon extends HomeEvent{
   const ChangeVisiablityIcon();
+}
+
+enum FaceRecognitionStatus { idle, matching, matched, failed }
+
+class UpdateFaceRecognitionStatus extends HomeEvent {
+  final FaceRecognitionStatus status;
+  const UpdateFaceRecognitionStatus(this.status);
+  @override
+  List<Object> get props => [status];
+}
+
+class CheckInStatusChangedEvent extends HomeEvent {
+  final bool isCheckedIn;
+  const CheckInStatusChangedEvent(this.isCheckedIn);
+  @override
+  List<Object> get props => [isCheckedIn];
 }

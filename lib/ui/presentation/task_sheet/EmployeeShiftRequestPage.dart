@@ -226,6 +226,8 @@ class _EmployeeShiftRequestPageState extends State<EmployeeShiftRequestPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true, // ✅ Prevents keyboard overlap
+      appBar: const HeaderWidget(),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
@@ -234,7 +236,7 @@ class _EmployeeShiftRequestPageState extends State<EmployeeShiftRequestPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const HeaderWidget(),
+
 
 
                 const SizedBox(height: 10),

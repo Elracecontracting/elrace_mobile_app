@@ -9,9 +9,9 @@ sealed class HomeState extends Equatable {
 
 final class HomeInitial extends HomeState {}
 
-final class CheckedInST extends HomeState {}
+final class CheckedInSTHome extends HomeState {}
 
-final class CheckedOutST extends HomeState {}
+final class CheckedOutSTHome extends HomeState {}
 
 class LastMonthAttendanceSummaryLoading extends HomeState {
   const LastMonthAttendanceSummaryLoading();
@@ -36,3 +36,11 @@ class LastMonthAttendanceSummaryError extends HomeState {
 
 class ChangeIndexLoading extends HomeState {}
 class ChangeIndexSuccess extends HomeState {}
+
+
+class FaceRecognitionStatusChanged extends HomeState {
+  final FaceRecognitionStatus status;
+  const FaceRecognitionStatusChanged(this.status);
+  @override
+  List<Object> get props => [status];
+}

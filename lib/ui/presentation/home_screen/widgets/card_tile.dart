@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../../../utils/color_utils.dart';
@@ -36,7 +37,10 @@ class CardTile extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: itemIndex.isOdd
-                          ? [buttonLight, buttonDark.withAlpha((0.2 * 255).toInt())]
+                          ? [
+                              buttonLight,
+                              buttonDark.withAlpha((0.2 * 255).toInt())
+                            ]
                           : [lightGrey, darkGrey],
                     )),
                 child: const SizedBox(
@@ -61,7 +65,10 @@ class CardTile extends StatelessWidget {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       colors: itemIndex.isOdd
-                          ? [buttonLight, buttonDark.withAlpha((0.2 * 255).toInt())]
+                          ? [
+                              buttonLight,
+                              buttonDark.withAlpha((0.2 * 255).toInt())
+                            ]
                           : [lightGrey, darkGrey],
                     )),
                 child: const SizedBox(
@@ -89,7 +96,8 @@ class CardTile extends StatelessWidget {
                         gradient: RadialGradient(
                           colors: [
                             Colors.white,
-                            Colors.black.withAlpha((0.3 * 255).toInt()), // Shadow color
+                            Colors.black
+                                .withAlpha((0.3 * 255).toInt()), // Shadow color
                           ],
                           center: Alignment.center,
                           radius: 3,
@@ -141,14 +149,18 @@ class CardTile extends StatelessWidget {
 class GrayCardComponent extends StatelessWidget {
   const GrayCardComponent({
     super.key,
-    required this.mainIcon,
+    this.mainIcon,
     this.onClick,
     required this.cardTitle,
     required this.backgroundImagePath,
     required this.childWidget,
-  });
+    this.topPadding = false,
+    this.topPaddingValue = 60,
 
-  final String mainIcon;
+  });
+  final double? topPaddingValue;
+  final bool topPadding;
+  final String? mainIcon;
   final String backgroundImagePath;
   final VoidCallback? onClick;
   final String cardTitle;
@@ -162,12 +174,12 @@ class GrayCardComponent extends StatelessWidget {
         children: [
           SizedBox(
             width: MediaQuery.of(context).size.width,
-            height: 150,
+            height: 180.w,
             child: Stack(
               children: [
                 SizedBox(
                   width: MediaQuery.of(context).size.width - 20,
-                  height: 170,
+                  height: 190.w,
                   child: Image.asset(
                     backgroundImagePath,
                     fit: BoxFit.fill,
@@ -175,27 +187,27 @@ class GrayCardComponent extends StatelessWidget {
                 ),
                 Positioned(
                   left: 36,
-                  top: 31,
+                  top: 16,
                   child: SizedBox(
                     height: SizeConfig().getHeight(43),
                     child: Row(
                       children: [
-                        SizedBox(
-                          width: SizeConfig().getWidth(40.26),
-                          height: SizeConfig().getHeight(40.31),
-                          child: Image.asset(
-                            mainIcon,
-                            width: SizeConfig().getWidth(40),
-                            height: SizeConfig().getHeight(40),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
+                        // SizedBox(
+                        //   width: SizeConfig().getWidth(40.26),
+                        //   height: SizeConfig().getHeight(40.31),
+                        //   child: Image.asset(
+                        //     mainIcon,
+                        //     width: SizeConfig().getWidth(40),
+                        //     height: SizeConfig().getHeight(40),
+                        //   ),
+                        // ),
+                        // const SizedBox(width: 10),
                         Text(
                           cardTitle.toUpperCase(),
                           style: GoogleFonts.koulen(
                             color: const Color(0xFF151544),
-                            fontSize: 18,
-                            fontWeight: FontWeight.w300,
+                            fontSize: 26.w,
+                            fontWeight: FontWeight.w400,
                           ),
                         ),
                       ],
@@ -203,12 +215,12 @@ class GrayCardComponent extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  left: 66,
-                  top: 69,
+                  top: topPadding? topPaddingValue:0,
+                  left: 36,
                   child: DefaultTextStyle(
                     style: GoogleFonts.nunito(
-                      fontSize: 12, // ✅ Use a realistic size instead of 1
-                      color: const Color(0xFF1A1A53),
+                      fontSize: 12.w, // ✅ Use a realistic size instead of 1
+                      color: Colors.black,
                     ),
                     child: Column(
                       children: [childWidget],

@@ -19,11 +19,11 @@ class FolderModel {
 
     return FolderModel(
       id: json['id'].toString(),
-      name: json['name'],
-      description: json['description'],
-      companyId: json['company_id'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      name: json['name'].toString(),
+      description: json['description'].toString(),
+      companyId: int.parse((json['company_id']??'0').toString()).toInt(),
+      createdAt: DateTime.parse(json['created_at']??''),
+      updatedAt: DateTime.parse(json['updated_at']??''),
     );
   }
 

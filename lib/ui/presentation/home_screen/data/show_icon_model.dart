@@ -4,7 +4,7 @@ class ShowIconModel {
   final String title;
   final String icon;
 
-  ShowIconModel({
+  const ShowIconModel({
     required this.title,
     required this.icon,
   });

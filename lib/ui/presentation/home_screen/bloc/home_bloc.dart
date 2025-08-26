@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:el_race/ui/presentation/Attendace_list/repository/attendance_repository.dart';
 import 'package:flutter/material.dart';
@@ -12,16 +11,22 @@ part 'home_state.dart';
 
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   
- static HomeBloc get(BuildContext context) => BlocProvider.of(context);
+  static HomeBloc get(BuildContext context) => BlocProvider.of(context);
+  
   HomeBloc() : super(HomeInitial()) {
-    on<CheckInET>(checkedInMethod);
-    on<FetchLastMonthAttendanceSummary>(_fetchLastMonthAttendanceSummary);
+    on<CheckInStatusChangedEvent>(checkedInMethod);
+    on<FetchLastMonthAttendanceSummary>(_fetchLastMonthAttendanceSummary  );      
     on<ChangeCurrentIndex>((event,emit){
       changeCurrentIndex(event, emit);
     });
     on<ChangeVisiablityIcon>((event,emit){
       changeBottomNavVisiblity(event, emit);
     });
+    on<UpdateFaceRecognitionStatus>((event, emit) {
+      faceRecognitionStatus = event.status;
+      emit(FaceRecognitionStatusChanged(event.status));
+    });
+  
   }
 
   int currentIndex = 1;
@@ -38,11 +43,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     emit(ChangeIndexSuccess());
   }
 
-  FutureOr<void> checkedInMethod(CheckInET event, Emitter<HomeState> emit) {
-    emit(CheckedInST());
+  FutureOr<void> checkedInMethod(CheckInStatusChangedEvent event, Emitter<HomeState> emit) {
+    emit(CheckedInSTHome());
   }
 
   int attendedDays = 0;
+  FaceRecognitionStatus faceRecognitionStatus = FaceRecognitionStatus.idle;
 
   Future<void> _fetchLastMonthAttendanceSummary(
     FetchLastMonthAttendanceSummary event,

@@ -21,8 +21,9 @@ class ContactBloc extends Bloc<ContactEvent, ContactState> {
     on<GetEmployeeLisET>(getEmpMethod);
   }
 
-  FutureOr<void> getEmpMethod(
-      GetEmployeeLisET event, Emitter<ContactState> emit) async {
+  List<Employee> empList = [];
+  FutureOr<void> getEmpMethod(GetEmployeeLisET event, Emitter<ContactState> emit) async {
+    if(empList.isNotEmpty) return;
     emit(const ContactLoadingState(isLoading: true));
 
     log('empModel.result!.employees! 1');
@@ -35,9 +36,8 @@ class ContactBloc extends Bloc<ContactEvent, ContactState> {
 
       if (empModel.result!.employees!.isNotEmpty) {
         emit(const ContactLoadingState(isLoading: false));
-
-        log('empModel.result!.employees! ${empModel.result!.employees!}');
-        emit(EmployeeListLoaded(empList: empModel.result!.employees!));
+        empList = empModel.result!.employees!;
+        emit(const EmployeeListLoaded());
       }
     }
 

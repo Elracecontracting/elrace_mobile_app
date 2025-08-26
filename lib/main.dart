@@ -1,12 +1,18 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
+<<<<<<< Updated upstream
 import 'package:el_race/report_module/data/services/report_hive_service.dart';
 import 'package:el_race/report_module/presentation/screens/report_listing/report_app_home_screen.dart';
+=======
+import 'package:el_race/ui/presentation/call_screen/bloc/contact_bloc.dart';
+>>>>>>> Stashed changes
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/provider/slider_provider.dart';
+import 'package:el_race/ui/presentation/my_notes/bloc/notes_bloc.dart';
+import 'package:el_race/ui/presentation/media/bloc/media_bloc.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_bloc.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
-import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:el_race/ui/presentation/splash_screen/splash_screen.dart';
 import 'package:el_race/utils/di.dart';
 import 'package:el_race/utils/generated_routes.dart';
@@ -19,6 +25,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
+import 'package:el_race/ui/presentation/home_screen/widgets/profile_box_with_slide_animation.dart';
 import 'firebase_service.dart';
 import 'report_module/data/provider/reports_provider.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -73,10 +80,15 @@ class MyApp extends StatelessWidget {
             BlocProvider(create: (ctx) => sl<HomeBloc>()),
             BlocProvider(create: (ctx) => sl<RequestsBloc>()),
             BlocProvider(create: (ctx) => sl<ApprovalBloc>()),
+            BlocProvider(create: (ctx) => sl<ProjectListBloc>()),
+            BlocProvider(create: (ctx) => sl<ContactBloc>()),
+            BlocProvider(create: (ctx) => sl<NotesBloc>()),
+            BlocProvider(create: (ctx) => sl<MediaBloc>()),
           ],
           child: ScreenUtilInit(
             designSize: const Size(411.4, 843.4),
             child: MaterialApp(
+<<<<<<< Updated upstream
                 debugShowCheckedModeBanner: false,
                 builder: (context, child) {
                   ScreenSizeUtil.context = context;
@@ -110,6 +122,59 @@ class MyApp extends StatelessWidget {
                 home: const SplashScreen()
                 // : const SignInScreen(),
                 ),
+=======
+              debugShowCheckedModeBanner: false,
+              builder: (context, child) {
+                ScreenSizeUtil.context = context;
+                return Stack(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        final profileBoxProvider = Provider.of<ProfileBoxProvider>(context, listen: false);
+                        if (profileBoxProvider.isProfileVisible) {
+                          profileBoxProvider.hideProfileBox(); // Close the profile box
+                        }
+                      },
+                      child: child!,
+                    ),
+                    Theme(
+                      data: ThemeData(
+                        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+                        useMaterial3: true,
+                        textTheme: TextTheme(
+                          displayLarge: GoogleFonts.koulen(fontSize: 28, fontWeight: FontWeight.w400),
+                          titleMedium: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+                          bodyMedium: GoogleFonts.inter(fontSize: 14),
+                        ),
+                      ), 
+                      child: const ProfileBoxWithSlideAnimation(),
+                    ),
+                  ],
+                );
+              },
+              navigatorKey: navKey,
+              title: 'El Race',
+              theme: ThemeData(
+                colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+                useMaterial3: true,
+                textTheme: TextTheme(
+                  displayLarge: GoogleFonts.koulen(fontSize: 28, fontWeight: FontWeight.w400),
+                  titleMedium: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+                  bodyMedium: GoogleFonts.inter(fontSize: 14),
+                ),
+              ),
+              localizationsDelegates: [
+                localizationDelegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: localizationDelegate.supportedLocales,
+              locale:SharedPref().isArabic()? localizationDelegate.supportedLocales.last:localizationDelegate.supportedLocales.first,
+              onGenerateRoute: onGeneratedRoutes.generatedRoutes,
+              home:  const SplashScreen()
+            ),
+>>>>>>> Stashed changes
           ),
         ),
       ),

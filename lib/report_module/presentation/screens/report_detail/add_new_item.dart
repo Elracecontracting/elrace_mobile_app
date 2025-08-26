@@ -104,12 +104,25 @@ class _AddNewItemState extends State<AddNewItem> {
                   if (bytes != null) {
                     imageLoading = true;
                     setState(() {});
+<<<<<<< Updated upstream
                     await File(widget.report.reportItems[currentIndex].image)
                         .writeAsBytes(bytes);
                     await FileImage(
                             File(widget.report.reportItems[currentIndex].image))
                         .evict();
                     _imageBust++;
+=======
+                    ReportItemModel? item =
+                        await reportProvider.updateReportItem(
+                      widget.report.reportItems[currentIndex],
+                      imageFile: bytes,
+                    );
+                    if (item != null) {
+                      List<ReportItemModel> items = widget.report.reportItems;
+                      items[currentIndex] = item;
+                      widget.report.copyWith(reportItems: items);
+                    }
+>>>>>>> Stashed changes
                     imageLoading = false;
                     setState(() {});
                   }
@@ -140,9 +153,15 @@ class _AddNewItemState extends State<AddNewItem> {
                       decoration: BoxDecoration(
                           color: CustomColors.containerColor,
                           borderRadius: BorderRadius.circular(8)),
+<<<<<<< Updated upstream
                       child: Image.file(
                           key: Key(_imageBust.toString()),
                           File(widget.report.reportItems[currentIndex].image)),
+=======
+                      child: Image.network(
+                          key: const Key("image"),
+                          widget.report.reportItems[currentIndex].image),
+>>>>>>> Stashed changes
                     ),
                   ),
                   Positioned(
@@ -214,9 +233,13 @@ class _AddNewItemState extends State<AddNewItem> {
             onPressed: () async {
               _loading = true;
               setState(() {});
+<<<<<<< Updated upstream
 
               if (currentIndex > -1 &&
                   widget.report.reportItems[currentIndex] != -1) {
+=======
+              if (widget.report.reportItems[currentIndex] != null) {
+>>>>>>> Stashed changes
                 ReportItemModel updatedItem =
                     widget.report.reportItems[currentIndex].copyWith(
                   location: locationController.text,

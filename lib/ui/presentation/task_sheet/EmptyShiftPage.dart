@@ -74,6 +74,8 @@ class _EmptyShiftPageState extends State<EmptyShiftPage> {
     final formattedDate = "${_getWeekday(widget.selectedDate)}, ${_getMonth(widget.selectedDate)} ${widget.selectedDate.day}";
 
     return Scaffold(
+      appBar: const HeaderWidget(),
+      backgroundColor: Colors.white,
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : timesheets.isEmpty
@@ -85,7 +87,7 @@ class _EmptyShiftPageState extends State<EmptyShiftPage> {
   Widget _buildTimesheetList(String formattedDate) {
     return Column(
       children: [
-        const HeaderWidget(),
+
 
         const SizedBox(height: 10),
         Padding(
@@ -261,7 +263,7 @@ class _EmptyShiftPageState extends State<EmptyShiftPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const HeaderWidget(),
+        
 
         const SizedBox(height: 10),
         Padding(

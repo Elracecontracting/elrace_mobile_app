@@ -1,2 +1,0 @@
-/home/hossam/Documents/Teleoceans/el_race/android/app/.cxx/Debug/2j616q6a/x86_64/CMakeFiles/edit_cache.dir
-/home/hossam/Documents/Teleoceans/el_race/android/app/.cxx/Debug/2j616q6a/x86_64/CMakeFiles/rebuild_cache.dir

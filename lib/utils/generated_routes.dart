@@ -37,9 +37,7 @@ class OnGeneratedRoutes {
           _contactBloc.add(GetEmployeeLisET());
         });
         return CupertinoPageRoute(
-            builder: (_) => CallScreen(
-                  loginResponseModel: settings.arguments! as LoginResponseModel,
-                ));
+            builder: (_) => const CallScreen());
     }
     return MaterialPageRoute(
         builder: (_) => Scaffold(

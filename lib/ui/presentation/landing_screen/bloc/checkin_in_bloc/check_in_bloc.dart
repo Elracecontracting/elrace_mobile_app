@@ -36,6 +36,7 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
         print('---- ${responseData.toString()}');
         if (responseData['status'] == 'success') {
           final checkInRecordId = responseData['check_in_record_id'];
+          print('checkInRecordIdBloc: $checkInRecordId');
           SharedPref().setPreferenceInt('checkInRecordId', checkInRecordId);
           emit(CheckedInST(responseData['message'], checkInRecordId));
         } else if (responseData['status'] == 'warning') {

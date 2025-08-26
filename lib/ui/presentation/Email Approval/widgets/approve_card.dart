@@ -38,7 +38,6 @@ class ApproveCard extends StatelessWidget {
 
         Util.pushPage(
           ApprovalConfirmationScreen(
-            loginResponseModel: SharedPref.getLoginData(),
             requestId: id,
             type: type,
           ),

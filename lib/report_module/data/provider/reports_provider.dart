@@ -1,7 +1,10 @@
 import 'package:el_race/report_module/data/models/folder_model.dart';
 import 'package:el_race/report_module/data/models/report_model.dart';
 import 'package:el_race/report_module/data/models/report_pdf_model.dart';
+<<<<<<< Updated upstream
 import 'package:el_race/report_module/data/services/report_hive_service.dart';
+=======
+>>>>>>> Stashed changes
 import 'package:el_race/ui/presentation/call_screen/data/repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:el_race/main.dart';
@@ -48,9 +51,14 @@ class ReportProvider extends ChangeNotifier {
   Future<Map<String, dynamic>> _handleResponse(http.StreamedResponse response,
       {bool alwaysShowMessage = false}) async {
     final res = await response.stream.bytesToString();
+    print('fff ${res}');
     final jsonData = json.decode(res);
 
+<<<<<<< Updated upstream
     if (jsonData is Map && jsonData['status'] == "upcoming") {
+=======
+    if (jsonData.toString().toLowerCase().contains('status') && jsonData['status'] != null && jsonData['status'] == "upcoming") {
+>>>>>>> Stashed changes
       showFlushBar(navKey.currentContext!, message: jsonData['message']);
       return {};
     }
@@ -79,9 +87,14 @@ class ReportProvider extends ChangeNotifier {
         'report_id': "1", //todo remove
         'company': "test" //todo remove
       });
+<<<<<<< Updated upstream
     // print(companyId);
     final jsonData = await _handleResponse(await request.send());
     // print(jsonData);
+=======
+    final jsonData = await _handleResponse(await request.send());
+
+>>>>>>> Stashed changes
     _setLoading(false);
 
     final createdReport = FolderModel.fromJson(jsonData['data']);
@@ -204,10 +217,24 @@ class ReportProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+<<<<<<< Updated upstream
   Future<ReportDetailModel?> getReportDetail(ReportModel report) async {
     Box<ReportDetailModel> reportDetailBox =
         await ReportHiveService.getReportDetailBox();
     return reportDetailBox.get("$empID-${report.folderId}-${report.id}");
+=======
+  Future<ReportDetailModel> getReportDetail(ReportModel report) async {
+    var request =
+        http.MultipartRequest('POST', Uri.parse('$baseUrl/reports/detail'))
+          ..fields.addAll({
+            'emp_id': empID,
+            'report_id': report.id,
+            'folder_id': report.folderId
+          });
+
+    final jsonData = await _handleResponse(await request.send());
+    return ReportDetailModel.fromJson(jsonData['data']);
+>>>>>>> Stashed changes
   }
 
   Future<void> updateReportDetail(ReportDetailModel report) async {
@@ -221,6 +248,7 @@ class ReportProvider extends ChangeNotifier {
     }
   }
 
+<<<<<<< Updated upstream
   Future<bool> deleteCoverPage(ReportDetailModel report) async {
     Box<ReportDetailModel> reportDetailBox =
         await ReportHiveService.getReportDetailBox();
@@ -228,6 +256,110 @@ class ReportProvider extends ChangeNotifier {
         "$empID-${report.report.folderId}-${report.report.id}",
         report.copyWith(coverPage: null));
     return true;
+=======
+  Future<CoverPageModel?> editCoverPage(CoverPageModel cover) async {
+    try {
+      var request = http.MultipartRequest(
+          'POST', Uri.parse('$baseUrl/report-cover/update'))
+        ..fields.addAll({
+          'emp_id': cover.empId,
+          'cover_id': cover.id!,
+          'title': cover.title,
+          'description': cover.description ?? "",
+        });
+      final jsonData = await _handleResponse(await request.send());
+      return CoverPageModel.fromJson(jsonData['data']);
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+    return null;
+  }
+
+  Future<bool> deleteCoverPage(String coverId) async {
+    var request =
+        http.MultipartRequest('POST', Uri.parse('$baseUrl/report-cover/delete'))
+          ..fields.addAll({
+            'emp_id': empID,
+            'cover_id': coverId,
+          });
+    final jsonData =
+        await _handleResponse(await request.send(), alwaysShowMessage: true);
+    return jsonData['status'] == "success";
+  }
+
+  Future<ReportItemModel?> addReportItem(
+      {required String reportId,
+      String type = "text",
+      String? location,
+      String? description,
+      File? imageFile}) async {
+    try {
+      var request = http.MultipartRequest(
+          'POST', Uri.parse('$baseUrl/api/upload_report_item'))
+        ..fields.addAll({
+          'emp_id': empID,
+          'report_id': reportId,
+          'location': location ?? "",
+          'description': description ?? '',
+          'type': type,
+          'index': "0",
+        });
+
+      if (imageFile != null) {
+        request.files.add(
+            await http.MultipartFile.fromPath('item_data', imageFile.path));
+      }
+
+      final jsonData = await _handleResponse(await request.send());
+      return ReportItemModel.fromJson(jsonData['data'][0], reportId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<ReportItemModel?> updateReportItem(ReportItemModel item,
+      {var imageFile}) async {
+    try {
+      var request = http.MultipartRequest(
+          'POST', Uri.parse('$baseUrl/report-items/update'))
+        ..fields.addAll({
+          'emp_id': empID,
+          'report_id': item.reportId,
+          'item_id': item.id,
+          'location': item.location,
+          'description': item.description,
+        });
+
+      if (imageFile != null && imageFile is File) {
+        request.files.add(
+            await http.MultipartFile.fromPath('item_data', imageFile.path));
+      }
+
+      if (imageFile != null && imageFile is Uint8List) {
+        request.files.add(http.MultipartFile.fromBytes('item_data', imageFile));
+      }
+      final jsonData = await _handleResponse(await request.send());
+      if (jsonData.isEmpty) return null;
+
+      return ReportItemModel.fromJson(jsonData['data'], item.reportId);
+    } catch (e) {
+      debugPrint(e.toString());
+    }
+    return null;
+  }
+
+  Future<bool> deleteReportItem(String itemId, String reportId) async {
+    var request =
+        http.MultipartRequest('POST', Uri.parse('$baseUrl/report-items/delete'))
+          ..fields.addAll({
+            'emp_id': empID,
+            'report_id': reportId,
+            'item_id': itemId,
+          });
+    final jsonData =
+        await _handleResponse(await request.send(), alwaysShowMessage: true);
+    return jsonData['status'] == "success";
+>>>>>>> Stashed changes
   }
 
   Future<List<ReportPdfModel>> fetchReports(

@@ -319,15 +319,14 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: const HeaderWidget(),
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
-            const HeaderWidget(),
 
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
 
 
             Padding(
