@@ -41,12 +41,8 @@ class ReportItemModel extends HiveObject {
     required this.updatedAt,
   });
 
-<<<<<<< Updated upstream
   factory ReportItemModel.fromJson(
       Map<String, dynamic> json, dynamic reportID) {
-=======
-  factory ReportItemModel.fromJson(Map<String, dynamic> json, var reportID) {
->>>>>>> Stashed changes
     return ReportItemModel(
       id: (json['item_id'] ?? json['id']).toString(),
       reportId: reportID.toString(),

@@ -1,39 +1,48 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/utils/string_utils.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class FirebaseService {
-  static final FirebaseMessaging _firebaseMessaging =
-      FirebaseMessaging.instance;
-  static final FlutterLocalNotificationsPlugin
-      _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  static final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
+  FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
     // Request notification permission
-    NotificationSettings settings =
-        await _firebaseMessaging.requestPermission();
+    NotificationSettings settings = await _firebaseMessaging.requestPermission();
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      debugPrint('✅ Notification permission granted');
+      print('✅ Notification permission granted');
     } else {
-      debugPrint('❌ Notification permission declined');
+      print('❌ Notification permission declined');
     }
 
     // Initialize local notifications (for showing notifications in foreground)
     const AndroidInitializationSettings androidInitSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    AndroidInitializationSettings('@mipmap/ic_launcher');
+    
+    const DarwinInitializationSettings iosInitSettings =
+    DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+    );
 
     const InitializationSettings initSettings =
-        InitializationSettings(android: androidInitSettings);
+    InitializationSettings(
+      android: androidInitSettings,
+      iOS: iosInitSettings,
+    );
 
     await _flutterLocalNotificationsPlugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         final payload = response.payload;
-        debugPrint("🔔 Notification tapped with payload: $payload");
+        print("🔔 Notification tapped with payload: $payload");
+
       },
     );
+
 
     // Handle foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -64,17 +73,25 @@ class FirebaseService {
     RemoteNotification? notification = message.notification;
     AndroidNotification? android = message.notification?.android;
 
-    if (notification != null && android != null) {
-      const AndroidNotificationDetails androidDetails =
-          AndroidNotificationDetails(
+    if (notification != null) {
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
         'high_importance_channel',
         'High Importance Notifications',
         importance: Importance.high,
         priority: Priority.high,
       );
 
+      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
       const NotificationDetails platformDetails =
-          NotificationDetails(android: androidDetails);
+      NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
 
       await _flutterLocalNotificationsPlugin.show(
         notification.hashCode,

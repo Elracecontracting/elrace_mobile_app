@@ -1,11 +1,6 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
-<<<<<<< Updated upstream
-import 'package:el_race/report_module/data/services/report_hive_service.dart';
-import 'package:el_race/report_module/presentation/screens/report_listing/report_app_home_screen.dart';
-=======
 import 'package:el_race/ui/presentation/call_screen/bloc/contact_bloc.dart';
->>>>>>> Stashed changes
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/provider/slider_provider.dart';
 import 'package:el_race/ui/presentation/my_notes/bloc/notes_bloc.dart';
@@ -38,7 +33,6 @@ void main() async {
     SharedPref().instantiatePreferences(),
     initDI(),
     HiveService.setupHive(),
-    ReportHiveService.setupHive(),
     Firebase.initializeApp(),
   ]);
   await FirebaseService.initialize();
@@ -88,41 +82,6 @@ class MyApp extends StatelessWidget {
           child: ScreenUtilInit(
             designSize: const Size(411.4, 843.4),
             child: MaterialApp(
-<<<<<<< Updated upstream
-                debugShowCheckedModeBanner: false,
-                builder: (context, child) {
-                  ScreenSizeUtil.context = context;
-                  return child!;
-                },
-                navigatorKey: navKey,
-                title: 'El Race',
-                theme: ThemeData(
-                  colorScheme:
-                      ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-                  useMaterial3: true,
-                  textTheme: TextTheme(
-                    displayLarge: GoogleFonts.koulen(
-                        fontSize: 28, fontWeight: FontWeight.w400),
-                    titleMedium: GoogleFonts.inter(
-                        fontSize: 16, fontWeight: FontWeight.w600),
-                    bodyMedium: GoogleFonts.inter(fontSize: 14),
-                  ),
-                ),
-                localizationsDelegates: [
-                  localizationDelegate,
-                  GlobalMaterialLocalizations.delegate,
-                  GlobalWidgetsLocalizations.delegate,
-                  GlobalCupertinoLocalizations.delegate,
-                ],
-                supportedLocales: localizationDelegate.supportedLocales,
-                locale: SharedPref().isArabic()
-                    ? localizationDelegate.supportedLocales.last
-                    : localizationDelegate.supportedLocales.first,
-                onGenerateRoute: onGeneratedRoutes.generatedRoutes,
-                home: const SplashScreen()
-                // : const SignInScreen(),
-                ),
-=======
               debugShowCheckedModeBanner: false,
               builder: (context, child) {
                 ScreenSizeUtil.context = context;
@@ -174,7 +133,6 @@ class MyApp extends StatelessWidget {
               onGenerateRoute: onGeneratedRoutes.generatedRoutes,
               home:  const SplashScreen()
             ),
->>>>>>> Stashed changes
           ),
         ),
       ),
