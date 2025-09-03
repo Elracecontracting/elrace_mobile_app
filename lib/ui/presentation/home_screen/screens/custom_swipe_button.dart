@@ -392,21 +392,10 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           // Timeline component below the button
           SizedBox(height: 20.h),
           Container(
-            width: buttonWidth,
+            width: buttonWidth * 0.7, // Decreased width to 70% of button width
             child: Column(
               children: [
-                // Timeline line
-                Container(
-                  height: 2,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE0E0E0),
-                    borderRadius: BorderRadius.circular(1),
-                  ),
-                ),
-
-                SizedBox(height: 8.h),
-
-                // Time labels with real timer data
+                // Time labels above the timeline
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -416,80 +405,95 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                       final formatted =
                           timer.toString().split('.').first.padLeft(8, "0");
 
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Green dot indicator
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
-                            ),
+                      return Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 8.w, vertical: 2.h),
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: const Color(0xFF1E1E50),
+                            width: 1,
                           ),
-                          const SizedBox(width: 6),
-                          // Timer label
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: 12.w, vertical: 4.h),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: const Color(0xFF1E1E50),
-                                width: 1,
-                              ),
-                            ),
-                            child: Text(
-                              formatted,
-                              style: GoogleFonts.inter(
-                                color: const Color(0xFF1E1E50),
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+                        ),
+                        child: Text(
+                          formatted,
+                          style: GoogleFonts.inter(
+                            color: const Color(0xFF1E1E50),
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w500,
                           ),
-                        ],
+                        ),
                       );
                     }),
 
                     // Right time label - shows 00:00:00 when checked out
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Timer label
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 12.w, vertical: 4.h),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: const Color(0xFF1E1E50),
-                              width: 1,
-                            ),
-                          ),
-                          child: Text(
-                            '00:00:00',
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFF1E1E50),
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                    Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFF1E1E50),
+                          width: 1,
                         ),
-                        const SizedBox(width: 6),
-                        // Red dot indicator
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                          ),
+                      ),
+                      child: Text(
+                        '00:00:00',
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF1E1E50),
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w500,
                         ),
-                      ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                SizedBox(height: 8.h),
+
+                // Timeline line with ellipse markers in Stack
+                Stack(
+                  children: [
+                    // Bright white horizontal line
+                    Container(
+                      height: 3,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 2,
+                            offset: const Offset(0, 1),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Left marker - Green ellipse image
+                    Positioned(
+                      left: -6,
+                      top: -8,
+                      child: Image.asset(
+                        'assets/png/Ellipse_green.png',
+                        width: 16,
+                        height: 16,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+
+                    // Right marker - Red ellipse image
+                    Positioned(
+                      right: -6,
+                      top: -8,
+                      child: Image.asset(
+                        'assets/png/Ellipse_red.png',
+                        width: 16,
+                        height: 16,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ],
                 ),

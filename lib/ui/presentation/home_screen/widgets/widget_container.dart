@@ -175,7 +175,7 @@ class WidgetContainer extends StatelessWidget {
                         // ),
 
                         // Time Status Widget
-                        const TimeStatusWidget(),
+                        // const TimeStatusWidget(),
                       ],
                     ),
                   ),
