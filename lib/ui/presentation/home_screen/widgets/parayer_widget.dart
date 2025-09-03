@@ -200,41 +200,49 @@ class _ParayerWidgetState extends State<ParayerWidget> {
                     ],
                   ),
                 ],
-                SizedBox(height: 10.h), // Reduced from 20.h
+                SizedBox(height: 0.h), // Reduced from 20.h
                 Stack(children: [
-                  SvgPicture.asset('assets/png/prayer_curve.svg',
-                      height: 130.h), // Reduced from 160.h
+                  Column(
+                    children: [
+                      SizedBox(height: 65.h),
+                      SvgPicture.asset(
+                        'assets/png/prayer_curve.svg',
+                        height: 85.h,
+                        fit: BoxFit.fill,
+                      ),
+                    ],
+                  ), // Reduced from 160.h
                   Positioned(
                       bottom: 65.h, // Reduced from 85.h
                       left: 0,
                       child: _label('Fajr', _fmt(pt.fajr))),
                   Positioned(
-                      bottom: 20.h, // Reduced from 55.h
-                      left: 20.w,
+                      bottom: 24.h, // Reduced from 55.h
+                      left: 26.w,
                       child: SvgPicture.asset('assets/png/fajr_icon.svg')),
                   Positioned(
-                      bottom: 85.h, // Reduced from 110.h
+                      bottom: 80.h, // Reduced from 110.h
                       left: 60.w,
                       child: _label('Dhuhr', _fmt(pt.dhuhr))),
                   Positioned(
-                      bottom: 75.h, // Reduced from 110.h
+                      bottom: 70.h, // Reduced from 110.h
                       right: 0.w,
                       left: 0.w,
                       child: SvgPicture.asset('assets/png/dhuhr_icon.svg')),
                   Positioned(
-                      bottom: 85.h, // Reduced from 110.h
-                      right: 60.w,
+                      bottom: 80.h, // Reduced from 110.h
+                      right: 50.w,
                       child: _label('Maghrib', _fmt(pt.maghrib))),
                   Positioned(
-                      bottom: 65.h, // Reduced from 85.h
+                      bottom: 60.h, // Reduced from 85.h
                       right: 0,
                       child: _label('Isha', _fmt(pt.isha))),
                   Positioned(
-                      bottom: 20.h, // Reduced from 55.h
-                      right: 20.w,
+                      bottom: 28.h, // Reduced from 55.h
+                      right: 25.w,
                       child: SvgPicture.asset('assets/png/ishaa_icon.svg')),
                   Positioned(
-                    top: 0,
+                    top: 12.h,
                     left: 0,
                     right: 0,
                     child: Column(
@@ -278,7 +286,7 @@ class _ParayerWidgetState extends State<ParayerWidget> {
                     ),
                   ),
                   Positioned(
-                    bottom: 35.h, // Reduced from 50.h
+                    bottom: 18.h, // Reduced from 50.h
                     right: 0,
                     left: 0,
                     child: Column(
@@ -308,8 +316,8 @@ class _ParayerWidgetState extends State<ParayerWidget> {
             ),
           ),
           Positioned(
-            right: 5,
-            bottom: 10.h, // Reduced from 15.h
+            right: 10.w,
+            bottom: 5.h, // Reduced from 15.h
             child: Image.asset(
               'assets/png/pray_decoration.png',
               width: 160.w, // Reduced from 200.w

@@ -38,8 +38,9 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   bool isProcessingFace = false;
 
   final double buttonWidth = 300.w;
-  final double buttonHeight = 55.w;
-  final double knobSize = 40.w;
+  final double buttonHeight = 48.w; // Reduced from 56.w to 48.w for shorter bar
+  final double knobSize =
+      35.w; // Reduced from 40.w to 35.w to maintain proportion
 
   Color _getProgressiveColor() {
     if (!isDragging && !isCheckedIn) return Colors.white;
@@ -232,8 +233,8 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
               width: buttonWidth,
               height: buttonHeight,
               decoration: BoxDecoration(
-                borderRadius:
-                    BorderRadius.circular(27.5), // Highly rounded corners
+                borderRadius: BorderRadius.circular(
+                    40), // Increased radius even more for whole widget
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -249,7 +250,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 300),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(27.5),
+                        borderRadius: BorderRadius.circular(40),
                         color: _isVisualCheckedIn
                             ? const Color(
                                 0xFF1E1E50) // Dark blue when checked in
@@ -298,7 +299,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                     right: _isVisualCheckedIn
                         ? 8
                         : null, // Right side when checked in
-                    top: (buttonHeight - 36) / 2,
+                    top: (buttonHeight - 32) / 2, // Centered for new height
                     child: AnimatedBuilder(
                       animation: _bounceAnimation,
                       builder: (context, child) {
@@ -321,7 +322,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                                           .white // White arrows when checked in (dark blue background)
                                       : const Color(
                                           0xFF666666), // Dark gray arrows when checked out
-                                  size: 36,
+                                  size: 32, // Reduced from 36 to fit new height
                                   weight: 900,
                                 ),
                               ),
@@ -361,7 +362,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                       width: dragOffset + knobSize,
                       height: buttonHeight,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(27.5),
+                        borderRadius: BorderRadius.circular(40),
                         color: _isVisualCheckedIn
                             ? const Color(0xFF1E1E50)
                                 .withOpacity(0.3) // Semi-transparent dark blue
@@ -390,7 +391,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           ),
 
           // Timeline component below the button
-          SizedBox(height: 20.h),
+          SizedBox(height: 16.h),
           Container(
             width: buttonWidth * 0.7, // Decreased width to 70% of button width
             child: Column(
@@ -451,10 +452,10 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                   ],
                 ),
 
-                SizedBox(height: 8.h),
+                SizedBox(height: 10.h),
 
-                // Timeline line with ellipse markers in Stack
-                Stack(
+                // Timeline with circles on the line
+                Column(
                   children: [
                     // Bright white horizontal line
                     Container(
@@ -472,27 +473,46 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                       ),
                     ),
 
-                    // Left marker - Green ellipse image
-                    Positioned(
-                      left: -6,
-                      top: -8,
-                      child: Image.asset(
-                        'assets/png/Ellipse_green.png',
-                        width: 16,
-                        height: 16,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
+                    // Circles positioned on the line
+                    Transform.translate(
+                      offset: const Offset(0, -8.5),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Left green circle
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1B5E20),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 2,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                          ),
 
-                    // Right marker - Red ellipse image
-                    Positioned(
-                      right: -6,
-                      top: -8,
-                      child: Image.asset(
-                        'assets/png/Ellipse_red.png',
-                        width: 16,
-                        height: 16,
-                        fit: BoxFit.contain,
+                          // Right red circle
+                          Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFB71C1C),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  blurRadius: 2,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],

@@ -62,12 +62,12 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
               Row(
                 children: [
                   Image.asset(
-                    "assets/newapp/my_projects.png",
+                    "assets/png/police.png",
                     height: 30.w,
                     width: 30.w,
                   ),
                   Text(
-                    ' My Projects',
+                    ' ABU DHABI POLICE',
                     style: GoogleFonts.koulen(
                       fontSize: 26.sp,
                       fontWeight: FontWeight.w500,
@@ -76,7 +76,16 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                   ),
                 ],
               ),
-              const SizedBox(width: 40),
+              Row(
+                children: [
+                  Image.asset(
+                    'assets/png/search.png',
+                    width: 38.w,
+                    height: 38.h,
+                  ),
+                  SizedBox(width: 23.w),
+                ],
+              ),
             ],
           ),
 

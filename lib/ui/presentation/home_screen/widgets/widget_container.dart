@@ -78,7 +78,7 @@ class WidgetContainer extends StatelessWidget {
                   opacity: !SharedPref.isUserAuthenticated() ? 0.5 : 1,
                   child: Container(
                     width: double.infinity,
-                    margin: const EdgeInsets.symmetric(vertical: 10),
+                    margin: const EdgeInsets.only(top: 6),
                     padding: const EdgeInsets.symmetric(
                         vertical: 20, horizontal: 16),
                     decoration: BoxDecoration(
@@ -91,14 +91,11 @@ class WidgetContainer extends StatelessWidget {
                     ),
                     child: Column(
                       children: [
-                        const SizedBox(height: 10),
                         // Swipe button
                         IgnorePointer(
                           ignoring: !SharedPref.isUserAuthenticated(),
                           child: const CustomSwipeButton(),
                         ),
-
-                        const SizedBox(height: 10),
 
                         // Timer
                         // Obx(() {
