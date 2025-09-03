@@ -1,22 +1,19 @@
 import 'dart:convert';
 import 'dart:developer';
+
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/instruction/views/instruction_view.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
-import 'package:el_race/ui/presentation/splash_screen/splash_screen.dart';
 import 'package:el_race/utils/Util.dart';
-import 'package:el_race/utils/di.dart';
+import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/orientation_helper.dart';
+import 'package:el_race/utils/string_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:el_race/utils/color_utils.dart';
-import 'package:el_race/utils/string_utils.dart';
 
 import '../home_screen/screens/home_screen.dart';
-
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -29,8 +26,8 @@ class _SignInScreenState extends State<SignInScreen> {
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
   bool isChecked = false;
-  late SignInBloc signInBloc ;
-  
+  late SignInBloc signInBloc;
+
   @override
   void didChangeDependencies() {
     signInBloc = SignInBloc.get(context);
@@ -41,7 +38,7 @@ class _SignInScreenState extends State<SignInScreen> {
   void dispose() {
     usernameController.dispose();
     passwordController.dispose();
-    
+
     super.dispose();
   }
 
@@ -50,7 +47,7 @@ class _SignInScreenState extends State<SignInScreen> {
     return BlocConsumer<SignInBloc, SignInState>(
       listener: (context, state) async {
         log('Listener state: $state');
-    
+
         if (state is ErrMsg) {
           Navigator.of(context, rootNavigator: true).maybePop();
           await Future.delayed(const Duration(milliseconds: 100));
@@ -69,7 +66,7 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
           );
         }
-    
+
         if (state is LoadingST) {
           if (state.isLoading) {
             showDialog(
@@ -83,23 +80,28 @@ class _SignInScreenState extends State<SignInScreen> {
         }
         if (state is InitialSignedInST) {
           Util.fetchHomeScreenData(context);
-        
-          SharedPref().setPreferencesString('loginResponse', jsonEncode(state.loginResponse.toJson()));
-          SharedPref().setPreferencesBoolean('isRegistered', true); 
-    
+
+          SharedPref().setPreferencesString(
+              'loginResponse', jsonEncode(state.loginResponse.toJson()));
+          SharedPref().setPreferencesBoolean('isRegistered', true);
+
           // final name = state.loginResponse.result?.data?.username?.toLowerCase() ?? "";
-          
+
           // if (name == "jawad@elrace.com" || name == "aziz@elrace.com") {
           //   Util.pushPageAndRemoveRoutes(const SplashScreen(), context);
           // } else {
-            Util.pushPageAndRemoveRoutes(InstructionView(loginResponseModel: state.loginResponse), context);
+          Util.pushPageAndRemoveRoutes(
+              InstructionView(loginResponseModel: state.loginResponse),
+              context);
           // }
         }
-    
       },
-      buildWhen: (previous, current) => current is LoadingST || current is InitialSignedInST || current is ErrMsg,
+      buildWhen: (previous, current) =>
+          current is LoadingST ||
+          current is InitialSignedInST ||
+          current is ErrMsg,
       builder: (context, state) {
-         return Scaffold(
+        return Scaffold(
           backgroundColor: Colors.white,
           resizeToAvoidBottomInset: false,
           body: SafeArea(
@@ -123,7 +125,9 @@ class _SignInScreenState extends State<SignInScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        SizedBox(height: SizeConfig().getHeight(110),),
+                        SizedBox(
+                          height: SizeConfig().getHeight(110),
+                        ),
                         Image.asset(
                           'assets/png/logo.gif',
                           fit: BoxFit.cover,
@@ -135,7 +139,8 @@ class _SignInScreenState extends State<SignInScreen> {
                         // ),
                         Text(
                           'sign in to your Account',
-                          style:GoogleFonts.tajawal(fontSize: SizeConfig().getTextSize(20)),
+                          style: GoogleFonts.tajawal(
+                              fontSize: SizeConfig().getTextSize(20)),
                         ),
                         SizedBox(height: SizeConfig().getHeight(20)),
                         textForms('Email ID', 'account.png', usernameController,

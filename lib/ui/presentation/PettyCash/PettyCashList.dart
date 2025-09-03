@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashPopUpScreen.dart';
-import '../../widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
+import 'package:flutter/material.dart';
+
+import '../../widgets/header_widget.dart';
 
 class PettyCashList extends StatefulWidget {
-
   const PettyCashList({super.key});
 
   @override
@@ -44,8 +44,7 @@ class _PettyCashListState extends State<PettyCashList> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          const HeaderWidget(),
-
+          const SizedBox(width: double.infinity, child: HeaderWidget()),
 
           // ✅ Petty Cash Title
           Padding(
@@ -59,7 +58,10 @@ class _PettyCashListState extends State<PettyCashList> {
                 ),
                 const Text(
                   'PETTY CASH',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: appFontColor),
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: appFontColor),
                 ),
                 Container(
                   width: 25,
@@ -86,7 +88,6 @@ class _PettyCashListState extends State<PettyCashList> {
             ),
           ),
 
-
           // ✅ Expense List
           Expanded(
             child: ListView.builder(
@@ -94,12 +95,15 @@ class _PettyCashListState extends State<PettyCashList> {
               itemCount: 10,
               itemBuilder: (context, index) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 6.0, horizontal: 14.0),
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 6.0, horizontal: 14.0),
                   child: Container(
                     decoration: BoxDecoration(
                       image: const DecorationImage(
-                        image: AssetImage('assets/png/item_bg.png'), // Make sure the path is correct
-                        fit: BoxFit.contain, // Makes the image cover the entire container
+                        image: AssetImage(
+                            'assets/png/item_bg.png'), // Make sure the path is correct
+                        fit: BoxFit
+                            .cover, // Makes the image cover the entire container
                       ),
                       color: Colors.transparent,
                       borderRadius: BorderRadius.circular(20),
@@ -130,7 +134,6 @@ class _PettyCashListState extends State<PettyCashList> {
                             ],
                           ),
                           SizedBox(width: 5),
-
                           SizedBox(
                             height: 30,
                             child: VerticalDivider(
@@ -139,7 +142,6 @@ class _PettyCashListState extends State<PettyCashList> {
                             ),
                           ),
                           SizedBox(width: 5),
-
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
@@ -163,7 +165,6 @@ class _PettyCashListState extends State<PettyCashList> {
                               ],
                             ),
                           ),
-
                           SizedBox(
                             height: 30,
                             child: VerticalDivider(
@@ -172,7 +173,6 @@ class _PettyCashListState extends State<PettyCashList> {
                             ),
                           ),
                           SizedBox(width: 5),
-
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
@@ -199,7 +199,8 @@ class _PettyCashListState extends State<PettyCashList> {
                           SizedBox(width: 0),
                           CircleAvatar(
                             radius: 10,
-                            backgroundImage: AssetImage('assets/png/tick-petty.png'),
+                            backgroundImage:
+                                AssetImage('assets/png/tick-petty.png'),
                           ),
                           SizedBox(width: 0),
                         ],
@@ -210,7 +211,6 @@ class _PettyCashListState extends State<PettyCashList> {
               },
             ),
           ),
-
         ],
       ),
     );

@@ -35,7 +35,7 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
   Future<void> _loadAvailableWidgets() async {
     final widgets = await WidgetService.getAvailableWidgetsWithState();
     final inactiveWidgets = widgets.where((w) => !w.isActive).toList();
-    
+
     setState(() {
       availableWidgets = inactiveWidgets;
       isLoading = false;
@@ -184,7 +184,12 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const CountWidget(count: '200', countColor: Colors.black, width: 30),
+                const CountWidget(
+                  count: '200',
+                  countColor: Colors.white,
+                  width: 30,
+                  containerColor: Color(0xff1A1A53),
+                ),
               ],
             ),
           ),
@@ -222,19 +227,21 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
                 child: const Column(
                   children: [
                     CustomBulletPoint(
-                      bulletColor: Color(0xFF009859),
+                      //bulletColor: Color(0xFF009859),
                       text: 'In progress',
                       textColor: Colors.black,
                       countColor: Colors.black,
                       count: '15',
+                      containerColor: Colors.white,
                     ),
                     SizedBox(height: 4),
                     CustomBulletPoint(
-                      bulletColor: Color(0xFFBA1719),
+                      //bulletColor: Color(0xFFBA1719),
                       text: 'Delay',
                       textColor: Colors.black,
                       countColor: Colors.black,
                       count: '2',
+                      containerColor: Colors.white,
                     ),
                   ],
                 ),
@@ -275,18 +282,20 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
                 child: Column(
                   children: [
                     CustomBulletPoint(
-                      bulletColor: const Color(0xFF009859),
+                      //bulletColor: const Color(0xFF009859),
                       text: translate('Approved'),
                       textColor: Colors.black,
                       countColor: Colors.black,
                       count: '5',
+                      containerColor: Colors.white,
                     ),
                     CustomBulletPoint(
-                      bulletColor: const Color(0xFFBA1719),
+                      // bulletColor: const Color(0xFFBA1719),
                       text: translate('home.rejected'),
                       textColor: Colors.black,
                       countColor: Colors.black,
                       count: '5',
+                      containerColor: Colors.white,
                     ),
                   ],
                 ),
@@ -324,17 +333,19 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
                 child: Column(
                   children: [
                     CustomBulletPoint(
-                      bulletColor: const Color(0xFF009859),
+                      // bulletColor: const Color(0xFF009859),
                       text: translate('videos'),
                       textColor: Colors.black,
                       countColor: Colors.black,
+                      containerColor: Colors.white,
                       count: '7',
                     ),
                     CustomBulletPoint(
-                      bulletColor: const Color(0xFFBA1719),
+                      // bulletColor: const Color(0xFFBA1719),
                       text: translate('photos'),
                       textColor: Colors.black,
                       countColor: Colors.black,
+                      containerColor: Colors.white,
                       count: '20',
                     ),
                   ],
@@ -391,106 +402,109 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
   Widget build(BuildContext context) {
     return Dialog(
       backgroundColor: Colors.transparent,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: black.withAlpha((0.1 * 255).toInt()),
-              spreadRadius: 2,
-              blurRadius: 10,
+      child: Stack(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: black.withAlpha((0.1 * 255).toInt()),
+                  spreadRadius: 2,
+                  blurRadius: 10,
+                ),
+              ],
             ),
-          ],
-        ),
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Add Widget',
-                    style: GoogleFonts.inter(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF000F42),
+                  const SizedBox(height: 20),
+                  if (isLoading)
+                    const CircularProgressIndicator()
+                  else if (availableWidgets.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      child: Text(
+                        'All widgets are already added',
+                        style: GoogleFonts.inter(
+                          fontSize: 14.sp,
+                          color: const Color(0xFF858585),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    )
+                  else
+                    Column(
+                      children: availableWidgets.map((widget) {
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: GestureDetector(
+                            onTap: () => _addWidget(widget.id),
+                            child: Stack(
+                              children: [
+                                _buildWidgetPreview(widget),
+                                Positioned(
+                                  right: 1.w,
+                                  top: 1.w,
+                                  child: Container(
+                                    width: 36.w,
+                                    height: 36.w,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF1A1A53),
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: black
+                                              .withAlpha((0.2 * 255).toInt()),
+                                          spreadRadius: 1,
+                                          blurRadius: 4,
+                                        ),
+                                      ],
+                                    ),
+                                    child: Icon(
+                                      Icons.add,
+                                      color: white,
+                                      size: 20.sp,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
-                  ),
-                  GestureDetector(
-                    onTap: () => Navigator.of(context).pop(),
-                    child: Icon(
-                      Icons.close,
-                      color: const Color(0xFF858585),
-                      size: 24.sp,
-                    ),
-                  ),
                 ],
               ),
-              const SizedBox(height: 20),
-              
-              if (isLoading)
-                const CircularProgressIndicator()
-              else if (availableWidgets.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 20),
-                  child: Text(
-                    'All widgets are already added',
-                    style: GoogleFonts.inter(
-                      fontSize: 14.sp,
-                      color: const Color(0xFF858585),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                )
-              else
-                Column(
-                  children: availableWidgets.map((widget) {
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: GestureDetector(
-                        onTap: () => _addWidget(widget.id),
-                        child: Stack(
-                          children: [
-                            _buildWidgetPreview(widget),
-                            Positioned(
-                              right: 1.w,
-                              top: 1.w,
-                              child: Container(
-                                width: 36.w,
-                                height: 36.w,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF1A1A53),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: black.withAlpha((0.2 * 255).toInt()),
-                                      spreadRadius: 1,
-                                      blurRadius: 4,
-                                    ),
-                                  ],
-                                ),
-                                child: Icon(
-                                  Icons.add,
-                                  color: white,
-                                  size: 20.sp,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-            ],
+            ),
           ),
-        ),
+          Positioned(
+            left: 5,
+            top: 4,
+            child: GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Container(
+                padding: EdgeInsets.all(3.w),
+                decoration: const BoxDecoration(
+                  color: red,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 24.sp,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
-} 
+}

@@ -1,6 +1,4 @@
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/ui/presentation/media/screens/media_list_screen.dart';
-import 'package:el_race/ui/presentation/my_notes/screens/my_notes_screen.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
@@ -22,7 +20,7 @@ class _SplashScreenState extends State<SplashScreen> {
       if(SharedPref.isUserAuthenticated()){
         Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
       }else{
-        Util.pushPageAndRemoveRoutes(const MediaListScreen(), context);
+        Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
       }
     });
     super.didChangeDependencies();

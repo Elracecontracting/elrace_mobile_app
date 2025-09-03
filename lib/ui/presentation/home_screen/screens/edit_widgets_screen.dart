@@ -77,7 +77,7 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
     showDialog(
       context: context,
       builder: (context) => SaveConfirmationDialog(
-        onSave: ()=> _saveChanges(),
+        onSave: () => _saveChanges(),
         onCancel: () => Navigator.of(context).pop(),
       ),
     );
@@ -123,14 +123,18 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
                           letterSpacing: 1.9,
                         ),
                       ),
-
-                       if (hasChanges)
+                      if (hasChanges)
                         GestureDetector(
                           onTap: _showSaveDialog,
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Image.asset('assets/png/save.gif', width: 45.sp, height: 45.sp, fit: BoxFit.cover,),
+                              Image.asset(
+                                'assets/png/save.gif',
+                                width: 45.sp,
+                                height: 45.sp,
+                                fit: BoxFit.cover,
+                              ),
                               const SizedBox(width: 4),
                               Text(
                                 'Save',
@@ -143,7 +147,7 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
                             ],
                           ),
                         )
-                        else
+                      else
                         const SizedBox(width: 40),
                     ],
                   ),
@@ -192,7 +196,6 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
                       // ),
                     ),
                   ),
-
                   if (activeWidgets.isEmpty)
                     Container(
                       padding: const EdgeInsets.all(32),
@@ -416,7 +419,12 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
                   ),
                 ),
                 const SizedBox(width: 10),
-                const CountWidget(count: '200', countColor: Colors.black, width: 30),
+                const CountWidget(
+                  count: '200',
+                  countColor: Colors.white,
+                  width: 30,
+                  containerColor: Color(0xff1A1A53),
+                ),
               ],
             ),
           ),
@@ -454,19 +462,21 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
                 child: const Column(
                   children: [
                     CustomBulletPoint(
-                      bulletColor: Color(0xFF009859),
+                      // bulletColor: Color(0xFF009859),
                       text: 'In progress',
                       textColor: Colors.black,
-                      countColor: Colors.black,
+                      countColor: Colors.white,
                       count: '15',
+                      containerColor: Colors.white,
                     ),
                     SizedBox(height: 4),
                     CustomBulletPoint(
-                      bulletColor: Color(0xFFBA1719),
+                      // bulletColor: Color(0xFFBA1719),
                       text: 'Delay',
                       textColor: Colors.black,
                       countColor: Colors.black,
                       count: '2',
+                      containerColor: Colors.white,
                     ),
                   ],
                 ),
@@ -507,18 +517,20 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
                 child: Column(
                   children: [
                     CustomBulletPoint(
-                      bulletColor: const Color(0xFF009859),
+                      //bulletColor: const Color(0xFF009859),
                       text: translate('Approved'),
                       textColor: Colors.black,
                       countColor: Colors.black,
                       count: '5',
+                      containerColor: Colors.white,
                     ),
                     CustomBulletPoint(
-                      bulletColor: const Color(0xFFBA1719),
+                      // bulletColor: const Color(0xFFBA1719),
                       text: translate('home.rejected'),
                       textColor: Colors.black,
                       countColor: Colors.black,
                       count: '5',
+                      containerColor: Colors.white,
                     ),
                   ],
                 ),
@@ -556,18 +568,20 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
                 child: Column(
                   children: [
                     CustomBulletPoint(
-                      bulletColor: const Color(0xFF009859),
+                      // bulletColor: const Color(0xFF009859),
                       text: translate('videos'),
                       textColor: Colors.black,
                       countColor: Colors.black,
                       count: '7',
+                      containerColor: Colors.white,
                     ),
                     CustomBulletPoint(
-                      bulletColor: const Color(0xFFBA1719),
+                      //bulletColor: const Color(0xFFBA1719),
                       text: translate('photos'),
                       textColor: Colors.black,
                       countColor: Colors.black,
                       count: '20',
+                      containerColor: Colors.white,
                     ),
                   ],
                 ),
@@ -618,4 +632,4 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
       ),
     );
   }
-} 
+}

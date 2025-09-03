@@ -144,7 +144,6 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 // Page Title (Fixed)
                 Padding(
                   padding: const EdgeInsets.symmetric(
@@ -199,7 +198,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                           child: LayoutBuilder(
                             builder: (context, constraints) {
                               final double screenWidth = constraints.maxWidth;
-                              final double circleSize = 121;
+                              const double circleSize = 121;
                               final double sideOffset =
                                   screenWidth / 3 - circleSize / 1.5;
 

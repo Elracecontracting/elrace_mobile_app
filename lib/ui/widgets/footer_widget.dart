@@ -25,11 +25,9 @@ class FooterWidget extends StatelessWidget {
               decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   color: white,
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
-                        color: lightGrey,
-                        offset: const Offset(1, 4),
-                        blurRadius: 10)
+                        color: lightGrey, offset: Offset(1, 4), blurRadius: 10)
                   ]),
               child: Center(
                 child: Padding(
@@ -39,7 +37,7 @@ class FooterWidget extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Image.asset('assets/png/icons/signout.png'),
-                      Text(
+                      const Text(
                         'SIGN OUT',
                         style:
                             TextStyle(fontWeight: FontWeight.bold, color: blue),

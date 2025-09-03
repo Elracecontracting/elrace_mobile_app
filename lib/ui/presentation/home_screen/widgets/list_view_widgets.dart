@@ -1,27 +1,32 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/report_module/presentation/screens/report_listing/report_app_home_screen.dart';
 import 'package:el_race/ui/presentation/Attendace_list/attendance_page.dart';
+import 'package:el_race/ui/presentation/PettyCash/PettyCashList.dart';
 import 'package:el_race/ui/presentation/home_screen/data/widget_model.dart';
 import 'package:el_race/ui/presentation/home_screen/services/widget_service.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/card_tile.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/custom_bullet_point.dart';
+import 'package:el_race/ui/presentation/lpo/screens/lpo_screen.dart';
 import 'package:el_race/ui/presentation/media/screens/media_list_screen.dart';
-import 'package:el_race/ui/presentation/my_projects/presentation/screens/project_list_screen.dart';
+import 'package:el_race/ui/presentation/my_documents/screens/my_documents_screen.dart';
+import 'package:el_race/ui/presentation/my_notes/screens/my_notes_screen.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/screens/my_project.dart';
 import 'package:el_race/ui/presentation/my_request/MyRequestsPage.dart';
-import 'package:el_race/ui/presentation/PettyCash/PettyCashList.dart';
 import 'package:el_race/ui/presentation/task_sheet/task_sheet_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/orientation_helper.dart';
-import 'package:el_race/utils/string_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../bloc/home_bloc.dart';
 
 class ListViewWidgets extends StatefulWidget {
-  const ListViewWidgets({super.key,});
+  const ListViewWidgets({
+    super.key,
+  });
 
   @override
   State<ListViewWidgets> createState() => _ListViewWidgetsState();
@@ -86,14 +91,49 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       backgroundImagePath: 'assets/png/gray_card.png', // ✅ Add this
       topPadding: true,
       topPaddingValue: 40,
-      childWidget:  Padding(
-        padding: EdgeInsets.only(left: 210.w,),
-        child: Image.asset(
-          'assets/png/time_sheet.png',
-          width: SizeConfig().getWidth(140),
-          height: SizeConfig().getHeight(140),
-        ),
+      childWidget: Stack(
+        children: [
+          Padding(
+            padding: EdgeInsets.only(
+              left: 210.w,
+            ),
+            child: Image.asset(
+              'assets/png/time_sheet.png',
+              width: SizeConfig().getWidth(140),
+              height: SizeConfig().getHeight(140),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 66),
+            child: SizedBox(
+              width: SizeConfig().getWidth(190),
+              height: SizeConfig().getHeight(85),
+              child: const Column(
+                children: [
+                  CustomBulletPoint(
+                    // bulletColor: Color(0xFF009859),
+                    text: 'No of Labors',
+                    textColor: Colors.black,
+                    countColor: Colors.black,
+                    count: '15',
+                    containerColor: Colors.white,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
+      // childWidget: Padding(
+      //   padding: EdgeInsets.only(
+      //     left: 210.w,
+      //   ),
+      //   child: Image.asset(
+      //     'assets/png/time_sheet.png',
+      //     width: SizeConfig().getWidth(140),
+      //     height: SizeConfig().getHeight(140),
+      //   ),
+      // ),
     );
   }
 
@@ -106,28 +146,62 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           backgroundImagePath: 'assets/png/pettycash_new_bg.png',
           childWidget: const SizedBox.shrink(),
         ),
-       
       ],
     );
-  
   }
 
   Widget _buildLPOWidget() {
-      return GrayCardComponent(
-      onClick: () => Util.showComingSoonToast(),
+    return GrayCardComponent(
+      onClick: () => Util.pushPage(const LpoListScreen(), context),
       mainIcon: 'assets/png/time_sheet.png',
       cardTitle: 'LPO',
       backgroundImagePath: 'assets/png/gray_card.png', // ✅ Add this
       topPadding: true,
       topPaddingValue: 40,
-      childWidget:  Padding(
-        padding: EdgeInsets.only(left: 210.w,),
-        child: Image.asset(
-          'assets/png/lpo.png',
-          width: SizeConfig().getWidth(140),
-          height: SizeConfig().getHeight(140),
-        ),
+      childWidget: Stack(
+        children: [
+          Padding(
+            padding: EdgeInsets.only(
+              left: 210.w,
+            ),
+            child: Image.asset(
+              'assets/png/lpo.png',
+              width: SizeConfig().getWidth(140),
+              height: SizeConfig().getHeight(140),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 66),
+            child: SizedBox(
+              width: SizeConfig().getWidth(190),
+              height: SizeConfig().getHeight(85),
+              child: const Column(
+                children: [
+                  CustomBulletPoint(
+                    // bulletColor: Color(0xFF009859),
+                    text: 'No. of LPO',
+                    textColor: Colors.black,
+                    countColor: Colors.black,
+                    count: '15',
+                    containerColor: Colors.white,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
+
+      // childWidget: Padding(
+      //   padding: EdgeInsets.only(
+      //     left: 210.w,
+      //   ),
+      //   child: Image.asset(
+      //     'assets/png/lpo.png',
+      //     width: SizeConfig().getWidth(140),
+      //     height: SizeConfig().getHeight(140),
+      //   ),
+      // ),
     );
   }
 
@@ -135,7 +209,13 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     return Stack(
       children: [
         GrayCardComponent(
-          onClick: () => Util.showComingSoonToast(),
+          onClick: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const MyDocumentsScreen()),
+            );
+          },
           cardTitle: translate('home.documents'),
           backgroundImagePath: 'assets/png/gray_card.png',
           childWidget: Column(
@@ -175,30 +255,58 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         GrayCardComponent(
           cardTitle: translate('my notes'),
           backgroundImagePath: 'assets/png/blue_card.png',
-          onClick: () => Util.pushPage(const AttendancePage(), context),
+          onClick: () => Util.pushPage(const MyNotesScreen(), context),
           topPadding: true,
-          childWidget: DefaultTextStyle(
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-            ),
-            child: Row(
-              children: [
-                SizedBox(
-                  width: SizeConfig().getWidth(40),
-                  height: SizeConfig().getHeight(150),
-                  child: Image.asset(
-                    'assets/png/not_icon.png',
-                    color: const Color(0xff1A1A53),
-                    fit: BoxFit.contain,
+          childWidget: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 66),
+                child: SizedBox(
+                  width: SizeConfig().getWidth(190),
+                  height: SizeConfig().getHeight(85),
+                  child: const Column(
+                    children: [
+                      CustomBulletPoint(
+                        // bulletColor: Color(0xFF009859),
+                        text: 'My Notes',
+                        textColor: Colors.black,
+                        countColor: Colors.black,
+                        count: '15',
+                        containerColor: Colors.white,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 10),
-                const CountWidget(count: '200', countColor: Colors.black, width: 30),
-              ],
-            ),
+              ),
+            ],
           ),
+          // childWidget: DefaultTextStyle(
+          //   style: const TextStyle(
+          //     fontSize: 10,
+          //     fontWeight: FontWeight.w500,
+          //     color: Colors.black,
+          //   ),
+          //   child: Row(
+          //     children: [
+          //       SizedBox(
+          //         width: SizeConfig().getWidth(40),
+          //         height: SizeConfig().getHeight(150),
+          //         child: Image.asset(
+          //           'assets/png/not_icon.png',
+          //           color: const Color(0xff1A1A53),
+          //           fit: BoxFit.contain,
+          //         ),
+          //       ),
+          //       const SizedBox(width: 10),
+          //       const CountWidget(
+          //         count: '200',
+          //         countColor: Colors.white,
+          //         width: 30,
+          //         containerColor: Color(0xff1A1A53),
+          //       ),
+          //     ],
+          //   ),
+          // ),
         ),
         Positioned(
           right: 6,
@@ -218,7 +326,10 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         GrayCardComponent(
           cardTitle: translate('home.projects'),
           backgroundImagePath: 'assets/png/gray_card.png',
-          onClick: () => Util.pushPage(const ProjectListScreen(), context),
+          onClick: () {
+            Navigator.push(
+                context, MaterialPageRoute(builder: (context) => MyProject()));
+          },
           childWidget: DefaultTextStyle(
             style: const TextStyle(
               fontSize: 10,
@@ -229,23 +340,25 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               padding: const EdgeInsets.only(top: 80),
               child: SizedBox(
                 width: SizeConfig().getWidth(190),
-                height: SizeConfig().getHeight(80),
+                height: SizeConfig().getHeight(85),
                 child: const Column(
                   children: [
                     CustomBulletPoint(
-                      bulletColor: Color(0xFF009859),
+                      // bulletColor: Color(0xFF009859),
                       text: 'In progress',
                       textColor: Colors.black,
                       countColor: Colors.black,
                       count: '15',
+                      containerColor: Colors.white,
                     ),
                     SizedBox(height: 4),
                     CustomBulletPoint(
-                      bulletColor: Color(0xFFBA1719),
+                      // bulletColor: Color(0xFFBA1719),
                       text: 'Delay',
                       textColor: Colors.black,
                       countColor: Colors.black,
                       count: '2',
+                      containerColor: Colors.white,
                     ),
                   ],
                 ),
@@ -286,17 +399,19 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                 child: Column(
                   children: [
                     CustomBulletPoint(
-                      bulletColor: const Color(0xFF009859),
+                      //bulletColor: const Color(0xFF009859),
                       text: translate('Approved'),
                       textColor: Colors.black,
                       countColor: Colors.black,
+                      containerColor: Colors.white,
                       count: '5',
                     ),
                     CustomBulletPoint(
-                      bulletColor: const Color(0xFFBA1719),
+                      // bulletColor: const Color(0xFFBA1719),
                       text: translate('home.rejected'),
                       textColor: Colors.black,
                       countColor: Colors.black,
+                      containerColor: Colors.white,
                       count: '5',
                     ),
                   ],
@@ -335,18 +450,19 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                 child: Column(
                   children: [
                     CustomBulletPoint(
-                      bulletColor: const Color(0xFF009859),
+                      // bulletColor: const Color(0xFF009859),
                       text: translate('videos'),
                       textColor: Colors.black,
                       countColor: Colors.black,
-                      count: '7',
+                      count: '7', containerColor: Colors.white,
                     ),
                     CustomBulletPoint(
-                      bulletColor: const Color(0xFFBA1719),
+                      // bulletColor: const Color(0xFFBA1719),
                       text: translate('photos'),
                       textColor: Colors.black,
                       countColor: Colors.black,
                       count: '20',
+                      containerColor: Colors.white,
                     ),
                   ],
                 ),
@@ -373,28 +489,53 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       backgroundImagePath: 'assets/png/notes_new_bg.png',
       onClick: () => Util.pushPage(const ReportAppHomeScreen(), context),
       topPadding: true,
-      childWidget: Container(
-        width: SizeConfig().getWidth(200),
-        height: SizeConfig().getHeight(67),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: SizeConfig().getWidth(55),
-              height: SizeConfig().getHeight(42.11),
-              child: Image.asset('$imagePrefixIcons/id_card.png'),
+      childWidget: DefaultTextStyle(
+        style: const TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w500,
+          color: Colors.black,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.only(top: 61),
+          child: SizedBox(
+            width: SizeConfig().getWidth(190),
+            height: SizeConfig().getHeight(80),
+            child: Column(
+              children: [
+                CustomBulletPoint(
+                  // bulletColor: const Color(0xFF009859),
+                  text: translate('No. Of Reports'),
+                  textColor: Colors.black,
+                  countColor: Colors.white,
+                  count: '7', containerColor: Color(0xff1A1A53),
+                ),
+              ],
             ),
-            SizedBox(width: SizeConfig().getWidth(20)),
-            SizedBox(
-              width: SizeConfig().getWidth(55),
-              height: SizeConfig().getHeight(44.40),
-              child: Image.asset('$imagePrefixIcons/licnc.png'),
-            ),
-            SizedBox(width: SizeConfig().getWidth(20)),
-          ],
+          ),
         ),
       ),
+      // childWidget: Container(
+      //   width: SizeConfig().getWidth(200),
+      //   height: SizeConfig().getHeight(67),
+      //   child: Row(
+      //     mainAxisAlignment: MainAxisAlignment.center,
+      //     crossAxisAlignment: CrossAxisAlignment.center,
+      //     children: [
+      //       SizedBox(
+      //         width: SizeConfig().getWidth(55),
+      //         height: SizeConfig().getHeight(42.11),
+      //         child: Image.asset('$imagePrefixIcons/id_card.png'),
+      //       ),
+      //       SizedBox(width: SizeConfig().getWidth(20)),
+      //       SizedBox(
+      //         width: SizeConfig().getWidth(55),
+      //         height: SizeConfig().getHeight(44.40),
+      //         child: Image.asset('$imagePrefixIcons/licnc.png'),
+      //       ),
+      //       SizedBox(width: SizeConfig().getWidth(20)),
+      //     ],
+      //   ),
+      // ),
     );
   }
 
@@ -416,7 +557,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                     GrayCardComponent(
                       cardTitle: translate('home.attendance'),
                       backgroundImagePath: 'assets/png/attendace_new_bg.png',
-                      onClick: () => Util.pushPage(const AttendancePage(), context),
+                      onClick: () =>
+                          Util.pushPage(const AttendancePage(), context),
                       childWidget: DefaultTextStyle(
                         style: const TextStyle(
                           fontSize: 10,
@@ -427,25 +569,29 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                           padding: const EdgeInsets.only(top: 80),
                           child: SizedBox(
                             width: SizeConfig().getWidth(190),
-                            height: SizeConfig().getHeight(80),
+                            height: SizeConfig().getHeight(85),
                             child: Column(
                               children: [
                                 CustomBulletPoint(
                                   isAttendance: true,
-                                  bulletColor: const Color(0xFF009859),
-                                  text: 'Present',
+                                  //bulletColor: const Color(0xFF009859),
+                                  text: 'ATTENDANCE',
                                   textColor: Colors.black,
-                                  countColor: Colors.black,
+                                  countColor: Colors.white,
                                   count: bloc.attendedDays.toString(),
+                                  containerColor: const Color(0xff1A1A53),
                                 ),
-                                const SizedBox(height: 4,),
+                                const SizedBox(
+                                  height: 4,
+                                ),
                                 const CustomBulletPoint(
                                   isAttendance: true,
-                                  bulletColor: Color(0xFFBA1719),
-                                  text: 'Absent',
+                                  // bulletColor: Color(0xFFBA1719),
+                                  text: 'ABSENT',
                                   textColor: Colors.black,
-                                  countColor: Colors.black,
+                                  countColor: Colors.white,
                                   count: '2',
+                                  containerColor: Color(0xff1A1A53),
                                 ),
                               ],
                             ),
@@ -453,29 +599,31 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                         ),
                       ),
                     ),
-                     Positioned(
+                    Positioned(
                       right: 30.w,
                       top: 10.w,
-                       child: Row(
+                      child: Row(
                         children: [
                           Image.asset(
                             'assets/png/date_attendance.png',
                             width: 20.w,
                             height: 20.w,
                           ),
-                          const SizedBox(width: 4,),
+                          const SizedBox(
+                            width: 4,
+                          ),
                           Text(
-                            'March', 
+                            'March',
                             style: GoogleFonts.aBeeZee(
-                              color: Colors.white, 
-                              fontSize: 20.sp, 
+                              color: Colors.white,
+                              fontSize: 20.sp,
                               fontWeight: FontWeight.w500,
                               fontStyle: FontStyle.italic,
                             ),
                           ),
                         ],
-                                           ),
-                     ),
+                      ),
+                    ),
                   ],
                 );
               },
@@ -495,9 +643,6 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                   ],
                 );
               }).toList(),
-
-
-
           ],
         ),
       ),

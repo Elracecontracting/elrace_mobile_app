@@ -27,38 +27,44 @@ import '../ui/presentation/call_screen/data/repository.dart';
 final sl = GetIt.instance;
 
 Future<void> initDI() async {
-  // Register Repositories
-  sl.registerSingleton<UserRepo>(UserRepo());
-  sl.registerSingleton<ContactRepo>(ContactRepo());
-  sl.registerSingleton<AttendanceRepo>(AttendanceRepo());
-  sl.registerSingleton<LoginResponseModel>(LoginResponseModel());
-  sl.registerLazySingleton<ProjectRepository>(() => ProjectRepositoryImpl(sl()));
-  sl.registerLazySingleton<INotesRepository>(() => NotesRepository());
-  sl.registerLazySingleton<IMediaRepository>(() => MediaRepository());
+  try {
+    // Register Repositories
+    sl.registerSingleton<UserRepo>(UserRepo());
+    sl.registerSingleton<ContactRepo>(ContactRepo());
+    sl.registerSingleton<AttendanceRepo>(AttendanceRepo());
+    sl.registerSingleton<LoginResponseModel>(LoginResponseModel());
 
-  // Data sources
-  sl.registerLazySingleton<ProjectRemoteDataSource>(() => ProjectRemoteDataSource());
+    // Temporarily comment out problematic dependencies for iOS simulator
+    // sl.registerLazySingleton<ProjectRepository>(() => ProjectRepositoryImpl(sl()));
+    sl.registerLazySingleton<INotesRepository>(() => NotesRepository());
+    sl.registerLazySingleton<IMediaRepository>(() => MediaRepository());
 
+    // Data sources
+    // sl.registerLazySingleton<ProjectRemoteDataSource>(() => ProjectRemoteDataSource());
 
-  // Register Blocs
-  sl.registerSingleton<SignInBloc>(SignInBloc());
-  sl.registerSingleton<ContactBloc>(ContactBloc());
-  sl.registerSingleton<CheckInBloc>(CheckInBloc());
-  sl.registerSingleton<CheckOutBloc>(CheckOutBloc());
-  sl.registerSingleton<AttendanceBloc>(AttendanceBloc());
-  sl.registerSingleton<HomeBloc>(HomeBloc());
-  sl.registerSingleton<RequestsBloc>(RequestsBloc());
-  sl.registerSingleton<ApprovalBloc>(ApprovalBloc()); 
-  sl.registerSingleton<NotesBloc>(NotesBloc(notesRepository: sl()));
-  sl.registerSingleton<MediaBloc>(MediaBloc(mediaRepository: sl()));
- 
-  sl.registerFactory(() => ProjectListBloc(
-    getProjectsUseCase: sl(),
-    getProjectAttachmentsUseCase: sl()
-  ));
+    // Register Blocs
+    sl.registerSingleton<SignInBloc>(SignInBloc());
+    sl.registerSingleton<ContactBloc>(ContactBloc());
+    sl.registerSingleton<CheckInBloc>(CheckInBloc());
+    sl.registerSingleton<CheckOutBloc>(CheckOutBloc());
+    sl.registerSingleton<AttendanceBloc>(AttendanceBloc());
+    sl.registerSingleton<HomeBloc>(HomeBloc());
+    sl.registerSingleton<RequestsBloc>(RequestsBloc());
+    sl.registerSingleton<ApprovalBloc>(ApprovalBloc());
+    sl.registerSingleton<NotesBloc>(NotesBloc(notesRepository: sl()));
+    sl.registerSingleton<MediaBloc>(MediaBloc(mediaRepository: sl()));
 
-  /// register usecases 
-  sl.registerLazySingleton(() => GetProjectsUseCase(repository: sl()));
-  sl.registerLazySingleton(() => GetProjectAttachmentsUseCase(repository: sl()));
-  
+    // Temporarily comment out problematic bloc for iOS simulator
+    // sl.registerFactory(() => ProjectListBloc(
+    //   getProjectsUseCase: sl(),
+    //   getProjectAttachmentsUseCase: sl()
+    // ));
+
+    /// register usecases
+    // sl.registerLazySingleton(() => GetProjectsUseCase(repository: sl()));
+    // sl.registerLazySingleton(() => GetProjectAttachmentsUseCase(repository: sl()));
+  } catch (e) {
+    print('Error in DI setup: $e');
+    // Continue with basic setup
+  }
 }

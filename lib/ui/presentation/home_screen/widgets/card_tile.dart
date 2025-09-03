@@ -103,7 +103,7 @@ class CardTile extends StatelessWidget {
                           radius: 3,
                         ),
                       ),
-                      child: Center(
+                      child: const Center(
                         child: Icon(
                           CupertinoIcons.arrow_right,
                           color: shadowBlueDark,
@@ -156,7 +156,6 @@ class GrayCardComponent extends StatelessWidget {
     required this.childWidget,
     this.topPadding = false,
     this.topPaddingValue = 60,
-
   });
   final double? topPaddingValue;
   final bool topPadding;
@@ -215,7 +214,7 @@ class GrayCardComponent extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  top: topPadding? topPaddingValue:0,
+                  top: topPadding ? topPaddingValue : 0,
                   left: 36,
                   child: DefaultTextStyle(
                     style: GoogleFonts.nunito(

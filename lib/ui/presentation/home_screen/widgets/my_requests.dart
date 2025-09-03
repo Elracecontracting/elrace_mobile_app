@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 class MyRequests extends StatelessWidget {
   final String title;
-  const MyRequests({super.key,required this.title});
+  const MyRequests({super.key, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +30,8 @@ class MyRequests extends StatelessWidget {
                   ),
                   Text(
                     title,
-                    style: TextStyle(color: blue, fontWeight: FontWeight.w500),
+                    style: const TextStyle(
+                        color: blue, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -69,7 +70,7 @@ class MyRequests extends StatelessWidget {
                                 ),
                                 Column(
                                   children: [
-                                    Text(
+                                    const Text(
                                       'ANNUAL LEAVE',
                                       style: TextStyle(
                                           fontWeight: FontWeight.bold,
@@ -109,7 +110,7 @@ class MyRequests extends StatelessWidget {
                                 ),
                                 const Column(
                                   mainAxisAlignment:
-                                  MainAxisAlignment.spaceBetween,
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       'REQUESTED',
@@ -130,7 +131,8 @@ class MyRequests extends StatelessWidget {
                                   height: 30,
                                   width: 30,
                                   decoration: BoxDecoration(
-                                      border: Border.all(color: blue, width: 2)),
+                                      border:
+                                          Border.all(color: blue, width: 2)),
                                 )
                               ],
                             ),

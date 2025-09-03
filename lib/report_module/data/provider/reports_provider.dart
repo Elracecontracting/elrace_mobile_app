@@ -6,14 +6,11 @@ import 'package:el_race/ui/presentation/call_screen/data/repository.dart';
 import 'package:flutter/foundation.dart';
 import 'package:el_race/main.dart';
 import 'package:el_race/report_module/core/utils/flush_bar.dart';
-import 'package:el_race/report_module/data/models/cover_page_model.dart';
-import 'package:el_race/report_module/data/models/report_item_model.dart';
 import 'package:el_race/report_module/data/models/report_detail_model.dart';
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'dart:convert';
-import 'dart:io';
 
 ReportProvider reportProvider =
     Provider.of<ReportProvider>(navKey.currentContext!, listen: false);

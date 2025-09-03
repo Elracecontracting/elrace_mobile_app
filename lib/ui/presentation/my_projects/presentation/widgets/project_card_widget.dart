@@ -2,26 +2,34 @@ import 'package:el_race/resources/app_colors.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/entities/project_entity.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_event.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/screens/attachment_list.dart';
-import 'package:el_race/ui/presentation/my_projects/presentation/screens/project_list_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/project_list_bloc.dart';
-
 
 class ProjectCardWidget extends StatelessWidget {
   final ProjectEntity item;
-  const ProjectCardWidget({super.key, required this.item});
+  final ProjectListBloc bloc;
+
+  const ProjectCardWidget({super.key, required this.item, required this.bloc});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        ProjectListBloc.get(context).add(GetProjectAttachmentsEvent(item.projectId.toString()));
-        Util.pushPage(const AttachmentListScreen(), context);
+        bloc.add(GetProjectAttachmentsEvent(item.projectId.toString()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AttachmentListScreen(
+              bloc: bloc,
+            ),
+          ),
+        );
       },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,14 +38,16 @@ class ProjectCardWidget extends StatelessWidget {
             alignment: Alignment.centerLeft,
             children: [
               Container(
-                width: 20.w,  
+                width: 20.w,
                 height: 28.w,
-                margin: EdgeInsets.only(left: 20.w,),
+                margin: EdgeInsets.only(
+                  left: 20.w,
+                ),
                 decoration: BoxDecoration(
                   color: red,
                   boxShadow: [
                     BoxShadow(
-                      color: red.withOpacity(0.3),
+                      color: red.withValues(alpha: 0.3),
                       blurRadius: 4,
                       spreadRadius: 1,
                     ),
@@ -48,11 +58,12 @@ class ProjectCardWidget extends StatelessWidget {
                 height: 37.w,
                 width: 210.w,
                 alignment: Alignment.centerLeft,
-                margin:  EdgeInsets.only(left: 30.w),
+                margin: EdgeInsets.only(left: 30.w),
                 padding: const EdgeInsets.symmetric(horizontal: 10),
                 decoration: const BoxDecoration(
-                  image: DecorationImage(image: AssetImage('assets/newapp/back_ground_card.png'))
-                ),
+                    image: DecorationImage(
+                        image:
+                            AssetImage('assets/newapp/back_ground_card.png'))),
                 child: SizedBox(
                   width: 190.w,
                   child: Text(
@@ -89,8 +100,11 @@ class ProjectCardWidget extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Image.asset("assets/newapp/my_projects.png",height: 26.w,width: 26.w,),
-                            
+                              Image.asset(
+                                "assets/newapp/my_projects.png",
+                                height: 26.w,
+                                width: 26.w,
+                              ),
                               const SizedBox(width: 8),
                               SizedBox(
                                 width: 100,
@@ -109,14 +123,18 @@ class ProjectCardWidget extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const Icon(Icons.more_horiz, size: 20, color: Colors.black),
+                      const Icon(Icons.more_horiz,
+                          size: 20, color: Colors.black),
                     ],
                   ),
-                 
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Image.asset("assets/png/icons/tag.png",height: 20.w,width: 20.w,),
+                      Image.asset(
+                        "assets/png/icons/tag.png",
+                        height: 20.w,
+                        width: 20.w,
+                      ),
                       const SizedBox(width: 8),
                       SizedBox(
                         width: 100,
@@ -131,7 +149,6 @@ class ProjectCardWidget extends StatelessWidget {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                     
                     ],
                   ),
                   const SizedBox(height: 3),
@@ -140,7 +157,11 @@ class ProjectCardWidget extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          Image.asset("assets/png/icons/hand.png",height: 30.w,width: 30.w,),
+                          Image.asset(
+                            "assets/png/icons/hand.png",
+                            height: 30.w,
+                            width: 30.w,
+                          ),
                           const SizedBox(width: 8),
                           SizedBox(
                             width: 170.w,
@@ -158,27 +179,24 @@ class ProjectCardWidget extends StatelessWidget {
                           ),
                         ],
                       ),
-
                       Container(
-                        padding: const EdgeInsets.all(6),
-                        margin: const EdgeInsets.only(right: 10,bottom: 20),
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: greyText, width: 2),
-                        ),
-                        child: Text(
-                          '+12',
-                          style: GoogleFonts.koulen(
-                            fontSize: 20.sp,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.green,
+                          padding: const EdgeInsets.all(6),
+                          margin: const EdgeInsets.only(right: 10, bottom: 20),
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: greyText, width: 2),
                           ),
-                        )
-                      ),
+                          child: Text(
+                            '+12',
+                            style: GoogleFonts.koulen(
+                              fontSize: 20.sp,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.green,
+                            ),
+                          )),
                     ],
                   ),
-                 
                   Transform.translate(
                     offset: Offset(0, -15.w),
                     child: Row(
@@ -197,27 +215,29 @@ class ProjectCardWidget extends StatelessWidget {
                         //     softWrap: false,
                         //   ),
                         // ),
-                         Container(
-                            width: 50.w,
-                            height: 50.w,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: ClipOval(
-                              child: Image.asset(
-                                      'assets/png/profile_1.png',
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                    ),
+                        Container(
+                          width: 50.w,
+                          height: 50.w,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: ClipOval(
+                            child: Image.asset(
+                              'assets/png/profile_1.png',
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
                             ),
                           ),
+                        ),
                         const Spacer(),
                         Container(
                           width: 60.w,
                           height: 100.w,
-                          margin: EdgeInsets.only(right: 10.w,),
+                          margin: EdgeInsets.only(
+                            right: 10.w,
+                          ),
                           decoration: const BoxDecoration(
                             color: Colors.white,
                             // image: DecorationImage(
@@ -232,15 +252,21 @@ class ProjectCardWidget extends StatelessWidget {
                                 width: 50.w,
                                 height: 50,
                                 alignment: Alignment.center,
-                                padding: const EdgeInsets.symmetric(horizontal: 6,) + const EdgeInsets.only(top: 10),
+                                padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                    ) +
+                                    const EdgeInsets.only(top: 10),
                                 decoration: const BoxDecoration(
                                   image: DecorationImage(
-                                    image: AssetImage("assets/png/date_box_bg.png"),
+                                    image: AssetImage(
+                                        "assets/png/date_box_bg.png"),
                                     fit: BoxFit.fill,
                                   ),
                                 ),
                                 child: Text(
-                                  Util.isValidDateTime(item.date)?DateTime.parse(item.date).day.toString():'',
+                                  Util.isValidDateTime(item.date)
+                                      ? DateTime.parse(item.date).day.toString()
+                                      : '',
                                   style: GoogleFonts.inter(
                                     fontSize: 17,
                                     fontWeight: FontWeight.bold,
@@ -250,8 +276,9 @@ class ProjectCardWidget extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 Util.isValidDateTime(item.date)
-                                  ? DateFormat.MMMM().format(DateTime.parse(item.date))
-                                  : '',
+                                    ? DateFormat.MMMM()
+                                        .format(DateTime.parse(item.date))
+                                    : '',
                                 style: GoogleFonts.inter(
                                   fontSize: 9.w,
                                   fontWeight: FontWeight.bold,
@@ -259,7 +286,9 @@ class ProjectCardWidget extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                Util.isValidDateTime(item.date)?DateTime.parse(item.date).year.toString():'',
+                                Util.isValidDateTime(item.date)
+                                    ? DateTime.parse(item.date).year.toString()
+                                    : '',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -272,8 +301,6 @@ class ProjectCardWidget extends StatelessWidget {
                       ],
                     ),
                   ),
-                 
-                  
                 ],
               ),
             ),

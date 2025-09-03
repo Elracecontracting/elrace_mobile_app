@@ -30,35 +30,20 @@ class ApprovalActionButtons extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _buildCircleActionButton(
-          context, 
-          "REJECT", 
-          const Color(0xFFBA1719), 
-          Icons.close, 
-          commentController, 
-          isSelected: selectedAction == 'reject'
-        ),
+        _buildCircleActionButton(context, "REJECT", const Color(0xFFBA1719),
+            Icons.close, commentController,
+            isSelected: selectedAction == 'reject'),
         SizedBox(width: 40.w),
-        _buildCircleActionButton(
-          context, 
-          "APPROVE", 
-          const Color(0xFF00D17A), 
-          Icons.check, 
-          commentController, 
-          isSelected: selectedAction == 'approve'
-        ),
+        _buildCircleActionButton(context, "APPROVE", const Color(0xFF00D17A),
+            Icons.check, commentController,
+            isSelected: selectedAction == 'approve'),
       ],
     );
   }
 
-  Widget _buildCircleActionButton(
-    BuildContext context, 
-    String label, 
-    Color color, 
-    IconData icon, 
-    TextEditingController commentController, 
-    {bool isSelected = false}
-  ) {
+  Widget _buildCircleActionButton(BuildContext context, String label,
+      Color color, IconData icon, TextEditingController commentController,
+      {bool isSelected = false}) {
     return BlocConsumer<ApprovalBloc, ApprovalState>(
       listener: (ctx, state) {
         if (state is ApprovalSuccess) {
@@ -77,34 +62,36 @@ class ApprovalActionButtons extends StatelessWidget {
       builder: (context, state) {
         final isLoading = state is ApprovalLoading;
         final isButtonDisabled = disabled || isLoading;
-        
+
         return AnimatedCircleButton(
-          onPressed: isButtonDisabled ? null : () async {
-            final token = SharedPref.getLoginData().result?.token ?? '';
-            String? comment = await _showCommentDialog(context, label);
-            if (comment == null) comment = '..';
-            if (label == "APPROVE") {
-              context.read<ApprovalBloc>().add(
-                ApproveRequest(
-                  requestId: requestId,
-                  type: type,
-                  token: token,
-                  userIds: userIds,
-                  comment: comment,
-                ),
-              );
-            } else if (label == "REJECT") {
-              context.read<ApprovalBloc>().add(
-                RejectRequest(
-                  requestId: requestId,
-                  type: type,
-                  token: token,
-                  userIds: userIds,
-                  comment: comment,
-                ),
-              );
-            }
-          },
+          onPressed: isButtonDisabled
+              ? null
+              : () async {
+                  final token = SharedPref.getLoginData().result?.token ?? '';
+                  String? comment = await _showCommentDialog(context, label);
+                  if (comment == null) comment = '..';
+                  if (label == "APPROVE") {
+                    context.read<ApprovalBloc>().add(
+                          ApproveRequest(
+                            requestId: requestId,
+                            type: type,
+                            token: token,
+                            userIds: userIds,
+                            comment: comment,
+                          ),
+                        );
+                  } else if (label == "REJECT") {
+                    context.read<ApprovalBloc>().add(
+                          RejectRequest(
+                            requestId: requestId,
+                            type: type,
+                            token: token,
+                            userIds: userIds,
+                            comment: comment,
+                          ),
+                        );
+                  }
+                },
           color: color,
           icon: icon,
           label: label,
@@ -115,7 +102,8 @@ class ApprovalActionButtons extends StatelessWidget {
     );
   }
 
-  Future<String?> _showCommentDialog(BuildContext context, String action) async {
+  Future<String?> _showCommentDialog(
+      BuildContext context, String action) async {
     final TextEditingController controller = TextEditingController();
     return showDialog<String>(
       context: context,
@@ -124,7 +112,8 @@ class ApprovalActionButtons extends StatelessWidget {
           title: Text('$action Comment'),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(hintText: 'Enter your comment...'),
+            decoration:
+                const InputDecoration(hintText: 'Enter your comment...'),
             minLines: 1,
             maxLines: 3,
           ),
@@ -134,7 +123,10 @@ class ApprovalActionButtons extends StatelessWidget {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(controller.text.trim().isEmpty ? null : controller.text.trim()),
+              onPressed: () => Navigator.of(context).pop(
+                  controller.text.trim().isEmpty
+                      ? null
+                      : controller.text.trim()),
               child: const Text('Submit'),
             ),
           ],
@@ -143,7 +135,6 @@ class ApprovalActionButtons extends StatelessWidget {
     );
   }
 }
-
 
 class AnimatedCircleButton extends StatefulWidget {
   final VoidCallback? onPressed;
@@ -231,20 +222,20 @@ class _AnimatedCircleButtonState extends State<AnimatedCircleButton>
                     color: widget.color,
                     width: 3.w,
                   ),
-                  color: widget.color.withOpacity(_controller.value * 0.8),
+                  color:
+                      widget.color.withValues(alpha: _controller.value * 0.8),
                 ),
                 child: Center(
-                  child: widget.isLoading
-                      ? SizedBox(
-                          width: 24.w,
-                          height: 24.w,
-                          child: const CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const SizedBox.shrink()
-                ),
+                    child: widget.isLoading
+                        ? SizedBox(
+                            width: 24.w,
+                            height: 24.w,
+                            child: const CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const SizedBox.shrink()),
               );
             },
           ),
@@ -257,7 +248,7 @@ class _AnimatedCircleButtonState extends State<AnimatedCircleButton>
             fontWeight: FontWeight.w500,
             letterSpacing: 1.0,
             color: widget.isDisabled
-                ? widget.color.withOpacity(0.5)
+                ? widget.color.withValues(alpha: 0.5)
                 : widget.color,
           ),
         ),
@@ -265,8 +256,6 @@ class _AnimatedCircleButtonState extends State<AnimatedCircleButton>
     );
   }
 }
-
-
 
 class CircleFillPainter extends CustomPainter {
   final double fillProgress;
@@ -292,7 +281,7 @@ class CircleFillPainter extends CustomPainter {
     final startY = size.height - fillHeight;
 
     final rect = Rect.fromLTWH(0, startY, size.width, fillHeight);
-    
+
     final path = Path()
       ..addOval(Rect.fromCircle(center: center, radius: radius));
 
@@ -302,8 +291,8 @@ class CircleFillPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return oldDelegate is CircleFillPainter && 
-           (oldDelegate.fillProgress != fillProgress || 
+    return oldDelegate is CircleFillPainter &&
+        (oldDelegate.fillProgress != fillProgress ||
             oldDelegate.fillColor != fillColor);
   }
-} 
+}

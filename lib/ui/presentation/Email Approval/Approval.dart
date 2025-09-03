@@ -1,10 +1,8 @@
 import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/widgets/approve_card.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_card_type_one.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_card_type_two.dart';
-import 'package:el_race/utils/Util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
@@ -12,10 +10,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 
-
 class ApprovalsScreen extends StatefulWidget {
-
-  const ApprovalsScreen({Key? key, }) : super(key: key);
+  const ApprovalsScreen({
+    Key? key,
+  }) : super(key: key);
 
   @override
   State<ApprovalsScreen> createState() => _ApprovalsScreenState();
@@ -36,7 +34,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
   // Add a field to store errors per category
   Map<String, String> categoryErrors = {};
-  
+
   // Add expanded state management for the new cards
   Set<int> expandedTypeOneItems = {};
   Set<int> expandedTypeTwoItems = {};
@@ -46,7 +44,6 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     super.initState();
     _fetchApprovalData(); // Initially fetch HR data
   }
-
 
   Future<List<dynamic>> _fetchCategoryData(String groupType) async {
     final token = SharedPref.getLoginData().result?.token;
@@ -72,7 +69,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
-    debugPrint("fetchCategoryData: ${request.url} $groupType \n${response.body}");
+    debugPrint(
+        "fetchCategoryData: ${request.url} $groupType \n${response.body}");
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -120,8 +118,10 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       // Add type info to each item
       hrItems = results[0].map((item) => {...item, 'type': 'HR'}).toList();
       rfqItems = results[1].map((item) => {...item, 'type': 'RFQ'}).toList();
-      invoiceItems = results[2].map((item) => {...item, 'type': 'INVOICE'}).toList();
-      pettyCashItems = results[3].map((item) => {...item, 'type': 'PETTY CASH'}).toList();
+      invoiceItems =
+          results[2].map((item) => {...item, 'type': 'INVOICE'}).toList();
+      pettyCashItems =
+          results[3].map((item) => {...item, 'type': 'PETTY CASH'}).toList();
 
       allItems = [...hrItems, ...rfqItems, ...invoiceItems, ...pettyCashItems];
 
@@ -157,7 +157,6 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     }
   }
 
-
   final Map<String, String> categoryIcons = {
     "My Actions": "assets/png/all-icon.png",
     "HR": "assets/png/hr-icon.png",
@@ -166,8 +165,13 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     "PETTY CASH": "assets/png/petty-cash-icon.png",
   };
 
-  final List<String> categories = ["My Actions", "HR", "RFQ", "INVOICE", "PETTY CASH"];
-
+  final List<String> categories = [
+    "My Actions",
+    "HR",
+    "RFQ",
+    "INVOICE",
+    "PETTY CASH"
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -240,7 +244,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                               style: GoogleFonts.koulen(
                                 fontSize: 13.sp,
                                 fontWeight: FontWeight.bold,
-                                color: isSelected ? Colors.white : Colors.black87,
+                                color:
+                                    isSelected ? Colors.white : Colors.black87,
                                 letterSpacing: 1.0,
                               ),
                             ),
@@ -260,75 +265,77 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
             else if (error.isNotEmpty)
               Center(child: Text("Error: $error"))
             else if (approvalItems.isEmpty)
-                const Expanded(
-                  child: Center(
-                    child: Text("No approvals in this category."),
-                  ),
-                )
-              else
-                Expanded(
-                  child: ListView.separated(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 10)+EdgeInsets.only(bottom: 40.w),
-                    itemCount: approvalItems.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final item = approvalItems[index];
-                       List<String> statuses = ['approved', 'pending', 'rejected'];
-                       String sampleStatus = statuses[index % statuses.length];
-                       
-                       final itemData = {
-                         "id": "${item["id"] ?? ""}",
-                         "name": "${item["name"] ?? ""}",
-                         "type": "${item["type"] ?? ""}",
-                         "requester": "${item["requester_name"] ?? ""}",
-                         "approver": "${item["emp_name"] ?? ""}",
-                         "location": "${item["location"] ?? ""}",
-                         "date": "${item["date"] ?? ""}",
-                         "image_emp": "${item["image_emp"] ?? ""}",
-                         "req_no": "REQ-${(item["id"] ?? "").toString().padLeft(6, '0')}",
-                         "title": "${item["name"] ?? ""}",
-                         "status": item["status"] ?? sampleStatus,
-                       };
+              const Expanded(
+                child: Center(
+                  child: Text("No approvals in this category."),
+                ),
+              )
+            else
+              Expanded(
+                child: ListView.separated(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 10) +
+                      EdgeInsets.only(bottom: 40.w),
+                  itemCount: approvalItems.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final item = approvalItems[index];
+                    List<String> statuses = ['approved', 'pending', 'rejected'];
+                    String sampleStatus = statuses[index % statuses.length];
 
-                      if(selectedCategory  != 'My Actions'){
-                          return ApprovalCardTypeTwo(
-                            item: itemData,
-                            isExpanded: false,
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return ApprovalConfirmationScreen(
-                                    requestId: itemData["id"],
-                                    type: itemData["type"],
-                                  );
-                                },
+                    final itemData = {
+                      "id": "${item["id"] ?? ""}",
+                      "name": "${item["name"] ?? ""}",
+                      "type": "${item["type"] ?? ""}",
+                      "requester": "${item["requester_name"] ?? ""}",
+                      "approver": "${item["emp_name"] ?? ""}",
+                      "location": "${item["location"] ?? ""}",
+                      "date": "${item["date"] ?? ""}",
+                      "image_emp": "${item["image_emp"] ?? ""}",
+                      "req_no":
+                          "REQ-${(item["id"] ?? "").toString().padLeft(6, '0')}",
+                      "title": "${item["name"] ?? ""}",
+                      "status": item["status"] ?? sampleStatus,
+                    };
+
+                    if (selectedCategory != 'My Actions') {
+                      return ApprovalCardTypeTwo(
+                        item: itemData,
+                        isExpanded: false,
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return ApprovalConfirmationScreen(
+                                requestId: itemData["id"],
+                                type: itemData["type"],
                               );
                             },
                           );
-                        }
+                        },
+                      );
+                    }
 
-                        return ApprovalCardTypeOne(
-                          item: itemData,
-                          isExpanded: expandedTypeOneItems.contains(index),
-                          onTap: () {
-                            setState(() {
-                              if (expandedTypeOneItems.contains(index)) {
-                                expandedTypeOneItems.remove(index);
-                              } else {
-                                expandedTypeOneItems.add(index);
-                              }
-                            });
-                          },
-                        );
-                    },
-                  ),
-                )
+                    return ApprovalCardTypeOne(
+                      item: itemData,
+                      isExpanded: expandedTypeOneItems.contains(index),
+                      onTap: () {
+                        setState(() {
+                          if (expandedTypeOneItems.contains(index)) {
+                            expandedTypeOneItems.remove(index);
+                          } else {
+                            expandedTypeOneItems.add(index);
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+              )
           ],
         ),
       ),
     );
   }
-
 }

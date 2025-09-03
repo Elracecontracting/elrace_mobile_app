@@ -36,8 +36,7 @@ class OnGeneratedRoutes {
         Future.delayed(const Duration(milliseconds: 500), () {
           _contactBloc.add(GetEmployeeLisET());
         });
-        return CupertinoPageRoute(
-            builder: (_) => const CallScreen());
+        return CupertinoPageRoute(builder: (_) => const CallScreen());
     }
     return MaterialPageRoute(
         builder: (_) => Scaffold(

@@ -28,7 +28,9 @@ class PrayerTimeListView extends StatelessWidget {
             isSelected: index == 0,
           );
         },
-        separatorBuilder: (context, index)=> SizedBox(height: 10.w,),
+        separatorBuilder: (context, index) => SizedBox(
+          height: 10.w,
+        ),
       ),
     );
   }
@@ -49,11 +51,13 @@ class PrayerTimeListViewItem extends StatelessWidget {
     return Opacity(
       opacity: isSelected ? 1.0 : 0.5, // Reduce opacity for non-selected items
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 6,vertical: 7.w),
+        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 7.w),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(6),
           border: Border.all(
-            color: isSelected ? shadowBlueLight.withOpacity(0.6) : const Color(0xff151544),
+            color: isSelected
+                ? shadowBlueLight.withValues(alpha: 0.6)
+                : const Color(0xff151544),
             width: 1,
           ),
         ),
@@ -78,7 +82,9 @@ class PrayerTimeListViewItem extends StatelessWidget {
             ),
             const Spacer(),
             ImageIcon(
-              const AssetImage('assets/png/alarm.png',),
+              const AssetImage(
+                'assets/png/alarm.png',
+              ),
               color: isSelected ? shadowBlueLight : null,
               size: 15.w,
             ),

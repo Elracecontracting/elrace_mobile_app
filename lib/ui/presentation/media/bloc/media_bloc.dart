@@ -12,12 +12,14 @@ part 'media_state.dart';
 
 class MediaBloc extends Bloc<MediaEvent, MediaState> {
   final IMediaRepository mediaRepository;
+  List<MediaModel> _allMedia = [];
 
   static MediaBloc get(BuildContext context) => BlocProvider.of(context);
 
   MediaBloc({required this.mediaRepository}) : super(MediaInitial()) {
     on<FetchMediaList>(_fetchMediaList);
     on<FetchMediaByType>(_fetchMediaByType);
+    on<SearchMedia>(_searchMedia);
     on<AddMedia>(_addMedia);
     on<UpdateMedia>(_updateMedia);
     on<DeleteMedia>(_deleteMedia);
@@ -30,10 +32,37 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     try {
       emit(MediaLoading());
       final mediaList = await mediaRepository.getMediaList();
+      _allMedia = mediaList;
       emit(MediaLoaded(mediaList));
     } catch (e) {
       emit(MediaError(e.toString()));
     }
+  }
+
+  Future<void> _searchMedia(
+    SearchMedia event,
+    Emitter<MediaState> emit,
+  ) async {
+    final query = event.keyword.trim().toLowerCase();
+    if (query.isEmpty) {
+      emit(MediaLoaded(_allMedia));
+      return;
+    }
+    final filtered = _allMedia.where((m) {
+      final name = m.name.toLowerCase();
+      final typeLabel = m.isImage ? 'image' : 'video';
+      final id = m.id.toLowerCase();
+      final url = (m.url).toLowerCase();
+      final s3 = (m.xWebUrl ?? '').toLowerCase();
+      final ext = m.fileExtension.toLowerCase();
+      return name.contains(query) ||
+          typeLabel.contains(query) ||
+          id.contains(query) ||
+          url.contains(query) ||
+          s3.contains(query) ||
+          ext.contains(query);
+    }).toList();
+    emit(MediaLoaded(filtered));
   }
 
   Future<void> _fetchMediaByType(
@@ -43,6 +72,7 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     try {
       emit(MediaLoading());
       final mediaList = await mediaRepository.getMediaByType(event.type);
+      _allMedia = mediaList;
       emit(MediaLoaded(mediaList));
     } catch (e) {
       emit(MediaError(e.toString()));
@@ -90,4 +120,4 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
       emit(MediaActionError(e.toString()));
     }
   }
-} 
+}

@@ -1,18 +1,20 @@
-import 'dart:developer';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/orientation_helper.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
+
 import '../../../../../utils/di.dart';
 import '../../../../../utils/string_utils.dart';
 import '../../widgets/header_widget.dart';
 import 'bloc/contact_bloc.dart';
 
 class CallScreen extends StatefulWidget {
-  const CallScreen({super.key,});
+  const CallScreen({
+    super.key,
+  });
 
   @override
   State<CallScreen> createState() => _CallScreenState();
@@ -56,54 +58,91 @@ class _CallScreenState extends State<CallScreen> {
         appBar: const HeaderWidget(),
         body: SafeArea(
           child: SingleChildScrollView(
-            padding: EdgeInsets.only(bottom: 100.w,top: 10.w),
+            padding: EdgeInsets.only(bottom: 100.w, top: 10.w),
             physics: const BouncingScrollPhysics(),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back),
+                        onPressed: () {
+                          // return Navigator.pop(context);
+                        },
+                      ),
+                      Text(
+                        'CONTACTS',
+                        style: GoogleFonts.koulen(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w400,
+                          color: appFontColor,
+                          letterSpacing: 1.9, // ⬅️ adjust value as needed
+                        ),
+                      ),
+                      const SizedBox(
+                        width: 20,
+                      )
+                    ],
+                  ),
+                ),
                 Column(
                   children: [
-                    searchWidget(),
+                    searchWidget(_contactBloc),
                     const SizedBox(
                       height: 30,
                     ),
-                    ListView.separated(
-                      shrinkWrap: true,
-                      itemCount: _contactBloc.empList.length,
-                      physics: const BouncingScrollPhysics(),
-                      itemBuilder: (context, index) {
-                        var emp = _contactBloc.empList[index];
-                        bool isExpanded = expandedIndex == index;
+                    BlocBuilder<ContactBloc, ContactState>(
+                      bloc: _contactBloc,
+                      builder: (context, state) {
+                        if (state is EmployeeListLoaded) {
+                          return ListView.separated(
+                            shrinkWrap: true,
+                            itemCount: state.employees.length,
+                            physics: const BouncingScrollPhysics(),
+                            itemBuilder: (context, index) {
+                              var emp = state.employees[index];
+                              bool isExpanded = expandedIndex == index;
 
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                          child: ContactTile(
-                            color: const [darkGrey,darkGrey],
-                            textColor: white,
-                            gradientAlignment: index.isOdd,
-                            image: emp.profilePhotoUrl.toString(),
-                            name: emp.name!,
-                            job: emp.jobId.toString(),
-                            emp: emp.id.toString(),
-                            num: emp.mobilePhone.toString(),
-                            isExpanded: isExpanded,
-                            onTapExpand: () {
-                              setState(() {
-                                expandedIndex = isExpanded ? null : index;
-                              });
+                              return AnimatedContainer(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                                child: ContactTile(
+                                  color: const [darkGrey, darkGrey],
+                                  textColor: white,
+                                  gradientAlignment: index.isOdd,
+                                  image: emp.profilePhotoUrl.toString(),
+                                  name: emp.name!,
+                                  job: emp.jobId.toString(),
+                                  emp: emp.id.toString(),
+                                  num: emp.mobilePhone.toString(),
+                                  isExpanded: isExpanded,
+                                  onTapExpand: () {
+                                    setState(() {
+                                      expandedIndex = isExpanded ? null : index;
+                                    });
+                                  },
+                                  onTapCall: () =>
+                                      _makePhoneCall('tel:${emp.mobilePhone}'),
+                                  onTapWhatsApp: () =>
+                                      _openWhatsApp(emp.mobilePhone.toString()),
+                                  onTapEmail: () => _sendEmail(emp.name!),
+                                ),
+                              );
                             },
-                            onTapCall: () => _makePhoneCall('tel:${emp.mobilePhone}'),
-                            onTapWhatsApp: () => _openWhatsApp(emp.mobilePhone.toString()),
-                            onTapEmail: () => _sendEmail(emp.name!),
-                          ),
-                        );
-                      },
-                      separatorBuilder:
-                          (BuildContext context, int index) {
-                        return const SizedBox(
-                          height: 20,
-                        );
+                            separatorBuilder:
+                                (BuildContext context, int index) {
+                              return const SizedBox(
+                                height: 20,
+                              );
+                            },
+                          );
+                        } else {
+                          return const CircularProgressIndicator();
+                        }
                       },
                     ),
                   ],
@@ -143,22 +182,29 @@ class _CallScreenState extends State<CallScreen> {
   }
 }
 
-Widget searchWidget() {
+Widget searchWidget(ContactBloc bloc) {
   return Container(
     height: 40,
     width: 250,
     decoration: BoxDecoration(
-        boxShadow: const [
-          BoxShadow(color: darkGrey, offset: Offset(2, 4), blurRadius: 12)
-        ],
-        borderRadius: BorderRadius.circular(25),
-        gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xffE5E4E2), Color(0xffD3D3D3)])),
+      border: Border.all(
+        color: Colors.grey,
+      ),
+      // boxShadow: const [
+      //   BoxShadow(color: darkGrey, offset: Offset(2, 4), blurRadius: 12)
+      // ],
+      borderRadius: BorderRadius.circular(25),
+      // gradient: const LinearGradient(
+      //     begin: Alignment.topCenter,
+      //     end: Alignment.bottomCenter,
+      //     colors: [Color(0xffE5E4E2), Color(0xffD3D3D3)])
+    ),
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: TextFormField(
+        onChanged: (value) {
+          bloc.add(SearchContactsEvent(value));
+        },
         style: const TextStyle(
           color: Color(0xFF1A1A53),
           fontSize: 15,
@@ -167,7 +213,7 @@ Widget searchWidget() {
         ),
         decoration: InputDecoration(
             border: InputBorder.none,
-            hintText: 'SEARCH CONTACT',
+            // hintText: 'SEARCH CONTACT',
             contentPadding: const EdgeInsets.symmetric(vertical: 14),
             hintStyle: const TextStyle(
                 fontSize: 12,
@@ -177,7 +223,7 @@ Widget searchWidget() {
             prefixIcon: Padding(
               padding: const EdgeInsets.all(8.0),
               child: Image.asset(
-                '$imagePrefixPng/search_icon.png',
+                'assets/png/menu.png',
                 width: 10,
                 height: 10,
               ),
@@ -185,9 +231,10 @@ Widget searchWidget() {
             suffixIcon: Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: Image.asset(
-                  "assets/png/mic_icon.png",
+                  "assets/png/search_icon.png",
                   width: 14,
                   height: 14,
+                  color: Colors.grey,
                 ))),
       ),
     ),
@@ -229,7 +276,8 @@ class ContactTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     List<String> nameParts = name.split(' ');
-    String image = 'https://t3.ftcdn.net/jpg/02/99/04/20/360_F_299042079_vGBD7wIlSeNl7vOevWHiL93G4koMM967.jpg';
+    String image =
+        'https://t3.ftcdn.net/jpg/02/99/04/20/360_F_299042079_vGBD7wIlSeNl7vOevWHiL93G4koMM967.jpg';
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10),
       child: GestureDetector(
@@ -267,13 +315,15 @@ class ContactTile extends StatelessWidget {
                     ),
                     shape: BoxShape.circle,
                     // gradient: const LinearGradient(colors: [darkPeach, lightPeach]),
-                    border: isExpanded ? Border.all(
-                      color: Colors.white,
-                      width: 2,
-                    ) : null,
+                    border: isExpanded
+                        ? Border.all(
+                            color: Colors.white,
+                            width: 2,
+                          )
+                        : null,
                   ),
                 ),
-                if(!isExpanded)
+                if (!isExpanded)
                   Expanded(
                     child: Padding(
                       padding: EdgeInsets.symmetric(horizontal: 8.w),
@@ -293,7 +343,10 @@ class ContactTile extends StatelessWidget {
                             width: 140.w,
                             child: Text(
                               job,
-                              style: const TextStyle(color: greyText,fontSize: 12,fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  color: greyText,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),
@@ -311,7 +364,8 @@ class ContactTile extends StatelessWidget {
                   ),
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 400),
-                  transitionBuilder: (Widget child, Animation<double> animation) {
+                  transitionBuilder:
+                      (Widget child, Animation<double> animation) {
                     return SlideTransition(
                       position: animation.drive(
                         Tween(begin: const Offset(1.0, 0.0), end: Offset.zero),
@@ -321,14 +375,15 @@ class ContactTile extends StatelessWidget {
                   },
                   child: isExpanded
                       ? Container(
-                        width: 250.w,
-                        padding: EdgeInsets.symmetric(vertical: 6.w,horizontal: 10.w),
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: const Color(0xFF1A1A53),width: 1),
+                          width: 250.w,
+                          padding: EdgeInsets.symmetric(
+                              vertical: 6.w, horizontal: 10.w),
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                                color: const Color(0xFF1A1A53), width: 1),
                             borderRadius: BorderRadius.circular(25),
                           ),
-                        child: Row(
+                          child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                             key: const ValueKey('icons'),
                             children: [
@@ -336,7 +391,8 @@ class ContactTile extends StatelessWidget {
                                 onTap: onTapCall,
                                 child: Container(
                                   padding: EdgeInsets.all(6.w),
-                                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                                  margin:
+                                      const EdgeInsets.symmetric(horizontal: 4),
                                   decoration: const BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: Colors.white,
@@ -353,14 +409,15 @@ class ContactTile extends StatelessWidget {
                                 onTap: onTapWhatsApp,
                                 child: Container(
                                   padding: EdgeInsets.all(6.w),
-                                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                                  margin:
+                                      const EdgeInsets.symmetric(horizontal: 4),
                                   decoration: const BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: Colors.white,
                                   ),
                                   child: Image.asset(
                                     '$imagePrefixPng/whatsapp.png',
-                                   width: 35.w,
+                                    width: 35.w,
                                     height: 35.w,
                                     fit: BoxFit.cover,
                                   ),
@@ -370,7 +427,8 @@ class ContactTile extends StatelessWidget {
                                 onTap: onTapEmail,
                                 child: Container(
                                   padding: EdgeInsets.all(6.w),
-                                  margin: const EdgeInsets.symmetric(horizontal: 4),
+                                  margin:
+                                      const EdgeInsets.symmetric(horizontal: 4),
                                   decoration: const BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: Colors.white,
@@ -385,20 +443,21 @@ class ContactTile extends StatelessWidget {
                               ),
                             ],
                           ),
-                      )
+                        )
                       : Container(
                           key: const ValueKey('button'),
                           height: 40,
                           width: 100,
                           decoration: BoxDecoration(
-                            border: Border.all(color: const Color(0xFF1A1A53),width: 1),
-                              borderRadius: BorderRadius.circular(25),),
+                            border: Border.all(
+                                color: const Color(0xFF1A1A53), width: 1),
+                            borderRadius: BorderRadius.circular(25),
+                          ),
                           child: const Center(
                             child: Text(
                               'Contact me',
                               style: TextStyle(
-                                  color: Color(0xFF1A1A53),
-                                  fontSize: 12),
+                                  color: Color(0xFF1A1A53), fontSize: 12),
                             ),
                           ),
                         ),

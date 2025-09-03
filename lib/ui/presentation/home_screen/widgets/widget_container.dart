@@ -1,17 +1,17 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/custom_swipe_button.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/edit_widgets_screen.dart';
-import 'package:el_race/ui/presentation/home_screen/widgets/check_in_widgets/offline_online_toggle.dart';
+
+import 'package:el_race/ui/presentation/home_screen/widgets/check_in_widgets/time_status_widget.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/list_view_widgets.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/parayer_widget.dart';
-import 'package:el_race/ui/presentation/home_screen/widgets/check_in_widgets/time_status_widget.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class WidgetContainer extends StatelessWidget {
   const WidgetContainer({super.key});
@@ -19,11 +19,16 @@ class WidgetContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: ScreenUtil().screenWidth,
+      //width: ScreenUtil().screenWidth,
+      width: double.infinity,
       decoration: BoxDecoration(
         color: white,
         boxShadow: [
-          BoxShadow(color: black.withAlpha((0.3 * 255).toInt()), spreadRadius: 10, blurRadius: 9)
+          BoxShadow(
+            color: black.withAlpha((0.3 * 255).toInt()),
+            spreadRadius: 10,
+            blurRadius: 9,
+          )
         ],
         borderRadius: const BorderRadius.only(
           topRight: Radius.circular(20),
@@ -33,13 +38,15 @@ class WidgetContainer extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: SizeConfig().getWidth(20)),
+            padding:
+                EdgeInsets.symmetric(horizontal: SizeConfig().getWidth(20)),
             child: Column(
               children: [
                 const SizedBox(height: 15),
 
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: SizeConfig().getWidth(20)),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: SizeConfig().getWidth(20)),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -52,7 +59,8 @@ class WidgetContainer extends StatelessWidget {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => Util.pushPage(const EditWidgetsScreen(), context),
+                        onTap: () =>
+                            Util.pushPage(const EditWidgetsScreen(), context),
                         child: Text(
                           translate('home.edit'),
                           style: GoogleFonts.nunito(
@@ -66,17 +74,18 @@ class WidgetContainer extends StatelessWidget {
                   ),
                 ),
 
-
                 Opacity(
-                  opacity: !SharedPref.isUserAuthenticated()? 0.5 : 1,
+                  opacity: !SharedPref.isUserAuthenticated() ? 0.5 : 1,
                   child: Container(
                     width: double.infinity,
                     margin: const EdgeInsets.symmetric(vertical: 10),
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 20, horizontal: 16),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12),
                       image: const DecorationImage(
-                        image: AssetImage('assets/png/gray_card.png'), // ✅ Update to your image path
+                        image: AssetImage(
+                            'assets/png/gray_card.png'), // ✅ Update to your image path
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -88,14 +97,14 @@ class WidgetContainer extends StatelessWidget {
                           ignoring: !SharedPref.isUserAuthenticated(),
                           child: const CustomSwipeButton(),
                         ),
-                  
+
                         const SizedBox(height: 10),
-                  
+
                         // Timer
                         // Obx(() {
                         //   final timer = Get.find<TimerController>().timeLeft.value;
                         //   final formatted = timer.toString().split('.').first.padLeft(8, "0");
-                  
+
                         //   return Text(
                         //     formatted,
                         //     style: const TextStyle(
@@ -105,9 +114,9 @@ class WidgetContainer extends StatelessWidget {
                         //     ),
                         //   );
                         // }),
-                  
+
                         const SizedBox(height: 16),
-                  
+
                         // Check-in / Check-out bar
                         // FutureBuilder(
                         //   future: null,
@@ -165,36 +174,18 @@ class WidgetContainer extends StatelessWidget {
                         //   },
                         // ),
 
-                        const Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            // New Check-in Status Widget
-                            UserModeStatusWidget(),
-
-                            // Time Status Widget
-                            TimeStatusWidget(),
-                          ],
-                        )
-
-                        
-
-
-                        
+                        // Time Status Widget
+                        const TimeStatusWidget(),
                       ],
                     ),
-                  
                   ),
                 ),
 
                 const SizedBox(height: 10),
-
-
+                const ParayerWidget(),
                 const ListViewWidgets(),
 
-                       // prayer times card
-               const ParayerWidget(),
-
+                // prayer times card
               ],
             ),
           ),
@@ -203,4 +194,3 @@ class WidgetContainer extends StatelessWidget {
     );
   }
 }
-

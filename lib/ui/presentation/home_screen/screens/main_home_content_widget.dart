@@ -1,7 +1,6 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:el_race/ui/presentation/News%20Banner/banner.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/widget_container.dart';
-import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/orientation_helper.dart';

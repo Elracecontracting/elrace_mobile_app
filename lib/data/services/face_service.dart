@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 import 'dart:io';
 import 'package:tflite_flutter/tflite_flutter.dart';
-import 'package:vector_math/vector_math.dart' as vmath;
 import 'package:image/image.dart' as img;
 import 'dart:math' as math;
 
@@ -63,7 +62,8 @@ class FaceService {
   /// Cosine similarity
   double cosineSimilarity(List<double> e1, List<double> e2) {
     if (e1.length != e2.length) {
-      print('❌ Embedding dimensions do not match: ${e1.length} vs ${e2.length}');
+      print(
+          '❌ Embedding dimensions do not match: ${e1.length} vs ${e2.length}');
       return 0.0;
     }
 
@@ -101,7 +101,8 @@ class FaceService {
   bool isMatch(List<double> e1, List<double> e2, {double threshold = 0.5}) {
     final similarity = cosineSimilarity(e1, e2);
     final isMatch = similarity > threshold;
-    print('🎯 Match result: $isMatch (similarity: $similarity, threshold: $threshold)');
+    print(
+        '🎯 Match result: $isMatch (similarity: $similarity, threshold: $threshold)');
     return isMatch;
   }
 
@@ -119,18 +120,18 @@ class FaceService {
       final resizedImage = img.copyResize(image, width: 112, height: 112);
 
       // Convert to normalized float values [0-1]
-      final input = List.generate(1, (_) => 
-        List.generate(112, (y) => 
-          List.generate(112, (x) {
-            final pixel = resizedImage.getPixel(x, y);
-            return [
-              pixel.r / 255.0,  // Red channel
-              pixel.g / 255.0,  // Green channel
-              pixel.b / 255.0,  // Blue channel
-            ];
-          })
-        )
-      );
+      final input = List.generate(
+          1,
+          (_) => List.generate(
+              112,
+              (y) => List.generate(112, (x) {
+                    final pixel = resizedImage.getPixel(x, y);
+                    return [
+                      pixel.r / 255.0, // Red channel
+                      pixel.g / 255.0, // Green channel
+                      pixel.b / 255.0, // Blue channel
+                    ];
+                  })));
 
       print('✅ Image preprocessed: 112x112x3');
       return input;
@@ -142,8 +143,10 @@ class FaceService {
 
   /// Create empty input tensor
   List<List<List<List<double>>>> _createEmptyInput() {
-    return List.generate(1,
-        (_) => List.generate(112, (_) => List.generate(112, (_) => [0.0, 0.0, 0.0])));
+    return List.generate(
+        1,
+        (_) => List.generate(
+            112, (_) => List.generate(112, (_) => [0.0, 0.0, 0.0])));
   }
 
   /// Dispose resources
@@ -154,4 +157,4 @@ class FaceService {
       print('🧹 FaceService disposed');
     }
   }
-} 
+}

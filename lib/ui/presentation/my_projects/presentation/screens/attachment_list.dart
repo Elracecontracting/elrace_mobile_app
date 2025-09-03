@@ -8,7 +8,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class AttachmentListScreen extends StatelessWidget {
-  const AttachmentListScreen({super.key});
+  final ProjectListBloc bloc;
+
+  const AttachmentListScreen({super.key, required this.bloc});
 
   @override
   Widget build(BuildContext context) {
@@ -17,7 +19,7 @@ class AttachmentListScreen extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         child: Column(
           children: [
-            const HeaderWidget(),
+            const SizedBox(width: double.infinity, child: HeaderWidget()),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -27,7 +29,11 @@ class AttachmentListScreen extends StatelessWidget {
                 ),
                 Row(
                   children: [
-                    Image.asset('assets/newapp/attachment.png',height: 30.w,width: 30.w,),
+                    Image.asset(
+                      'assets/newapp/attachment.png',
+                      height: 30.w,
+                      width: 30.w,
+                    ),
                     const Text(
                       ' Attachments',
                       style: TextStyle(
@@ -40,37 +46,41 @@ class AttachmentListScreen extends StatelessWidget {
                 const SizedBox(width: 40),
               ],
             ),
-            BlocBuilder<ProjectListBloc, ProjectListState>(
-              builder: (ctx, state) {
-                var bloc = ProjectListBloc.get(ctx);
-                if (state is ProjectAttachmentsLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (state is ProjectAttachmentsLoaded) {
-                  var list = bloc.projectAttacmentList; 
-                  return RefreshIndicator(
-                    onRefresh: () async => {},
-                     child: GridView.builder(
-                       padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 20),
-                       shrinkWrap: true,
-                       physics: const NeverScrollableScrollPhysics(),
-                       itemCount: list.length,
-                       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                         crossAxisCount: 2,
-                         mainAxisSpacing: 12,
-                         crossAxisSpacing: 12,
-                         childAspectRatio: 0.9,
-                       ),
-                       itemBuilder: (context, index) {
-                         return AttachmentWidget(item: list[index]);
-                       },
-                     ),
-                  );
-                } else if (state is ProjectAttachmentsError) {
-                  return Center(child: Text(state.message));
-                } else {
-                  return const SizedBox();
-                }
-              },
+            BlocProvider.value(
+              value: bloc,
+              child: BlocBuilder<ProjectListBloc, ProjectListState>(
+                builder: (ctx, state) {
+                  if (state is ProjectAttachmentsLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (state is ProjectAttachmentsLoaded) {
+                    var list = bloc.projectAttacmentList;
+                    return RefreshIndicator(
+                      onRefresh: () async => {},
+                      child: GridView.builder(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 20),
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: list.length,
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          childAspectRatio: 0.9,
+                        ),
+                        itemBuilder: (context, index) {
+                          return AttachmentWidget(item: list[index]);
+                        },
+                      ),
+                    );
+                  } else if (state is ProjectAttachmentsError) {
+                    return Center(child: Text(state.message));
+                  } else {
+                    return const SizedBox();
+                  }
+                },
+              ),
             ),
           ],
         ),

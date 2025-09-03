@@ -149,9 +149,10 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
                                   data: SliderTheme.of(context).copyWith(
                                     thumbColor: Colors.white, // knob color
                                     activeTrackColor: CustomColors.blue,
-                                    inactiveTrackColor:
-                                        Colors.white.withOpacity(0.3),
-                                    overlayColor: Colors.white.withOpacity(0.1),
+                                    inactiveTrackColor: Colors.white
+                                      ..withValues(alpha: 0.3),
+                                    overlayColor: Colors.white
+                                      ..withValues(alpha: 0.1),
                                     thumbShape: const RoundSliderThumbShape(
                                         enabledThumbRadius: 10),
                                     trackHeight: 4,

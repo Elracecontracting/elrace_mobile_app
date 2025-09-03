@@ -7,3 +7,11 @@ sealed class ContactEvent extends Equatable {
 }
 
 final class GetEmployeeLisET extends ContactEvent {}
+
+final class SearchContactsEvent extends ContactEvent {
+  final String keyword;
+  const SearchContactsEvent(this.keyword);
+
+  @override
+  List<Object> get props => [keyword];
+}

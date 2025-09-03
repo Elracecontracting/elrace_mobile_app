@@ -13,11 +13,10 @@ class ProjectAnnouncementPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: const HeaderWidget(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Default Header Widget
-          const HeaderWidget(),
 
           const SizedBox(height: 10),
 

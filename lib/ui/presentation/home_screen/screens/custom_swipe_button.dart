@@ -1,6 +1,7 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/project_list_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart' show GoogleFonts;
 import 'package:flutter_translate/flutter_translate.dart';
@@ -9,6 +10,7 @@ import 'package:camera/camera.dart';
 import 'package:get/get.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/home_bloc.dart' hide CheckInET, CheckOutET;
+import '../widgets/timer_controller.dart';
 
 class CustomSwipeButton extends StatefulWidget {
   const CustomSwipeButton({super.key});
@@ -22,12 +24,15 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   bool isCheckedIn = false;
   double dragOffset = 0.0;
   bool isDragging = false;
+  bool _isVisualCheckedIn = false; // Visual state for transitions
   late AnimationController _arrowController;
   late Animation<double> _arrowScaleAnimation;
   late Animation<double> _arrowTranslationAnimation;
   bool? matchResult; // null = no result, true = matched, false = not matched
   late AnimationController _checkmarkController;
   late Animation<double> _checkmarkScaleAnimation;
+  late AnimationController _bounceController;
+  late Animation<double> _bounceAnimation;
   AuthenticateFaceViewController? _faceController;
   CameraController? _cameraController;
   bool isProcessingFace = false;
@@ -39,17 +44,21 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   Color _getProgressiveColor() {
     if (!isDragging && !isCheckedIn) return Colors.white;
     if (isCheckedIn) return const Color(0xFF1E1E50);
-    
+
     final progress = (dragOffset / (buttonWidth - knobSize)).clamp(0.0, 1.0);
-    
+
     if (progress < 0.4) {
-      return Color.lerp(const Color(0xFFE8E8F0), const Color(0xFFD0D0E0), (progress - 0.2) / 0.2)!;
+      return Color.lerp(const Color(0xFFE8E8F0), const Color(0xFFD0D0E0),
+          (progress - 0.2) / 0.2)!;
     } else if (progress < 0.6) {
-      return Color.lerp(const Color(0xFFD0D0E0), const Color(0xFF8080C0), (progress - 0.4) / 0.2)!;
+      return Color.lerp(const Color(0xFFD0D0E0), const Color(0xFF8080C0),
+          (progress - 0.4) / 0.2)!;
     } else if (progress < 0.8) {
-      return Color.lerp(const Color(0xFF8080C0), const Color(0xFF4040A0), (progress - 0.6) / 0.2)!;
+      return Color.lerp(const Color(0xFF8080C0), const Color(0xFF4040A0),
+          (progress - 0.6) / 0.2)!;
     } else {
-      return Color.lerp(const Color(0xFF4040A0), const Color(0xFF1E1E50), (progress - 0.8) / 0.2)!;
+      return Color.lerp(const Color(0xFF4040A0), const Color(0xFF1E1E50),
+          (progress - 0.8) / 0.2)!;
     }
   }
 
@@ -58,6 +67,8 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
       dragOffset = isCheckedIn ? (buttonWidth - knobSize) : 0;
       isDragging = false;
       startSwipe = false;
+      _isVisualCheckedIn =
+          isCheckedIn; // Reset visual state to match actual state
     });
   }
 
@@ -83,13 +94,31 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
     _checkmarkScaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _checkmarkController, curve: Curves.elasticOut),
     );
+
+    // Forward movement animation controller
+    _bounceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _bounceAnimation = Tween<double>(begin: 0.0, end: 12.0).animate(
+      CurvedAnimation(parent: _bounceController, curve: Curves.elasticOut),
+    );
+
     _faceController = Get.put(AuthenticateFaceViewController());
+
+    // Start forward movement animation with a small delay
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _bounceController.repeat(reverse: true);
+      }
+    });
   }
 
   @override
   void dispose() {
     _arrowController.dispose();
     _checkmarkController.dispose();
+    _bounceController.dispose();
     _cameraController?.dispose();
     super.dispose();
   }
@@ -147,8 +176,9 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           loginResponseModel: SharedPref.getLoginData(),
           isCheckedIn: isCheckedIn,
           onConfirmed: () async {
-            context.read<HomeBloc>().add(const UpdateFaceRecognitionStatus(FaceRecognitionStatus.matching));
-             _resetPosition();
+            context.read<HomeBloc>().add(const UpdateFaceRecognitionStatus(
+                FaceRecognitionStatus.matching));
+            _resetPosition();
           },
           onCancelled: _resetPosition,
         );
@@ -161,102 +191,307 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Stack(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // Main swipe button container
           GestureDetector(
             onHorizontalDragStart: (_) => setState(() => isDragging = true),
             onHorizontalDragUpdate: (details) {
               setState(() {
                 dragOffset += details.delta.dx;
                 dragOffset = dragOffset.clamp(0.0, buttonWidth - knobSize);
+
+                // Calculate swipe progress for smooth visual transitions
+                final progress = dragOffset / (buttonWidth - knobSize);
+
                 if (dragOffset > 2.0) {
                   startSwipe = true;
+                  // Smooth visual state transition based on swipe progress
+                  if (progress > 0.3) {
+                    if (_isVisualCheckedIn != !isCheckedIn) {
+                      _isVisualCheckedIn = !isCheckedIn;
+                      // Haptic feedback when visual state changes
+                      HapticFeedback.lightImpact();
+                    }
+                  } else {
+                    if (_isVisualCheckedIn != isCheckedIn) {
+                      _isVisualCheckedIn = isCheckedIn;
+                    }
+                  }
                 } else {
                   startSwipe = false;
+                  if (_isVisualCheckedIn != isCheckedIn) {
+                    _isVisualCheckedIn = isCheckedIn;
+                  }
                 }
               });
             },
             onHorizontalDragEnd: (_) => _onDragEnd(),
-            child: Stack(
-              children: [
-                // Main swipe button container
-                Container(
-                  width: buttonWidth,
-                  height: buttonHeight,
-                  decoration: const BoxDecoration(
-                    color: Colors.transparent, // Remove solid color background
+            child: Container(
+              width: buttonWidth,
+              height: buttonHeight,
+              decoration: BoxDecoration(
+                borderRadius:
+                    BorderRadius.circular(27.5), // Highly rounded corners
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                  child: Stack(
-                    children: [
-                      // Conditional background for both check-in and check-out
-                      Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            image: DecorationImage(
-                              image: AssetImage(
-                                isCheckedIn
-                                    ? 'assets/png/swipe-bg-blue.png' // 👈 Checkout state
-                                    : 'assets/png/swipe-button-inner.png', // 👈 Checkin state
-                              ),
-                              fit: BoxFit.contain,
-                            ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  // Dynamic background that transitions between light gray and dark blue
+                  Positioned.fill(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(27.5),
+                        color: _isVisualCheckedIn
+                            ? const Color(
+                                0xFF1E1E50) // Dark blue when checked in
+                            : const Color(
+                                0xFFE8E8E8), // Light gray when checked out
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
                           ),
-                        ),
+                        ],
                       ),
+                    ),
+                  ),
 
-                      // Center text
-                      if (isDragging)
-                        Positioned.fill(
-                          child: Container(
-                            width: buttonWidth,
-                            height: buttonHeight,
-                            decoration: BoxDecoration(
-                              color: _getProgressiveColor(),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
+                  // Center text with dynamic color
+                  Center(
+                    child: AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 300),
+                      style: GoogleFonts.inter(
+                        color: _isVisualCheckedIn
+                            ? Colors
+                                .white // White text when checked in (dark blue background)
+                            : const Color(
+                                0xFF1A1A53), // Dark blue text when checked out (light gray background)
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
+                      child: Text(
+                        _isVisualCheckedIn
+                            ? translate(
+                                'custom_swipe_button.swipe_to_check_out')
+                            : translate(
+                                'custom_swipe_button.swipe_to_check_in'),
+                      ),
+                    ),
+                  ),
+
+                  // Dynamic chevron icons that change position and direction based on state
+                  Positioned(
+                    left: _isVisualCheckedIn
+                        ? null
+                        : 8, // Left side when checked out
+                    right: _isVisualCheckedIn
+                        ? 8
+                        : null, // Right side when checked in
+                    top: (buttonHeight - 36) / 2,
+                    child: AnimatedBuilder(
+                      animation: _bounceAnimation,
+                      builder: (context, child) {
+                        return Transform.translate(
+                          offset: Offset(_bounceAnimation.value, 0),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 300),
+                                child: Icon(
+                                  _isVisualCheckedIn
+                                      ? Icons
+                                          .chevron_left // Left-pointing when on right side (check in)
+                                      : Icons
+                                          .chevron_right, // Right-pointing when on left side (check out)
+                                  key: ValueKey(_isVisualCheckedIn),
+                                  color: _isVisualCheckedIn
+                                      ? Colors
+                                          .white // White arrows when checked in (dark blue background)
+                                      : const Color(
+                                          0xFF666666), // Dark gray arrows when checked out
+                                  size: 36,
+                                  weight: 900,
+                                ),
+                              ),
+                              Transform.translate(
+                                offset: const Offset(-25, 0),
+                                child: AnimatedSwitcher(
+                                  duration: const Duration(milliseconds: 300),
+                                  child: Icon(
+                                    _isVisualCheckedIn
+                                        ? Icons
+                                            .chevron_left // Left-pointing when on right side (check in)
+                                        : Icons
+                                            .chevron_right, // Right-pointing when on left side (check out)
+                                    key: ValueKey(_isVisualCheckedIn),
+                                    color: _isVisualCheckedIn
+                                        ? Colors
+                                            .white // White arrows when checked in (dark blue background)
+                                        : const Color(
+                                            0xFF666666), // Dark gray arrows when checked out
+                                    size: 36,
+                                    weight: 900,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      Center(
-                        child: Text(
-                          isCheckedIn
-                              ? translate(
-                                  'custom_swipe_button.swipe_to_check_out')
-                              : translate(
-                                  'custom_swipe_button.swipe_to_check_in'),
-                          style: GoogleFonts.koulen(
-                            color: isCheckedIn || startSwipe
-                                ? Colors.white
-                                : const Color(0xFF1A1A53),
-                            fontSize: 22.sp,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      )
-                    ],
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Visual swipe progress indicator
+                  Positioned(
+                    left: 0,
+                    top: 0,
+                    child: Container(
+                      width: dragOffset + knobSize,
+                      height: buttonHeight,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(27.5),
+                        color: _isVisualCheckedIn
+                            ? const Color(0xFF1E1E50)
+                                .withOpacity(0.3) // Semi-transparent dark blue
+                            : const Color(0xFFE8E8E8).withOpacity(
+                                0.3), // Semi-transparent light gray
+                      ),
+                    ),
+                  ),
+
+                  // Swipe knob (invisible but functional)
+                  Positioned(
+                    left: dragOffset,
+                    top: (buttonHeight - knobSize) / 2,
+                    child: Container(
+                      width: knobSize,
+                      height: knobSize,
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(knobSize / 2),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Timeline component below the button
+          SizedBox(height: 20.h),
+          Container(
+            width: buttonWidth,
+            child: Column(
+              children: [
+                // Timeline line
+                Container(
+                  height: 2,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE0E0E0),
+                    borderRadius: BorderRadius.circular(1),
                   ),
                 ),
 
-                // Arrow icon
-                Positioned(
-                  left: dragOffset + 19 - 16,
-                  top: (buttonHeight - 39) / 2,
-                  child: AnimatedBuilder(
-                    animation: _arrowController,
-                    builder: (context, child) {
-                      return Transform.translate(
-                        offset: Offset(_arrowTranslationAnimation.value, 0),
-                        child: child,
+                SizedBox(height: 8.h),
+
+                // Time labels with real timer data
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Left time label - shows remaining time from TimerController
+                    Obx(() {
+                      final timer = Get.find<TimerController>().timeLeft.value;
+                      final formatted =
+                          timer.toString().split('.').first.padLeft(8, "0");
+
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Green dot indicator
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          // Timer label
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 12.w, vertical: 4.h),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: const Color(0xFF1E1E50),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              formatted,
+                              style: GoogleFonts.inter(
+                                color: const Color(0xFF1E1E50),
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
                       );
-                    },
-                    child: Image.asset(
-                      isCheckedIn
-                          ? 'assets/png/arrow_left.png'
-                          : 'assets/png/arrow_right.png',
-                      height: 45.w,
-                      fit: BoxFit.cover,
-                      color: Colors.grey,
+                    }),
+
+                    // Right time label - shows 00:00:00 when checked out
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Timer label
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 12.w, vertical: 4.h),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFF1E1E50),
+                              width: 1,
+                            ),
+                          ),
+                          child: Text(
+                            '00:00:00',
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF1E1E50),
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        // Red dot indicator
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),

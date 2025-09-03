@@ -55,7 +55,7 @@ class Util {
   }
 
   static void showComingSoonToast() {
-    CustomToast().showToast("Coming Soon 🚧");
+    CustomToast().showToast("Coming Soon 🚧",isCenter: true);
   }
 
   static String monthName(int month) {

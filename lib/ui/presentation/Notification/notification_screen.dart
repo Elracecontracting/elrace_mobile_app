@@ -1,4 +1,3 @@
-import 'package:el_race/resources/app_colors.dart';
 import 'package:el_race/ui/presentation/Attendace_list/attendance_page.dart';
 import 'package:el_race/ui/widgets/back_icon.dart';
 import 'package:el_race/utils/Util.dart';
@@ -82,12 +81,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: const HeaderWidget(),
       backgroundColor: Colors.white,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const HeaderWidget(),
-          const SizedBox(height: 16),
           Stack(
             alignment: Alignment.center,
             children: [
@@ -96,7 +94,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 translate('notification_screen.center'),
                 style: GoogleFonts.koulen(
                   fontSize: 26.sp,
-                  fontWeight: FontWeight.w600,                                                                                          
+                  fontWeight: FontWeight.w600,
                   color: appFontColor,
                   letterSpacing: 1.5,
                 ),
@@ -112,22 +110,26 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   SizedBox(
                     height: 55.w,
                     child: ListView.separated(
-                      padding: const EdgeInsets.only(left: 10,right: 10),
+                      padding: const EdgeInsets.only(left: 10, right: 10),
                       controller: _pageController,
                       itemCount: notificationType.length,
                       physics: const BouncingScrollPhysics(),
                       scrollDirection: Axis.horizontal,
                       itemBuilder: (context, index) {
-                        String notificationIcon = notificationType[index]['icon'];
-                        String notificationTitle = notificationType[index]['title'];
+                        String notificationIcon =
+                            notificationType[index]['icon'];
+                        String notificationTitle =
+                            notificationType[index]['title'];
                         return InkWell(
-                          onTap: ()=> setState(() => currentIndex = index),
+                          onTap: () => setState(() => currentIndex = index),
                           child: Container(
                             alignment: Alignment.center,
                             margin: const EdgeInsets.only(top: 6),
                             padding: const EdgeInsets.symmetric(horizontal: 10),
                             decoration: BoxDecoration(
-                              color: index==currentIndex ? appFontColor:  greyText2,
+                              color: index == currentIndex
+                                  ? appFontColor
+                                  : greyText2,
                               // gradient: const LinearGradient(
                               //   colors: [Color(0xFFE6E6E6), ],
                               //   begin: Alignment.center,
@@ -156,14 +158,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
                               crossAxisAlignment: CrossAxisAlignment.center,
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Image.asset(notificationIcon,height: 25.w,),
+                                Image.asset(
+                                  notificationIcon,
+                                  height: 25.w,
+                                ),
                                 const SizedBox(
                                   width: 5,
                                 ),
                                 Text(
                                   notificationTitle.toUpperCase(),
-                                  style:  GoogleFonts.koulen(
-                                    color: index == currentIndex? Colors.white:const Color(0xFF1A237E),
+                                  style: GoogleFonts.koulen(
+                                    color: index == currentIndex
+                                        ? Colors.white
+                                        : const Color(0xFF1A237E),
                                     fontSize: 18.sp,
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: 1.7,
@@ -204,7 +211,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             // ),
                           ),
                         );
-                      }, separatorBuilder: (BuildContext context, int index) => const SizedBox(width: 10,),
+                      },
+                      separatorBuilder: (BuildContext context, int index) =>
+                          const SizedBox(
+                        width: 10,
+                      ),
                     ),
                   ),
                   // Row(

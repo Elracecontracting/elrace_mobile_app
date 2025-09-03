@@ -1,29 +1,28 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:el_race/core/utils/directory_operation.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/data/models/report_detail_item.dart';
+import 'package:el_race/data/models/report_detail_model.dart';
+import 'package:el_race/data/models/report_model.dart';
 import 'package:el_race/data/repositories/company_repository.dart';
 import 'package:el_race/data/repositories/report_repository.dart';
+import 'package:el_race/data/services/pdf_service.dart';
 import 'package:el_race/ui/presentation/My_task/screens/report_detail/camera_screen.dart';
 import 'package:el_race/ui/presentation/My_task/screens/report_detail/pdf_preview_screen.dart';
+import 'package:el_race/ui/presentation/PettyCash/PettyCashAddExpense.dart'; // Import the login model
+import 'package:el_race/utils/color_utils.dart'; // Import global colors
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
-import '../../widgets/header_widget.dart';
-import 'package:el_race/utils/color_utils.dart'; // Import global colors
 import 'package:http/http.dart' as http;
-import 'package:el_race/ui/presentation/PettyCash/PettyCashAddExpense.dart'; // Import the login model
-import '../../widgets/custom_slider_button.dart';
-import 'dart:io';
-import 'package:el_race/data/models/report_model.dart';
-import 'package:el_race/data/models/report_detail_model.dart';
-import 'package:el_race/data/models/report_detail_item.dart';
-import 'package:el_race/data/services/pdf_service.dart';
-import 'package:el_race/core/utils/directory_operation.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../widgets/custom_slider_button.dart';
+import '../../widgets/header_widget.dart';
 
 class PettyCashPopUpScreen extends StatefulWidget {
-
   const PettyCashPopUpScreen({super.key});
 
   @override
@@ -49,14 +48,13 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
   List<File> savedPdfs = [];
   List<int> draftExpenseIds = [];
 
-
   Future<void> _addCameraImageForAttachment() async {
     var result = await Navigator.push(
         context,
         MaterialPageRoute(
             builder: (context) => const CustomCameraScreen(
-              onePicture: false,
-            )));
+                  onePicture: false,
+                )));
 
     if (result != null && result is List<XFile> && result.isNotEmpty) {
       for (var image in result) {
@@ -72,7 +70,6 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
 
     // Step 1: Fetch the Draft & Balance immediately
     _fetchDraftSummary();
-
   }
 
   void _showErrorDialog(String message) {
@@ -91,12 +88,11 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       ),
     );
   }
+
   String capitalize(String text) {
     if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1);
   }
-
-
 
   Future<void> _fetchDraftSummary() async {
     if (!mounted) return;
@@ -145,11 +141,12 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
           draftAmount = (result['total_draft_amount'] ?? 0).toDouble();
           expenseSheets.addAll(newItems);
           isDraftLoading = false;
-          draftExpenseIds = newItems.map<int>((item) => item['id'] as int).toList();
-
+          draftExpenseIds =
+              newItems.map<int>((item) => item['id'] as int).toList();
         });
       } else {
-        throw Exception("Failed to fetch draft summary: ${response.statusCode}");
+        throw Exception(
+            "Failed to fetch draft summary: ${response.statusCode}");
       }
     } catch (e) {
       print("Error fetching draft summary: $e");
@@ -160,7 +157,6 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
     }
   }
 
-
   Future<void> _submitExpense() async {
     try {
       final token = SharedPref.getLoginData().result?.token;
@@ -169,19 +165,22 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
 
       if (token == null) {
         _showErrorDialog("Missing user token.");
-        _sliderKey.currentState?.resetSlider(); // ⬅️ Reset on validation failure
+        _sliderKey.currentState
+            ?.resetSlider(); // ⬅️ Reset on validation failure
         return;
       }
 
       if (attachments.isEmpty) {
         _showErrorDialog("Please add at least one attachment.");
-        _sliderKey.currentState?.resetSlider(); // ⬅️ Reset on validation failure
+        _sliderKey.currentState
+            ?.resetSlider(); // ⬅️ Reset on validation failure
         return;
       }
 
       if (draftExpenseIds.isEmpty) {
         _showErrorDialog("No draft expenses found to submit.");
-        _sliderKey.currentState?.resetSlider(); // ⬅️ Reset on validation failure
+        _sliderKey.currentState
+            ?.resetSlider(); // ⬅️ Reset on validation failure
         return;
       }
 
@@ -206,7 +205,8 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
 
       if (validAttachments.isEmpty) {
         _showErrorDialog("No valid attachment files found.");
-        _sliderKey.currentState?.resetSlider(); // ⬅️ Reset on validation failure
+        _sliderKey.currentState
+            ?.resetSlider(); // ⬅️ Reset on validation failure
         return;
       }
 
@@ -254,7 +254,8 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
         );
       } catch (e) {
         print("PDF generation failed: $e");
-        _showErrorDialog("PDF generation failed. Make sure all images are valid.");
+        _showErrorDialog(
+            "PDF generation failed. Make sure all images are valid.");
         _sliderKey.currentState?.resetSlider(); // ⬅️ Reset on error
         return;
       }
@@ -292,13 +293,15 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       Navigator.pop(context); // ⬅️ Dismiss loading dialog
 
       final data = jsonDecode(response.body);
-      if (response.statusCode == 200 && data["result"]?['status'] == 'success') {
+      if (response.statusCode == 200 &&
+          data["result"]?['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Request submitted successfully!")),
         );
         Navigator.pop(context, true); // ✅ Back with success
       } else {
-        final message = data['result']?['message'] ?? "Failed to submit request.";
+        final message =
+            data['result']?['message'] ?? "Failed to submit request.";
         _sliderKey.currentState?.resetSlider(); // ⬅️ Reset on error
         _showErrorDialog(message);
       }
@@ -309,7 +312,6 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       _showErrorDialog("An error occurred while submitting the request.");
     }
   }
-
 
   Future<void> _generateAttachmentPdf() async {
     if (attachments.isEmpty) {
@@ -331,7 +333,6 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
         return;
       }
     }
-
 
     pettyCashReport = ReportModel(
       id: const Uuid().v4(),
@@ -371,7 +372,8 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
         projectName: pettyCashReport!.name,
       );
 
-      String fileName = "PettyCashReport_${DateTime.now().millisecondsSinceEpoch}";
+      String fileName =
+          "PettyCashReport_${DateTime.now().millisecondsSinceEpoch}";
 
       final directory = await getAppDirectory();
       final folder = Directory("${directory.path}/PettyCashReports");
@@ -404,9 +406,6 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
     }
   }
 
-
-
-
   Future<void> _loadSavedPdfs() async {
     if (pettyCashReport == null) return;
 
@@ -416,7 +415,6 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
     savedPdfs = pdfModels.map((pdfModel) => File(pdfModel.path)).toList();
     setState(() {});
   }
-
 
   void _openPdf(String path) {
     Navigator.push(
@@ -443,11 +441,9 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header Section (unchanged)
-                
+
                 const SizedBox(height: 10),
-      
-      
-      
+
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.0),
                   child: Row(
@@ -456,15 +452,18 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                       BackButton(),
                       Text(
                         'ADD EXPENSE',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: appFontColor),
+                        style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: appFontColor),
                       ),
                       SizedBox(width: 40), // Spacer for alignment
                     ],
                   ),
                 ),
-      
+
                 const SizedBox(height: 10),
-      
+
                 // Draft Section (unchanged)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 10.0),
@@ -498,8 +497,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                     ],
                   ),
                 ),
-      
-      
+
                 // Attachment Section (unchanged)
                 Center(
                   child: Row(
@@ -513,7 +511,8 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                             Stack(
                               clipBehavior: Clip.none,
                               children: [
-                                Image.asset('assets/png/document_icon.png', width: 30, height: 30),
+                                Image.asset('assets/png/document_icon.png',
+                                    width: 30, height: 30),
                                 Positioned(
                                   top: -3,
                                   right: -3,
@@ -522,25 +521,33 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                     backgroundColor: Colors.red,
                                     child: Text(
                                       attachments.length.toString(),
-                                      style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(width: 5),
-                            Image.asset('assets/png/Attached_icon.png', width: 25, height: 25),
+                            Image.asset('assets/png/Attached_icon.png',
+                                width: 25, height: 25),
                             const SizedBox(width: 8),
                             const Text(
                               "Attachment",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: appFontColor),
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: appFontColor),
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 8),
                       GestureDetector(
-                        onTap: _generateAttachmentPdf, // when clicking on pdf icon
+                        onTap:
+                            _generateAttachmentPdf, // when clicking on pdf icon
                         child: const Icon(
                           Icons.picture_as_pdf,
                           color: Colors.red,
@@ -550,7 +557,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                     ],
                   ),
                 ),
-      
+
                 if (attachments.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -562,16 +569,20 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 24, vertical: 12),
                         ),
                         child: const Text(
                           "Generate Report",
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16),
                         ),
                       ),
                     ),
                   ),
-      
+
                 if (savedPdfs.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -580,7 +591,8 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                       children: [
                         const Text(
                           "Generated Reports",
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold, fontSize: 18),
                         ),
                         const SizedBox(height: 10),
                         ListView.builder(
@@ -592,7 +604,8 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                             final filename = file.path.split('/').last;
                             return ListTile(
                               title: Text(filename),
-                              trailing: const Icon(Icons.picture_as_pdf, color: Colors.red),
+                              trailing: const Icon(Icons.picture_as_pdf,
+                                  color: Colors.red),
                               onTap: () {
                                 _openPdf(file.path);
                               },
@@ -602,23 +615,25 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                       ],
                     ),
                   ),
-      
-      
+
                 // Add Expense Button (unchanged)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 26.0, vertical: 10.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 26.0, vertical: 10.0),
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
                       minimumSize: const Size(double.infinity, 50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(25)),
                       padding: EdgeInsets.zero,
                       elevation: 0,
                     ),
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const PettyCashAddExpense()),
+                        MaterialPageRoute(
+                            builder: (context) => const PettyCashAddExpense()),
                       );
                     },
                     child: Ink(
@@ -635,11 +650,15 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Image.asset('assets/png/plus_icon_1.png', width: 20, height: 20),
+                            Image.asset('assets/png/plus_icon_1.png',
+                                width: 20, height: 20),
                             const SizedBox(width: 8),
                             const Text(
                               "ADD EXPENSE",
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: appFontColor),
+                              style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: appFontColor),
                             ),
                           ],
                         ),
@@ -647,36 +666,36 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                     ),
                   ),
                 ),
-      
+
                 // Transaction List with Dynamic Data
                 Column(
                   children: [
-                      ListView.builder(
-                        shrinkWrap: true,
-                        controller: _scrollController,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: expenseSheets.length,
-                        itemBuilder: (context, index) {
-                          var expense = expenseSheets[index];
-                          final state = "DRAFT";
-                          final date = expense['date'];
-                          final total = expense['amount'];
-                          final id = expense['id'];
-      
-                          return _buildTransactionItem_2(
-                            state is String ? capitalize(state) : state.toString(),
-                            date is String ? date : 'Date not available',
-                            total != null ? total.toString() : '0',
-                          );
-                        },
-                      ),
-      
+                    ListView.builder(
+                      shrinkWrap: true,
+                      controller: _scrollController,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: expenseSheets.length,
+                      itemBuilder: (context, index) {
+                        var expense = expenseSheets[index];
+                        const state = "DRAFT";
+                        final date = expense['date'];
+                        final total = expense['amount'];
+                        final id = expense['id'];
+
+                        return _buildTransactionItem_2(
+                          state is String
+                              ? capitalize(state)
+                              : state.toString(),
+                          date is String ? date : 'Date not available',
+                          total != null ? total.toString() : '0',
+                        );
+                      },
+                    ),
                   ],
                 ),
-      
-      
+
                 const SizedBox(height: 10),
-      
+
                 // Notice Section (unchanged)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -702,20 +721,18 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                     ],
                   ),
                 ),
-      
+
                 const SizedBox(height: 20),
-      
+
                 // Slider Button (unchanged)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: CustomSliderButton(
-                    key: _sliderKey, // ✅ <-- this is critical
-                    onSlideComplete: _submitExpense,
-                    loginResponseModel: SharedPref.getLoginData(),
-                  )
-      
-                ),
-      
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: CustomSliderButton(
+                      key: _sliderKey, // ✅ <-- this is critical
+                      onSlideComplete: _submitExpense,
+                      loginResponseModel: SharedPref.getLoginData(),
+                    )),
+
                 const SizedBox(height: 120),
               ],
             ),
@@ -724,9 +741,6 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       ),
     );
   }
-
-
-
 
   // Reusable widget for transaction items
   Widget _buildTransactionItem_2(String status, String date, String amount) {
@@ -765,7 +779,6 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
               ],
             ),
             const SizedBox(width: 5),
-
             const SizedBox(
               height: 30,
               child: VerticalDivider(
@@ -774,7 +787,6 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
               ),
             ),
             const SizedBox(width: 5),
-
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -798,7 +810,6 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                 ],
               ),
             ),
-
             const SizedBox(
               height: 30,
               child: VerticalDivider(
@@ -807,7 +818,6 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
               ),
             ),
             const SizedBox(width: 5),
-
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -842,7 +852,9 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       ),
     );
   }
-  Widget _buildDraftInfo(String label, String amount, String bgImage, String iconImage, Color textColor) {
+
+  Widget _buildDraftInfo(String label, String amount, String bgImage,
+      String iconImage, Color textColor) {
     return Container(
       width: 120, // Ensures uniform circle size
       height: 120,
@@ -853,18 +865,24 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
           image: AssetImage(bgImage), // Background image for the circle
           fit: BoxFit.cover, // Ensures the image covers the circle
         ),
-        boxShadow: [const BoxShadow(color: Colors.black26, blurRadius: 5)],
+        boxShadow: const [
+          const BoxShadow(color: Colors.black26, blurRadius: 5)
+        ],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center, // Centers content
         children: [
-          Image.asset(iconImage, width: 25, height: 25), // Image instead of icon
+          Image.asset(iconImage,
+              width: 25, height: 25), // Image instead of icon
           const SizedBox(height: 3), // Adjusts spacing
-          Text(label, style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold)),
-          Text(amount, style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold)),
+          Text(label,
+              style: TextStyle(
+                  color: textColor, fontSize: 12, fontWeight: FontWeight.bold)),
+          Text(amount,
+              style: TextStyle(
+                  color: textColor, fontSize: 12, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
-
 }

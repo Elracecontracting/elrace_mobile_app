@@ -6,7 +6,6 @@ import 'package:el_race/report_module/data/models/report_item_model.dart';
 import 'package:el_race/report_module/data/repositories/company_repository.dart';
 import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -376,7 +375,7 @@ class PdfService {
             pw.SizedBox(height: 20),
             pw.Text(reportDetail.coverPage!.title,
                 textDirection: RegExp(r'[\u0600-\u06FF]').hasMatch(
-                  reportDetail.coverPage!.title!,
+                  reportDetail.coverPage!.title,
                 )
                     ? pw.TextDirection.rtl
                     : pw.TextDirection.ltr,

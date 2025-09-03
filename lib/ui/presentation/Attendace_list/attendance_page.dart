@@ -343,7 +343,6 @@ class _AttendancePageState extends State<AttendancePage> {
                                         const SizedBox(
                                           width: 11,
                                         ),
-                                      
                                         const Spacer(),
                                         Text(
                                           status,
@@ -365,17 +364,22 @@ class _AttendancePageState extends State<AttendancePage> {
                                         Container(
                                           width: 70.w,
                                           height: 71.w,
-                                          margin: const EdgeInsets.only(top: 3,),
+                                          margin: const EdgeInsets.only(
+                                            top: 3,
+                                          ),
                                           decoration: BoxDecoration(
                                             color: textColor,
-                                            borderRadius: BorderRadius.circular(30),
+                                            borderRadius:
+                                                BorderRadius.circular(30),
                                           ),
                                         ),
                                       Container(
                                         height: 70.w,
                                         key: const ValueKey("collapsed"),
-                                        padding:EdgeInsets.symmetric(horizontal: 10.w),
-                                        margin: EdgeInsets.only(left: 4.w, top: 3),
+                                        padding: EdgeInsets.symmetric(
+                                            horizontal: 10.w),
+                                        margin:
+                                            EdgeInsets.only(left: 4.w, top: 3),
                                         decoration: backgroundImage == ''
                                             ? BoxDecoration(
                                                 color: Colors.grey[300],
@@ -384,11 +388,15 @@ class _AttendancePageState extends State<AttendancePage> {
                                               )
                                             : BoxDecoration(
                                                 gradient: const LinearGradient(
-                                                  colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
+                                                  colors: [
+                                                    Color(0xFFD6D6D6),
+                                                    Color(0xFFADB2BD)
+                                                  ],
                                                   begin: Alignment.bottomRight,
                                                   end: Alignment.topLeft,
                                                 ),
-                                                borderRadius: BorderRadius.circular(30),
+                                                borderRadius:
+                                                    BorderRadius.circular(30),
                                               ),
                                         child: Row(
                                           children: [
@@ -409,9 +417,10 @@ class _AttendancePageState extends State<AttendancePage> {
                                             const SizedBox(
                                               height: 39.5,
                                               child: VerticalDivider(
-                                                  color: Colors.grey, thickness: 1),
+                                                  color: Colors.grey,
+                                                  thickness: 1),
                                             ),
-                            
+
                                             // Check-in
                                             SizedBox(
                                               width: 90.w,
@@ -425,7 +434,8 @@ class _AttendancePageState extends State<AttendancePage> {
                                                     'Check-in',
                                                     style: GoogleFonts.inter(
                                                       fontSize: 12,
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                       color: appFontColor,
                                                     ),
                                                   ),
@@ -434,7 +444,8 @@ class _AttendancePageState extends State<AttendancePage> {
                                                         .format(checkInTime),
                                                     style: GoogleFonts.inter(
                                                       fontSize: 10,
-                                                      fontWeight: FontWeight.w500,
+                                                      fontWeight:
+                                                          FontWeight.w500,
                                                       color: Colors.black,
                                                     ),
                                                   ),
@@ -442,8 +453,7 @@ class _AttendancePageState extends State<AttendancePage> {
                                               ),
                                             ),
                                             const SizedBox(width: 5),
-                                           
-                            
+
                                             // Check-out
                                             Expanded(
                                               child: Column(
@@ -456,70 +466,68 @@ class _AttendancePageState extends State<AttendancePage> {
                                                     'Check-out',
                                                     style: GoogleFonts.inter(
                                                       fontSize: 12,
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                       color: appFontColor,
                                                     ),
                                                   ),
                                                   Text(
                                                     checkOutTime != null
                                                         ? DateFormat('HH:mm:ss')
-                                                            .format(checkOutTime)
+                                                            .format(
+                                                                checkOutTime)
                                                         : '--:--:--',
                                                     textAlign: TextAlign.center,
                                                     style: GoogleFonts.inter(
                                                       fontSize: 10,
-                                                      fontWeight: FontWeight.w500,
+                                                      fontWeight:
+                                                          FontWeight.w500,
                                                       color: Colors.black,
                                                     ),
                                                   ),
                                                 ],
                                               ),
                                             ),
-                                            SizedBox(width: 40.w), 
-
-                                           
+                                            SizedBox(width: 40.w),
                                           ],
                                         ),
                                       ),
                                     ],
                                   ),
-
-                                 
                             AnimatedAlign(
-                              alignment:
-                                  isExpanded ? Alignment.centerLeft : Alignment.centerRight,
+                              alignment: isExpanded
+                                  ? Alignment.centerLeft
+                                  : Alignment.centerRight,
                               duration: const Duration(milliseconds: 900),
                               curve: Curves.easeInOut,
                               child: Container(
-                                  margin: EdgeInsets.symmetric(horizontal: 10.w),
-                                  key: ValueKey( isExpanded), // triggers rebuild on expand/collapse
-                                  width: 50.w,
-                                  height: 50.w,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                        color: Colors.white,
-                                        width: 2),
-                                  ),
-                                  child: ClipOval(
-                                    child: _isValidBase64(
-                                            _imageBase64)
-                                        ? Image.memory(
-                                            base64Decode(
-                                                _imageBase64),
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                          )
-                                        : Image.asset(
-                                            'assets/png/profile_1.png',
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                          ),
-                                  ),
+                                margin: EdgeInsets.symmetric(horizontal: 10.w),
+                                key: ValueKey(
+                                    isExpanded), // triggers rebuild on expand/collapse
+                                width: 50.w,
+                                height: 50.w,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border:
+                                      Border.all(color: Colors.white, width: 2),
                                 ),
-                            ),      
+                                child: ClipOval(
+                                  child: _isValidBase64(_imageBase64)
+                                      ? Image.memory(
+                                          base64Decode(_imageBase64),
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                        )
+                                      : Image.asset(
+                                          'assets/png/profile_1.png',
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                        ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       );
@@ -644,8 +652,6 @@ class _AttendancePageState extends State<AttendancePage> {
   }
 }
 
-
-
 class BouncingIconToggle extends StatefulWidget {
   final IconData icon;
   final bool isExpanded;
@@ -680,7 +686,7 @@ class _BouncingIconToggleState extends State<BouncingIconToggle>
   }
 
   void _setAnimation() {
-    final double bounceAmount = 10; // how far it bounces
+    const double bounceAmount = 10; // how far it bounces
     final double start = widget.isExpanded ? 0.0 : 0.0;
     final double peak =
         widget.isExpanded ? -bounceAmount : bounceAmount; // direction

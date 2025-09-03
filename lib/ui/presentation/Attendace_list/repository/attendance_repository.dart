@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -15,7 +16,10 @@ class AttendanceRepo {
   }) async {
     try {
       final loginResponse = await userRepo.getLoginResponse();
-      var token = loginResponse!.result!.token!;
+      final token = loginResponse?.result?.token;
+      if (token == null || token.isEmpty) {
+        throw Exception('Invalid token');
+      }
 
       Map<String, String> headers = {
         "Content-Type": "application/json",
@@ -50,13 +54,17 @@ class AttendanceRepo {
       rethrow;
     }
   }
+
   Future<Map<String, dynamic>> getAttendanceSummary({
     required String startDate,
     required String endDate,
   }) async {
     try {
       final loginResponse = await userRepo.getLoginResponse();
-      var token = loginResponse!.result!.token!;
+      final token = loginResponse?.result?.token;
+      if (token == null || token.isEmpty) {
+        throw Exception('Invalid token');
+      }
 
       final headers = {
         "Content-Type": "application/json",
@@ -80,12 +88,22 @@ class AttendanceRepo {
 
       debugPrint('getAttendanceSummary: ${body} \nresponse:${response.body}');
 
-      final json = jsonDecode(response.body);
-      return json['result']['data'];
+      final decoded = jsonDecode(response.body);
+      // Handle error structure {result: {status: 'error', message: 'Invalid token'}}
+      final result = decoded is Map<String, dynamic> ? decoded['result'] : null;
+      if (result is Map<String, dynamic>) {
+        final status = result['status'];
+        if (status == 'error') {
+          final message = result['message']?.toString() ?? 'Unknown error';
+          throw Exception(message);
+        }
+        final data = result['data'];
+        return data;
+      }
+      throw Exception('Malformed response');
     } catch (e) {
       log("Error in getAttendanceSummary: $e");
       rethrow;
     }
   }
-
 }
