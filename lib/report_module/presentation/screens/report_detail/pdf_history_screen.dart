@@ -30,7 +30,7 @@ class PdfCreationScreen extends StatefulWidget {
 
 class _PdfCreationScreenState extends State<PdfCreationScreen> {
   TextEditingController nameController = TextEditingController();
-  TextEditingController subject = TextEditingController();
+  // TextEditingController subject = TextEditingController();
   TextEditingController projectName = TextEditingController();
   bool _generating = false;
 
@@ -41,8 +41,9 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
     _loadPdfHistory();
     nameController =
         TextEditingController(text: widget.reportDetailModel.report.name);
-    subject = TextEditingController(text: "Weekly");
-    projectName = TextEditingController();
+    // subject = TextEditingController();
+    projectName =
+        TextEditingController(text: widget.reportDetailModel.report.name);
     super.initState();
   }
 
@@ -91,9 +92,9 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
               maxCharacter: 100,
               showLabel: true,
               required: true,
-              controller: subject,
+              controller: projectName,
               inputType: TextInputType.text,
-              hintText: "Subject",
+              hintText: "Project Name",
             ),
           ),
           Padding(
@@ -205,8 +206,7 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
 
     Uint8List pdfBytes = await PdfService().generateReportPdf(
       report: widget.reportDetailModel,
-      subject: subject.text,
-      projectName: widget.reportDetailModel.report.name,
+      projectName: projectName.text,
     );
 
     print('file_by: $pdfBytes');

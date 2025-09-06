@@ -16,7 +16,6 @@ import '../../../ui/presentation/call_screen/data/repository.dart';
 class PdfService {
   Future<Uint8List> generateReportPdf({
     required ReportDetailModel report,
-    required String subject,
     required String projectName,
   }) async {
     final pdf = pw.Document();
@@ -33,8 +32,8 @@ class PdfService {
         pageFormat: PdfPageFormat.a4,
         margin:
             const pw.EdgeInsets.only(left: 32, right: 32, bottom: 20, top: 5),
-        header: (context) => _buildHeader(
-            context, logo, report, projectName, subject, notoSanArabic),
+        header: (context) =>
+            _buildHeader(context, logo, report, projectName, notoSanArabic),
         footer: (context) => _buildFooter(context),
         build: (context) => _buildBody(
             context, logo, report, imageMap, userData, notoSanArabic),
@@ -45,7 +44,7 @@ class PdfService {
   }
 
   _buildHeader(context, logo, ReportDetailModel report, String projectName,
-      String subject, pw.Font font) {
+      pw.Font font) {
     CompanyModel companyData = CompanyRepository.company!;
     bool needToShowCover =
         (context.pageNumber == 1 && report.coverPage != null);
@@ -65,7 +64,7 @@ class PdfService {
                 pw.Padding(
                   padding: const pw.EdgeInsets.symmetric(vertical: 2),
                   child: pw.Text(
-                    "Site Report",
+                    "Report",
                     textAlign: pw.TextAlign.center,
                     style: pw.TextStyle(
                       font: font,
@@ -74,7 +73,6 @@ class PdfService {
                     ),
                   ),
                 ),
-                pw.SizedBox(width: 100)
               ],
             ),
             pw.SizedBox(height: 2),
@@ -86,52 +84,53 @@ class PdfService {
               child: pw.Row(
                 mainAxisSize: pw.MainAxisSize.min,
                 children: [
-                  if (companyData.employeeName != "")
-                    pw.Expanded(
-                      child: pw.Column(
-                          mainAxisAlignment: pw.MainAxisAlignment.start,
-                          children: [
-                            pw.Text(
-                              "Subject:",
-                              textAlign: pw.TextAlign.center,
-                              style: pw.TextStyle(
-                                fontSize: 13,
-                                font: font,
-                                fontWeight: pw.FontWeight.bold,
-                              ),
-                            ),
-                            pw.SizedBox(height: 3),
-                            pw.Text(
-                              subject,
-                              textAlign: pw.TextAlign.center,
-                              textDirection:
-                                  RegExp(r'[\u0600-\u06FF]').hasMatch(subject)
-                                      ? pw.TextDirection.rtl
-                                      : pw.TextDirection.ltr,
-                              style: pw.TextStyle(
-                                fontSize: 13,
-                                font: font,
-                                fontWeight: pw.FontWeight.normal,
-                              ),
-                            ),
-                          ]),
-                    ),
-                  pw.Container(width: 1, color: PdfColors.black, height: 44),
+                  // if (companyData.employeeName != "")
+                  // pw.Expanded(
+                  //   child: pw.Column(
+                  //       mainAxisAlignment: pw.MainAxisAlignment.start,
+                  //       children: [
+                  //         pw.Text(
+                  //           "Subject:",
+                  //           textAlign: pw.TextAlign.center,
+                  //           style: pw.TextStyle(
+                  //             fontSize: 13,
+                  //             font: font,
+                  //             fontWeight: pw.FontWeight.bold,
+                  //           ),
+                  //         ),
+                  //         pw.SizedBox(height: 3),
+                  //         pw.Text(
+                  //           subject,
+                  //           textAlign: pw.TextAlign.center,
+                  //           textDirection:
+                  //               RegExp(r'[\u0600-\u06FF]').hasMatch(subject)
+                  //                   ? pw.TextDirection.rtl
+                  //                   : pw.TextDirection.ltr,
+                  //           style: pw.TextStyle(
+                  //             fontSize: 13,
+                  //             font: font,
+                  //             fontWeight: pw.FontWeight.normal,
+                  //           ),
+                  //         ),
+                  //       ]),
+                  // ),
+                  // pw.Container(width: 1, color: PdfColors.black, height: 44),
                   pw.Expanded(
                     flex: 2,
                     child: pw.Column(
                         mainAxisAlignment: pw.MainAxisAlignment.start,
                         children: [
+                          pw.SizedBox(height: 1),
                           pw.Text(
-                            "Project",
+                            "Project Name",
                             textAlign: pw.TextAlign.center,
                             style: pw.TextStyle(
-                              fontSize: 13,
-                              font: font,
+                              fontSize: 14,
+                              // font: font,
                               fontWeight: pw.FontWeight.bold,
                             ),
                           ),
-                          pw.SizedBox(height: 3),
+                          // pw.SizedBox(height: 1),
                           pw.Text(
                             projectName,
                             textAlign: pw.TextAlign.center,
@@ -139,10 +138,7 @@ class PdfService {
                                 RegExp(r'[\u0600-\u06FF]').hasMatch(projectName)
                                     ? pw.TextDirection.rtl
                                     : pw.TextDirection.ltr,
-                            style: pw.TextStyle(
-                              fontSize: 13,
-                              font: font,
-                            ),
+                            style: pw.TextStyle(fontSize: 13, font: font),
                           )
                         ]),
                   ),
@@ -151,16 +147,17 @@ class PdfService {
                     child: pw.Column(
                         mainAxisAlignment: pw.MainAxisAlignment.start,
                         children: [
+                          pw.SizedBox(height: 1),
                           pw.Text(
                             "Date:",
                             textAlign: pw.TextAlign.center,
                             style: pw.TextStyle(
-                              fontSize: 13,
-                              font: font,
+                              fontSize: 14,
+                              // font: font,
                               fontWeight: pw.FontWeight.bold,
                             ),
                           ),
-                          pw.SizedBox(height: 3),
+                          // pw.SizedBox(height: 1),
                           pw.Text(
                             " ${DateFormat("dd//MM/yyyy").format(DateTime.now())}",
                             textAlign: pw.TextAlign.center,
@@ -324,7 +321,7 @@ class PdfService {
                             children: [
                               pw.SizedBox(width: 12),
                               pw.Text(
-                                "Project:",
+                                "Project Name:",
                                 textAlign: pw.TextAlign.center,
                                 style: pw.TextStyle(
                                   fontSize: 15,
@@ -437,7 +434,7 @@ class PdfService {
       border: pw.TableBorder.all(color: PdfColors.grey),
       columnWidths: {
         0: const pw.FixedColumnWidth(30),
-        1: const pw.FlexColumnWidth(1),
+        1: const pw.FlexColumnWidth(1.5),
         2: const pw.FlexColumnWidth(1),
         3: const pw.FlexColumnWidth(1),
       },
@@ -459,7 +456,8 @@ class PdfService {
               ),
               pw.Container(
                 height: rowHeight,
-                alignment: pw.Alignment.center,
+                alignment: pw.Alignment.bottomLeft,
+                padding: const pw.EdgeInsets.all(4),
                 child: pw.Text(reportDetail.reportItems[i].location,
                     textDirection: RegExp(r'[\u0600-\u06FF]')
                             .hasMatch(reportDetail.reportItems[i].location)
@@ -471,22 +469,13 @@ class PdfService {
               pw.Container(
                 height: rowHeight,
                 padding: const pw.EdgeInsets.all(4),
-                alignment: pw.Alignment.centerLeft,
-                child: pw.Column(
-                  mainAxisAlignment: pw.MainAxisAlignment.center,
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    if (reportDetail.reportItems[i].description != "")
-                      pw.SizedBox(height: 4),
-                    if (reportDetail.reportItems[i].description != "")
-                      pw.Text(reportDetail.reportItems[i].description,
-                          textDirection: RegExp(r'[\u0600-\u06FF]').hasMatch(
-                                  reportDetail.reportItems[i].description)
-                              ? pw.TextDirection.rtl
-                              : pw.TextDirection.ltr,
-                          style: pw.TextStyle(fontSize: 13, font: font)),
-                  ],
-                ),
+                alignment: pw.Alignment.bottomLeft,
+                child: pw.Text(reportDetail.reportItems[i].description,
+                    textDirection: RegExp(r'[\u0600-\u06FF]')
+                            .hasMatch(reportDetail.reportItems[i].description)
+                        ? pw.TextDirection.rtl
+                        : pw.TextDirection.ltr,
+                    style: pw.TextStyle(fontSize: 13, font: font)),
               ),
             ],
           ),
@@ -499,7 +488,7 @@ class PdfService {
       border: pw.TableBorder.all(color: PdfColors.grey),
       columnWidths: {
         0: const pw.FixedColumnWidth(30),
-        1: const pw.FlexColumnWidth(1),
+        1: const pw.FlexColumnWidth(1.5),
         2: const pw.FlexColumnWidth(1),
         3: const pw.FlexColumnWidth(1),
       },

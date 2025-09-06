@@ -1,7 +1,9 @@
 import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
 import 'package:el_race/report_module/data/models/report_model.dart';
+import 'package:el_race/report_module/data/provider/reports_provider.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/report_detail.dart';
+import 'package:el_race/report_module/data/models/report_detail_model.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -59,17 +61,38 @@ class ReportTile extends StatelessWidget {
                   style: CustomTextStyle.smallGrey,
                 ),
                 const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: CustomColors.blue,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
-                  child: Text(
-                    "Report",
-                    style: CustomTextStyle.smallWhite,
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: CustomColors.blue,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 2, horizontal: 12),
+                      child: Text(
+                        "Report",
+                        style: CustomTextStyle.smallWhite,
+                      ),
+                    ),
+                    FutureBuilder<ReportDetailModel?>(
+                        future: reportProvider.getReportDetail(report),
+                        builder: (context, snapshot) {
+                          return Container(
+                            margin: const EdgeInsets.only(left: 5),
+                            decoration: BoxDecoration(
+                              color: CustomColors.blue,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 2, horizontal: 12),
+                            child: Text(
+                              "Images : ${snapshot.data?.reportItems.length ?? 0}",
+                              style: CustomTextStyle.smallWhite,
+                            ),
+                          );
+                        }),
+                  ],
                 )
               ],
             ),

@@ -256,14 +256,14 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       "Image From Gallery",
       "Image From Camera",
       // "Add New Section",
-      "Add Text Block",
-      "Add Cover Page",
+      // "Add Text Block",
+      // "Add Cover Page",
     ];
     if (insideSection) {
       options = [
         "Image From Gallery",
         "Image From Camera",
-        "Add Text Block",
+        // "Add Text Block",
       ];
     }
 
