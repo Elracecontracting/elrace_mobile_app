@@ -1,8 +1,6 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/custom_swipe_button.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/edit_widgets_screen.dart';
-
-import 'package:el_race/ui/presentation/home_screen/widgets/check_in_widgets/time_status_widget.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/list_view_widgets.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/parayer_widget.dart';
 import 'package:el_race/utils/Util.dart';
@@ -94,7 +92,7 @@ class WidgetContainer extends StatelessWidget {
                         // Swipe button
                         IgnorePointer(
                           ignoring: !SharedPref.isUserAuthenticated(),
-                          child: const CustomSwipeButton(),
+                          child: CustomSwipeButton(),
                         ),
 
                         // Timer
@@ -179,8 +177,8 @@ class WidgetContainer extends StatelessWidget {
                 ),
 
                 const SizedBox(height: 10),
-                const ParayerWidget(),
-                const ListViewWidgets(),
+                ParayerWidget(),
+                ListViewWidgets(),
 
                 // prayer times card
               ],

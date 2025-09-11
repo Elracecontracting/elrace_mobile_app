@@ -1,22 +1,24 @@
-import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
-import 'package:el_race/utils/color_utils.dart'; // Import global colors
-import '../../widgets/custom_slider_button.dart';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
+import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/utils/color_utils.dart'; // Import global colors
+import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+
+import '../../widgets/custom_slider_button.dart';
 
 class RequestPermission extends StatefulWidget {
   final dynamic loginResponseModel;
 
-  const RequestPermission({Key? key, required this.loginResponseModel}) : super(key: key);
+  const RequestPermission({Key? key, required this.loginResponseModel})
+      : super(key: key);
 
   @override
   _RequestPermissionState createState() => _RequestPermissionState();
 }
-
 
 class _RequestPermissionState extends State<RequestPermission> {
   String selectedReason = "New hire";
@@ -26,7 +28,8 @@ class _RequestPermissionState extends State<RequestPermission> {
   DateTime leaveEndDate = DateTime.now();
   String description = '';
   String selectedDay = 'Today';
-  final GlobalKey<CustomSliderButtonState> _sliderKey = GlobalKey<CustomSliderButtonState>();
+  final GlobalKey<CustomSliderButtonState> _sliderKey =
+      GlobalKey<CustomSliderButtonState>();
 
   // Add missing time variables
   String startTimeFormatted = 'Select Time';
@@ -95,7 +98,8 @@ class _RequestPermissionState extends State<RequestPermission> {
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withAlpha((0.1 * 255).toInt()),
+                              color:
+                                  Colors.black.withAlpha((0.1 * 255).toInt()),
                               blurRadius: 10,
                               spreadRadius: 2,
                             ),
@@ -106,9 +110,11 @@ class _RequestPermissionState extends State<RequestPermission> {
                           children: [
                             // Title Bar
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16.0),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.arrow_back),
@@ -178,13 +184,15 @@ class _RequestPermissionState extends State<RequestPermission> {
                                         },
                                       ),
                                       Text(
-                                        translate('request_permission.tomorrow'),
+                                        translate(
+                                            'request_permission.tomorrow'),
                                         style: GoogleFonts.inter(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500,
                                           color: Colors.black,
                                         ),
-                                      ),                                    ],
+                                      ),
+                                    ],
                                   ),
 
                                   const SizedBox(height: 10),
@@ -200,19 +208,21 @@ class _RequestPermissionState extends State<RequestPermission> {
                                         ),
                                       ),
                                       Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 6),
                                         decoration: BoxDecoration(
                                           color: Colors.grey.shade300,
-                                          borderRadius: BorderRadius.circular(20),
+                                          borderRadius:
+                                              BorderRadius.circular(20),
                                         ),
                                         child: Text(
-                                          DateFormat('dd/MM/yyyy').format(joinedDate),
+                                          DateFormat('dd/MM/yyyy')
+                                              .format(joinedDate),
                                           style: GoogleFonts.inter(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w500,
                                           ),
                                         ),
-
                                       ),
                                     ],
                                   ),
@@ -222,7 +232,6 @@ class _RequestPermissionState extends State<RequestPermission> {
                                   // Balance Leave
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
-
                                     children: [
                                       Text(
                                         translate('common.balance_leave'),
@@ -243,7 +252,6 @@ class _RequestPermissionState extends State<RequestPermission> {
                                         ),
                                       ),
                                     ],
-
                                   ),
 
                                   const SizedBox(height: 30),
@@ -264,48 +272,64 @@ class _RequestPermissionState extends State<RequestPermission> {
                                     ),
                                   ),
 
-
                                   const SizedBox(height: 10),
 
                                   Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 6.0),
                                     child: Stack(
                                       children: [
                                         Container(
                                           decoration: BoxDecoration(
-                                            borderRadius: BorderRadius.circular(18),
+                                            borderRadius:
+                                                BorderRadius.circular(18),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.grey.withAlpha((0.3 * 255).toInt()),
+                                                color: Colors.grey.withAlpha(
+                                                    (0.3 * 255).toInt()),
                                                 spreadRadius: 1,
                                                 blurRadius: 5,
                                                 offset: const Offset(2, 3),
                                               ),
                                             ],
                                             image: const DecorationImage(
-                                              image: AssetImage('assets/png/desc_box.png'),
+                                              image: AssetImage(
+                                                  'assets/png/desc_box.png'),
                                               fit: BoxFit.cover,
                                             ),
                                           ),
                                           child: TextField(
                                             maxLines: 2,
-                                            onChanged: (value) => setState(() => description = value),
+                                            onChanged: (value) => setState(
+                                                () => description = value),
                                             decoration: InputDecoration(
                                               border: OutlineInputBorder(
-                                                borderRadius: BorderRadius.circular(22),
-                                                borderSide: const BorderSide(color: Colors.grey, width: 0.5),
+                                                borderRadius:
+                                                    BorderRadius.circular(22),
+                                                borderSide: const BorderSide(
+                                                    color: Colors.grey,
+                                                    width: 0.5),
                                               ),
                                               enabledBorder: OutlineInputBorder(
-                                                borderRadius: BorderRadius.circular(22),
-                                                borderSide: const BorderSide(color: Colors.grey, width: 0.5),
+                                                borderRadius:
+                                                    BorderRadius.circular(22),
+                                                borderSide: const BorderSide(
+                                                    color: Colors.grey,
+                                                    width: 0.5),
                                               ),
                                               focusedBorder: OutlineInputBorder(
-                                                borderRadius: BorderRadius.circular(22),
-                                                borderSide: const BorderSide(color: Colors.blue, width: 2),
+                                                borderRadius:
+                                                    BorderRadius.circular(22),
+                                                borderSide: const BorderSide(
+                                                    color: Colors.blue,
+                                                    width: 2),
                                               ),
                                               filled: true,
                                               fillColor: Colors.transparent,
-                                              contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+                                              contentPadding:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 18,
+                                                      horizontal: 12),
                                             ),
                                           ),
                                         ),
@@ -316,10 +340,18 @@ class _RequestPermissionState extends State<RequestPermission> {
                                             children: [
                                               Text(
                                                 '${description.trim().isEmpty ? 1 : description.trim().split(RegExp(r'\s+')).length}/50',
-                                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                                style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight:
+                                                        FontWeight.bold),
                                               ),
                                               const SizedBox(height: 2),
-                                              Text(translate('request_permission.max_words'), style: const TextStyle(fontSize: 10, color: Colors.black)),
+                                              Text(
+                                                  translate(
+                                                      'request_permission.max_words'),
+                                                  style: const TextStyle(
+                                                      fontSize: 10,
+                                                      color: Colors.black)),
                                             ],
                                           ),
                                         ),
@@ -331,20 +363,22 @@ class _RequestPermissionState extends State<RequestPermission> {
 
                                   // Notice
                                   Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Image.asset('assets/png/notice_icon.png', width: 34, height: 34),
+                                      Image.asset('assets/png/notice_icon.png',
+                                          width: 34, height: 34),
                                       const SizedBox(width: 5),
                                       Expanded(
                                         child: Text(
-                                          'Please be aware that temporary permission request is deducted from your balance.',
+                                          translate(
+                                              'request.temp_permission_notice'),
                                           style: GoogleFonts.inter(
                                             color: appFontColor,
                                             fontSize: 9,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-
                                       ),
                                     ],
                                   ),
@@ -354,10 +388,11 @@ class _RequestPermissionState extends State<RequestPermission> {
                                   // Submit
                                   CustomSliderButton(
                                     key: _sliderKey,
-                                    onSlideComplete: _submitTempPermissionRequest,
-                                    loginResponseModel: widget.loginResponseModel,
+                                    onSlideComplete:
+                                        _submitTempPermissionRequest,
+                                    loginResponseModel:
+                                        widget.loginResponseModel,
                                   ),
-
                                 ],
                               ),
                             ),
@@ -412,7 +447,8 @@ class _RequestPermissionState extends State<RequestPermission> {
         try {
           final format = DateFormat.jm(); // e.g., 1:00 PM
           final dateTime = format.parse(time);
-          return DateFormat.H().format(dateTime); // returns hour in 24-hour format as string
+          return DateFormat.H()
+              .format(dateTime); // returns hour in 24-hour format as string
         } catch (e) {
           return ""; // fallback if time is "Select Time" or invalid
         }
@@ -451,24 +487,24 @@ class _RequestPermissionState extends State<RequestPermission> {
         }),
       );
 
-
       final data = jsonDecode(response.body);
       print("🔥 Submitting Body:\n${jsonEncode(data)}"); // Log the full body
 
-      if (response.statusCode == 200 && data["result"]?['status'] == 'success') {
+      if (response.statusCode == 200 &&
+          data["result"]?['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Request submitted successfully!")),
+          SnackBar(content: Text(translate('request.request_submitted'))),
         );
-        Navigator.pop(context, true); // ✅ Go back to MyRequestsPage with refresh flag
-
+        Navigator.pop(
+            context, true); // ✅ Go back to MyRequestsPage with refresh flag
       } else {
         _sliderKey.currentState?.resetSlider(); // 👈 Reset the slider position
-        _showErrorDialog(data["result"]?['message'] ?? "Request failed");
+        _showErrorDialog(
+            data["result"]?['message'] ?? translate('request.request_failed'));
       }
-
     } catch (e) {
       _sliderKey.currentState?.resetSlider(); // 👈 Reset the slider position
-      _showErrorDialog(e.toString());
+      _showErrorDialog(translate('request.error_occurred'));
     }
   }
 
@@ -476,20 +512,17 @@ class _RequestPermissionState extends State<RequestPermission> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Error'),
+        title: Text(translate('common.error')),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('OK'),
+            child: Text(translate('common.ok')),
           )
         ],
       ),
     );
   }
-
-
-
 
   @override
   void initState() {
@@ -504,5 +537,4 @@ class _RequestPermissionState extends State<RequestPermission> {
           : DateTime.now().add(const Duration(days: 1));
     });
   }
-
 }

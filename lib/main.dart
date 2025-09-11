@@ -7,7 +7,6 @@ import 'package:el_race/ui/presentation/home_screen/provider/slider_provider.dar
 import 'package:el_race/ui/presentation/home_screen/widgets/profile_box_with_slide_animation.dart';
 import 'package:el_race/ui/presentation/media/bloc/media_bloc.dart';
 import 'package:el_race/ui/presentation/my_notes/bloc/notes_bloc.dart';
-import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_bloc.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
 import 'package:el_race/ui/presentation/splash_screen/splash_screen.dart';
@@ -16,7 +15,6 @@ import 'package:el_race/utils/generated_routes.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:el_race/utils/screen_size_util.dart';
 // import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -52,6 +50,10 @@ void main() async {
     supportedLocales: ['en', 'ar'],
     basePath: 'assets/i18n',
   );
+
+  if (SharedPref().isArabic()) {
+    await delegate.changeLocale(const Locale('ar'));
+  }
 
   runApp(
     BlocProvider(
@@ -124,6 +126,7 @@ class MyApp extends StatelessWidget {
                         ),
                         child: const ProfileBoxWithSlideAnimation(),
                       ),
+                      Overlay(key: appOverlayKey),
                     ],
                   );
                 },
@@ -148,9 +151,11 @@ class MyApp extends StatelessWidget {
                   GlobalCupertinoLocalizations.delegate,
                 ],
                 supportedLocales: localizationDelegate.supportedLocales,
-                locale: SharedPref().isArabic()
-                    ? localizationDelegate.supportedLocales.last
-                    : localizationDelegate.supportedLocales.first,
+                locale: localizationDelegate.currentLocale,
+
+                // locale: SharedPref().isArabic()
+                //     ? localizationDelegate.supportedLocales.last
+                //     : localizationDelegate.supportedLocales.first,
                 onGenerateRoute: onGeneratedRoutes.generatedRoutes,
                 home: const SplashScreen()),
           ),
@@ -161,3 +166,4 @@ class MyApp extends StatelessWidget {
 }
 
 GlobalKey<NavigatorState> navKey = GlobalKey();
+final GlobalKey<OverlayState> appOverlayKey = GlobalKey<OverlayState>();

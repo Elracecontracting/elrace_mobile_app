@@ -1,20 +1,21 @@
 import 'dart:convert';
+
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
-import '../../widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+
+import '../../widgets/header_widget.dart';
 import '../Attendace_list/repository/attendance_repository.dart';
 
 class PettyCashAddExpense extends StatefulWidget {
-
   const PettyCashAddExpense({Key? key}) : super(key: key);
 
   @override
   _PettyCashAddExpenseState createState() => _PettyCashAddExpenseState();
 }
-
 
 class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
   String description = '';
@@ -28,12 +29,16 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
   dynamic selectedUser;
   String amount = '';
   String selectedExpenseType = 'EXPENSE TYPE'; // Default display text
-  final List<String> expenseTypes = ['Fuel', 'Hospitality', 'Site Material','Others'];
+  final List<String> expenseTypes = [
+    'Fuel',
+    'Hospitality',
+    'Site Material',
+    'Others'
+  ];
   String empID = '';
   String companyId = '';
   final String baseUrl = 'https://test.elrace.com/api/';
   bool isSubmitting = false;
-
 
   Future<void> _showPettyCashUserDialog() async {
     setState(() {
@@ -50,7 +55,8 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
         "Authorization": "Bearer $token",
       };
 
-      final url = Uri.parse("https://test.elrace.com/api/get_petty_cash_records");
+      final url =
+          Uri.parse("https://test.elrace.com/api/get_petty_cash_records");
       final body = jsonEncode({
         "jsonrpc": "2.0",
         "params": {},
@@ -80,79 +86,87 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
             return StatefulBuilder(
               builder: (context, setDialogState) {
                 return Dialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  insetPadding: const EdgeInsets.symmetric(horizontal: 30, vertical: 24),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
+                  insetPadding:
+                      const EdgeInsets.symmetric(horizontal: 30, vertical: 24),
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(24, 26, 24, 20),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Text("Select Petty Cash Holder", style: TextStyle(fontWeight: FontWeight.bold)),
+                        Text(translate('pettycash.select_petty_cash_holder'),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
                         const SizedBox(height: 16),
-
                         TextField(
                           onChanged: (value) {
                             setDialogState(() {
                               searchQuery = value;
                               filteredUsers = pettyCashUsers
-                                  .where((user) => user['name'].toLowerCase().contains(searchQuery.toLowerCase()))
+                                  .where((user) => user['name']
+                                      .toLowerCase()
+                                      .contains(searchQuery.toLowerCase()))
                                   .take(4)
                                   .toList();
                             });
                           },
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.search, size: 18),
-                            hintText: 'Search user...',
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            hintText: translate('pettycash.search_user'),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 10),
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12)),
                           ),
                         ),
-
                         const SizedBox(height: 14),
-
                         isLoading
                             ? const CircularProgressIndicator()
                             : filteredUsers.isEmpty
-                            ? const Text("No users found.")
-                            : SizedBox(
-                          height: 200,
-                          child: ListView.separated(
-                            itemCount: filteredUsers.length,
-                            itemBuilder: (_, index) {
-                              final user = filteredUsers[index];
-                              return ListTile(
-                                title: Text(user['name'], style: const TextStyle(fontSize: 13)),
-                                tileColor: selectedUser?['id'] == user['id']
-                                    ? Colors.blue.shade100
-                                    : Colors.transparent,
-                                onTap: () => setDialogState(() {
-                                  selectedUser = user;
-                                }),
-                              );
-                            },
-                            separatorBuilder: (_, __) => Divider(color: Colors.grey.shade400),
-                          ),
-                        ),
-
+                                ? Text(translate('pettycash.no_users'))
+                                : SizedBox(
+                                    height: 200,
+                                    child: ListView.separated(
+                                      itemCount: filteredUsers.length,
+                                      itemBuilder: (_, index) {
+                                        final user = filteredUsers[index];
+                                        return ListTile(
+                                          title: Text(user['name'],
+                                              style: const TextStyle(
+                                                  fontSize: 13)),
+                                          tileColor:
+                                              selectedUser?['id'] == user['id']
+                                                  ? Colors.blue.shade100
+                                                  : Colors.transparent,
+                                          onTap: () => setDialogState(() {
+                                            selectedUser = user;
+                                          }),
+                                        );
+                                      },
+                                      separatorBuilder: (_, __) =>
+                                          Divider(color: Colors.grey.shade400),
+                                    ),
+                                  ),
                         const SizedBox(height: 20),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             TextButton(
                               onPressed: () => Navigator.pop(context),
-                              child: const Text("Cancel"),
+                              child: Text(translate('pettycash.cancel')),
                             ),
                             const SizedBox(width: 12),
                             ElevatedButton(
                               onPressed: selectedUser != null
                                   ? () {
-                                setState(() {
-                                  // Use selectedUser['name'] or ['id'] as needed
-                                });
-                                Navigator.pop(context);
-                              }
+                                      setState(() {
+                                        // Use selectedUser['name'] or ['id'] as needed
+                                      });
+                                      Navigator.pop(context);
+                                    }
                                   : null,
-                              child: const Text("OK"),
+                              child: Text(translate('pettycash.ok')),
                             ),
                           ],
                         )
@@ -176,7 +190,8 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
   }
 
   Future<void> init({required String base}) async {
-    empID = (await userRepo.getLoginResponse())!.result!.data!.emp_id.toString();
+    empID =
+        (await userRepo.getLoginResponse())!.result!.data!.emp_id.toString();
   }
 
   String getExpenseTypeApiValue(String label) {
@@ -194,7 +209,6 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
     }
   }
 
-
   Future<void> _pickDate() async {
     DateTime? picked = await showDatePicker(
       context: context,
@@ -207,7 +221,8 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
     }
   }
 
-  Widget _buildInfoRow(String imagePath, String title, String value, {VoidCallback? onTap}) {
+  Widget _buildInfoRow(String imagePath, String title, String value,
+      {VoidCallback? onTap}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: GestureDetector(
@@ -220,8 +235,11 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                Text(value, style: const TextStyle(fontSize: 12, color: Colors.black)),
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.bold)),
+                Text(value,
+                    style: const TextStyle(fontSize: 12, color: Colors.black)),
               ],
             ),
           ],
@@ -238,28 +256,28 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
     // 🔍 Field validation
     if (selectedExpenseType == 'EXPENSE TYPE') {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select an expense type.")),
+        SnackBar(content: Text(translate('home.Select_Petty_Cash_Holder'))),
       );
       return;
     }
 
     if (selectedUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please select a petty cash holder.")),
+        SnackBar(content: Text(translate('home.Select_Petty_Cash_Holder'))),
       );
       return;
     }
 
     if (amount.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter an amount.")),
+        SnackBar(content: Text(translate('home.Enter_amount_in_AED'))),
       );
       return;
     }
 
     if (description.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a description.")),
+        SnackBar(content: Text(translate('home.DESCRIPTION'))),
       );
       return;
     }
@@ -297,21 +315,24 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
 
       if (decoded['result']['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(decoded['result']['message'] ?? 'Expense submitted')),
+          SnackBar(
+              content: Text(decoded['result']['message'] ??
+                  translate('pettycash.request_submitted'))),
         );
         Navigator.pop(context);
       } else {
-        throw Exception(decoded['result']['message'] ?? 'Submission failed.');
+        throw Exception(decoded['result']['message'] ??
+            translate('pettycash.failed_to_submit'));
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: ${e.toString()}")),
+        SnackBar(
+            content: Text("${translate('pettycash.error')}: ${e.toString()}")),
       );
     } finally {
       setState(() => isSubmitting = false);
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -324,10 +345,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-
             const SizedBox(height: 10),
-
 
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -360,7 +378,8 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                   });
                 },
                 position: PopupMenuPosition.under,
-                itemBuilder: (BuildContext context) => expenseTypes.map((String type) {
+                itemBuilder: (BuildContext context) =>
+                    expenseTypes.map((String type) {
                   return PopupMenuItem<String>(
                     value: type,
                     child: Text(
@@ -381,7 +400,8 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                 child: SizedBox(
                   width: 240, // Optional: adjust to your design
                   child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 36),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 36),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
                         colors: [Color(0xFF1A237E), Color(0xFF3F51B5)],
@@ -412,20 +432,19 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
               ),
             ),
 
-
-
-
             const SizedBox(height: 20),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildInfoRow('assets/png/calendar_icon.png', 'Date', formattedDate, onTap: _pickDate),
+                  _buildInfoRow('assets/png/calendar_icon.png',
+                      translate('pettycash.date'), formattedDate,
+                      onTap: _pickDate),
                   _buildInfoRow(
                     'assets/png/supplier_icon.png',
-                    'Petty Cash Holder',
-                    selectedUser?['name'] ?? 'Select user',
+                    translate('pettycash.holder'),
+                    selectedUser?['name'] ?? translate('pettycash.select_user'),
                     onTap: _showPettyCashUserDialog,
                   ),
                   Padding(
@@ -446,7 +465,8 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                             children: [
                               const Text(
                                 'Amount',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                    fontSize: 15, fontWeight: FontWeight.bold),
                               ),
                               TextField(
                                 keyboardType: TextInputType.number,
@@ -456,10 +476,11 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                                     amount = value;
                                   });
                                 },
-                                decoration: const InputDecoration(
-                                  hintText: 'Enter amount in AED',
+                                decoration: InputDecoration(
+                                  hintText: translate('pettycash.enter_amount'),
                                   isDense: true,
-                                  contentPadding: EdgeInsets.symmetric(vertical: 4),
+                                  contentPadding:
+                                      const EdgeInsets.symmetric(vertical: 4),
                                 ),
                               ),
                             ],
@@ -472,15 +493,15 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
               ),
             ),
 
-
             const SizedBox(height: 20),
             // Description Field
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0), // Adjust padding as needed
+              padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0), // Adjust padding as needed
               child: Align(
                 alignment: Alignment.center, // Align text to the left
                 child: Text(
-                  'DESCRIPTION',
+                  translate('pettycash.description').toUpperCase(),
                   style: _infoTextStyle_1(),
                   textAlign: TextAlign.center, // Ensures left alignment
                 ),
@@ -509,20 +530,27 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                       onChanged: (value) => setState(() => description = value),
                       decoration: InputDecoration(
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(22), // Adjust border radius
-                          borderSide: const BorderSide(color: Colors.grey, width: 0.5), // Add border
+                          borderRadius:
+                              BorderRadius.circular(22), // Adjust border radius
+                          borderSide: const BorderSide(
+                              color: Colors.grey, width: 0.5), // Add border
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(22),
-                          borderSide: const BorderSide(color: Colors.grey, width: 0.5), // Normal state border
+                          borderSide: const BorderSide(
+                              color: Colors.grey,
+                              width: 0.5), // Normal state border
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(22),
-                          borderSide: const BorderSide(color: Colors.blue, width: 2), // Highlight border when focused
+                          borderSide: const BorderSide(
+                              color: Colors.blue,
+                              width: 2), // Highlight border when focused
                         ),
                         filled: true,
                         fillColor: Colors.grey[300], // Keep background white
-                        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12), // Reduce padding
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 18, horizontal: 12), // Reduce padding
                       ),
                     ),
                   ),
@@ -533,13 +561,15 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                       children: [
                         Text(
                           '${description.split(' ').length}/50',
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.bold),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 2),
-                        const Text(
-                          'Max words',
-                          style: TextStyle(fontSize: 10, color: Colors.black),
+                        Text(
+                          translate('pettycash.max_words'),
+                          style: const TextStyle(
+                              fontSize: 10, color: Colors.black),
                         ),
                       ],
                     ),
@@ -558,20 +588,27 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: appFontColor,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: isSubmitting ? null : submitExpense,
                       child: isSubmitting
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                          : const Text('Save', style: TextStyle(color: Colors.white)),
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                  color: Colors.white, strokeWidth: 2))
+                          : Text(translate('pettycash.save'),
+                              style: const TextStyle(color: Colors.white)),
                     ),
                   ),
                   const SizedBox(width: 15), // Adds spacing between buttons
-                  Expanded(child: _buildButton('Cancel', const Color(0xFFBA1719))),
+                  Expanded(
+                      child: _buildButton(translate('pettycash.cancel'),
+                          const Color(0xFFBA1719))),
                 ],
               ),
             ),
-
 
             const SizedBox(height: 20),
           ],
@@ -616,13 +653,15 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
         onPressed: () {},
         child: Text(text, style: const TextStyle(color: Colors.white)),
       ),
     );
   }
-  TextStyle _infoTextStyle_1() => const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: appFontColor);
 
+  TextStyle _infoTextStyle_1() => const TextStyle(
+      fontSize: 14, fontWeight: FontWeight.bold, color: appFontColor);
 }

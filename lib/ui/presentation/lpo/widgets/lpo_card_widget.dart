@@ -9,7 +9,18 @@ import 'package:intl/intl.dart';
 class LpoCardWidget extends StatelessWidget {
   const LpoCardWidget({
     super.key,
+    this.name,
+    this.vendorName,
+    this.date,
+    this.amount,
+    this.lpoCount,
   });
+
+  final String? name;
+  final String? vendorName;
+  final String? date;
+  final String? amount;
+  final String? lpoCount;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +58,7 @@ class LpoCardWidget extends StatelessWidget {
                               SizedBox(
                                 width: 100,
                                 child: Text(
-                                  'item.name',
+                                  name ?? 'item.name',
                                   style: GoogleFonts.koulen(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w500,
@@ -78,16 +89,23 @@ class LpoCardWidget extends StatelessWidget {
                       SizedBox(
                         width: 100,
                         child: Text(
-                          "LPO NO",
+                          (lpoCount ?? '').toString(),
                           style: GoogleFonts.koulen(
                             fontSize: 12,
-                            fontWeight: FontWeight.w400,
+                            fontWeight: FontWeight.w600,
                             color: black,
-                            //letterSpacing: 1.0,
                           ),
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      // const SizedBox(width: 8),
+                      // Text(
+                      //   (lpoCount ?? '').toString(),
+                      //   style: GoogleFonts.koulen(
+                      //     fontSize: 12,
+                      //     fontWeight: FontWeight.w600,
+                      //     color: black,
+                      //   ),
+                      // ),
                     ],
                   ),
                   //const SizedBox(height: 3),
@@ -106,7 +124,7 @@ class LpoCardWidget extends StatelessWidget {
                           SizedBox(
                             width: 170.w,
                             child: Text(
-                              'Vendor Name',
+                              vendorName ?? 'Vendor Name',
                               maxLines: 1,
                               style: GoogleFonts.koulen(
                                 fontSize: 12,
@@ -119,6 +137,7 @@ class LpoCardWidget extends StatelessWidget {
                           ),
                         ],
                       ),
+
                       // Container(
                       //     padding: const EdgeInsets.all(6),
                       //     margin: const EdgeInsets.only(right: 10, bottom: 20),
@@ -209,10 +228,8 @@ class LpoCardWidget extends StatelessWidget {
                                   ),
                                 ),
                                 child: Text(
-                                  Util.isValidDateTime('item.date')
-                                      ? DateTime.parse('item.date')
-                                          .day
-                                          .toString()
+                                  Util.isValidDateTime(date ?? 'item.date')
+                                      ? DateTime.parse(date!).day.toString()
                                       : '',
                                   style: GoogleFonts.inter(
                                     fontSize: 17,
@@ -222,9 +239,9 @@ class LpoCardWidget extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                Util.isValidDateTime('item.date')
+                                Util.isValidDateTime(date ?? 'item.date')
                                     ? DateFormat.MMMM()
-                                        .format(DateTime.parse('item.date'))
+                                        .format(DateTime.parse(date!))
                                     : '',
                                 style: GoogleFonts.inter(
                                   fontSize: 9.w,
@@ -233,10 +250,8 @@ class LpoCardWidget extends StatelessWidget {
                                 ),
                               ),
                               Text(
-                                Util.isValidDateTime('item.date')
-                                    ? DateTime.parse('item.date')
-                                        .year
-                                        .toString()
+                                Util.isValidDateTime(date ?? 'item.date')
+                                    ? DateTime.parse(date!).year.toString()
                                     : '',
                                 style: GoogleFonts.inter(
                                   fontSize: 12,
@@ -291,7 +306,7 @@ class LpoCardWidget extends StatelessWidget {
                     child: SizedBox(
                       width: 190.w,
                       child: Text(
-                        'item.name',
+                        ('AMOUNT: $amount'),
                         style: GoogleFonts.koulen(
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w500,

@@ -1,6 +1,7 @@
 import 'package:el_race/ui/presentation/PettyCash/PettyCashPopUpScreen.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 
 import '../../widgets/header_widget.dart';
 
@@ -24,7 +25,7 @@ class _PettyCashListState extends State<PettyCashList> {
 
     // Show success message
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Submitted Successfully!")),
+      SnackBar(content: Text(translate('pettycash.submitted_success'))),
     );
 
     // Reset the slider after 1 second
@@ -56,9 +57,9 @@ class _PettyCashListState extends State<PettyCashList> {
                   icon: const Icon(Icons.arrow_back),
                   onPressed: () => Navigator.pop(context),
                 ),
-                const Text(
-                  'PETTY CASH',
-                  style: TextStyle(
+                Text(
+                  translate('home.petty_cash'),
+                  style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: appFontColor),
@@ -115,8 +116,8 @@ class _PettyCashListState extends State<PettyCashList> {
                         ),
                       ],
                     ),
-                    child: const Padding(
-                      padding: EdgeInsets.fromLTRB(25, 9, 15, 12),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(25, 9, 15, 12),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -124,8 +125,8 @@ class _PettyCashListState extends State<PettyCashList> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
-                                "Submitted",
-                                style: TextStyle(
+                                translate("home.Submitted"),
+                                style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
                                   color: appFontColor,
@@ -133,28 +134,28 @@ class _PettyCashListState extends State<PettyCashList> {
                               ),
                             ],
                           ),
-                          SizedBox(width: 5),
-                          SizedBox(
+                          const SizedBox(width: 5),
+                          const SizedBox(
                             height: 30,
                             child: VerticalDivider(
                               color: Colors.grey,
                               thickness: 2,
                             ),
                           ),
-                          SizedBox(width: 5),
+                          const SizedBox(width: 5),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Text(
-                                  'Date',
-                                  style: TextStyle(
+                                  translate('request_permission.date'),
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                     color: appFontColor,
                                   ),
                                 ),
-                                Text(
+                                const Text(
                                   "03/03/2025",
                                   style: TextStyle(
                                     fontSize: 10,
@@ -165,27 +166,27 @@ class _PettyCashListState extends State<PettyCashList> {
                               ],
                             ),
                           ),
-                          SizedBox(
+                          const SizedBox(
                             height: 30,
                             child: VerticalDivider(
                               color: Colors.grey,
                               thickness: 2,
                             ),
                           ),
-                          SizedBox(width: 5),
+                          const SizedBox(width: 5),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 Text(
-                                  'Amount',
-                                  style: TextStyle(
+                                  translate('home.amount'),
+                                  style: const TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                     color: appFontColor,
                                   ),
                                 ),
-                                Text(
+                                const Text(
                                   "3,000",
                                   style: TextStyle(
                                     fontSize: 10,
@@ -196,13 +197,13 @@ class _PettyCashListState extends State<PettyCashList> {
                               ],
                             ),
                           ),
-                          SizedBox(width: 0),
-                          CircleAvatar(
+                          const SizedBox(width: 0),
+                          const CircleAvatar(
                             radius: 10,
                             backgroundImage:
                                 AssetImage('assets/png/tick-petty.png'),
                           ),
-                          SizedBox(width: 0),
+                          const SizedBox(width: 0),
                         ],
                       ),
                     ),

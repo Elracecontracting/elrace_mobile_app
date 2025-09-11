@@ -4,6 +4,7 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/task_sheet/TaskDetailsPage.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 
@@ -99,7 +100,7 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                 children: [
                   const BackButton(),
                   Text(
-                    'TIME SHEET',
+                    translate('home.time_sheet'),
                     style: GoogleFonts.koulen(
                       fontSize: 19,
                       fontWeight: FontWeight.w300,

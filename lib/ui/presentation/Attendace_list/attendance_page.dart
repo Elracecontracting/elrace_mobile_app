@@ -1,13 +1,16 @@
 import 'dart:convert';
 import 'dart:developer';
+
 import 'package:el_race/ui/presentation/Attendace_list/model/attendance_model.dart'; // Import the login model
 import 'package:el_race/ui/presentation/Attendace_list/repository/attendance_repository.dart';
 import 'package:el_race/utils/color_utils.dart'; // Import global colors
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+
 import '../../widgets/header_widget.dart';
 import 'bloc/attendance_bloc.dart';
 
@@ -114,7 +117,7 @@ class _AttendancePageState extends State<AttendancePage> {
                   onPressed: () => Navigator.pop(context),
                 ),
                 Text(
-                  'MY ATTENDANCE',
+                  translate('home.attendance'),
                   style: GoogleFonts.koulen(
                     fontSize: 20,
                     fontWeight: FontWeight.w400,
@@ -143,7 +146,7 @@ class _AttendancePageState extends State<AttendancePage> {
                       ],
                     ),
                     child: Text(
-                      'Report',
+                      translate('home.report'),
                       style: GoogleFonts.koulen(
                         fontSize: 14,
                         color: appFontColor,

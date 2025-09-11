@@ -3,13 +3,13 @@ import 'package:el_race/utils/Util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 
 import '../bloc/notes_bloc.dart';
 import '../data/note_model.dart';
 import '../widgets/note_item_widget.dart';
 import '../widgets/notes_header_widget.dart';
 import 'add_note_screen.dart';
-
 
 class MyNotesScreen extends StatefulWidget {
   const MyNotesScreen({super.key});
@@ -44,7 +44,8 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
           }
           if (state is NoteActionSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Note action completed successfully')),
+              const SnackBar(
+                  content: Text('Note action completed successfully')),
             );
           }
         },
@@ -177,14 +178,14 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Add New Note'),
+        title: Text(translate('notes.add_new_note')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: titleController,
-              decoration: const InputDecoration(
-                labelText: 'Title',
+              decoration: InputDecoration(
+                labelText: translate('notes.title'),
                 border: OutlineInputBorder(),
               ),
               maxLines: 1,
@@ -192,8 +193,8 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
             const SizedBox(height: 16),
             TextField(
               controller: descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description',
+              decoration: InputDecoration(
+                labelText: translate('notes.description'),
                 border: OutlineInputBorder(),
               ),
               maxLines: 3,
@@ -203,7 +204,7 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
+            child: Text(translate('common.cancel')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -219,7 +220,7 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
                 Navigator.of(dialogContext).pop();
               }
             },
-            child: const Text('Add'),
+            child: Text(translate('common.add')),
           ),
         ],
       ),
@@ -236,7 +237,9 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Created: ${note.date.day}/${note.date.month}/${note.date.year}',
+              translate('notes.created', args: {
+                'date': '${note.date.day}/${note.date.month}/${note.date.year}'
+              }),
               style: const TextStyle(
                 fontSize: 12,
                 color: Colors.grey,
@@ -249,7 +252,7 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Close'),
+            child: Text(translate('common.close')),
           ),
         ],
       ),
@@ -260,12 +263,12 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Note'),
-        content: const Text('Are you sure you want to delete this note?'),
+        title: Text(translate('notes.delete_note')),
+        content: Text(translate('notes.delete_confirm')),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
+            child: Text(translate('common.cancel')),
           ),
           ElevatedButton(
             onPressed: () {
@@ -275,10 +278,10 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
             ),
-            child: const Text('Delete'),
+            child: Text(translate('common.delete')),
           ),
         ],
       ),
     );
   }
-} 
+}

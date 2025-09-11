@@ -5,6 +5,7 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -15,7 +16,26 @@ class ParayerWidget extends StatefulWidget {
   State<ParayerWidget> createState() => _ParayerWidgetState();
 }
 
-class _ParayerWidgetState extends State<ParayerWidget> {
+class _ParayerWidgetState extends State<ParayerWidget>
+    with WidgetsBindingObserver {
+  String _prayerKey(Prayer p) {
+    switch (p) {
+      case Prayer.fajr:
+        return 'home.Fajr';
+      case Prayer.dhuhr:
+        return 'home.Dhuhr';
+      case Prayer.asr:
+        return 'home.Asr';
+      case Prayer.maghrib:
+        return 'home.Maghrib';
+      case Prayer.isha:
+        return 'home.Isha';
+      // في adhan غالباً مش هتوصل لـ none، لكن للاحتياط:
+      default:
+        return 'home.Fajr';
+    }
+  }
+
   PrayerTimes? _pt;
   Prayer? _next;
   DateTime? _nextTime;
@@ -27,13 +47,22 @@ class _ParayerWidgetState extends State<ParayerWidget> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // مراقبة حالة التطبيق
     _init();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // إزالة المراقبة
     _ticker?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _init(); // إعادة محاولة جلب اللوكيشن عند العودة
+    }
   }
 
   Future<void> _init() async {
@@ -157,7 +186,7 @@ class _ParayerWidgetState extends State<ParayerWidget> {
               children: [
                 Row(
                   children: [
-                    Text('Prayer times',
+                    Text(translate('home.prayer_times'),
                         style: GoogleFonts.koulen(
                           fontSize: 24,
                           fontWeight: FontWeight.w400,
@@ -215,7 +244,7 @@ class _ParayerWidgetState extends State<ParayerWidget> {
                   Positioned(
                       bottom: 65.h, // Reduced from 85.h
                       left: 0,
-                      child: _label('Fajr', _fmt(pt.fajr))),
+                      child: _label(translate('home.Fajr'), _fmt(pt.fajr))),
                   Positioned(
                       bottom: 24.h, // Reduced from 55.h
                       left: 26.w,
@@ -223,7 +252,7 @@ class _ParayerWidgetState extends State<ParayerWidget> {
                   Positioned(
                       bottom: 80.h, // Reduced from 110.h
                       left: 60.w,
-                      child: _label('Dhuhr', _fmt(pt.dhuhr))),
+                      child: _label(translate('home.Dhuhr'), _fmt(pt.dhuhr))),
                   Positioned(
                       bottom: 70.h, // Reduced from 110.h
                       right: 0.w,
@@ -232,11 +261,12 @@ class _ParayerWidgetState extends State<ParayerWidget> {
                   Positioned(
                       bottom: 80.h, // Reduced from 110.h
                       right: 50.w,
-                      child: _label('Maghrib', _fmt(pt.maghrib))),
+                      child:
+                          _label(translate('home.Maghrib'), _fmt(pt.maghrib))),
                   Positioned(
                       bottom: 60.h, // Reduced from 85.h
                       right: 0,
-                      child: _label('Isha', _fmt(pt.isha))),
+                      child: _label(translate('home.Isha'), _fmt(pt.isha))),
                   Positioned(
                       bottom: 28.h, // Reduced from 55.h
                       right: 25.w,
@@ -263,7 +293,7 @@ class _ParayerWidgetState extends State<ParayerWidget> {
                                 end: Alignment.bottomRight,
                               ).createShader(b),
                               child: Text(
-                                'Asr',
+                                translate('home.Asr'),
                                 style: GoogleFonts.kanit(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w400,
@@ -292,14 +322,22 @@ class _ParayerWidgetState extends State<ParayerWidget> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(
-                          'till ${(_next ?? Prayer.fajr).name.toUpperCase()}',
-                          style: GoogleFonts.kanit(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.white,
-                          ),
-                        ),
+                        Builder(builder: (context) {
+                          final nextPrayer = _next ?? Prayer.fajr;
+                          final nextPrayerName =
+                              translate(_prayerKey(nextPrayer));
+
+                          return Text(
+                            translate('home.till_prayer',
+                                args: {'prayer': nextPrayerName}),
+                            //'till ${(_next ?? Prayer.fajr).name.toUpperCase()}',
+                            style: GoogleFonts.kanit(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.white,
+                            ),
+                          );
+                        }),
                         Text(
                           _hhmmssUntil(_nextTime),
                           style: GoogleFonts.kanit(

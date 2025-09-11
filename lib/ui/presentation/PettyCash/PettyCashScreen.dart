@@ -6,6 +6,7 @@ import 'package:el_race/ui/presentation/PettyCash/PettyCashList.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashPopUpScreen.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -159,7 +160,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                         onPressed: () => Navigator.pop(context),
                       ),
                       Text(
-                        'PETTYCASH',
+                        translate('home.petty_cash'),
                         style: GoogleFonts.koulen(
                           fontSize: 20,
                           fontWeight: FontWeight.w400,
@@ -660,9 +661,9 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
           height: 30,
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Text(
-            'you have received 2,500 AED from accounts department transferred by Mohamed Jouda on 25/03/2025',
+            translate('pettycash.received_message'),
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
           ),
         ),

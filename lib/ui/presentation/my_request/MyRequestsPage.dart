@@ -639,7 +639,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                         onPressed: () => Navigator.pop(context, true),
                       ),
                       Text(
-                        'MY REQUESTS',
+                        translate('home.my_request'),
                         style: GoogleFonts.koulen(
                           fontSize: 18,
                           fontWeight: FontWeight.w400,
@@ -681,22 +681,22 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                     ),
                     child: TextField(
                       controller: searchController,
-                      decoration: const InputDecoration(
-                        hintText: "Find your request",
-                        hintStyle: TextStyle(
+                      decoration: InputDecoration(
+                        hintText: translate('home.Find_your_request'),
+                        hintStyle: const TextStyle(
                             fontSize: 12,
                             color: appFontColor), // Reduced font size
-                        prefixIcon: Padding(
+                        prefixIcon: const Padding(
                           padding: EdgeInsets.all(
                               8.0), // Adjust padding to control icon size
                           child: Icon(Icons.menu,
                               size: 18,
                               color: appFontColor), // Reduced icon size
                         ),
-                        suffixIcon:
-                            Icon(Icons.search, size: 18, color: appFontColor),
+                        suffixIcon: const Icon(Icons.search,
+                            size: 18, color: appFontColor),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
+                        contentPadding: const EdgeInsets.symmetric(
                             vertical: 10, horizontal: 10), // Adjust padding
                       ),
                       onChanged: (query) {},

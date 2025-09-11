@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/main.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:el_race/utils/Util.dart';
@@ -12,6 +13,57 @@ import 'package:provider/provider.dart';
 
 class ProfileBoxWithSlideAnimation extends StatelessWidget {
   const ProfileBoxWithSlideAnimation({super.key});
+
+  void _showCertificateOverEverything() {
+    final overlayState = appOverlayKey.currentState;
+    if (overlayState == null) return;
+
+    late OverlayEntry entry;
+    entry = OverlayEntry(
+      builder: (ctx) {
+        final size =
+            MediaQuery.of(ctx).size; // ناخد أبعاد الشاشة من نفس الـ Overlay
+        return Material(
+          type: MaterialType.transparency, // علشان Directionality/Theme
+          child: Stack(
+            children: [
+              // خلفية (barrier) قابلة للإغلاق باللمس
+              Positioned.fill(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => entry.remove(),
+                  child: Container(color: Colors.black54),
+                ),
+              ),
+
+              // المحتوى في المنتصف
+              Center(
+                child: Dialog(
+                  insetPadding: const EdgeInsets.all(15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: size.width * 0.85,
+                      height: size.height * 0.30,
+                      child: Image.asset(
+                        'assets/png/certificate.png',
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    overlayState.insert(entry);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -127,35 +179,35 @@ class ProfileBoxWithSlideAnimation extends StatelessWidget {
                               ),
                               const SizedBox(height: 6),
                               GestureDetector(
-                                onTap: () {
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) {
-                                      return Dialog(
-                                        insetPadding: const EdgeInsets.all(15),
-                                        child: Container(
-                                          width: double.infinity,
-                                          height: MediaQuery.of(context)
-                                                  .size
-                                                  .height *
-                                              0.3,
-                                          decoration: BoxDecoration(
-                                            color: Colors.black,
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                            child: Image.asset(
-                                                'assets/png/certificate.png',
-                                                fit: BoxFit.cover),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
+                                onTap: _showCertificateOverEverything,
+                                //   final ctx = navKey.currentContext!;
+                                //   showDialog(
+                                //     context: ctx,
+                                //     builder: (_) {
+                                //       return Dialog(
+                                //         insetPadding: const EdgeInsets.all(15),
+                                //         child: Container(
+                                //           width: double.infinity,
+                                //           height:
+                                //               MediaQuery.of(ctx).size.height *
+                                //                   0.3,
+                                //           decoration: BoxDecoration(
+                                //             color: Colors.black,
+                                //             borderRadius:
+                                //                 BorderRadius.circular(12),
+                                //           ),
+                                //           child: ClipRRect(
+                                //             borderRadius:
+                                //                 BorderRadius.circular(12),
+                                //             child: Image.asset(
+                                //                 'assets/png/certificate.png',
+                                //                 fit: BoxFit.cover),
+                                //           ),
+                                //         ),
+                                //       );
+                                //     },
+                                //   );
+
                                 child: Image.asset(
                                   'assets/png/cert_icon.png',
                                   height: 26.52,

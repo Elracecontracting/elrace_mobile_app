@@ -2,6 +2,7 @@ import 'package:el_race/utils/color_utils.dart'; // Import global colors
 import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../../widgets/header_widget.dart';
 
 class ProjectAnnouncementPage extends StatelessWidget {
@@ -17,7 +18,6 @@ class ProjectAnnouncementPage extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           const SizedBox(height: 10),
 
           Padding(
@@ -26,7 +26,10 @@ class ProjectAnnouncementPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 IconButton(
-                  icon: const Icon(Icons.arrow_back,size: 32,),
+                  icon: const Icon(
+                    Icons.arrow_back,
+                    size: 32,
+                  ),
                   onPressed: () => Navigator.pop(context),
                 ),
                 Row(
@@ -35,12 +38,12 @@ class ProjectAnnouncementPage extends StatelessWidget {
                     Image.asset('assets/png/news_logo.png'),
                     const SizedBox(width: 8),
                     Text(
-                      translate('NEWS'),
+                      translate('home.news'),
                       style: GoogleFonts.koulen(
                           fontSize: 25,
                           fontWeight: FontWeight.w400,
                           color: appFontColor),
-                    ),   
+                    ),
                   ],
                 ),
                 const SizedBox(width: 100),

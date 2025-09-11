@@ -8,6 +8,7 @@ import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class MyProject extends StatelessWidget {
@@ -78,7 +79,7 @@ class MyProject extends StatelessWidget {
                     width: 30.w,
                   ),
                   Text(
-                    ' My Projects',
+                    translate('home.projects'),
                     style: GoogleFonts.koulen(
                       fontSize: 26.sp,
                       fontWeight: FontWeight.w500,

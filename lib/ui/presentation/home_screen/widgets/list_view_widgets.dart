@@ -91,38 +91,41 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       backgroundImagePath: 'assets/png/gray_card.png', // ✅ Add this
       topPadding: true,
       topPaddingValue: 40,
-      childWidget: Stack(
-        children: [
-          Padding(
-            padding: EdgeInsets.only(
-              left: 210.w,
-            ),
-            child: Image.asset(
-              'assets/png/time_sheet.png',
-              width: SizeConfig().getWidth(140),
-              height: SizeConfig().getHeight(140),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 66),
-            child: SizedBox(
-              width: SizeConfig().getWidth(190),
-              height: SizeConfig().getHeight(85),
-              child: const Column(
-                children: [
-                  CustomBulletPoint(
-                    // bulletColor: Color(0xFF009859),
-                    text: 'No of Labors',
-                    textColor: Colors.black,
-                    countColor: Colors.black,
-                    count: '15',
-                    containerColor: Colors.white,
-                  ),
-                ],
+      childWidget: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Stack(
+          children: [
+            Padding(
+              padding: EdgeInsets.only(
+                left: 210.w,
+              ),
+              child: Image.asset(
+                'assets/png/time_sheet.png',
+                width: SizeConfig().getWidth(140),
+                height: SizeConfig().getHeight(140),
               ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.only(top: 66),
+              child: SizedBox(
+                width: SizeConfig().getWidth(190),
+                height: SizeConfig().getHeight(85),
+                child: Column(
+                  children: [
+                    CustomBulletPoint(
+                      // bulletColor: Color(0xFF009859),
+                      text: translate('home.No_of_Labors'),
+                      textColor: Colors.black,
+                      countColor: Colors.black,
+                      count: '15',
+                      containerColor: Colors.white,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
       // childWidget: Padding(
       //   padding: EdgeInsets.only(
@@ -138,15 +141,18 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   }
 
   Widget _buildPettyCashWidget() {
-    return Stack(
-      children: [
-        GrayCardComponent(
-          onClick: () => Util.pushPage(const PettyCashList(), context),
-          cardTitle: 'Petty Cash',
-          backgroundImagePath: 'assets/png/pettycash_new_bg.png',
-          childWidget: const SizedBox.shrink(),
-        ),
-      ],
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Stack(
+        children: [
+          GrayCardComponent(
+            onClick: () => Util.pushPage(const PettyCashList(), context),
+            cardTitle: translate('home.petty_cash'),
+            backgroundImagePath: 'assets/png/pettycash_new_bg.png',
+            childWidget: const SizedBox.shrink(),
+          ),
+        ],
+      ),
     );
   }
 
@@ -154,42 +160,45 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     return GrayCardComponent(
       onClick: () => Util.pushPage(const LpoListScreen(), context),
       mainIcon: 'assets/png/time_sheet.png',
-      cardTitle: 'LPO',
+      cardTitle: translate('home.lpo'),
       backgroundImagePath: 'assets/png/gray_card.png', // ✅ Add this
       topPadding: true,
       topPaddingValue: 40,
-      childWidget: Stack(
-        children: [
-          Padding(
-            padding: EdgeInsets.only(
-              left: 210.w,
-            ),
-            child: Image.asset(
-              'assets/png/lpo.png',
-              width: SizeConfig().getWidth(140),
-              height: SizeConfig().getHeight(140),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 66),
-            child: SizedBox(
-              width: SizeConfig().getWidth(190),
-              height: SizeConfig().getHeight(85),
-              child: const Column(
-                children: [
-                  CustomBulletPoint(
-                    // bulletColor: Color(0xFF009859),
-                    text: 'No. of LPO',
-                    textColor: Colors.black,
-                    countColor: Colors.black,
-                    count: '15',
-                    containerColor: Colors.white,
-                  ),
-                ],
+      childWidget: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Stack(
+          children: [
+            Padding(
+              padding: EdgeInsets.only(
+                left: 210.w,
+              ),
+              child: Image.asset(
+                'assets/png/lpo.png',
+                width: SizeConfig().getWidth(140),
+                height: SizeConfig().getHeight(140),
               ),
             ),
-          ),
-        ],
+            Padding(
+              padding: const EdgeInsets.only(top: 66),
+              child: SizedBox(
+                width: SizeConfig().getWidth(190),
+                height: SizeConfig().getHeight(85),
+                child: Column(
+                  children: [
+                    CustomBulletPoint(
+                      // bulletColor: Color(0xFF009859),
+                      text: translate('home.No_of_LPO'),
+                      textColor: Colors.black,
+                      countColor: Colors.black,
+                      count: '15',
+                      containerColor: Colors.white,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
 
       // childWidget: Padding(
@@ -253,32 +262,35 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     return Stack(
       children: [
         GrayCardComponent(
-          cardTitle: translate('my notes'),
+          cardTitle: translate('home.my_notes'),
           backgroundImagePath: 'assets/png/blue_card.png',
           onClick: () => Util.pushPage(const MyNotesScreen(), context),
           topPadding: true,
-          childWidget: Stack(
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 66),
-                child: SizedBox(
-                  width: SizeConfig().getWidth(190),
-                  height: SizeConfig().getHeight(85),
-                  child: const Column(
-                    children: [
-                      CustomBulletPoint(
-                        // bulletColor: Color(0xFF009859),
-                        text: 'My Notes',
-                        textColor: Colors.black,
-                        countColor: Colors.black,
-                        count: '15',
-                        containerColor: Colors.white,
-                      ),
-                    ],
+          childWidget: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Stack(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(top: 66),
+                  child: SizedBox(
+                    width: SizeConfig().getWidth(190),
+                    height: SizeConfig().getHeight(85),
+                    child: Column(
+                      children: [
+                        CustomBulletPoint(
+                          // bulletColor: Color(0xFF009859),
+                          text: translate('home.my_notes'),
+                          textColor: Colors.black,
+                          countColor: Colors.black,
+                          count: '15',
+                          containerColor: Colors.white,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           // childWidget: DefaultTextStyle(
           //   style: const TextStyle(
@@ -330,37 +342,40 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
             Navigator.push(
                 context, MaterialPageRoute(builder: (context) => MyProject()));
           },
-          childWidget: DefaultTextStyle(
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.only(top: 80),
-              child: SizedBox(
-                width: SizeConfig().getWidth(190),
-                height: SizeConfig().getHeight(85),
-                child: const Column(
-                  children: [
-                    CustomBulletPoint(
-                      // bulletColor: Color(0xFF009859),
-                      text: 'In progress',
-                      textColor: Colors.black,
-                      countColor: Colors.black,
-                      count: '15',
-                      containerColor: Colors.white,
-                    ),
-                    SizedBox(height: 4),
-                    CustomBulletPoint(
-                      // bulletColor: Color(0xFFBA1719),
-                      text: 'Delay',
-                      textColor: Colors.black,
-                      countColor: Colors.black,
-                      count: '2',
-                      containerColor: Colors.white,
-                    ),
-                  ],
+          childWidget: Directionality(
+            textDirection: TextDirection.ltr,
+            child: DefaultTextStyle(
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: Colors.black,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 80),
+                child: SizedBox(
+                  width: SizeConfig().getWidth(190),
+                  height: SizeConfig().getHeight(85),
+                  child: Column(
+                    children: [
+                      CustomBulletPoint(
+                        // bulletColor: Color(0xFF009859),
+                        text: translate('home.In_progress'),
+                        textColor: Colors.black,
+                        countColor: Colors.black,
+                        count: '15',
+                        containerColor: Colors.white,
+                      ),
+                      const SizedBox(height: 4),
+                      CustomBulletPoint(
+                        // bulletColor: Color(0xFFBA1719),
+                        text: translate('home.Delay'),
+                        textColor: Colors.black,
+                        countColor: Colors.black,
+                        count: '2',
+                        containerColor: Colors.white,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -385,36 +400,39 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           cardTitle: translate('home.my_request'),
           backgroundImagePath: 'assets/png/gray_card.png',
           onClick: () => Util.pushPage(const MyRequestsPage(), context),
-          childWidget: DefaultTextStyle(
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.only(top: 80),
-              child: SizedBox(
-                width: SizeConfig().getWidth(190),
-                height: SizeConfig().getHeight(80),
-                child: Column(
-                  children: [
-                    CustomBulletPoint(
-                      //bulletColor: const Color(0xFF009859),
-                      text: translate('Approved'),
-                      textColor: Colors.black,
-                      countColor: Colors.black,
-                      containerColor: Colors.white,
-                      count: '5',
-                    ),
-                    CustomBulletPoint(
-                      // bulletColor: const Color(0xFFBA1719),
-                      text: translate('home.rejected'),
-                      textColor: Colors.black,
-                      countColor: Colors.black,
-                      containerColor: Colors.white,
-                      count: '5',
-                    ),
-                  ],
+          childWidget: Directionality(
+            textDirection: TextDirection.ltr,
+            child: DefaultTextStyle(
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: Colors.black,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 80),
+                child: SizedBox(
+                  width: SizeConfig().getWidth(190),
+                  height: SizeConfig().getHeight(80),
+                  child: Column(
+                    children: [
+                      CustomBulletPoint(
+                        //bulletColor: const Color(0xFF009859),
+                        text: translate('home.Approved'),
+                        textColor: Colors.black,
+                        countColor: Colors.black,
+                        containerColor: Colors.white,
+                        count: '5',
+                      ),
+                      CustomBulletPoint(
+                        // bulletColor: const Color(0xFFBA1719),
+                        text: translate('home.rejected'),
+                        textColor: Colors.black,
+                        countColor: Colors.black,
+                        containerColor: Colors.white,
+                        count: '5',
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -433,38 +451,41 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     return Stack(
       children: [
         GrayCardComponent(
-          cardTitle: translate('Media'),
+          cardTitle: translate('home.media'),
           backgroundImagePath: 'assets/png/gray_card.png',
           onClick: () => Util.pushPage(const MediaListScreen(), context),
-          childWidget: DefaultTextStyle(
-            style: const TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.only(top: 80),
-              child: SizedBox(
-                width: SizeConfig().getWidth(190),
-                height: SizeConfig().getHeight(80),
-                child: Column(
-                  children: [
-                    CustomBulletPoint(
-                      // bulletColor: const Color(0xFF009859),
-                      text: translate('videos'),
-                      textColor: Colors.black,
-                      countColor: Colors.black,
-                      count: '7', containerColor: Colors.white,
-                    ),
-                    CustomBulletPoint(
-                      // bulletColor: const Color(0xFFBA1719),
-                      text: translate('photos'),
-                      textColor: Colors.black,
-                      countColor: Colors.black,
-                      count: '20',
-                      containerColor: Colors.white,
-                    ),
-                  ],
+          childWidget: Directionality(
+            textDirection: TextDirection.ltr,
+            child: DefaultTextStyle(
+              style: const TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w500,
+                color: Colors.black,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.only(top: 80),
+                child: SizedBox(
+                  width: SizeConfig().getWidth(190),
+                  height: SizeConfig().getHeight(80),
+                  child: Column(
+                    children: [
+                      CustomBulletPoint(
+                        // bulletColor: const Color(0xFF009859),
+                        text: translate('home.videos'),
+                        textColor: Colors.black,
+                        countColor: Colors.black,
+                        count: '7', containerColor: Colors.white,
+                      ),
+                      CustomBulletPoint(
+                        // bulletColor: const Color(0xFFBA1719),
+                        text: translate('home.photos'),
+                        textColor: Colors.black,
+                        countColor: Colors.black,
+                        count: '20',
+                        containerColor: Colors.white,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -489,27 +510,30 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       backgroundImagePath: 'assets/png/notes_new_bg.png',
       onClick: () => Util.pushPage(const ReportAppHomeScreen(), context),
       topPadding: true,
-      childWidget: DefaultTextStyle(
-        style: const TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-          color: Colors.black,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.only(top: 61),
-          child: SizedBox(
-            width: SizeConfig().getWidth(190),
-            height: SizeConfig().getHeight(80),
-            child: Column(
-              children: [
-                CustomBulletPoint(
-                  // bulletColor: const Color(0xFF009859),
-                  text: translate('No. Of Reports'),
-                  textColor: Colors.black,
-                  countColor: Colors.white,
-                  count: '7', containerColor: Color(0xff1A1A53),
-                ),
-              ],
+      childWidget: Directionality(
+        textDirection: TextDirection.ltr,
+        child: DefaultTextStyle(
+          style: const TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(top: 61),
+            child: SizedBox(
+              width: SizeConfig().getWidth(190),
+              height: SizeConfig().getHeight(80),
+              child: Column(
+                children: [
+                  CustomBulletPoint(
+                    // bulletColor: const Color(0xFF009859),
+                    text: translate('home.No_Of_Reports'),
+                    textColor: Colors.black,
+                    countColor: Colors.white,
+                    count: '7', containerColor: const Color(0xff1A1A53),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -559,41 +583,44 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                       backgroundImagePath: 'assets/png/attendace_new_bg.png',
                       onClick: () =>
                           Util.pushPage(const AttendancePage(), context),
-                      childWidget: DefaultTextStyle(
-                        style: const TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black,
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.only(top: 80),
-                          child: SizedBox(
-                            width: SizeConfig().getWidth(190),
-                            height: SizeConfig().getHeight(85),
-                            child: Column(
-                              children: [
-                                CustomBulletPoint(
-                                  isAttendance: true,
-                                  //bulletColor: const Color(0xFF009859),
-                                  text: 'ATTENDANCE',
-                                  textColor: Colors.black,
-                                  countColor: Colors.white,
-                                  count: bloc.attendedDays.toString(),
-                                  containerColor: const Color(0xff1A1A53),
-                                ),
-                                const SizedBox(
-                                  height: 4,
-                                ),
-                                const CustomBulletPoint(
-                                  isAttendance: true,
-                                  // bulletColor: Color(0xFFBA1719),
-                                  text: 'ABSENT',
-                                  textColor: Colors.black,
-                                  countColor: Colors.white,
-                                  count: '2',
-                                  containerColor: Color(0xff1A1A53),
-                                ),
-                              ],
+                      childWidget: Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: DefaultTextStyle(
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 80),
+                            child: SizedBox(
+                              width: SizeConfig().getWidth(190),
+                              height: SizeConfig().getHeight(85),
+                              child: Column(
+                                children: [
+                                  CustomBulletPoint(
+                                    isAttendance: true,
+                                    //bulletColor: const Color(0xFF009859),
+                                    text: translate('home.attendance'),
+                                    textColor: Colors.black,
+                                    countColor: Colors.white,
+                                    count: bloc.attendedDays.toString(),
+                                    containerColor: const Color(0xff1A1A53),
+                                  ),
+                                  const SizedBox(
+                                    height: 4,
+                                  ),
+                                  CustomBulletPoint(
+                                    isAttendance: true,
+                                    // bulletColor: Color(0xFFBA1719),
+                                    text: translate('home.absent'),
+                                    textColor: Colors.black,
+                                    countColor: Colors.white,
+                                    count: '2',
+                                    containerColor: const Color(0xff1A1A53),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),

@@ -66,15 +66,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
   final List<Map<String, dynamic>> notificationType = [
     {
       'icon': 'assets/png/notification_icon.png',
-      'title': 'notifications',
+      'title': translate('notification_screen.center'),
     },
     {
       'icon': 'assets/png/announcement.png',
-      'title': 'announcements',
+      'title': translate('news_banner.announcements'),
     },
     {
       'icon': 'assets/png/urgent_icon.png',
-      'title': 'circular',
+      'title': translate('notification_screen.circulars'),
     },
   ];
 

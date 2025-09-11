@@ -1,25 +1,28 @@
 import 'dart:convert';
+
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
 import 'package:el_race/utils/color_utils.dart';
-import '../../widgets/custom_slider_button.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+
+import '../../widgets/custom_slider_button.dart';
 
 class RequestJobMissionPage extends StatefulWidget {
   final loginResponseModel;
 
-
-  const RequestJobMissionPage({Key? key, required this.loginResponseModel}) : super(key: key);
+  const RequestJobMissionPage({Key? key, required this.loginResponseModel})
+      : super(key: key);
 
   @override
   _RequestJobMissionPageState createState() => _RequestJobMissionPageState();
 }
 
 class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
-  final GlobalKey<CustomSliderButtonState> _sliderKey = GlobalKey<CustomSliderButtonState>();
+  final GlobalKey<CustomSliderButtonState> _sliderKey =
+      GlobalKey<CustomSliderButtonState>();
 
   String description = '';
   String clientDetails = '';
@@ -28,7 +31,6 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
   String selectedMissionType = "Job Mission Type";
   String selectedDuration = "Morning";
   String selectedDay = 'Today'; // or 'Tomorrow'
-
 
   Future<void> _selectDate(BuildContext context) async {
     if (selectedDay == 'Tomorrow') return; // Disable manual selection
@@ -46,7 +48,6 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
       });
     }
   }
-
 
   String formatDate(DateTime date) {
     return DateFormat('dd/MM/yyyy').format(date);
@@ -78,8 +79,12 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
           "join_date": null,
           "late_days": null,
           "attachment": null,
-          "client_details": selectedMissionType.toLowerCase() == 'client visit' ? clientDetails : null,
-          "project_details": selectedMissionType.toLowerCase() == 'client visit' ? projectDetails : null,
+          "client_details": selectedMissionType.toLowerCase() == 'client visit'
+              ? clientDetails
+              : null,
+          "project_details": selectedMissionType.toLowerCase() == 'client visit'
+              ? projectDetails
+              : null,
           "duration_type": null,
           "hour_from": null,
           "hour_to": null,
@@ -105,34 +110,35 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
 
       Navigator.pop(context); // ✅ Close loading dialog
 
-      if (response.statusCode == 200 && data['result']?['status'] == 'success') {
+      if (response.statusCode == 200 &&
+          data['result']?['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Job mission request submitted successfully!")),
+          SnackBar(content: Text(translate('request.job_mission_success'))),
         );
-        Navigator.pop(context, true); // ✅ Go back to MyRequestsPage with refresh flag
+        Navigator.pop(
+            context, true); // ✅ Go back to MyRequestsPage with refresh flag
       } else {
         _sliderKey.currentState?.resetSlider(); // ✅ Reset slider on API failure
-        _showErrorDialog(data['result']?['message'] ?? "Request failed");
+        _showErrorDialog(
+            data['result']?['message'] ?? translate('request.request_failed'));
       }
     } catch (e) {
       Navigator.pop(context); // Close loading dialog
       _sliderKey.currentState?.resetSlider(); // ✅ Reset slider on exception
-      _showErrorDialog("An error occurred while submitting the request.");
+      _showErrorDialog(translate('request.error_occurred'));
     }
   }
-
-
 
   void _showErrorDialog(String msg) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text("Submission Failed"),
+        title: Text(translate('request.submission_failed')),
         content: Text(msg),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
+            child: Text(translate('common.ok')),
           ),
         ],
       ),
@@ -162,7 +168,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withAlpha((0.1 * 255).toInt()),
+                              color:
+                                  Colors.black.withAlpha((0.1 * 255).toInt()),
                               blurRadius: 10,
                               spreadRadius: 2,
                             ),
@@ -173,9 +180,11 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16.0),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.arrow_back),
@@ -201,7 +210,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                     });
                                   },
                                   position: PopupMenuPosition.under,
-                                  itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                                  itemBuilder: (BuildContext context) =>
+                                      <PopupMenuEntry<String>>[
                                     _buildMenuItem('Client Visit'),
                                     _buildMenuItem('Media'),
                                     _buildMenuItem('Support'),
@@ -212,19 +222,25 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: SizedBox(
-                                    width: 240, // 👈 Fixed width of dropdown button
+                                    width:
+                                        240, // 👈 Fixed width of dropdown button
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 36),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 7, horizontal: 36),
                                       decoration: BoxDecoration(
                                         gradient: const LinearGradient(
-                                          colors: [Color(0xFF1A237E), Color(0xFF3F51B5)],
+                                          colors: [
+                                            Color(0xFF1A237E),
+                                            Color(0xFF3F51B5)
+                                          ],
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                         ),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Flexible(
                                             child: Text(
@@ -234,12 +250,13 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                                 color: Colors.white,
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.w500,
-                                                letterSpacing: 2.2, // Optional for extra spacing
+                                                letterSpacing:
+                                                    2.2, // Optional for extra spacing
                                               ),
                                             ),
-
                                           ),
-                                          const Icon(Icons.arrow_drop_down, color: Colors.white),
+                                          const Icon(Icons.arrow_drop_down,
+                                              color: Colors.white),
                                         ],
                                       ),
                                     ),
@@ -247,21 +264,18 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                 ),
                               ),
                             ),
-
-
                             const SizedBox(height: 20),
-
                             Center(
                               child: Text(
-                                'SELECT DAY',
+                                translate('request.select_day'),
                                 style: GoogleFonts.koulen(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                   color: appFontColor,
-                                  letterSpacing: 1.6, // Optional for stylistic effect
+                                  letterSpacing:
+                                      1.6, // Optional for stylistic effect
                                 ),
                               ),
-
                             ),
                             const SizedBox(height: 4),
                             Row(
@@ -276,12 +290,13 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                         setState(() {
                                           selectedDay = value!;
                                           selectedDate = DateTime.now();
-                                          selectedDuration = 'Afternoon'; // ✅ Morning disabled, so set Afternoon
+                                          selectedDuration =
+                                              'Afternoon'; // ✅ Morning disabled, so set Afternoon
                                         });
                                       },
                                     ),
                                     Text(
-                                      'Today',
+                                      translate('request.today'),
                                       style: GoogleFonts.inter(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
@@ -298,13 +313,15 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                       onChanged: (value) {
                                         setState(() {
                                           selectedDay = value!;
-                                          selectedDate = DateTime.now().add(const Duration(days: 1));
-                                          selectedDuration = 'Morning'; // ✅ default when both options allowed
+                                          selectedDate = DateTime.now()
+                                              .add(const Duration(days: 1));
+                                          selectedDuration =
+                                              'Morning'; // ✅ default when both options allowed
                                         });
                                       },
                                     ),
                                     Text(
-                                      'Tomorrow',
+                                      translate('request.tomorrow'),
                                       style: GoogleFonts.inter(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
@@ -316,10 +333,9 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                               ],
                             ),
                             const SizedBox(height: 10),
-
                             Center(
                               child: Text(
-                                'DURATION TYPE',
+                                translate('request.duration_type'),
                                 style: GoogleFonts.koulen(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
@@ -327,10 +343,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                   letterSpacing: 1.9, // Optional for spacing
                                 ),
                               ),
-
                             ),
                             const SizedBox(height: 0),
-
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -342,13 +356,14 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                       onChanged: selectedDay == 'Today'
                                           ? null // ✅ Disable Morning when Today is selected
                                           : (value) {
-                                        setState(() {
-                                          selectedDuration = value.toString();
-                                        });
-                                      },
+                                              setState(() {
+                                                selectedDuration =
+                                                    value.toString();
+                                              });
+                                            },
                                     ),
                                     Text(
-                                      'Morning',
+                                      translate('request.morning'),
                                       style: GoogleFonts.inter(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
@@ -369,7 +384,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                       },
                                     ),
                                     Text(
-                                      'Afternoon',
+                                      translate('request.afternoon'),
                                       style: GoogleFonts.inter(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w500,
@@ -380,16 +395,17 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                 ),
                               ],
                             ),
-
-
                             if (selectedMissionType == 'Client Visit') ...[
                               const SizedBox(height: 10),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 26.0),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 26.0),
                                 child: TextField(
-                                  onChanged: (value) => setState(() => clientDetails = value),
+                                  onChanged: (value) =>
+                                      setState(() => clientDetails = value),
                                   decoration: InputDecoration(
-                                    labelText: 'Client Details',
+                                    labelText:
+                                        translate('request.client_details'),
                                     labelStyle: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
@@ -398,18 +414,23 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12), // reduced height
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        vertical: 10,
+                                        horizontal: 12), // reduced height
                                     isDense: true, // makes it more compact
                                   ),
                                 ),
                               ),
                               const SizedBox(height: 20),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 26.0),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 26.0),
                                 child: TextField(
-                                  onChanged: (value) => setState(() => projectDetails = value),
+                                  onChanged: (value) =>
+                                      setState(() => projectDetails = value),
                                   decoration: InputDecoration(
-                                    labelText: 'Project Details',
+                                    labelText:
+                                        translate('request.project_details'),
                                     labelStyle: const TextStyle(
                                       fontSize: 12,
                                       fontWeight: FontWeight.bold,
@@ -418,25 +439,26 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
-                                    contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12), // reduced height
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        vertical: 10,
+                                        horizontal: 12), // reduced height
                                     isDense: true, // makes it more compact
                                   ),
                                 ),
                               ),
                             ],
-
                             const SizedBox(height: 20),
                             Center(
                               child: Text(
-                                'DATE',
+                                translate('request.date'),
                                 style: GoogleFonts.koulen(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                   color: appFontColor,
-                                  letterSpacing: 1.9, // Optional for extra spacing
+                                  letterSpacing:
+                                      1.9, // Optional for extra spacing
                                 ),
                               ),
-
                             ),
                             const SizedBox(height: 10),
                             Center(
@@ -446,10 +468,12 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                   return;
                                 },
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 22),
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 8, horizontal: 22),
                                   decoration: BoxDecoration(
                                     image: const DecorationImage(
-                                      image: AssetImage('assets/png/desc_box.png'),
+                                      image:
+                                          AssetImage('assets/png/desc_box.png'),
                                       fit: BoxFit.cover,
                                     ),
                                     borderRadius: BorderRadius.circular(20),
@@ -459,15 +483,13 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                     style: GoogleFonts.inter(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w500,
-                                      color: Colors.black, // Optional: adjust if needed
+                                      color: Colors
+                                          .black, // Optional: adjust if needed
                                     ),
                                   ),
-
                                 ),
                               ),
-
                             ),
-
                             const SizedBox(height: 30),
                             Center(
                               child: Text(
@@ -476,14 +498,15 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
                                   color: appFontColor,
-                                  letterSpacing: 1.9, // Optional for extra emphasis
+                                  letterSpacing:
+                                      1.9, // Optional for extra emphasis
                                 ),
                               ),
-
                             ),
                             const SizedBox(height: 10),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 26.0),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 26.0),
                               child: Stack(
                                 children: [
                                   Container(
@@ -491,36 +514,47 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                       borderRadius: BorderRadius.circular(18),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.grey.withAlpha((0.3 * 255).toInt()),
+                                          color: Colors.grey
+                                              .withAlpha((0.3 * 255).toInt()),
                                           spreadRadius: 1,
                                           blurRadius: 5,
                                           offset: const Offset(2, 3),
                                         ),
                                       ],
                                       image: const DecorationImage(
-                                        image: AssetImage('assets/png/desc_box.png'),
+                                        image: AssetImage(
+                                            'assets/png/desc_box.png'),
                                         fit: BoxFit.cover,
                                       ),
                                     ),
                                     child: TextField(
                                       maxLines: 2,
-                                      onChanged: (value) => setState(() => description = value),
+                                      onChanged: (value) =>
+                                          setState(() => description = value),
                                       decoration: InputDecoration(
                                         border: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(22),
-                                          borderSide: const BorderSide(color: Colors.grey, width: 0.5),
+                                          borderRadius:
+                                              BorderRadius.circular(22),
+                                          borderSide: const BorderSide(
+                                              color: Colors.grey, width: 0.5),
                                         ),
                                         enabledBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(22),
-                                          borderSide: const BorderSide(color: Colors.grey, width: 0.5),
+                                          borderRadius:
+                                              BorderRadius.circular(22),
+                                          borderSide: const BorderSide(
+                                              color: Colors.grey, width: 0.5),
                                         ),
                                         focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(22),
-                                          borderSide: const BorderSide(color: Colors.blue, width: 2),
+                                          borderRadius:
+                                              BorderRadius.circular(22),
+                                          borderSide: const BorderSide(
+                                              color: Colors.blue, width: 2),
                                         ),
                                         filled: true,
                                         fillColor: Colors.transparent,
-                                        contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                vertical: 18, horizontal: 12),
                                       ),
                                     ),
                                   ),
@@ -531,37 +565,45 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                       children: [
                                         Text(
                                           '${description.trim().isEmpty ? 1 : description.trim().split(RegExp(r'\s+')).length}/50',
-                                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                          style: const TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.bold),
                                           textAlign: TextAlign.center,
                                         ),
                                         const SizedBox(height: 2),
-                                        const Text('Max words', style: TextStyle(fontSize: 10, color: Colors.black)),
+                                        Text(translate('request.max_words'),
+                                            style: const TextStyle(
+                                                fontSize: 10,
+                                                color: Colors.black)),
                                       ],
                                     ),
                                   ),
                                 ],
                               ),
                             ),
-
                             const SizedBox(height: 20),
                             Row(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Padding(
-                                  padding: const EdgeInsets.fromLTRB(10, 0, 0, 0),
-                                  child: Image.asset('assets/png/notice_icon.png', width: 34, height: 34),
+                                  padding:
+                                      const EdgeInsets.fromLTRB(10, 0, 0, 0),
+                                  child: Image.asset(
+                                      'assets/png/notice_icon.png',
+                                      width: 34,
+                                      height: 34),
                                 ),
                                 const SizedBox(width: 5),
                                 Expanded(
                                   child: Text(
-                                    translate('notification.job_mission_notice'),
+                                    translate(
+                                        'notification.job_mission_notice'),
                                     style: GoogleFonts.inter(
                                       color: Colors.black87,
                                       fontSize: 9,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-
                                 ),
                               ],
                             ),
@@ -611,7 +653,6 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
     );
   }
 
-
   PopupMenuItem<String> _buildMenuItem(String text) {
     return PopupMenuItem<String>(
       value: text,
@@ -629,5 +670,4 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
       ),
     );
   }
-
 }

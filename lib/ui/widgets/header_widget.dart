@@ -68,9 +68,10 @@ class _HeaderWidgetState extends State<HeaderWidget> {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Positioned(
+            PositionedDirectional(
               top: SizeConfig().getHeight(36),
-              left: SizeConfig().getWidth(15),
+              start: SizeConfig().getWidth(15),
+              //left: SizeConfig().getWidth(15),
               child: Image.asset(
                 'assets/png/logo.gif',
                 fit: BoxFit.cover,
@@ -82,14 +83,14 @@ class _HeaderWidgetState extends State<HeaderWidget> {
               bottom: false,
               child: Padding(
                 padding: EdgeInsets.symmetric(
-                  horizontal: SizeConfig().getWidth(20),
-                  vertical: 0
-                ),
+                    horizontal: SizeConfig().getWidth(20), vertical: 0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    SizedBox(width: SizeConfig().getWidth(200),),
+                    SizedBox(
+                      width: SizeConfig().getWidth(200),
+                    ),
                     Row(
                       children: [
                         GestureDetector(
@@ -188,7 +189,8 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                               Util.pushPage(const SignInScreen(), context);
                               return;
                             }
-                            Provider.of<ProfileBoxProvider>(context, listen: false)
+                            Provider.of<ProfileBoxProvider>(context,
+                                    listen: false)
                                 .toggleProfileBox();
                           },
                           child: Container(

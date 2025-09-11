@@ -5,6 +5,7 @@ import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../bloc/media_bloc.dart';
@@ -162,7 +163,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                 const SizedBox(width: 7),
                 if (!_showSearch)
                   Text(
-                    'Media',
+                    translate('home.media'),
                     style: GoogleFonts.koulen(
                       fontSize: 28.sp,
                       fontWeight: FontWeight.w400,

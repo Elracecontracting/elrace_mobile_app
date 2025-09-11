@@ -15,6 +15,7 @@ import 'package:el_race/ui/presentation/PettyCash/PettyCashAddExpense.dart'; // 
 import 'package:el_race/utils/color_utils.dart'; // Import global colors
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
@@ -77,12 +78,12 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Error"),
+        title: Text(translate('pettycash.error')),
         content: Text(message),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text("OK"),
+            child: Text(translate('pettycash.ok')),
           ),
         ],
       ),
@@ -164,21 +165,21 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       print("_submitExpense");
 
       if (token == null) {
-        _showErrorDialog("Missing user token.");
+        _showErrorDialog(translate('pettycash.failed_to_submit'));
         _sliderKey.currentState
             ?.resetSlider(); // ⬅️ Reset on validation failure
         return;
       }
 
       if (attachments.isEmpty) {
-        _showErrorDialog("Please add at least one attachment.");
+        _showErrorDialog(translate('pettycash.please_add_images'));
         _sliderKey.currentState
             ?.resetSlider(); // ⬅️ Reset on validation failure
         return;
       }
 
       if (draftExpenseIds.isEmpty) {
-        _showErrorDialog("No draft expenses found to submit.");
+        _showErrorDialog(translate('pettycash.failed_to_submit'));
         _sliderKey.currentState
             ?.resetSlider(); // ⬅️ Reset on validation failure
         return;
@@ -193,7 +194,8 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       try {
         await rootBundle.load(logoPath);
       } catch (_) {
-        _showErrorDialog("Company logo asset not found: $logoPath");
+        _showErrorDialog(
+            "${translate('pettycash.error')}: Company logo asset not found: $logoPath");
         _sliderKey.currentState?.resetSlider(); // ⬅️ Reset on error
         return;
       }
@@ -254,8 +256,8 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
         );
       } catch (e) {
         print("PDF generation failed: $e");
-        _showErrorDialog(
-            "PDF generation failed. Make sure all images are valid.");
+        _showErrorDialog(translate('pettycash.failed_to_generate_pdf',
+            args: {'error': e.toString()}));
         _sliderKey.currentState?.resetSlider(); // ⬅️ Reset on error
         return;
       }
@@ -296,12 +298,12 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       if (response.statusCode == 200 &&
           data["result"]?['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Request submitted successfully!")),
+          SnackBar(content: Text(translate('pettycash.request_submitted'))),
         );
         Navigator.pop(context, true); // ✅ Back with success
       } else {
-        final message =
-            data['result']?['message'] ?? "Failed to submit request.";
+        final message = data['result']?['message'] ??
+            translate('pettycash.failed_to_submit');
         _sliderKey.currentState?.resetSlider(); // ⬅️ Reset on error
         _showErrorDialog(message);
       }
@@ -309,7 +311,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       Navigator.pop(context); // Ensure dialog closes
       print("Submit error: $e");
       _sliderKey.currentState?.resetSlider(); // ⬅️ Reset on catch
-      _showErrorDialog("An error occurred while submitting the request.");
+      _showErrorDialog(translate('request.error_occurred'));
     }
   }
 
@@ -572,7 +574,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 24, vertical: 12),
                         ),
-                        child: const Text(
+                        child: Text(
                           "Generate Report",
                           style: const TextStyle(
                               color: Colors.white,

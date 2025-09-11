@@ -1,14 +1,15 @@
+import 'package:camera/camera.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/ui/presentation/authenticate_face/view_model/authenticate_face_view_model.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/project_list_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart' show GoogleFonts;
-import 'package:flutter_translate/flutter_translate.dart';
-import 'package:el_race/ui/presentation/authenticate_face/view_model/authenticate_face_view_model.dart';
-import 'package:camera/camera.dart';
-import 'package:get/get.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_translate/flutter_translate.dart';
+import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart' show GoogleFonts;
+
 import '../bloc/home_bloc.dart' hide CheckInET, CheckOutET;
 import '../widgets/timer_controller.dart';
 
@@ -191,6 +192,14 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
 
   @override
   Widget build(BuildContext context) {
+    final iconColor =
+        _isVisualCheckedIn ? Colors.white : const Color(0xFF666666);
+    final iconData =
+        _isVisualCheckedIn ? Icons.chevron_left : Icons.chevron_right;
+    final isRTL = Directionality.of(context) == TextDirection.rtl;
+    final currentLocale = LocalizedApp.of(context).delegate.currentLocale;
+    // مقدار التداخل بين السهمين
+    const overlap = 12.0;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -292,67 +301,121 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                   ),
 
                   // Dynamic chevron icons that change position and direction based on state
-                  Positioned(
-                    left: _isVisualCheckedIn
-                        ? null
-                        : 8, // Left side when checked out
-                    right: _isVisualCheckedIn
-                        ? 8
-                        : null, // Right side when checked in
-                    top: (buttonHeight - 32) / 2, // Centered for new height
+
+                  PositionedDirectional(
+                    start: _isVisualCheckedIn ? null : 8,
+                    end: _isVisualCheckedIn ? 8 : null,
+                    top: (buttonHeight - 32) / 2,
                     child: AnimatedBuilder(
                       animation: _bounceAnimation,
-                      builder: (context, child) {
+                      builder: (context, _) {
                         return Transform.translate(
                           offset: Offset(_bounceAnimation.value, 0),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 300),
-                                child: Icon(
-                                  _isVisualCheckedIn
-                                      ? Icons
-                                          .chevron_left // Left-pointing when on right side (check in)
-                                      : Icons
-                                          .chevron_right, // Right-pointing when on left side (check out)
-                                  key: ValueKey(_isVisualCheckedIn),
-                                  color: _isVisualCheckedIn
-                                      ? Colors
-                                          .white // White arrows when checked in (dark blue background)
-                                      : const Color(
-                                          0xFF666666), // Dark gray arrows when checked out
-                                  size: 32, // Reduced from 36 to fit new height
-                                  weight: 900,
-                                ),
-                              ),
-                              Transform.translate(
-                                offset: const Offset(-25, 0),
-                                child: AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 300),
-                                  child: Icon(
-                                    _isVisualCheckedIn
-                                        ? Icons
-                                            .chevron_left // Left-pointing when on right side (check in)
-                                        : Icons
-                                            .chevron_right, // Right-pointing when on left side (check out)
-                                    key: ValueKey(_isVisualCheckedIn),
-                                    color: _isVisualCheckedIn
-                                        ? Colors
-                                            .white // White arrows when checked in (dark blue background)
-                                        : const Color(
-                                            0xFF666666), // Dark gray arrows when checked out
-                                    size: 36,
-                                    weight: 900,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            // مهم: نكدّس القديم والجديد فوق بعض عشان العرض ما يتغيّرش أثناء السويتش
+                            layoutBuilder: (current, previous) => Stack(
+                              alignment: Alignment.center,
+                              clipBehavior: Clip.none,
+                              children: [
+                                ...previous,
+                                if (current != null) current,
+                              ],
+                            ),
+                            transitionBuilder: (child, anim) =>
+                                FadeTransition(opacity: anim, child: child),
+                            child: SizedBox(
+                              key: ValueKey(
+                                  _isVisualCheckedIn), // نبدّل المجموعة ككتلة واحدة
+                              width: 44, // اضبطه حسب ذوقك
+                              height: 32, // نفس ارتفاع الأيقونة
+                              child: Stack(
+                                alignment: Alignment.centerLeft,
+                                clipBehavior: Clip.none,
+                                children: [
+                                  // السهم الأول (الأساسي)
+                                  Icon(iconData,
+                                      size: 32, weight: 900, color: iconColor),
+
+                                  // السهم الثاني متداخل لليمين/اليسار حسب اتجاه اللغة
+                                  Transform.translate(
+                                    offset:
+                                        Offset(isRTL ? overlap : -overlap, 0),
+                                    child: Icon(iconData,
+                                        size: 32,
+                                        weight: 900,
+                                        color: iconColor),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         );
                       },
                     ),
                   ),
+
+                  // PositionedDirectional(
+                  //   start: _isVisualCheckedIn
+                  //       ? null
+                  //       : 8, // Left side when checked out
+                  //   end: _isVisualCheckedIn
+                  //       ? 8
+                  //       : null, // Right side when checked in
+                  //   top: (buttonHeight - 32) / 2, // Centered for new height
+                  //   child: AnimatedBuilder(
+                  //     animation: _bounceAnimation,
+                  //     builder: (context, child) {
+                  //       return Transform.translate(
+                  //         offset: Offset(_bounceAnimation.value, 0),
+                  //         child: Row(
+                  //           mainAxisSize: MainAxisSize.min,
+                  //           children: [
+                  //             AnimatedSwitcher(
+                  //               duration: const Duration(milliseconds: 300),
+                  //               child: Icon(
+                  //                 _isVisualCheckedIn
+                  //                     ? Icons
+                  //                         .chevron_left // Left-pointing when on right side (check in)
+                  //                     : Icons
+                  //                         .chevron_right, // Right-pointing when on left side (check out)
+                  //                 key: ValueKey(_isVisualCheckedIn),
+                  //                 color: _isVisualCheckedIn
+                  //                     ? Colors
+                  //                         .white // White arrows when checked in (dark blue background)
+                  //                     : const Color(
+                  //                         0xFF666666), // Dark gray arrows when checked out
+                  //                 size: 32, // Reduced from 36 to fit new height
+                  //                 weight: 900,
+                  //               ),
+                  //             ),
+                  //             Transform.translate(
+                  //               offset: const Offset(-25, 0),
+                  //               child: AnimatedSwitcher(
+                  //                 duration: const Duration(milliseconds: 300),
+                  //                 child: Icon(
+                  //                   _isVisualCheckedIn
+                  //                       ? Icons
+                  //                           .chevron_left // Left-pointing when on right side (check in)
+                  //                       : Icons
+                  //                           .chevron_right, // Right-pointing when on left side (check out)
+                  //                   key: ValueKey(_isVisualCheckedIn),
+                  //                   color: _isVisualCheckedIn
+                  //                       ? Colors
+                  //                           .white // White arrows when checked in (dark blue background)
+                  //                       : const Color(
+                  //                           0xFF666666), // Dark gray arrows when checked out
+                  //                   size: 36,
+                  //                   weight: 900,
+                  //                 ),
+                  //               ),
+                  //             ),
+                  //           ],
+                  //         ),
+                  //       );
+                  //     },
+                  //   ),
+                  // ),
 
                   // Visual swipe progress indicator
                   Positioned(

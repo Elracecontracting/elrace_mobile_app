@@ -3,6 +3,7 @@ import 'package:el_race/utils/orientation_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -71,11 +72,15 @@ class _CallScreenState extends State<CallScreen> {
                       IconButton(
                         icon: const Icon(Icons.arrow_back),
                         onPressed: () {
-                          // return Navigator.pop(context);
+                          // Navigator.pushReplacement(
+                          //   context,
+                          //   MaterialPageRoute(
+                          //       builder: (context) => const HomeScreen()),
+                          // );
                         },
                       ),
                       Text(
-                        'CONTACTS',
+                        translate('home.contact'),
                         style: GoogleFonts.koulen(
                           fontSize: 20,
                           fontWeight: FontWeight.w400,
@@ -453,10 +458,10 @@ class ContactTile extends StatelessWidget {
                                 color: const Color(0xFF1A1A53), width: 1),
                             borderRadius: BorderRadius.circular(25),
                           ),
-                          child: const Center(
+                          child: Center(
                             child: Text(
-                              'Contact me',
-                              style: TextStyle(
+                              translate('home.contact_me'),
+                              style: const TextStyle(
                                   color: Color(0xFF1A1A53), fontSize: 12),
                             ),
                           ),
