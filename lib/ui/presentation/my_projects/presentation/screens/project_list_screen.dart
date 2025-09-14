@@ -11,8 +11,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 class ProjectListScreen extends StatefulWidget {
   final ProjectListBloc bloc;
+  final int? partnerId;
 
-  const ProjectListScreen({super.key, required this.bloc});
+  const ProjectListScreen({super.key, required this.bloc, this.partnerId});
 
   @override
   State<ProjectListScreen> createState() => _ProjectListScreenState();
@@ -27,7 +28,13 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     bloc = widget.bloc;
-    bloc.add(LoadProjectsEvent());
+
+    // Load projects based on whether we have a partnerId or not
+    if (widget.partnerId != null) {
+      bloc.add(LoadProjectsByPartnerEvent(partnerId: widget.partnerId!));
+    } else {
+      bloc.add(LoadProjectsEvent());
+    }
   }
 
   void _onScroll() {
@@ -103,21 +110,25 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                     bloc.visibleProjects.isNotEmpty) {
                   var list = bloc.visibleProjects;
                   return RefreshIndicator(
-                    onRefresh: () async =>
-                        bloc.add(LoadProjectsEvent(refresh: true)),
+                    onRefresh: () async {
+                      if (widget.partnerId != null) {
+                        bloc.add(LoadProjectsByPartnerEvent(
+                            partnerId: widget.partnerId!, refresh: true));
+                      } else {
+                        bloc.add(LoadProjectsEvent(refresh: true));
+                      }
+                    },
                     child: ListView.separated(
                       padding: const EdgeInsets.only(top: 10),
                       controller: _scrollController,
-                      itemCount: list.length + 1, // ✅ Removed header from list
+                      itemCount: list
+                          .length, // ✅ Fixed: removed +1 to prevent index issues
                       itemBuilder: (context, index) {
                         if (index < list.length) {
                           final item = list[index];
                           return ProjectCardWidget(item: item, bloc: bloc);
                         } else {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(child: CircularProgressIndicator()),
-                          );
+                          return const SizedBox(); // ✅ Fallback widget
                         }
                       },
                       separatorBuilder: (context, index) =>

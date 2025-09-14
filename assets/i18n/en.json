@@ -70,7 +70,11 @@
     "logout": "Logout",
     "name_not_available": "Name not available",
     "job_id_not_available": "Job ID not available",
-    "id_not_available": "ID not available"
+    "id_not_available": "ID not available",
+    "default_name": "Marwan Ahmed Mohamed Abdelsattar",
+    "default_profession": "Graphic Designer",
+    "default_id": "5026",
+    "status_active": "Status : Active"
   },
   "notes": {
     "add_new_note": "Add New Note",

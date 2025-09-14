@@ -71,7 +71,11 @@
       "logout": "تسجيل الخروج",
       "name_not_available": "الاسم غير متوفر",
       "job_id_not_available": "معرف الوظيفة غير متوفر",
-      "id_not_available": "المعرف غير متوفر"
+      "id_not_available": "المعرف غير متوفر",
+      "default_name": "مروان أحمد محمد عبد الستار",
+      "default_profession": "مصمم جرافيك",
+      "default_id": "5026",
+      "status_active": "الحالة : نشط"
     },
     "notes": {
       "add_new_note": "إضافة ملاحظة جديدة",
@@ -184,4 +188,6 @@
       "pdf_generated_opened": "تم إنشاء ملف PDF وفتحه!",
       "failed_to_generate_pdf": "فشل إنشاء PDF: {error}"
     }
-  } 
+    
+  }
+  

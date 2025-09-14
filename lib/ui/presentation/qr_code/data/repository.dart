@@ -3,12 +3,9 @@ import 'dart:developer';
 import 'dart:typed_data';
 
 import 'package:dio/dio.dart';
-import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:el_race/ui/presentation/signin/data/repository.dart';
 import 'package:el_race/utils/api_query.dart';
 import 'package:el_race/utils/urll_utils.dart';
-import 'package:flutter/material.dart';
 
 class QrCodeRepository {
   ApiQuery apiQuery = ApiQuery();
@@ -17,12 +14,12 @@ class QrCodeRepository {
   Future<Uint8List?> getQrCodeImage() async {
     try {
       final loginResponse = await userRepo.getLoginResponse();
-      if (loginResponse?.result?.data?.emp_id == null) {
-        log('❌ No employee ID found in login response');
+      if (loginResponse?.result?.data?.emp_profile_id == null) {
+        log('❌ No employee profile ID found in login response');
         return null;
       }
 
-      final empId = loginResponse!.result!.data!.emp_id!;
+      final empId = loginResponse!.result!.data!.emp_profile_id!;
       log('🔍 Fetching QR code for employee ID: $empId');
 
       final token = loginResponse.result?.token;
@@ -70,13 +67,13 @@ class QrCodeRepository {
     try {
       // Get current user's login data
       final loginResponse = await userRepo.getLoginResponse();
-      if (loginResponse?.result?.data?.emp_id == null) {
-        log('❌ No employee ID found in login response');
+      if (loginResponse?.result?.data?.emp_profile_id == null) {
+        log('❌ No employee profile ID found in login response');
         return null;
       }
 
-      final empId = loginResponse!.result!.data!.emp_id!;
-      log('🔍 Fetching QR code directly for employee ID: $empId');
+      final empId = loginResponse!.result!.data!.emp_profile_id!;
+      log('🔍 Fetching QR code directly for employee profile ID: $empId');
 
       // Get authentication token
       final token = loginResponse.result?.token;

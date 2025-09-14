@@ -5,6 +5,13 @@ class LoadProjectsEvent extends ProjectListEvent {
   LoadProjectsEvent({this.refresh = false});
 }
 
+class LoadProjectsByPartnerEvent extends ProjectListEvent {
+  final int partnerId;
+  final bool refresh;
+
+  LoadProjectsByPartnerEvent({required this.partnerId, this.refresh = false});
+}
+
 class GetProjectAttachmentsEvent extends ProjectListEvent {
   final String projectId;
 
