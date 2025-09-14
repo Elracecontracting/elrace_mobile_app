@@ -106,5 +106,11 @@ List<WidgetModel> getAvailableWidgets() {
       iconPath: 'assets/png/my_documents.png',
       backgroundPath: 'assets/png/notes_new_bg.png',
     ),
+    const WidgetModel(
+      id: 'qr_code',
+      title: 'My QR Code',
+      iconPath: 'assets/png/qr_code.png',
+      backgroundPath: 'assets/png/gray_card.png',
+    ),
   ];
-} 
+}

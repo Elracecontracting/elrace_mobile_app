@@ -1,68 +1,23 @@
 import 'dart:convert';
+import 'dart:ui';
 
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/main.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:el_race/utils/Util.dart';
-import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart' show GoogleFonts;
 import 'package:provider/provider.dart';
 
 class ProfileBoxWithSlideAnimation extends StatelessWidget {
   const ProfileBoxWithSlideAnimation({super.key});
 
-  void _showCertificateOverEverything() {
-    final overlayState = appOverlayKey.currentState;
-    if (overlayState == null) return;
-
-    late OverlayEntry entry;
-    entry = OverlayEntry(
-      builder: (ctx) {
-        final size =
-            MediaQuery.of(ctx).size; // ناخد أبعاد الشاشة من نفس الـ Overlay
-        return Material(
-          type: MaterialType.transparency, // علشان Directionality/Theme
-          child: Stack(
-            children: [
-              // خلفية (barrier) قابلة للإغلاق باللمس
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => entry.remove(),
-                  child: Container(color: Colors.black54),
-                ),
-              ),
-
-              // المحتوى في المنتصف
-              Center(
-                child: Dialog(
-                  insetPadding: const EdgeInsets.all(15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: size.width * 0.85,
-                      height: size.height * 0.30,
-                      child: Image.asset(
-                        'assets/png/certificate.png',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+  // Custom painter for QR code background with repeated numbers
+  Widget _buildQRBackground() {
+    return CustomPaint(
+      size: const Size(200, 200),
+      painter: QRBackgroundPainter(),
     );
-
-    overlayState.insert(entry);
   }
 
   @override
@@ -94,444 +49,322 @@ class ProfileBoxWithSlideAnimation extends StatelessWidget {
                     : null,
                 top: 0,
                 child: Material(
-                  color: Colors.grey[300],
+                  color: Colors.white,
                   child: SafeArea(
                     child: Container(
                       width: drawerWidth,
-                      padding: EdgeInsets.zero,
-                      child: SingleChildScrollView(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: const BorderRadius.only(
-                              topRight: Radius.circular(20),
-                              bottomRight: Radius.circular(20),
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              const SizedBox(height: 40),
-                              Row(
-                                children: [
-                                  const SizedBox(
-                                    width: 106.13,
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                          color: Colors.black, width: 2),
-                                    ),
-                                    child: CircleAvatar(
-                                      radius: 35,
-                                      backgroundImage: hasValidImage
-                                          ? MemoryImage(
-                                              base64Decode(base64Image))
-                                          : const AssetImage(
-                                                  'assets/png/profile_1.png')
-                                              as ImageProvider,
-                                    ),
-                                  ),
-                                  const SizedBox(
-                                    width: 12.4,
-                                  ),
-                                  Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius:
-                                            BorderRadius.circular(24)),
-                                    child: Image.asset(
-                                        'assets/png/name_tag_icon.png'),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                loginData.result?.data?.name
-                                        ?.split(' ')
-                                        .take(2)
-                                        .join(' ') ??
-                                    translate('profile.name_not_available'),
-                                style: GoogleFonts.inter(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 11.26),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                loginData.result?.data?.job_id ??
-                                    translate('profile.job_id_not_available'),
-                                style: GoogleFonts.inter(
-                                    fontSize: 11.26,
-                                    fontWeight: FontWeight.w400),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                loginData.result?.data?.emp_id?.toString() ??
-                                    translate('profile.id_not_available'),
-                                style: GoogleFonts.inter(
-                                    fontSize: 11.26,
-                                    fontWeight: FontWeight.w400),
-                              ),
-                              const SizedBox(height: 6),
-                              GestureDetector(
-                                onTap: _showCertificateOverEverything,
-                                //   final ctx = navKey.currentContext!;
-                                //   showDialog(
-                                //     context: ctx,
-                                //     builder: (_) {
-                                //       return Dialog(
-                                //         insetPadding: const EdgeInsets.all(15),
-                                //         child: Container(
-                                //           width: double.infinity,
-                                //           height:
-                                //               MediaQuery.of(ctx).size.height *
-                                //                   0.3,
-                                //           decoration: BoxDecoration(
-                                //             color: Colors.black,
-                                //             borderRadius:
-                                //                 BorderRadius.circular(12),
-                                //           ),
-                                //           child: ClipRRect(
-                                //             borderRadius:
-                                //                 BorderRadius.circular(12),
-                                //             child: Image.asset(
-                                //                 'assets/png/certificate.png',
-                                //                 fit: BoxFit.cover),
-                                //           ),
-                                //         ),
-                                //       );
-                                //     },
-                                //   );
-
-                                child: Image.asset(
-                                  'assets/png/cert_icon.png',
-                                  height: 26.52,
-                                  width: 26.52,
-                                  //fit: BoxFit.cover,
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  Container(
-                                    margin: const EdgeInsets.only(top: 15),
-                                    padding: const EdgeInsets.only(
-                                        top: 20, bottom: 10),
-                                    color: Colors.grey.shade100,
+                      height: MediaQuery.of(context).size.height,
+                      child: Stack(
+                        children: [
+                          SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                // Top section
+                                Container(
+                                  height: 200,
+                                  child: Center(
                                     child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
-                                        //const SizedBox(height: 80),
+                                        // Profile picture
                                         Container(
+                                          width: 80,
+                                          height: 80,
                                           decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black.withAlpha(
-                                                    (0.15 * 255).toInt()),
-                                                offset: const Offset(0, 1.68),
-                                                // blurRadius: 4,
-                                              ),
-                                            ],
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.grey.shade300,
+                                              width: 2,
+                                            ),
                                           ),
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            children: [
-                                              Padding(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        vertical: 14),
-                                                child: Container(
-                                                  width: 94.13,
-                                                  height: 25.03,
-                                                  decoration: BoxDecoration(
-                                                    gradient: LinearGradient(
-                                                      colors: !SharedPref()
-                                                              .isArabic()
-                                                          ? [
-                                                              const Color(
-                                                                  0xFF151544),
-                                                              const Color(
-                                                                  0xFF3535AA)
-                                                            ] // لو مش عربي
-                                                          : [
-                                                              Colors.white,
-                                                              Colors.grey[300]!
-                                                            ], // لو عربي
-                                                      begin:
-                                                          Alignment.centerLeft,
-                                                      end:
-                                                          Alignment.centerRight,
-                                                    ),
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            20.3),
-                                                  ),
-                                                  child: ElevatedButton(
-                                                    onPressed: () async {
-                                                      if (profileBoxProvider
-                                                          .isProfileVisible) {
-                                                        profileBoxProvider
-                                                            .hideProfileBox();
-                                                      }
-                                                      await Util
-                                                          .saveAndChangeLocale(
-                                                              context, 'en');
-                                                    },
-                                                    style: ElevatedButton
-                                                        .styleFrom(
-                                                      backgroundColor:
-                                                          Colors.transparent,
-                                                      //  backgroundColor: !SharedPref().isArabic()
-                                                      //       ? appFontColor
-                                                      //       : Colors.white,
-                                                      minimumSize:
-                                                          const Size(100, 30),
-                                                      shape:
-                                                          RoundedRectangleBorder(
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          20.3)),
-                                                    ),
-                                                    child: Text(
-                                                        translate(
-                                                            'profile.english'),
-                                                        style: TextStyle(
-                                                            color: !SharedPref()
-                                                                    .isArabic()
-                                                                ? Colors.white
-                                                                : Colors.black,
-                                                            fontSize: 12)),
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 10),
-                                              Container(
-                                                width: 94.13,
-                                                height: 25.03,
-                                                decoration: BoxDecoration(
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          20.3),
-                                                ),
-                                                child: ElevatedButton(
-                                                  onPressed: () async {
-                                                    if (profileBoxProvider
-                                                        .isProfileVisible) {
-                                                      profileBoxProvider
-                                                          .hideProfileBox();
-                                                    }
-                                                    await Util
-                                                        .saveAndChangeLocale(
-                                                            context, 'ar');
-                                                  },
-                                                  style:
-                                                      ElevatedButton.styleFrom(
-                                                    backgroundColor:
-                                                        SharedPref().isArabic()
-                                                            ? appFontColor
-                                                            : Colors
-                                                                .grey.shade200,
-                                                    minimumSize:
-                                                        const Size(100, 30),
-                                                    shape:
-                                                        RoundedRectangleBorder(
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        20.3)),
-                                                  ),
-                                                  child: Text(
-                                                      translate(
-                                                          'profile.arabic'),
-                                                      style: TextStyle(
-                                                          color: SharedPref()
-                                                                  .isArabic()
-                                                              ? Colors.white
-                                                              : Colors.black,
-                                                          fontSize: 12)),
-                                                ),
-                                              ),
-                                            ],
+                                          child: CircleAvatar(
+                                            radius: 38,
+                                            backgroundImage: hasValidImage
+                                                ? MemoryImage(
+                                                    base64Decode(base64Image))
+                                                : const AssetImage(
+                                                        'assets/png/profile_1.png')
+                                                    as ImageProvider,
                                           ),
                                         ),
-
-                                        const SizedBox(height: 6),
-                                        // Container(
-                                        //   height: 2,
-                                        //   width: double.infinity,
-                                        //   decoration: BoxDecoration(
-                                        //     color: Colors.grey.shade300,
-                                        //     // boxShadow: [
-                                        //     //   BoxShadow(
-                                        //     //     color: Colors.black.withAlpha(
-                                        //     //         (0.15 * 255).toInt()),
-                                        //     //     offset: const Offset(0, 2),
-                                        //     //     blurRadius: 4,
-                                        //     //   ),
-                                        //     // ],
-                                        //   ),
-                                        // ),
-
+                                        const SizedBox(height: 12),
+                                        // Full name
+                                        Text(
+                                          loginData.result?.data?.name ??
+                                              'Marwan Ahmed Mohamed Abdelsattar',
+                                          style: GoogleFonts.inter(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 16,
+                                            color: Colors.grey.shade800,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        // Profession
+                                        Text(
+                                          loginData.result?.data?.job_id ??
+                                              'Graphic Designer',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        // ID number
+                                        Text(
+                                          loginData.result?.data?.emp_id
+                                                  ?.toString() ??
+                                              '5026',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400,
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        // Golden badge icon
                                         Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 20, vertical: 12),
+                                          width: 20,
+                                          height: 20,
                                           decoration: BoxDecoration(
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black.withAlpha(
-                                                    (0.15 * 255).toInt()),
-                                                offset: const Offset(0, 1.68),
-                                                //blurRadius: 4,
-                                              )
-                                            ],
+                                            color: Colors.amber.shade600,
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
+                                          child: Icon(
+                                            Icons.star,
                                             color: Colors.white,
-                                          ),
-                                          child: Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.start,
-                                            children: [
-                                              Image.asset(
-                                                  'assets/png/notification_filled_icon.png'),
-                                              const SizedBox(width: 20),
-                                              Text(
-                                                  translate(
-                                                      'profile.mute_notifications'),
-                                                  style: GoogleFonts.inter(
-                                                      fontSize: 12)),
-                                              const Spacer(),
-                                              SizedBox(
-                                                height: 10.57,
-                                                child: Transform.scale(
-                                                  scale: 0.7, // تصغير الحجم
-                                                  child: const Switch(
-                                                    value: false,
-                                                    onChanged: null,
-                                                    activeColor:
-                                                        appFontColor, // لون الزر لما يكون ON
-                                                    activeTrackColor: Color(
-                                                        0xffD9D9D9), // لون الخلفية لما يكون ON
-                                                    inactiveThumbColor: Color(
-                                                        0xff3E3C3C), // لون الزر لما يكون OFF
-                                                    inactiveTrackColor: Color(
-                                                        0xffD9D9D9), // لون الخلفية لما يكون OFF
-                                                  ),
-                                                ),
-                                              )
-                                              // Switch.adaptive(
-                                              //   value: isMuted,
-                                              //   onChanged: (val) => _updateMuteStatus(val),
-                                              //   activeColor: const Color(0xFF1A1A53),
-                                              //   activeTrackColor: Colors.grey.shade400,
-                                              // ),
-                                            ],
+                                            size: 12,
                                           ),
                                         ),
-                                        // 🔹 Divider with shadow
-                                        // Container(
-                                        //   height: 2,
-                                        //   width: double.infinity,
-                                        //   decoration: BoxDecoration(
-                                        //     color: Colors.grey.shade300,
-                                        // boxShadow: [
-                                        //   BoxShadow(
-                                        //     color: Colors.black.withAlpha(
-                                        //         (0.15 * 255).toInt()),
-                                        //     offset: const Offset(0, 2),
-                                        //     blurRadius: 4,
-                                        //   ),
-                                        // ],
-                                        //   ),
-                                        // ),
-                                        const SizedBox(
-                                          height: 12,
+                                        // Status
+                                        Text(
+                                          'Status : Active',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w400,
+                                            height: 0,
+                                            color: const Color(0xFF1D1A20),
+                                            decoration: TextDecoration.none,
+                                          ),
+                                          textAlign: TextAlign.center,
                                         ),
-                                        // Container(
-                                        //   padding: const EdgeInsets.symmetric(
-                                        //         horizontal: 20, vertical: 12),
-                                        //   decoration: BoxDecoration(
-                                        //       color: Colors.white,
-                                        //       boxShadow: [
-                                        //         BoxShadow(
-                                        //           color: Colors.black.withAlpha(
-                                        //               (0.15 * 255).toInt()),
-                                        //           offset: const Offset(0, 1.68),
-                                        //           // blurRadius: 4,
-                                        //         )
-                                        //       ]),
-                                        //   child: Row(
-                                        //     children: [
-                                        //       SizedBox(
-                                        //         child: Image.asset(
-                                        //             'assets/png/dark_mode_icon.png'),
-                                        //       ),
-                                        //       const SizedBox(width: 22),
-                                        //       Text(
-                                        //           translate(
-                                        //               'profile.dark_mode'),
-                                        //           style: const TextStyle(
-                                        //               fontSize: 12)),
-                                        //     ],
-                                        //   ),
-                                        // ),
                                       ],
                                     ),
                                   ),
-                                  // Positioned(
-                                  //   top: -10,
-                                  //   left: 0,
-                                  //   right: 0,
-                                  //   child: Center(
-                                  //     child: Container(
-                                  //       //padding: const EdgeInsets.all(13),
-                                  //       decoration: BoxDecoration(
-                                  //         color: Colors.grey.shade100,
-                                  //         borderRadius:
-                                  //             BorderRadius.circular(27),
-                                  //         // boxShadow: [
-                                  //         //   BoxShadow(
-                                  //         //     color: Colors.black
-                                  //         //         .withAlpha((0.5 * 255).toInt()),
-                                  //         //     blurRadius: 6,
-                                  //         //     offset: const Offset(0, 3),
-                                  //         //   ),
-                                  //         // ],
-                                  //       ),
-                                  //       child: Image.asset(
-                                  //           'assets/png/qr_code.png',
-                                  //           height: 176,
-                                  //           width: 176),
-                                  //     ),
-                                  //   ),
-                                  // ),
-                                ],
-                              ),
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[300],
-                                  borderRadius: const BorderRadius.only(
-                                    bottomRight: Radius.circular(20),
+                                ),
+
+                                // QR Code section
+                                Container(
+                                  margin: const EdgeInsets.only(
+                                      top: 20, bottom: 36),
+                                  width: 200,
+                                  height: 200,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    clipBehavior: Clip.hardEdge,
+                                    children: [
+                                      // Background with repeated numbers
+                                      Container(
+                                        width: 200,
+                                        height: 200,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(16),
+                                          border: Border.all(
+                                            color: Colors.green,
+                                            width: 3,
+                                          ),
+                                        ),
+                                        child: _buildQRBackground(),
+                                      ),
+                                      // QR Code (rotated 45 degrees)
+                                      Transform.rotate(
+                                        angle:
+                                            0.785398, // 45 degrees in radians
+                                        child: Container(
+                                          width: 100,
+                                          height: 100,
+                                          decoration: BoxDecoration(
+                                            color: Colors.black,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Image.asset(
+                                            'assets/png/qr_code.png',
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(
-                                      width: 20,
-                                    ),
-                                    Image.asset('assets/png/log_out_icon.png'),
-                                    const SizedBox(
-                                      width: 26,
-                                    ),
-                                    TextButton(
-                                      onPressed: () async {
+
+                                // Language selection
+                                Container(
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 20),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      // English button
+                                      Expanded(
+                                        child: Container(
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: !SharedPref().isArabic()
+                                                ? const Color(0xFF1A1A53)
+                                                : Colors.grey.shade200,
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: Material(
+                                            color: Colors.transparent,
+                                            child: InkWell(
+                                              onTap: () async {
+                                                if (profileBoxProvider
+                                                    .isProfileVisible) {
+                                                  profileBoxProvider
+                                                      .hideProfileBox();
+                                                }
+                                                await Util.saveAndChangeLocale(
+                                                    context, 'en');
+                                              },
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                              child: Container(
+                                                height: 40,
+                                                alignment: Alignment.center,
+                                                child: Text(
+                                                  'English',
+                                                  style: TextStyle(
+                                                    color:
+                                                        !SharedPref().isArabic()
+                                                            ? Colors.white
+                                                            : Colors.black,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      // Arabic button
+                                      Expanded(
+                                        child: Container(
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: SharedPref().isArabic()
+                                                ? const Color(0xFF1A1A53)
+                                                : Colors.grey.shade200,
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: Material(
+                                            color: Colors.transparent,
+                                            child: InkWell(
+                                              onTap: () async {
+                                                if (profileBoxProvider
+                                                    .isProfileVisible) {
+                                                  profileBoxProvider
+                                                      .hideProfileBox();
+                                                }
+                                                await Util.saveAndChangeLocale(
+                                                    context, 'ar');
+                                              },
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                              child: Container(
+                                                height: 40,
+                                                alignment: Alignment.center,
+                                                child: Text(
+                                                  'Arabic',
+                                                  style: TextStyle(
+                                                    color:
+                                                        SharedPref().isArabic()
+                                                            ? Colors.white
+                                                            : Colors.black,
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                const SizedBox(height: 16),
+
+                                // Mute notifications
+                                Container(
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 20),
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.notifications,
+                                        color: const Color(0xFF1A1A53),
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Text(
+                                        'Mute notifications',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w400,
+                                          color: Colors.grey.shade800,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Switch(
+                                        value: false,
+                                        onChanged: (value) {
+                                          // Handle mute toggle
+                                        },
+                                        activeColor: const Color(0xFF1A1A53),
+                                        activeTrackColor: Colors.grey.shade300,
+                                        inactiveThumbColor:
+                                            Colors.grey.shade600,
+                                        inactiveTrackColor:
+                                            Colors.grey.shade300,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                const SizedBox(height: 16),
+
+                                // Logout section
+                                Container(
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () async {
                                         SharedPref().clearPreferences();
                                         Navigator.pushReplacement(
                                           context,
@@ -540,16 +373,79 @@ class ProfileBoxWithSlideAnimation extends StatelessWidget {
                                                   const SignInScreen()),
                                         );
                                       },
-                                      child: Text(translate('profile.logout'),
-                                          style: const TextStyle(
-                                              color: Color(0xffBA1719))),
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.logout,
+                                              color: Colors.red.shade600,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 16),
+                                            Text(
+                                              'Logout',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w400,
+                                                color: Colors.red.shade600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
-                                  ],
+                                  ),
                                 ),
-                              ),
-                            ],
+
+                                const SizedBox(height: 20),
+                              ],
+                            ),
                           ),
-                        ),
+                          // Decorative strips behind profile image
+                          Positioned(
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            child: IgnorePointer(
+                              child: Stack(
+                                children: [
+                                  // First strip (left side)
+                                  Positioned(
+                                    top: 0,
+                                    left: drawerWidth * 0.1,
+                                    child: Transform.rotate(
+                                      angle: 3.14159, // 180 degrees in radians
+                                      child: CustomPaint(
+                                        size: Size(
+                                            drawerWidth * 0.1,
+                                            MediaQuery.of(context).size.height *
+                                                0.4),
+                                        painter: DecorativeStripPainter(),
+                                      ),
+                                    ),
+                                  ),
+                                  // Second strip (right side, spread apart)
+                                  Positioned(
+                                    top: 0,
+                                    right: drawerWidth * 0.1,
+                                    child: Transform.rotate(
+                                      angle: 3.14159, // 180 degrees in radians
+                                      child: CustomPaint(
+                                        size: Size(
+                                            drawerWidth * 0.1,
+                                            MediaQuery.of(context).size.height *
+                                                0.4),
+                                        painter: DecorativeStripPainter(),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -558,4 +454,61 @@ class ProfileBoxWithSlideAnimation extends StatelessWidget {
             },
           );
   }
+}
+
+// Custom painter for QR background with repeated numbers
+class QRBackgroundPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    const textStyle = TextStyle(
+      color: Colors.green,
+      fontSize: 12,
+      fontWeight: FontWeight.w400,
+    );
+
+    const spacing = 50.0; // Increased spacing for more spread out numbers
+    for (double x = 0; x < size.width; x += spacing) {
+      for (double y = 0; y < size.height; y += spacing) {
+        final textPainter = TextPainter(
+          text: const TextSpan(text: '5026', style: textStyle),
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout();
+        textPainter.paint(canvas, Offset(x, y));
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// Custom painter for decorative strips
+class DecorativeStripPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: const Alignment(0.0, 1.0), // Bottom
+        end: const Alignment(0.0, -1.0), // Top
+        colors: [
+          Colors.white.withOpacity(0.49),
+          const Color(0xFF999999).withOpacity(0.49),
+        ],
+        stops: const [0.0, 1.0],
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    // Create the triangular strip path based on new SVG (36/233 ratio)
+    final path = Path();
+    path.moveTo(0, 0);
+    path.lineTo(size.width * 0.154, 0); // 36/233 ≈ 0.154 (15.4% of width)
+    path.lineTo(size.width, size.height);
+    path.lineTo(0, size.height);
+    path.close();
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

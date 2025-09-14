@@ -8,6 +8,7 @@ import 'package:el_race/ui/presentation/home_screen/widgets/profile_box_with_sli
 import 'package:el_race/ui/presentation/media/bloc/media_bloc.dart';
 import 'package:el_race/ui/presentation/my_notes/bloc/notes_bloc.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
+import 'package:el_race/ui/presentation/qr_code/bloc/qr_code_bloc.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
 import 'package:el_race/ui/presentation/splash_screen/splash_screen.dart';
 import 'package:el_race/utils/di.dart';
@@ -89,6 +90,7 @@ class MyApp extends StatelessWidget {
             BlocProvider(create: (ctx) => sl<ContactBloc>()),
             BlocProvider(create: (ctx) => sl<NotesBloc>()),
             BlocProvider(create: (ctx) => sl<MediaBloc>()),
+            BlocProvider(create: (ctx) => QrCodeBloc()),
           ],
           child: ScreenUtilInit(
             designSize: const Size(411.4, 843.4),

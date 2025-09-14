@@ -7,6 +7,7 @@ import 'package:el_race/utils/di.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
+import 'package:el_race/ui/presentation/qr_code/qr_code_screen.dart';
 
 import '../ui/presentation/call_screen/bloc/contact_bloc.dart';
 import '../ui/presentation/call_screen/call_screen.dart';
@@ -37,6 +38,8 @@ class OnGeneratedRoutes {
           _contactBloc.add(GetEmployeeLisET());
         });
         return CupertinoPageRoute(builder: (_) => const CallScreen());
+      case '/qr_code':
+        return CupertinoPageRoute(builder: (_) => const QrCodeScreen());
     }
     return MaterialPageRoute(
         builder: (_) => Scaffold(

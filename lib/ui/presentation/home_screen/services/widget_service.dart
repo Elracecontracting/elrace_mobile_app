@@ -32,7 +32,8 @@ class WidgetService {
       'projects',
       'my_request',
       'media',
-      'my_report'
+      'my_report',
+      'qr_code'
     ];
     
     final allWidgets = getAvailableWidgets();
