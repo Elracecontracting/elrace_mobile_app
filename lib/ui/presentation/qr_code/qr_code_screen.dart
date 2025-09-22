@@ -69,9 +69,9 @@ class QrCodeScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              
+
               SizedBox(height: 32.h),
-              
+
               // QR Code Display
               Center(
                 child: QrCodeDisplayWidget(
@@ -80,9 +80,9 @@ class QrCodeScreen extends StatelessWidget {
                   showRefreshButton: true,
                 ),
               ),
-              
+
               SizedBox(height: 32.h),
-              
+
               // Instructions
               Container(
                 width: double.infinity,
@@ -134,9 +134,9 @@ class QrCodeScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              
+
               const Spacer(),
-              
+
               // Action Buttons
               Row(
                 children: [

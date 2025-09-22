@@ -11,6 +11,7 @@ import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
+import '../../../../firebase_service.dart';
 import '../../../../utils/di.dart';
 
 part 'sign_in_event.dart';
@@ -32,25 +33,37 @@ class SignInBloc extends Bloc<SignInEvent, SignInState> {
 
     emit(const LoadingST(isLoading: true));
 
+    await FirebaseService.ensureFCMToken();
+
     DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
 
     if (Platform.isAndroid) {
       AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
       print('Running on ${androidInfo.model}');
       print('Running on id ${androidInfo.id}');
+      print('Running on brand ${androidInfo.brand}');
+      print('Running on device ${androidInfo.device}');
 
-      deviceName = androidInfo.id;
+      // Use a more unique device identifier
+      deviceName =
+          '${androidInfo.brand}_${androidInfo.device}_${androidInfo.id}';
     }
 
     if (Platform.isIOS) {
       IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
       print('Running on ${iosInfo.utsname.machine}');
-      deviceName = iosInfo.utsname.machine;
+      print('Running on name ${iosInfo.name}');
+      print('Running on model ${iosInfo.model}');
+
+      // Use a more unique device identifier for iOS
+      deviceName =
+          '${iosInfo.name}_${iosInfo.model}_${iosInfo.utsname.machine}';
     }
     // event.deviceId;
-   
+
     try {
-      Response response = await userRepo.loginApiCall(event.email, event.password, deviceName);
+      Response response =
+          await userRepo.loginApiCall(event.email, event.password, deviceName);
       if (response.statusCode == 200) {
         var n = jsonEncode(response.data);
         loginResponseModel = loginResponseModelFromJson(n);

@@ -4,13 +4,15 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class FirebaseService {
-  static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  static final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
-  FlutterLocalNotificationsPlugin();
+  static final FirebaseMessaging _firebaseMessaging =
+      FirebaseMessaging.instance;
+  static final FlutterLocalNotificationsPlugin
+      _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
   static Future<void> initialize() async {
     // Request notification permission
-    NotificationSettings settings = await _firebaseMessaging.requestPermission();
+    NotificationSettings settings =
+        await _firebaseMessaging.requestPermission();
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       print('✅ Notification permission granted');
     } else {
@@ -19,17 +21,16 @@ class FirebaseService {
 
     // Initialize local notifications (for showing notifications in foreground)
     const AndroidInitializationSettings androidInitSettings =
-    AndroidInitializationSettings('@mipmap/ic_launcher');
-    
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+
     const DarwinInitializationSettings iosInitSettings =
-    DarwinInitializationSettings(
+        DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
 
-    const InitializationSettings initSettings =
-    InitializationSettings(
+    const InitializationSettings initSettings = InitializationSettings(
       android: androidInitSettings,
       iOS: iosInitSettings,
     );
@@ -39,10 +40,8 @@ class FirebaseService {
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         final payload = response.payload;
         print("🔔 Notification tapped with payload: $payload");
-
       },
     );
-
 
     // Handle foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -64,17 +63,43 @@ class FirebaseService {
 
     // Listen for token refresh
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-      SharedPref().setPreferencesString(fcm_token, token.toString());
+      SharedPref().setPreferencesString(fcm_token, newToken.toString());
       print('🔁 FCM Token refreshed: $newToken');
     });
   }
 
+  static Future<String?> ensureFCMToken() async {
+    try {
+      // Check if we already have a token in SharedPreferences
+      String? existingToken = SharedPref().getPreferenceString(fcm_token);
+      if (existingToken != null && existingToken.isNotEmpty) {
+        print(
+            '📱 Using existing FCM Token: ${existingToken.substring(0, 20)}...');
+        return existingToken;
+      }
+
+      // Try to get a new token
+      String? token = await _firebaseMessaging.getToken();
+      if (token != null) {
+        SharedPref().setPreferencesString(fcm_token, token);
+        print('📱 FCM Token obtained and stored: ${token.substring(0, 20)}...');
+      } else {
+        print('❌ Failed to get FCM token - Firebase may not be initialized');
+      }
+      return token;
+    } catch (e) {
+      print('❌ Error getting FCM token: $e');
+      print('❌ This may happen if Firebase is not properly initialized');
+      return null;
+    }
+  }
+
   static Future<void> _showNotification(RemoteMessage message) async {
     RemoteNotification? notification = message.notification;
-    AndroidNotification? android = message.notification?.android;
 
     if (notification != null) {
-      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      const AndroidNotificationDetails androidDetails =
+          AndroidNotificationDetails(
         'high_importance_channel',
         'High Importance Notifications',
         importance: Importance.high,
@@ -87,8 +112,7 @@ class FirebaseService {
         presentSound: true,
       );
 
-      const NotificationDetails platformDetails =
-      NotificationDetails(
+      const NotificationDetails platformDetails = NotificationDetails(
         android: androidDetails,
         iOS: iosDetails,
       );

@@ -76,7 +76,7 @@ class LpoCardWidget extends StatelessWidget {
                       //     size: 20, color: Colors.black),
                     ],
                   ),
-                  const SizedBox(height: 50),
+                  const SizedBox(height: 25),
                   Row(
                     children: [
                       Image.asset(
@@ -270,7 +270,7 @@ class LpoCardWidget extends StatelessWidget {
             ),
           ),
           Transform.translate(
-            offset: Offset(-20.w, -20.h),
+            offset: Offset(-20.w, -15.h),
             child: Align(
               alignment: Alignment.centerRight,
               child: Stack(
@@ -278,9 +278,9 @@ class LpoCardWidget extends StatelessWidget {
                 children: [
                   Container(
                     width: 20.w,
-                    height: 28.w,
+                    height: 27.w,
                     margin: EdgeInsets.only(
-                      left: 20.w,
+                      left: 29.w,
                     ),
                     decoration: BoxDecoration(
                       color: red,

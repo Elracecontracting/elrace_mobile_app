@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 class HomCheckIn extends StatelessWidget {
   final Function(double val) value;
-  const HomCheckIn({super.key,required this.value});
+  const HomCheckIn({super.key, required this.value});
 
   @override
   Widget build(BuildContext context) {

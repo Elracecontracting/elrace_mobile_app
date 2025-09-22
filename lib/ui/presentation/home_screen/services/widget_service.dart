@@ -6,8 +6,9 @@ class WidgetService {
   static const String _activeWidgetsKey = 'active_widgets';
 
   static Future<List<WidgetModel>> getActiveWidgets() async {
-    final activeWidgetsJson = SharedPref().getPreferenceString(_activeWidgetsKey);
-    
+    final activeWidgetsJson =
+        SharedPref().getPreferenceString(_activeWidgetsKey);
+
     if (activeWidgetsJson.isEmpty) {
       // Initialize with default widgets if none are saved
       await _initializeDefaultWidgets();
@@ -35,12 +36,13 @@ class WidgetService {
       'my_report',
       'qr_code'
     ];
-    
+
     final allWidgets = getAvailableWidgets();
-    final activeWidgets = allWidgets.where((widget) => 
-      defaultWidgets.contains(widget.id)
-    ).map((widget) => widget.copyWith(isActive: true)).toList();
-    
+    final activeWidgets = allWidgets
+        .where((widget) => defaultWidgets.contains(widget.id))
+        .map((widget) => widget.copyWith(isActive: true))
+        .toList();
+
     await saveActiveWidgets(activeWidgets);
   }
 
@@ -52,7 +54,7 @@ class WidgetService {
   static Future<List<WidgetModel>> getAvailableWidgetsWithState() async {
     final activeWidgets = await getActiveWidgets();
     final allWidgets = getAvailableWidgets();
-    
+
     return allWidgets.map((widget) {
       final isActive = activeWidgets.any((active) => active.id == widget.id);
       return widget.copyWith(isActive: isActive);
@@ -62,18 +64,19 @@ class WidgetService {
   static Future<void> toggleWidget(String widgetId) async {
     final currentWidgets = await getActiveWidgets();
     final widgetExists = currentWidgets.any((w) => w.id == widgetId);
-    
+
     if (widgetExists) {
       currentWidgets.removeWhere((w) => w.id == widgetId);
     } else {
-      final availableWidget = getAvailableWidgets().firstWhere((w) => w.id == widgetId);
+      final availableWidget =
+          getAvailableWidgets().firstWhere((w) => w.id == widgetId);
       currentWidgets.add(availableWidget.copyWith(isActive: true));
     }
-    
+
     await saveActiveWidgets(currentWidgets);
   }
 
   static Future<void> resetToDefaultWidgets() async {
     await _initializeDefaultWidgets();
   }
-} 
+}
