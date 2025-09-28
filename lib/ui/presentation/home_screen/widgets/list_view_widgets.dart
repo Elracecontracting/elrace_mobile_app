@@ -12,13 +12,13 @@ import 'package:el_race/ui/presentation/my_documents/screens/my_documents_screen
 import 'package:el_race/ui/presentation/my_notes/screens/my_notes_screen.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/screens/my_project.dart';
 import 'package:el_race/ui/presentation/my_request/MyRequestsPage.dart';
-import 'package:el_race/ui/presentation/qr_code/qr_code_screen.dart';
 import 'package:el_race/ui/presentation/task_sheet/task_sheet_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -79,8 +79,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         return _buildMediaWidget();
       case 'my_report':
         return _buildMyReportWidget();
-      case 'qr_code':
-        return _buildQrCodeWidget();
+      // QR widget removed from home screen - only available in sidebar
       default:
         return const SizedBox.shrink();
     }
@@ -153,6 +152,14 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
             cardTitle: translate('home.petty_cash'),
             backgroundImagePath: 'assets/png/pettycash_new_bg.png',
             childWidget: const SizedBox.shrink(),
+          ),
+          Positioned(
+            right: 6,
+            top: 30,
+            child: Opacity(
+              opacity: .12,
+              child: SvgPicture.asset('assets/newapp/petty_cash.svg'),
+            ),
           ),
         ],
       ),
@@ -389,7 +396,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           top: 30,
           child: Opacity(
             opacity: .12,
-            child: Image.asset('assets/newapp/my_projects.png'),
+            child: SvgPicture.asset('assets/newapp/my_projects.svg'),
           ),
         ),
       ],
@@ -563,52 +570,6 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       //     ],
       //   ),
       // ),
-    );
-  }
-
-  Widget _buildQrCodeWidget() {
-    return GrayCardComponent(
-      mainIcon: 'assets/png/qr_code.png', // You'll need to add this icon
-      cardTitle: 'My QR Code',
-      backgroundImagePath: 'assets/png/gray_card.png',
-      onClick: () => Util.pushPage(const QrCodeScreen(), context),
-      topPadding: true,
-      topPaddingValue: 40,
-      childWidget: Directionality(
-        textDirection: TextDirection.ltr,
-        child: Stack(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(
-                left: 210.w,
-              ),
-              child: Icon(
-                Icons.qr_code_2,
-                size: 140.w,
-                color: Colors.deepPurple.shade600,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 66),
-              child: SizedBox(
-                width: SizeConfig().getWidth(190),
-                height: SizeConfig().getHeight(85),
-                child: Column(
-                  children: [
-                    CustomBulletPoint(
-                      text: 'Employee Profile',
-                      textColor: Colors.black,
-                      countColor: Colors.black,
-                      count: 'QR',
-                      containerColor: Colors.white,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 

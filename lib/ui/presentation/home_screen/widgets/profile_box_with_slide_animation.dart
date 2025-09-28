@@ -196,8 +196,8 @@ class _ProfileBoxWithSlideAnimationState
                         child: Container(
                           width: drawerWidth,
                           height: MediaQuery.of(context).size.height *
-                              0.62, // Reduced height to 62% to show border radius
-                          padding: const EdgeInsets.only(bottom: 10),
+                              0.72, // Increased height to 65% to accommodate content
+                          padding: const EdgeInsets.only(bottom: 15),
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.grey[300],
@@ -668,7 +668,7 @@ class _ProfileBoxWithSlideAnimationState
                                               //   ),
                                               // ),
                                               const SizedBox(
-                                                height: 1,
+                                                height: 8,
                                               ),
                                               // Container(
                                               //   padding: const EdgeInsets.symmetric(
@@ -784,7 +784,8 @@ class _ProfileBoxWithSlideAnimationState
                                 ),
                                 const Spacer(),
                                 Container(
-                                  margin: const EdgeInsets.only(top: 8),
+                                  margin:
+                                      const EdgeInsets.only(top: 8, bottom: 20),
                                   decoration: BoxDecoration(
                                     color: Colors.grey[300],
                                     borderRadius: const BorderRadius.only(

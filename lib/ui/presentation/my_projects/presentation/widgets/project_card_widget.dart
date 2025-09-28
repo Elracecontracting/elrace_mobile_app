@@ -83,7 +83,7 @@ class ProjectCardWidget extends StatelessWidget {
           Container(
             margin: const EdgeInsets.fromLTRB(10, 0, 10, 0),
             width: 357.65.w,
-            height: 250.h,
+            height: 200.h,
             decoration: const BoxDecoration(
               image: DecorationImage(
                 image: AssetImage("assets/png/background.png"),

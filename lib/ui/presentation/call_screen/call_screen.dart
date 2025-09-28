@@ -290,14 +290,19 @@ class ContactTile extends StatelessWidget {
         child: Container(
           height: 85.w,
           width: 350.w,
-          decoration: ShapeDecoration(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+          decoration: BoxDecoration(
+            image: const DecorationImage(
+              image: AssetImage('assets/png/bg_petty.png'),
+              fit: BoxFit.cover,
             ),
-            gradient: LinearGradient(
-                colors: color,
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha((0.08 * 255).toInt()),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10),

@@ -265,13 +265,55 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                                 0xFF1E1E50) // Dark blue when checked in
                             : const Color(
                                 0xFFE8E8E8), // Light gray when checked out
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(40),
+                        child: Stack(
+                          children: [
+                            // Inner shadow effect using gradient
+                            Positioned.fill(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(40),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.black.withOpacity(0.0),
+                                      Colors.black.withOpacity(0.0),
+                                      Colors.black.withOpacity(0.15),
+                                      Colors.black.withOpacity(0.25),
+                                    ],
+                                    stops: const [0.0, 0.3, 0.7, 1.0],
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Additional inner shadow from top
+                            Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              height: 8,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(40),
+                                    topRight: Radius.circular(40),
+                                  ),
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.black.withOpacity(0.2),
+                                      Colors.black.withOpacity(0.0),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

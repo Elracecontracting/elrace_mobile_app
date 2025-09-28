@@ -156,8 +156,8 @@ class _MyProjectState extends State<MyProject> {
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           crossAxisSpacing: 20.w,
-                          mainAxisSpacing: 15.h,
-                          childAspectRatio: 1.1,
+                          mainAxisSpacing: 10.h,
+                          childAspectRatio: 1,
                         ),
                         itemCount: partners.length,
                         itemBuilder: (context, index) {
@@ -208,7 +208,7 @@ class _MyProjectState extends State<MyProject> {
                                 borderRadius: BorderRadius.circular(20),
                               ),
                               child: Padding(
-                                padding: EdgeInsets.all(6.w),
+                                padding: EdgeInsets.all(8.w),
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   mainAxisSize: MainAxisSize.min,
@@ -217,31 +217,31 @@ class _MyProjectState extends State<MyProject> {
                                       child: partner.icon != null
                                           ? Image.network(
                                               partner.icon!,
-                                              width: 50.w,
-                                              height: 50.h,
+                                              width: 45.w,
+                                              height: 45.h,
                                               fit: BoxFit.contain,
                                               errorBuilder: (context, error,
                                                       stackTrace) =>
                                                   Image.asset(
                                                 "assets/png/police.png",
-                                                width: 50.w,
-                                                height: 50.h,
+                                                width: 45.w,
+                                                height: 45.h,
                                                 fit: BoxFit.contain,
                                               ),
                                             )
                                           : Image.asset(
                                               "assets/png/police.png",
-                                              width: 50.w,
-                                              height: 50.h,
+                                              width: 45.w,
+                                              height: 45.h,
                                               fit: BoxFit.contain,
                                             ),
                                     ),
-                                    SizedBox(height: 4.h),
+                                    SizedBox(height: 3.h),
                                     Flexible(
                                       child: Text(
                                         partner.name,
                                         style: GoogleFonts.koulen(
-                                          fontSize: 18.sp,
+                                          fontSize: 16.sp,
                                           fontWeight: FontWeight.w400,
                                         ),
                                         textAlign: TextAlign.center,
@@ -249,7 +249,7 @@ class _MyProjectState extends State<MyProject> {
                                         maxLines: 2,
                                       ),
                                     ),
-                                    SizedBox(height: 2.h),
+                                    SizedBox(height: 1.h),
                                     Flexible(
                                       child: Row(
                                         mainAxisAlignment:
@@ -259,7 +259,7 @@ class _MyProjectState extends State<MyProject> {
                                           Text(
                                             '# ',
                                             style: GoogleFonts.koulen(
-                                              fontSize: 11.sp,
+                                              fontSize: 10.sp,
                                               fontWeight: FontWeight.w400,
                                               color: Colors.black,
                                             ),
@@ -268,17 +268,17 @@ class _MyProjectState extends State<MyProject> {
                                             child: Text(
                                               'work orders',
                                               style: GoogleFonts.koulen(
-                                                fontSize: 11.sp,
+                                                fontSize: 10.sp,
                                                 fontWeight: FontWeight.w400,
                                                 color: Colors.black,
                                               ),
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
-                                          SizedBox(width: 4.w),
+                                          SizedBox(width: 3.w),
                                           Container(
-                                            width: 18.w,
-                                            height: 18.h,
+                                            width: 20.w,
+                                            height: 20.h,
                                             decoration: const BoxDecoration(
                                               color: Colors.white,
                                               shape: BoxShape.circle,
@@ -289,7 +289,7 @@ class _MyProjectState extends State<MyProject> {
                                                     .toString(),
                                                 style: GoogleFonts.montserrat(
                                                   fontWeight: FontWeight.w700,
-                                                  fontSize: 10.sp,
+                                                  fontSize: 9.sp,
                                                 ),
                                               ),
                                             ),

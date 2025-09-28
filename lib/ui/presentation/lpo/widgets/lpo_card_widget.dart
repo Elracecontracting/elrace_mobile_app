@@ -49,8 +49,8 @@ class LpoCardWidget extends StatelessWidget {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              SvgPicture.asset(
-                                "assets/png/lpo_blue.svg",
+                              Image.asset(
+                                "assets/newapp/my_projects.png",
                                 height: 26.w,
                                 width: 26.w,
                               ),
@@ -270,7 +270,7 @@ class LpoCardWidget extends StatelessWidget {
             ),
           ),
           Transform.translate(
-            offset: Offset(-20.w, -15.h),
+            offset: Offset(-20.w, -17.h),
             child: Align(
               alignment: Alignment.centerRight,
               child: Stack(
@@ -280,7 +280,7 @@ class LpoCardWidget extends StatelessWidget {
                     width: 20.w,
                     height: 27.w,
                     margin: EdgeInsets.only(
-                      left: 29.w,
+                      left: 40.w,
                     ),
                     decoration: BoxDecoration(
                       color: red,
@@ -298,17 +298,17 @@ class LpoCardWidget extends StatelessWidget {
                     width: 210.w,
                     alignment: Alignment.centerLeft,
                     margin: EdgeInsets.only(left: 30.w),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
                     decoration: const BoxDecoration(
                         image: DecorationImage(
                             image: AssetImage(
                                 'assets/png/lpo_blue_container.png'))),
                     child: SizedBox(
-                      width: 190.w,
+                      width: 200.w,
                       child: Text(
                         ('AMOUNT: $amount'),
                         style: GoogleFonts.koulen(
-                          fontSize: 12.sp,
+                          fontSize: 16.sp,
                           fontWeight: FontWeight.w500,
                           color: Colors.white,
                           letterSpacing: 1.2,

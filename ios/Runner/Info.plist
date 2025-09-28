@@ -2,75 +2,62 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <!-- Face ID (optional) -->
-  <key>NSFaceIDUsageDescription</key>
-  <string>We are using Face ID for checking in.</string>
-
-  <!-- Location (When In Use) -->
-  <key>NSLocationWhenInUseUsageDescription</key>
-  <string>We use your location to calculate accurate prayer times.</string>
-
-  <!-- If (and only if) you request ALWAYS auth in code, also include: -->
-  <!--
-  <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-  <string>We use your location in the background to keep prayer times accurate.</string>
-  -->
-
-  <!-- Optional: allow tel:/sms: URL checks -->
-  <key>LSApplicationQueriesSchemes</key>
-  <array>
-    <string>sms</string>
-    <string>tel</string>
-  </array>
-
-  <key>CFBundleDevelopmentRegion</key>
-  <string>$(DEVELOPMENT_LANGUAGE)</string>
-  <key>CFBundleDisplayName</key>
-  <string>El Race</string>
-  <key>CFBundleExecutable</key>
-  <string>$(EXECUTABLE_NAME)</string>
-  <key>CFBundleIdentifier</key>
-  <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
-  <key>CFBundleInfoDictionaryVersion</key>
-  <string>6.0</string>
-  <key>CFBundleName</key>
-  <string>el_race</string>
-  <key>CFBundlePackageType</key>
-  <string>APPL</string>
-  <key>CFBundleShortVersionString</key>
-  <string>$(FLUTTER_BUILD_NAME)</string>
-  <key>CFBundleSignature</key>
-  <string>????</string>
-  <key>CFBundleVersion</key>
-  <string>$(FLUTTER_BUILD_NUMBER)</string>
-  <key>LSRequiresIPhoneOS</key>
-  <true/>
-
-  <key>UILaunchStoryboardName</key>
-  <string>LaunchScreen</string>
-
-  <!-- Flutter template includes Main storyboard; keeping is fine -->
-  <key>UIMainStoryboardFile</key>
-  <string>Main</string>
-
-  <key>UISupportedInterfaceOrientations</key>
-  <array>
-    <string>UIInterfaceOrientationPortrait</string>
-    <string>UIInterfaceOrientationLandscapeLeft</string>
-    <string>UIInterfaceOrientationLandscapeRight</string>
-  </array>
-
-  <key>UISupportedInterfaceOrientations~ipad</key>
-  <array>
-    <string>UIInterfaceOrientationPortrait</string>
-    <string>UIInterfaceOrientationPortraitUpsideDown</string>
-    <string>UIInterfaceOrientationLandscapeLeft</string>
-    <string>UIInterfaceOrientationLandscapeRight</string>
-  </array>
-
-  <key>CADisableMinimumFrameDurationOnPhone</key>
-  <true/>
-  <key>UIApplicationSupportsIndirectInputEvents</key>
-  <true/>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>El Race</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>el_race</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(FLUTTER_BUILD_NAME)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>sms</string>
+		<string>tel</string>
+	</array>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSFaceIDUsageDescription</key>
+	<string>We are using Face ID for checking in.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We use your location to calculate accurate prayer times.</string>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+	</array>
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
 </dict>
 </plist>

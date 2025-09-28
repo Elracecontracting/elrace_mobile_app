@@ -61,7 +61,7 @@ List<WidgetModel> getAvailableWidgets() {
     const WidgetModel(
       id: 'petty_cash',
       title: 'Petty Cash',
-      iconPath: 'assets/png/petty_cash.png',
+      iconPath: 'assets/newapp/petty_cash.svg',
       backgroundPath: 'assets/png/pettycash_new_bg.png',
     ),
     const WidgetModel(
@@ -85,7 +85,7 @@ List<WidgetModel> getAvailableWidgets() {
     const WidgetModel(
       id: 'projects',
       title: 'Projects',
-      iconPath: 'assets/newapp/my_projects.png',
+      iconPath: 'assets/newapp/my_projects.svg',
       backgroundPath: 'assets/png/gray_card.png',
     ),
     const WidgetModel(

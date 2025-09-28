@@ -10,22 +10,25 @@ class ArraowVisibalityBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.bottomCenter,
-      child:  BlocBuilder<HomeBloc, HomeState>(
-        builder: (ctx,state) {
-          var bloc = HomeBloc.get(ctx);
-          return InkWell(
-            onTap: ()=> bloc.add(const ChangeVisiablityIcon()),
-            child: Container(
-              height: 50.w,
-              margin: EdgeInsets.only(bottom: 120.w),
-              child: 
-              !bloc.enableBottomNav?
-              Image.asset("assets/newapp/arrow_appear.png",width: 50.w,):
-              Image.asset("assets/newapp/arrow.png",width: 50.w,),
-            ),
-          );
-        }
-      ),
+      child: BlocBuilder<HomeBloc, HomeState>(builder: (ctx, state) {
+        var bloc = HomeBloc.get(ctx);
+        return InkWell(
+          onTap: () => bloc.add(const ChangeVisiablityIcon()),
+          child: Container(
+            height: 50.w,
+            margin: EdgeInsets.only(bottom: 120.w),
+            child: !bloc.enableBottomNav
+                ? Image.asset(
+                    "assets/newapp/arrow_appear.png",
+                    width: 40.w,
+                  )
+                : Image.asset(
+                    "assets/newapp/arrow.png",
+                    width: 40.w,
+                  ),
+          ),
+        );
+      }),
     );
   }
 }
