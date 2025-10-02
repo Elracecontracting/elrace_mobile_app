@@ -45,9 +45,7 @@ class _LandingScreenState extends State<LandingScreen> {
     _pages = [
       const SizedBox(), // Placeholder for the first tab
       const HomeScreen(),
-      CallScreen(
-        loginResponseModel: widget.loginResponseModel,
-      ),
+      const CallScreen(),
     ];
     _locationBloc.add(GetCurrentLocationET());
   }

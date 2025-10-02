@@ -64,6 +64,13 @@ class TimerController extends GetxController {
   Future<void> stopTimer() async {
     _timer?.cancel();
     _timer = null;
+    
+    if(_checkInTime == null) {
+      SharedPref().removePreference('checkInTime');
+      SharedPref().removePreference('isCheckedIn');
+      SharedPref().removePreference('timeLeft');
+      return;
+    }
 
     final elapsed = DateTime.now().difference(_checkInTime!);
     final updatedRemaining = _initialRemaining - elapsed;

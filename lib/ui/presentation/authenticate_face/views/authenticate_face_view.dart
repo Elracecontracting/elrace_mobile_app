@@ -30,7 +30,7 @@ class AuthenticateFaceView extends GetView<AuthenticateFaceViewController> {
     return GetBuilder<AuthenticateFaceViewController>(
       init: AuthenticateFaceViewController(),
       builder: (controller) {
-        controller.isLeftToRight = isLeftToRight;
+        // controller.isLeftToRight = isLeftToRight;
         controller.onCheckInStatusChanged = onCheckInStatusChanged;
         return SafeArea(
           child: Scaffold(

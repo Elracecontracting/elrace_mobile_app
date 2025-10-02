@@ -84,10 +84,10 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
       },
       child: Scaffold(
         backgroundColor: Colors.white,
+        appBar: const HeaderWidget(),
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const HeaderWidget(),
       
             const SizedBox(height: 10),
       

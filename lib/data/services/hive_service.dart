@@ -21,6 +21,7 @@ class HiveService {
     Hive.registerAdapter(ReportModelAdapter());
     Hive.registerAdapter(ReportDetailModelAdapter());
     Hive.registerAdapter(ReportDetailItemAdapter());
+    Hive.registerAdapter(CompanyModelAdapter());
     Hive.registerAdapter(PdfModelAdapter());
   }
 

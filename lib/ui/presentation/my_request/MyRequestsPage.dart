@@ -576,10 +576,10 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
           await _fetchRequests();
         },
         child: Scaffold(
+          backgroundColor: Colors.white,
+          appBar: const HeaderWidget(),
         body: Column(
           children: [
-            const HeaderWidget(),
-        
             const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),

@@ -14,6 +14,7 @@ class CameraView extends StatefulWidget {
     this.initialCameraLensDirection = CameraLensDirection.back,
     this.onController,
     this.cameraSize = const Size(200, 200),
+    this.externalController, // Add external controller parameter
   });
   final Size cameraSize;
   final Function(InputImage inputImage) onImage;
@@ -22,6 +23,7 @@ class CameraView extends StatefulWidget {
   final Function(CameraLensDirection direction)? onCameraLensDirectionChanged;
   final CameraLensDirection initialCameraLensDirection;
   final void Function(CameraController controller)? onController;
+  final CameraController? externalController; // External controller parameter
 
   @override
   State<CameraView> createState() => _CameraViewState();
@@ -31,13 +33,41 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   static List<CameraDescription> _cameras = [];
   CameraController? _controller;
   int _cameraIndex = -1;
+  bool _usingExternalController = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
-    _initialize();
+    // Check if we should use external controller
+    if (widget.externalController != null) {
+      _controller = widget.externalController;
+      _usingExternalController = true;
+      widget.onController?.call(_controller!);
+      setState(() {});
+    } else {
+      _initialize();
+    }
+  }
+
+  @override
+  void didUpdateWidget(CameraView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Handle external controller changes
+    if (widget.externalController != oldWidget.externalController) {
+      if (widget.externalController != null) {
+        _controller = widget.externalController;
+        _usingExternalController = true;
+        widget.onController?.call(_controller!);
+        setState(() {});
+      } else {
+        _usingExternalController = false;
+        _controller = null;
+        _initialize();
+      }
+    }
   }
 
   void _initialize() async {
@@ -68,12 +98,56 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   }
 
   Widget _liveFeedBody() {
-    if (_cameras.isEmpty) return Container();
+    if (_cameras.isEmpty && !_usingExternalController) return Container();
     if (_controller == null) return Container();
-    if ((_controller?.value.isInitialized ?? false) == false) {
-      return Container();
+    
+    // Add validation to prevent disposed controller exception
+    if (!_controller!.value.isInitialized) {
+      return Container(
+        height: widget.cameraSize.height,
+        width: widget.cameraSize.width,
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(widget.cameraSize.width),
+        ),
+        child: const Center(
+          child: Icon(
+            Icons.camera_alt,
+            color: Colors.grey,
+            size: 40,
+          ),
+        ),
+      );
     }
-    widget.onController?.call(_controller!);
+    
+    // Safe call to onController
+    if (widget.onController != null) {
+      try {
+        widget.onController!(_controller!);
+      } catch (e) {
+        debugPrint('Error calling onController: $e');
+      }
+    }
+
+    // Safe access to preview size with null checks
+    final previewSize = _controller!.value.previewSize;
+    if (previewSize == null) {
+      return Container(
+        height: widget.cameraSize.height,
+        width: widget.cameraSize.width,
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(widget.cameraSize.width),
+        ),
+        child: const Center(
+          child: Icon(
+            Icons.camera_alt,
+            color: Colors.grey,
+            size: 40,
+          ),
+        ),
+      );
+    }
 
     return SizedBox(
       height: widget.cameraSize.height,
@@ -83,8 +157,8 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
         child: FittedBox(
           fit: BoxFit.cover,
           child: SizedBox(
-              width: _controller!.value.previewSize!.height,
-              height: _controller!.value.previewSize!.width,
+              width: previewSize.height,
+              height: previewSize.width,
               child: CameraPreview(_controller!)),
         ),
       ),
@@ -160,8 +234,11 @@ class _CameraViewState extends State<CameraView> with WidgetsBindingObserver {
   }
 
   Future _stopLiveFeed() async {
-    await _controller?.stopImageStream();
-    await _controller?.dispose();
+    // Only dispose if we're not using an external controller
+    if (!_usingExternalController && _controller != null) {
+      await _controller?.stopImageStream();
+      await _controller?.dispose();
+    }
     _controller = null;
   }
 

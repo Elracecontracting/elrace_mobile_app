@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/ui/presentation/call_screen/bloc/contact_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
@@ -10,6 +11,7 @@ import 'package:el_race/utils/custom_navigate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart' show BlocProvider;
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class Util {
   static fetchHomeScreenData(cxt){
@@ -19,6 +21,8 @@ class Util {
 
     BlocProvider.of<RequestsBloc>(cxt, listen: false)
     .add(const FetchRequestsCount());
+
+    BlocProvider.of<ContactBloc>(cxt, listen: false).add(GetEmployeeLisET());
   }
 
   static Future<void> saveAndChangeLocale(BuildContext context, String languageCode) async {
@@ -41,7 +45,18 @@ class Util {
     );
   }
 
+  static Future<void> openUrl(String url) async {
+    print(url);
+    if (await canLaunchUrl(Uri.parse(url))) {
+      await launchUrl(Uri.parse(url));
+    } else {
+      throw 'Could not launch $url';
+    }
+  }
 
+  static void showComingSoonToast() {
+    CustomToast().showToast("Coming Soon 🚧");
+  }
 
   static String monthName(int month) {
     const monthNames = [
@@ -63,6 +78,18 @@ class Util {
       base64Decode(str);
       return true;
     } catch (_) {
+      return false;
+    }
+  }
+
+
+  static  isValidDateTime(String? value) {
+    if (value == null || value.isEmpty) return false;
+
+    try {
+      DateTime.parse(value);
+      return true;
+    } catch (e) {
       return false;
     }
   }

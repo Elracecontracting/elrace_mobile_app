@@ -1086,7 +1086,7 @@ class _CameraWithOverlayState extends State<CameraWithOverlay> {
 }
 
 class Project {
-  final int partnerId;
+  final String partnerId;
   final int agreementId;
   final String name;
 
@@ -1098,9 +1098,9 @@ class Project {
 
   factory Project.fromJson(Map<String, dynamic> json) {
     return Project(
-      partnerId: json['partner_id'],
+      partnerId: json['partner_id'].toString(),
       agreementId: json['project_id'],
-      name: json['name'],
+      name: json['name'].toString(),
     );
   }
 }

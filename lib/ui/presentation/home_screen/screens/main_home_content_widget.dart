@@ -10,8 +10,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import '../provider/slider_provider.dart';
 
+import '../provider/slider_provider.dart';
 
 class MainHomeContentWidget extends StatelessWidget {
   const MainHomeContentWidget({super.key});
@@ -23,26 +23,9 @@ class MainHomeContentWidget extends StatelessWidget {
       onRefresh: () async => await Util.fetchHomeScreenData(context),
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.symmetric(vertical: SizeConfig().getHeight(10)),
         child: Column(
           children: [
-            const HeaderWidget(),
-            const SizedBox(height: 1),
-      
-            Container(
-              height: 2,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.grey[400],
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha((0.3 * 255).toInt()), // Soft shadow
-                    offset: const Offset(0, 2), // Slight downward shift
-                    blurRadius: 2,
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: SizeConfig().getHeight(11)),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -50,13 +33,16 @@ class MainHomeContentWidget extends StatelessWidget {
                   children: [
                     CarouselSlider.builder(
                       itemCount: sliderProvider.sliderImages.length,
-                      itemBuilder: (BuildContext context, int itemIndex, int pageViewIndex) {
+                      itemBuilder: (BuildContext context, int itemIndex,
+                          int pageViewIndex) {
                         return GestureDetector(
-                          onTap: () => Util.pushPage(const ProjectAnnouncementPage(),context),
+                          onTap: () => Util.pushPage(
+                              const ProjectAnnouncementPage(), context),
                           child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: SizeConfig().getWidth(7)),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: SizeConfig().getWidth(7)),
                             child: Container(
-                              height: 160,
+                              height: 160.w,
                               width: double.infinity,
                               decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(20),
@@ -79,19 +65,22 @@ class MainHomeContentWidget extends StatelessWidget {
                                   ),
                                   Positioned(
                                     bottom: 30,
-                                    left: 10,
-                                    right: 10,
+                                    left: 0,
+                                    right: 0,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         image: const DecorationImage(
-                                          image: AssetImage('assets/png/news-liner-bg.png'),
+                                          image: AssetImage(
+                                              'assets/png/news-liner-bg.png'),
                                           fit: BoxFit.cover,
                                         ),
                                         borderRadius: BorderRadius.circular(4),
                                       ),
-                                      padding: const EdgeInsets.symmetric(vertical: 5, horizontal: 1),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 5, horizontal: 1),
                                       child: Text(
-                                        sliderProvider.titles[itemIndex % sliderProvider.titles.length],
+                                        sliderProvider.titles[itemIndex %
+                                            sliderProvider.titles.length],
                                         style: TextStyle(
                                           color: appFontColor,
                                           fontSize: 8,
@@ -100,7 +89,8 @@ class MainHomeContentWidget extends StatelessWidget {
                                             Shadow(
                                               offset: const Offset(0, 1),
                                               blurRadius: 6,
-                                              color: Colors.black.withAlpha((0.4 * 255).toInt()),
+                                              color: Colors.black.withAlpha(
+                                                  (0.4 * 255).toInt()),
                                             ),
                                           ],
                                         ),
@@ -125,7 +115,7 @@ class MainHomeContentWidget extends StatelessWidget {
                         initialPage: sliderProvider.currentIndex,
                       ),
                     ),
-      
+
                     // Dots Indicator
                     Positioned(
                       bottom: 10,
@@ -133,7 +123,8 @@ class MainHomeContentWidget extends StatelessWidget {
                       right: 0,
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(sliderProvider.titles.length, (index) {
+                        children: List.generate(sliderProvider.titles.length,
+                            (index) {
                           final isActive = sliderProvider.currentIndex == index;
                           return GestureDetector(
                             onTap: () => sliderProvider.setCurrentIndex(index),
@@ -143,7 +134,9 @@ class MainHomeContentWidget extends StatelessWidget {
                               margin: const EdgeInsets.symmetric(horizontal: 4),
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: isActive ? const Color(0xFF1A1A53) : Colors.transparent,
+                                color: isActive
+                                    ? const Color(0xFF1A1A53)
+                                    : Colors.transparent,
                                 border: Border.all(
                                   color: const Color(0xFF1A1A53),
                                   width: 1,
@@ -156,18 +149,19 @@ class MainHomeContentWidget extends StatelessWidget {
                     ),
                   ],
                 ),
-      
+
                 // "See All" Button
                 Padding(
                   padding: const EdgeInsets.only(top: 12.0, right: 16),
                   child: Align(
                     alignment: Alignment.centerRight,
                     child: GestureDetector(
-                      onTap: () => Util.pushPage(const ProjectAnnouncementPage(), context),
+                      onTap: () => Util.pushPage(
+                          const ProjectAnnouncementPage(), context),
                       child: Text(
                         translate('home.see_all'),
                         style: GoogleFonts.inter(
-                          fontSize: 12,
+                          fontSize: 16,
                           color: Colors.grey[700],
                           fontWeight: FontWeight.w500,
                         ),
@@ -177,10 +171,7 @@ class MainHomeContentWidget extends StatelessWidget {
                 ),
               ],
             ),
-      
-      
             const SizedBox(height: 10),
-      
             const WidgetContainer(),
             SizedBox(height: 120.h),
           ],

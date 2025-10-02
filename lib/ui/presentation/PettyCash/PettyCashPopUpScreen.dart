@@ -23,9 +23,8 @@ import 'package:uuid/uuid.dart';
 
 
 class PettyCashPopUpScreen extends StatefulWidget {
-  final dynamic loginResponseModel;
 
-  const PettyCashPopUpScreen({Key? key, required this.loginResponseModel}) : super(key: key);
+  const PettyCashPopUpScreen({super.key});
 
   @override
   _PettyCashPopUpScreenState createState() => _PettyCashPopUpScreenState();
@@ -437,13 +436,14 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       },
       child: Scaffold(
         backgroundColor: Colors.white,
+        appBar: const HeaderWidget(),
         body: SafeArea(
           child: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header Section (unchanged)
-                const HeaderWidget(),
+                
                 const SizedBox(height: 10),
       
       
@@ -711,7 +711,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                   child: CustomSliderButton(
                     key: _sliderKey, // ✅ <-- this is critical
                     onSlideComplete: _submitExpense,
-                    loginResponseModel: widget.loginResponseModel,
+                    loginResponseModel: SharedPref.getLoginData(),
                   )
       
                 ),

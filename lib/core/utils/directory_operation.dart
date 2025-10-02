@@ -49,7 +49,6 @@ Future<Directory> getAppDirectory() async {
   Directory appDocDir = await getApplicationDocumentsDirectory();
   return appDocDir;
 }
-
 Future<void> moveFromOneSectionToAnother(
     String reportID, String section, String updatedSection) async {
   final directory = await getApplicationDocumentsDirectory();

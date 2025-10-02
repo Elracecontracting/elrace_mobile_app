@@ -1,19 +1,20 @@
 
 import 'package:el_race/core/constants/app_images.dart';
+import 'package:el_race/providers/profile_box_provider.dart';
+import 'package:el_race/ui/presentation/call_screen/call_screen.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
+import 'package:el_race/ui/presentation/home_screen/widgets/profile_box_with_slide_animation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
-
 
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
 
   static const List<Widget> screens = [
-    SizedBox(),
+    CallScreen(),
     HomeScreenPage(),
     SizedBox(),
   ];
@@ -89,7 +90,7 @@ class CustomBottomNavBar extends StatelessWidget {
   Widget _buildNavItem(BuildContext context,{required int index, required String icon}) {
     final bloc = HomeBloc.get(context);
     return IconButton(
-      onPressed: () =>bloc.add(ChangeCurrentIndex(index: index)),
+      onPressed: () => bloc.add(ChangeCurrentIndex(index: index)),
       icon: Image.asset(
         icon,
         width: 30.w,

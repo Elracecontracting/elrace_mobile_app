@@ -3,6 +3,7 @@ import 'package:el_race/resources/app_colors.dart';
 import 'package:el_race/ui/presentation/register_face/views/register_face_view.dart';
 import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:el_race/ui/widgets/custom_button.dart';
+import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/extensions/size_extension.dart';
 import 'package:flutter/material.dart';
 import '../view_model/instruction_view_model.dart';
@@ -101,14 +102,7 @@ class InstructionView extends StatelessWidget {
               // Action Button
               CustomButton(
                 text: "Let's Go",
-                onTap: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => RegisterFaceView(loginResponseModel: loginResponseModel),
-                    ),
-                  );
-                },
+                onTap: () => Util.pushPage(const RegisterFaceView(), context),
               ),
               const Spacer(flex: 2),
             ],

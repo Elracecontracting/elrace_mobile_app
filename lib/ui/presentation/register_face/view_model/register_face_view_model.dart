@@ -4,16 +4,20 @@ import 'package:camera/camera.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:el_race/data/models/gesture_description.dart';
 import 'package:el_race/data/models/user_model.dart';
+import 'package:el_race/data/services/face_service.dart';
 import 'package:el_race/resources/app_colors.dart';
 import 'package:el_race/resources/app_string.dart';
 import 'package:el_race/ui/widgets/custom_toast.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:image/image.dart' as img;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
+import 'dart:typed_data';
+import 'dart:math' as math;
 import '../../../../utils/extract_face_feature.dart';
 import '../../authenticate_face/view_model/authenticate_face_view_model.dart';
 class RegisterFaceViewController extends GetxController {
@@ -23,9 +27,14 @@ class RegisterFaceViewController extends GetxController {
       enableContours: true,
       enableClassification: true,
       enableTracking: true,
-      performanceMode: FaceDetectorMode.fast,
+      performanceMode: FaceDetectorMode.accurate,
     ),
   );
+
+  // FaceService for TensorFlow Lite face recognition
+  late FaceService faceService;
+  var faceEmbeddingSize = 192; // MobileFaceNet embedding size
+  List<double>? faceEmbedding;
 
   late List<GestureDescription> gestureDescriptions;
 
@@ -54,11 +63,11 @@ class RegisterFaceViewController extends GetxController {
   var runtimeInstruction = ''.obs;
 
   final gestureAnimations = {
-    "Smile": AppString.smile,
+    // "Smile": AppString.smile,
     "Blink": AppString.blink,
-    "Look Left": AppString.left,
-    "Look Right": AppString.right,
-    "Look Straight": AppString.straight,
+    // "Look Left": AppString.left,
+    // "Look Right": AppString.right,
+    // "Look Straight": AppString.straight,
   };
   @override
   void onInit() {
@@ -69,30 +78,14 @@ class RegisterFaceViewController extends GetxController {
     });
 
     gestureDescriptions = [
-      // GestureDescription(
-      //   icon: Icons.tag_faces,
-      //   step: "Smile",
-      //   title: "Give a smile to the camera to proceed.",
-      //   statusKey: "Pending".obs,
-      // ),
+    
       GestureDescription(
         icon: Icons.face,
         step: "Blink",
         title: "Blink both eyes once clearly for detection.",
         statusKey: "Pending".obs,
       ),
-      // GestureDescription(
-      //   icon: Icons.keyboard_arrow_left,
-      //   step: "Look Left",
-      //   title: "Turn your head slightly to the left.",
-      //   statusKey: "Pending".obs,
-      // ),
-      // GestureDescription(
-      //   icon: Icons.keyboard_arrow_right,
-      //   step: "Look Right",
-      //   title: "Turn your head slightly to the right.",
-      //   statusKey: "Pending".obs,
-      // ),
+   
     ]..shuffle();
     // gestureDescriptions.add(
     //   GestureDescription(
@@ -104,13 +97,87 @@ class RegisterFaceViewController extends GetxController {
     gestureDescriptions.first.statusKey!.value = "In progress";
 
     currentInstruction = _buildInstruction();
+
+    // Initialize FaceService
+    faceService = FaceService();
+
   }
 
+  // Extract face embedding using FaceService
+  Future<List<double>> extractFaceEmbedding(InputImage inputImage) async {
+    if (!faceService.isModelLoaded) {
+      print('⚠️ FaceService model not loaded - using geometric fallback');
+      return _createGeometricEmbedding(inputImage);
+    }
 
+    try {
+      // Convert InputImage to Uint8List
+      final bytes = inputImage.bytes;
+      if (bytes == null) {
+        print('❌ InputImage bytes are null');
+        return _createGeometricEmbedding(inputImage);
+      }
+
+      // Extract embedding using FaceService
+      final embedding = await faceService.getEmbedding(bytes);
+      print('✅ FaceService embedding extracted: ${embedding.length} dimensions');
+      return embedding;
+    } catch (e) {
+      print('❌ Error extracting FaceService embedding: $e');
+      print('💡 Falling back to geometric embedding');
+      return _createGeometricEmbedding(inputImage);
+    }
+  }
+
+  // Create geometric embedding as fallback when FaceService is not available
+  Future<List<double>> _createGeometricEmbedding(InputImage inputImage) async {
+    try {
+      // Extract face features using ML Kit
+      final features = await extractFaceFeatures(inputImage, faceDetector);
+      
+      // Create a simple geometric embedding from face landmarks
+      final embedding = <double>[];
+      
+      // Add normalized landmark positions
+      if (features.leftEye != null) {
+        embedding.add(features.leftEye!.x!.toDouble());
+        embedding.add(features.leftEye!.y!.toDouble());
+      }
+      if (features.rightEye != null) {
+        embedding.add(features.rightEye!.x!.toDouble());
+        embedding.add(features.rightEye!.y!.toDouble());
+      }
+      if (features.noseBase != null) {
+        embedding.add(features.noseBase!.x!.toDouble());
+        embedding.add(features.noseBase!.y!.toDouble());
+      }
+      if (features.leftMouth != null) {
+        embedding.add(features.leftMouth!.x!.toDouble());
+        embedding.add(features.leftMouth!.y!.toDouble());
+      }
+      if (features.rightMouth != null) {
+        embedding.add(features.rightMouth!.x!.toDouble());
+        embedding.add(features.rightMouth!.y!.toDouble());
+      }
+      
+      // Pad to 192 dimensions to match FaceService embedding size
+      while (embedding.length < 192) {
+        embedding.add(0.0);
+      }
+      
+      print('✅ Created geometric embedding: ${embedding.length} dimensions');
+      return embedding;
+    } catch (e) {
+      print('❌ Error creating geometric embedding: $e');
+      // Return a default embedding
+      return List.filled(192, 0.0);
+    }
+  }
 
   @override
   void onClose() {
     faceDetector.close();
+    faceService.dispose();
     super.onClose();
   }
 
@@ -133,9 +200,9 @@ class RegisterFaceViewController extends GetxController {
       final camera = cameraController!.description;
       final imageSize = cameraController!.value.previewSize!;
       final faceRect = face.boundingBox;
-      final viewWidth = MediaQuery.of(context).size.height * 0.30;
-      final viewHeight = MediaQuery.of(context).size.height * 0.30;
-
+      final double viewWidth = 0.30.sh;
+      final double viewHeight = 0.30.sh;
+      
       final scaleX = viewWidth / imageSize.height;
       final scaleY = viewHeight / imageSize.width;
       final isFrontCamera = camera.lensDirection == CameraLensDirection.front;
@@ -206,9 +273,9 @@ class RegisterFaceViewController extends GetxController {
             gestureStartTime = DateTime.now();
           } else {
             final elapsed = DateTime.now().difference(gestureStartTime!).inMilliseconds;
-            gestureProgress.value = (elapsed / 1000).clamp(0.0, 1.0);
+            gestureProgress.value = (elapsed / 3000).clamp(0.0, 1.0);
 
-            if (elapsed >= 1000) {
+            if (elapsed >= 3000) {
               gestureDescriptions[currentStep].statusKey!.value = "Approved";
               gestureStartTime = null;
               gestureProgress.value = 0.0;
@@ -292,6 +359,15 @@ class RegisterFaceViewController extends GetxController {
       final inputImage = InputImage.fromFilePath(originalFile.path);
       faceFeatures = await extractFaceFeatures(inputImage, faceDetector);
 
+      // Extract TensorFlow face embedding
+      try {
+        faceEmbedding = await extractFaceEmbedding(inputImage);
+        print('✅ TensorFlow face embedding extracted: ${faceEmbedding!.length} dimensions');
+      } catch (e) {
+        print('❌ Failed to extract TensorFlow embedding: $e');
+        faceEmbedding = null;
+      }
+
       File displayFile = originalFile;
       if (cameraController!.description.lensDirection == CameraLensDirection.front) {
         displayFile = await _flipImageHorizontally(originalFile);
@@ -356,7 +432,8 @@ class RegisterFaceViewController extends GetxController {
         return Colors.grey;
     }
   }
-  Future<void> registerUser(String name) async {
+  
+  Future<void> registerUser(String name, String uuid) async {
     if (imageBase64 == null || faceFeatures == null) {
       CustomToast().showToast("Face data missing");
       return;
@@ -369,17 +446,21 @@ class RegisterFaceViewController extends GetxController {
       image: imageBase64!,
       registeredOn: DateTime.now().millisecondsSinceEpoch,
       faceFeatures: faceFeatures!,
+      faceEmbedding: faceEmbedding, // TensorFlow face embedding
+      uuid: uuid,
     );
 
     try {
       debugPrint('--------------userID: $userId');
       debugPrint('--------------user: ${user.toJson()}');
-
-      await FirebaseFirestore.instance.collection("users").doc(userId).set(user.toJson());
-      CustomToast().showToast("SignIn Success!");
+      if (faceEmbedding != null) {
+        debugPrint('--------------faceEmbedding: ${faceEmbedding!.length} dimensions');
+      }
+      await FirebaseFirestore.instance.collection("users").doc(uuid).set(user.toJson());
+      CustomToast().showToast("Registration Success!");
     } catch (e) {
-      print("SignIn Error: $e");
-      CustomToast().showToast("SignIn Failed! Try Again.");
+      print("Registration Error: $e");
+      CustomToast().showToast("Registration Failed! Try Again.");
     }
   }
   void openSettings() async {

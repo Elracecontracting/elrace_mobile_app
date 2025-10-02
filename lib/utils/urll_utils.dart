@@ -5,6 +5,7 @@ class UrlUtil {
   static const String checkInApi = 'check_in';
   static const String checkOutApi = 'check_out';
   static const String attendanceListApi = 'attendance/list';
+  static const String mediaAttachmentsApi = 'media_attachments';
 
 
 }

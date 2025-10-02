@@ -1,12 +1,10 @@
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
-import 'package:el_race/ui/presentation/my_request/bloc/requests_event.dart';
+import 'package:el_race/ui/presentation/media/screens/media_list_screen.dart';
+import 'package:el_race/ui/presentation/my_notes/screens/my_notes_screen.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/utils/Util.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -24,7 +22,7 @@ class _SplashScreenState extends State<SplashScreen> {
       if(SharedPref.isUserAuthenticated()){
         Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
       }else{
-        Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
+        Util.pushPageAndRemoveRoutes(const MediaListScreen(), context);
       }
     });
     super.didChangeDependencies();

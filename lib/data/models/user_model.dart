@@ -3,14 +3,19 @@ class UserModel {
   String? name;
   String? image;
   FaceFeatures? faceFeatures;
+  List<double>? faceEmbedding; // TensorFlow face embedding
   int? registeredOn;
+  String? email;
+  String? uuid;
 
   UserModel({
     this.id,
     this.name,
     this.image,
     this.faceFeatures,
+    this.faceEmbedding,
     this.registeredOn,
+    this.uuid,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -19,7 +24,11 @@ class UserModel {
       name: json['name'],
       image: json['image'],
       faceFeatures: FaceFeatures.fromJson(json["faceFeatures"]),
+      faceEmbedding: json['faceEmbedding'] != null 
+          ? List<double>.from(json['faceEmbedding'])
+          : null,
       registeredOn: json['registeredOn'],
+      uuid: json['uuid'],
     );
   }
 
@@ -29,7 +38,9 @@ class UserModel {
       'name': name,
       'image': image,
       'faceFeatures': faceFeatures?.toJson() ?? {},
+      'faceEmbedding': faceEmbedding,
       'registeredOn': registeredOn,
+      'uuid': uuid,
     };
   }
 }
@@ -84,6 +95,8 @@ class FaceFeatures {
         "noseBase": noseBase?.toJson() ?? {},
         "bottomMouth": bottomMouth?.toJson() ?? {},
       };
+
+      
 }
 
 class Points {

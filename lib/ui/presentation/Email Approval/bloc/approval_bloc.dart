@@ -4,7 +4,6 @@ import 'approval_event.dart';
 import 'approval_state.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:el_race/core/utils/shared_pref.dart';
 
 class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
   ApprovalBloc() : super(ApprovalInitial()) {

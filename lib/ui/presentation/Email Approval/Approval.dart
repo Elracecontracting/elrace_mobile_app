@@ -1,7 +1,12 @@
 import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/approve_card.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_card_type_one.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_card_type_two.dart';
+import 'package:el_race/utils/Util.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/header_widget.dart';
@@ -17,7 +22,7 @@ class ApprovalsScreen extends StatefulWidget {
 }
 
 class _ApprovalsScreenState extends State<ApprovalsScreen> {
-  String selectedCategory = "ALL";
+  String selectedCategory = "My Actions";
   TextEditingController searchController = TextEditingController();
   List<dynamic> hrItems = [];
   List<dynamic> rfqItems = [];
@@ -31,6 +36,10 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
   // Add a field to store errors per category
   Map<String, String> categoryErrors = {};
+  
+  // Add expanded state management for the new cards
+  Set<int> expandedTypeOneItems = {};
+  Set<int> expandedTypeTwoItems = {};
 
   @override
   void initState() {
@@ -150,25 +159,26 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
 
   final Map<String, String> categoryIcons = {
-    "ALL": "assets/png/all-icon.png",
+    "My Actions": "assets/png/all-icon.png",
     "HR": "assets/png/hr-icon.png",
     "RFQ": "assets/png/rfq-icon.png",
     "INVOICE": "assets/png/invoice-icon.png",
     "PETTY CASH": "assets/png/petty-cash-icon.png",
   };
 
-  final List<String> categories = ["ALL", "HR", "RFQ", "INVOICE", "PETTY CASH"];
+  final List<String> categories = ["My Actions", "HR", "RFQ", "INVOICE", "PETTY CASH"];
 
 
   @override
   Widget build(BuildContext context) {
+    print('${SharedPref.getLoginData().result?.token}');
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: const HeaderWidget(),
       body: RefreshIndicator(
         onRefresh: _fetchApprovalData,
         child: Column(
           children: [
-            const HeaderWidget(),
             const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -209,24 +219,26 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                         });
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        width: 90.w,
+                        margin: const EdgeInsets.only(right: 4),
+                        padding: const EdgeInsets.symmetric(vertical: 7),
                         decoration: BoxDecoration(
                           color: isSelected ? appFontColor : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(30),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Row(
+                        child: Column(
                           children: [
                             Image.asset(
                               categoryIcons[cat] ?? "assets/icons/default.png",
-                              height: 25,
-                              width: 25,
+                              height: 30.w,
+                              width: 30.w,
                               // color: isSelected ? Colors.white : Colors.black87,
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(height: 6),
                             Text(
                               cat,
                               style: GoogleFonts.koulen(
-                                fontSize: 13,
+                                fontSize: 13.sp,
                                 fontWeight: FontWeight.bold,
                                 color: isSelected ? Colors.white : Colors.black87,
                                 letterSpacing: 1.0,
@@ -255,26 +267,64 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                 )
               else
                 Expanded(
-                  child: ListView.builder(
+                  child: ListView.separated(
                     physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 10)+EdgeInsets.only(bottom: 40.w),
                     itemCount: approvalItems.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final item = approvalItems[index];
-                      return ApproveCard(item: {
-                        "id": "${item["id"] ?? ""}",
-                        "name": "${item["name"] ?? ""}",
-                        "type": "${item["type"] ?? ""}",
-                        "requester": "${item["requester_name"] ?? "NOT AVAILABLE"}",
-                        "approver": "${item["emp_name"] ?? "NOT AVAILABLE"}",
-                        "location": "${item["location"] ?? "NOT AVAILABLE"}",
-                        "date": "${item["date"] ?? ""}",
-                        "image_emp": "${item["image_emp"] ?? "NOT AVAILABLE"}",
-                      });
+                       List<String> statuses = ['approved', 'pending', 'rejected'];
+                       String sampleStatus = statuses[index % statuses.length];
+                       
+                       final itemData = {
+                         "id": "${item["id"] ?? ""}",
+                         "name": "${item["name"] ?? ""}",
+                         "type": "${item["type"] ?? ""}",
+                         "requester": "${item["requester_name"] ?? ""}",
+                         "approver": "${item["emp_name"] ?? ""}",
+                         "location": "${item["location"] ?? ""}",
+                         "date": "${item["date"] ?? ""}",
+                         "image_emp": "${item["image_emp"] ?? ""}",
+                         "req_no": "REQ-${(item["id"] ?? "").toString().padLeft(6, '0')}",
+                         "title": "${item["name"] ?? ""}",
+                         "status": item["status"] ?? sampleStatus,
+                       };
 
+                      if(selectedCategory  != 'My Actions'){
+                          return ApprovalCardTypeTwo(
+                            item: itemData,
+                            isExpanded: false,
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return ApprovalConfirmationScreen(
+                                    requestId: itemData["id"],
+                                    type: itemData["type"],
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        }
+
+                        return ApprovalCardTypeOne(
+                          item: itemData,
+                          isExpanded: expandedTypeOneItems.contains(index),
+                          onTap: () {
+                            setState(() {
+                              if (expandedTypeOneItems.contains(index)) {
+                                expandedTypeOneItems.remove(index);
+                              } else {
+                                expandedTypeOneItems.add(index);
+                              }
+                            });
+                          },
+                        );
                     },
                   ),
                 )
-
           ],
         ),
       ),
