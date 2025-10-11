@@ -10,8 +10,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../bloc/home_bloc.dart';
+
 class AddWidgetDialog extends StatefulWidget {
   final Function() onWidgetAdded;
+
 
   const AddWidgetDialog({
     super.key,
@@ -42,8 +45,9 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
     });
   }
 
-  Future<void> _addWidget(String widgetId) async {
+  Future<void> _addWidget(String widgetId,HomeBloc bloc) async {
     await WidgetService.toggleWidget(widgetId);
+    bloc.isEdit=true;
     widget.onWidgetAdded();
     Navigator.of(context).pop();
   }
@@ -400,6 +404,7 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
 
   @override
   Widget build(BuildContext context) {
+    var bloc = HomeBloc.get(context);
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Stack(
@@ -445,7 +450,7 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
                           child: GestureDetector(
-                            onTap: () => _addWidget(widget.id),
+                            onTap: () => _addWidget(widget.id,bloc),
                             child: Stack(
                               children: [
                                 _buildWidgetPreview(widget),

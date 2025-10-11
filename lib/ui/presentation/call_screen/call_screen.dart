@@ -5,11 +5,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hexcolor/hexcolor.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../../utils/di.dart';
 import '../../../../../utils/string_utils.dart';
 import '../../widgets/header_widget.dart';
+import '../home_screen/bloc/home_bloc.dart';
 import 'bloc/contact_bloc.dart';
 
 class CallScreen extends StatefulWidget {
@@ -33,6 +35,7 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bloc = HomeBloc.get(context);
     return BlocListener<ContactBloc, ContactState>(
       listenWhen: (p, c) => c is ContactLoadingState,
       listener: (context, state) {
@@ -57,103 +60,105 @@ class _CallScreenState extends State<CallScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: const HeaderWidget(),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: EdgeInsets.only(bottom: 100.w, top: 10.w),
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () {
-                          // Navigator.pushReplacement(
-                          //   context,
-                          //   MaterialPageRoute(
-                          //       builder: (context) => const HomeScreen()),
-                          // );
-                        },
-                      ),
-                      Text(
-                        translate('home.contact'),
-                        style: GoogleFonts.koulen(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w400,
-                          color: appFontColor,
-                          letterSpacing: 1.9, // ⬅️ adjust value as needed
-                        ),
-                      ),
-                      const SizedBox(
-                        width: 20,
-                      )
-                    ],
-                  ),
-                ),
-                Column(
+        body: SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: 100.w, top: 10.w),
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 0.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    searchWidget(_contactBloc),
-                    const SizedBox(
-                      height: 30,
-                    ),
-                    BlocBuilder<ContactBloc, ContactState>(
-                      bloc: _contactBloc,
-                      builder: (context, state) {
-                        if (state is EmployeeListLoaded) {
-                          return ListView.separated(
-                            shrinkWrap: true,
-                            itemCount: state.employees.length,
-                            physics: const BouncingScrollPhysics(),
-                            itemBuilder: (context, index) {
-                              var emp = state.employees[index];
-                              bool isExpanded = expandedIndex == index;
 
-                              return AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                                child: ContactTile(
-                                  color: const [darkGrey, darkGrey],
-                                  textColor: white,
-                                  gradientAlignment: index.isOdd,
-                                  image: emp.profilePhotoUrl.toString(),
-                                  name: emp.name!,
-                                  job: emp.jobId.toString(),
-                                  emp: emp.id.toString(),
-                                  num: emp.mobilePhone.toString(),
-                                  isExpanded: isExpanded,
-                                  onTapExpand: () {
-                                    setState(() {
-                                      expandedIndex = isExpanded ? null : index;
-                                    });
-                                  },
-                                  onTapCall: () =>
-                                      _makePhoneCall('tel:${emp.mobilePhone}'),
-                                  onTapWhatsApp: () =>
-                                      _openWhatsApp(emp.mobilePhone.toString()),
-                                  onTapEmail: () => _sendEmail(emp.name!),
-                                ),
-                              );
-                            },
-                            separatorBuilder:
-                                (BuildContext context, int index) {
-                              return const SizedBox(
-                                height: 20,
-                              );
-                            },
-                          );
-                        } else {
-                          return const CircularProgressIndicator();
-                        }
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back),
+                      onPressed: () {
+                        setState(() {
+                          bloc.add(ChangeCurrentIndex(index: 1));
+                        });
+                        // Navigator.pushReplacement(
+                        //   context,
+                        //   MaterialPageRoute(
+                        //       builder: (context) => const HomeScreen()),
+                        // );
                       },
                     ),
+                    Text(
+                      translate('home.contact'),
+                      style: GoogleFonts.koulen(
+                        fontSize: 25,
+                        fontWeight: FontWeight.w400,
+                        color: appFontColor,
+                        //letterSpacing: 1.9, // ⬅️ adjust value as needed
+                      ),
+                    ),
+                    const SizedBox(
+                      width: 20,
+                    )
                   ],
                 ),
-              ],
-            ),
+              ),
+              Column(
+                children: [
+                  searchWidget(_contactBloc),
+                  const SizedBox(
+                    height: 30,
+                  ),
+                  BlocBuilder<ContactBloc, ContactState>(
+                    bloc: _contactBloc,
+                    builder: (context, state) {
+                      if (state is EmployeeListLoaded) {
+                        return ListView.separated(
+                          shrinkWrap: true,
+                          itemCount: state.employees.length,
+                          physics: const BouncingScrollPhysics(),
+                          itemBuilder: (context, index) {
+                            var emp = state.employees[index];
+                            bool isExpanded = expandedIndex == index;
+
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                              child: ContactTile(
+                                color: const [darkGrey, darkGrey],
+                                textColor: white,
+                                gradientAlignment: index.isOdd,
+                                image: emp.profilePhotoUrl.toString(),
+                                name: emp.name!,
+                                job: emp.jobId.toString(),
+                                emp: emp.id.toString(),
+                                num: emp.mobilePhone.toString(),
+                                isExpanded: isExpanded,
+                                onTapExpand: () {
+                                  setState(() {
+                                    expandedIndex = isExpanded ? null : index;
+                                  });
+                                },
+                                onTapCall: () =>
+                                    _makePhoneCall('tel:${emp.mobilePhone}'),
+                                onTapWhatsApp: () =>
+                                    _openWhatsApp(emp.mobilePhone.toString()),
+                                onTapEmail: () => _sendEmail(emp.name!),
+                              ),
+                            );
+                          },
+                          separatorBuilder:
+                              (BuildContext context, int index) {
+                            return const SizedBox(
+                              height: 20,
+                            );
+                          },
+                        );
+                      } else {
+                        return const CircularProgressIndicator();
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -292,7 +297,7 @@ class ContactTile extends StatelessWidget {
           width: 350.w,
           decoration: BoxDecoration(
             image: const DecorationImage(
-              image: AssetImage('assets/png/bg_petty.png'),
+              image: AssetImage('assets/png/contact_back.png'),
               fit: BoxFit.cover,
             ),
             borderRadius: BorderRadius.circular(16),
@@ -344,19 +349,23 @@ class ContactTile extends StatelessWidget {
                         children: [
                           Text(
                             nameParts.length > 1 ? nameParts[1] : name,
-                            style: const TextStyle(fontWeight: FontWeight.w500),
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
+                            style: GoogleFonts.nunito(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           SizedBox(height: 2.w),
                           SizedBox(
                             width: 140.w,
                             child: Text(
                               job,
-                              style: const TextStyle(
-                                  color: greyText,
+                              style: GoogleFonts.nunito(
                                   fontSize: 12,
-                                  fontWeight: FontWeight.bold),
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.grey
+                              ),
                               overflow: TextOverflow.ellipsis,
                               maxLines: 1,
                             ),
@@ -364,9 +373,13 @@ class ContactTile extends StatelessWidget {
                           SizedBox(height: 2.w),
                           Text(
                             emp,
-                            style: const TextStyle(color: greyText),
                             overflow: TextOverflow.ellipsis,
                             maxLines: 1,
+                            style: GoogleFonts.nunito(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey
+                            ),
                           )
                         ],
                       ),
@@ -390,11 +403,11 @@ class ContactTile extends StatelessWidget {
                               vertical: 6.w, horizontal: 10.w),
                           decoration: BoxDecoration(
                             border: Border.all(
-                                color: const Color(0xFF1A1A53), width: 1),
+                                color: const Color(0xFF1A1A53), width: 2),
                             borderRadius: BorderRadius.circular(25),
                           ),
                           child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             key: const ValueKey('icons'),
                             children: [
                               GestureDetector(
@@ -409,8 +422,8 @@ class ContactTile extends StatelessWidget {
                                   ),
                                   child: Image.asset(
                                     '$imagePrefixPng/call.png',
-                                    width: 35.w,
-                                    height: 35.w,
+                                    width: 30.w,
+                                    height: 30.w,
                                     fit: BoxFit.cover,
                                   ),
                                 ),
@@ -427,8 +440,8 @@ class ContactTile extends StatelessWidget {
                                   ),
                                   child: Image.asset(
                                     '$imagePrefixPng/whatsapp.png',
-                                    width: 35.w,
-                                    height: 35.w,
+                                    width: 30.w,
+                                    height: 30.w,
                                     fit: BoxFit.cover,
                                   ),
                                 ),
@@ -445,8 +458,8 @@ class ContactTile extends StatelessWidget {
                                   ),
                                   child: Image.asset(
                                     '$imagePrefixPng/email.png',
-                                    width: 35.w,
-                                    height: 35.w,
+                                    width: 30.w,
+                                    height: 30.w,
                                     fit: BoxFit.cover,
                                   ),
                                 ),

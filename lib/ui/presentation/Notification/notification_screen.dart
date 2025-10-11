@@ -8,6 +8,9 @@ import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../widgets/header_widget.dart';
+import '../home_screen/bloc/home_bloc.dart';
+import '../home_screen/screens/main_screens.dart';
+import '../home_screen/widgets/visibilty_icon.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({
@@ -80,241 +83,252 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const HeaderWidget(),
-      backgroundColor: Colors.white,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              const BackIcon(),
-              Text(
-                translate('notification_screen.center'),
-                style: GoogleFonts.koulen(
-                  fontSize: 26.sp,
-                  fontWeight: FontWeight.w600,
-                  color: appFontColor,
-                  letterSpacing: 1.5,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
-                  SizedBox(
-                    height: 55.w,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.only(left: 10, right: 10),
-                      controller: _pageController,
-                      itemCount: notificationType.length,
-                      physics: const BouncingScrollPhysics(),
-                      scrollDirection: Axis.horizontal,
-                      itemBuilder: (context, index) {
-                        String notificationIcon =
-                            notificationType[index]['icon'];
-                        String notificationTitle =
-                            notificationType[index]['title'];
-                        return InkWell(
-                          onTap: () => setState(() => currentIndex = index),
-                          child: Container(
-                            alignment: Alignment.center,
-                            margin: const EdgeInsets.only(top: 6),
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            decoration: BoxDecoration(
-                              color: index == currentIndex
-                                  ? appFontColor
-                                  : greyText2,
-                              // gradient: const LinearGradient(
-                              //   colors: [Color(0xFFE6E6E6), ],
-                              //   begin: Alignment.center,
-                              //   end: Alignment.centerRight,
-                              // ),
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black
-                                      .withAlpha((0.1 * 255).toInt()),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            // child: Stack(
-                            //   children: [
-                            //     Column(
-                            //       crossAxisAlignment: CrossAxisAlignment.start,
-                            //       children: [
-                            //         // Row(
-                            //         //   mainAxisAlignment:
-                            //         //       MainAxisAlignment.spaceBetween,
-                            //         //   children: [
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  notificationIcon,
-                                  height: 25.w,
-                                ),
-                                const SizedBox(
-                                  width: 5,
-                                ),
-                                Text(
-                                  notificationTitle.toUpperCase(),
-                                  style: GoogleFonts.koulen(
-                                    color: index == currentIndex
-                                        ? Colors.white
-                                        : const Color(0xFF1A237E),
-                                    fontSize: 18.sp,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.7,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            // Container(
-                            //   padding: const EdgeInsets.symmetric(
-                            //       horizontal: 8, vertical: 4),
-                            //   decoration: BoxDecoration(
-                            //     color: Colors.white,
-                            //     borderRadius:
-                            //         BorderRadius.circular(10),
-                            //   ),
-                            //   child: const Icon(
-                            //     Icons.arrow_forward,
-                            //     size: 16,
-                            //     color: Color(0xFF2D2F81),
-                            //   ),
-                            // ),
-                            //   ],
-                            // ),
-                            // const SizedBox(height: 6),
-                            // Text(
-                            //   translate(
-                            //       'notification_screen.stay_updated'),
-                            //   style: const TextStyle(
-                            //     color: Colors.black87,
-                            //     fontSize: 11,
-                            //     fontWeight: FontWeight.bold,
-                            //     height: 1.4,
-                            //   ),
-                            // ),
-                            //       ],
-                            //     ),
-                            //   ],
-                            // ),
-                          ),
-                        );
-                      },
-                      separatorBuilder: (BuildContext context, int index) =>
-                          const SizedBox(
-                        width: 10,
-                      ),
-                    ),
+    var bloc = HomeBloc.get(context);
+    return PopScope(
+      canPop: true, // 🔹 يمنع الرجوع تلقائيًا إلا لو انت سمحت بذلك
+      onPopInvokedWithResult: (didPop, result) async {
+        bloc.isNotOpen=false;
+        if (didPop) return; // المستخدم رجع فعلاً، خلاص نخرج
+
+      },
+      child: Scaffold(
+        appBar: const HeaderWidget(),
+        extendBody: true, // 👈 مهم جدًا
+        floatingActionButton: const ArraowVisibalityBottomNav(),
+        bottomNavigationBar:  const CustomBottomNavBar(isMain: false,),
+        backgroundColor: Colors.white,
+        body: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              alignment: Alignment.center,
+              children: [
+                const BackIcon(),
+                Text(
+                  translate('notification_screen.center'),
+                  style: GoogleFonts.koulen(
+                    fontSize: 26.sp,
+                    fontWeight: FontWeight.w600,
+                    color: appFontColor
                   ),
-                  // Row(
-                  //   mainAxisAlignment: MainAxisAlignment.center,
-                  //   children: List.generate(3, (dotIndex) {
-                  //     return Container(
-                  //       margin: const EdgeInsets.symmetric(horizontal: 4),
-                  //       width: 8,
-                  //       height: 8,
-                  //       decoration: BoxDecoration(
-                  //         shape: BoxShape.circle,
-                  //         color: dotIndex == currentIndex ? Colors.black : Colors.grey[400],
-                  //       ),
-                  //     );
-                  //   }),
-                  // ),
-
-                  const SizedBox(height: 20),
-
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: notifications.length,
-                    itemBuilder: (context, index) {
-                      final item = notifications[index];
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          GestureDetector(
-                            onTap: () =>
-                                Util.pushPage(const AttendancePage(), context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
+                  children: [
+                    SizedBox(
+                      height: 55.w,
+                      child: ListView.separated(
+                        padding: const EdgeInsets.only(left: 10, right: 10),
+                        controller: _pageController,
+                        itemCount: notificationType.length,
+                        physics: const BouncingScrollPhysics(),
+                        scrollDirection: Axis.horizontal,
+                        itemBuilder: (context, index) {
+                          String notificationIcon =
+                              notificationType[index]['icon'];
+                          String notificationTitle =
+                              notificationType[index]['title'];
+                          return InkWell(
+                            onTap: () => setState(() => currentIndex = index),
                             child: Container(
-                              margin: const EdgeInsets.only(bottom: 6),
-                              padding: const EdgeInsets.all(12),
+                              alignment: Alignment.center,
+                              margin: const EdgeInsets.only(top: 6),
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
                               decoration: BoxDecoration(
-                                image: const DecorationImage(
-                                  image: AssetImage('assets/png/bg_petty.png'),
-                                  fit: BoxFit.cover,
-                                ),
-                                borderRadius: BorderRadius.circular(16),
+                                color: index == currentIndex
+                                    ? appFontColor
+                                    : greyText2,
+                                // gradient: const LinearGradient(
+                                //   colors: [Color(0xFFE6E6E6), ],
+                                //   begin: Alignment.center,
+                                //   end: Alignment.centerRight,
+                                // ),
+                                borderRadius: BorderRadius.circular(20),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black
-                                        .withAlpha((0.08 * 255).toInt()),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
+                                        .withAlpha((0.1 * 255).toInt()),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
                                   ),
                                 ],
                               ),
-                              child: IntrinsicHeight(
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Image.asset(
-                                      item['icon'] ?? '',
-                                      width: 29,
-                                      height: 29,
-                                      color: appFontColor,
+                              // child: Stack(
+                              //   children: [
+                              //     Column(
+                              //       crossAxisAlignment: CrossAxisAlignment.start,
+                              //       children: [
+                              //         // Row(
+                              //         //   mainAxisAlignment:
+                              //         //       MainAxisAlignment.spaceBetween,
+                              //         //   children: [
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Image.asset(
+                                    notificationIcon,
+                                    height: 25.w,
+                                  ),
+                                  const SizedBox(
+                                    width: 5,
+                                  ),
+                                  Text(
+                                    notificationTitle.toUpperCase(),
+                                    style: GoogleFonts.koulen(
+                                      color: index == currentIndex
+                                          ? Colors.white
+                                          : const Color(0xFF1A237E),
+                                      fontSize: 20.sp,
+                                      fontWeight: FontWeight.w400,
+      
                                     ),
-                                    const SizedBox(width: 7),
-                                    Expanded(
-                                      child: Align(
-                                        alignment: Alignment.centerLeft,
-                                        child: Text(
-                                          item['message'] ?? '',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                      ),
+                                  ),
+                                ],
+                              ),
+                              // Container(
+                              //   padding: const EdgeInsets.symmetric(
+                              //       horizontal: 8, vertical: 4),
+                              //   decoration: BoxDecoration(
+                              //     color: Colors.white,
+                              //     borderRadius:
+                              //         BorderRadius.circular(10),
+                              //   ),
+                              //   child: const Icon(
+                              //     Icons.arrow_forward,
+                              //     size: 16,
+                              //     color: Color(0xFF2D2F81),
+                              //   ),
+                              // ),
+                              //   ],
+                              // ),
+                              // const SizedBox(height: 6),
+                              // Text(
+                              //   translate(
+                              //       'notification_screen.stay_updated'),
+                              //   style: const TextStyle(
+                              //     color: Colors.black87,
+                              //     fontSize: 11,
+                              //     fontWeight: FontWeight.bold,
+                              //     height: 1.4,
+                              //   ),
+                              // ),
+                              //       ],
+                              //     ),
+                              //   ],
+                              // ),
+                            ),
+                          );
+                        },
+                        separatorBuilder: (BuildContext context, int index) =>
+                            const SizedBox(
+                          width: 10,
+                        ),
+                      ),
+                    ),
+                    // Row(
+                    //   mainAxisAlignment: MainAxisAlignment.center,
+                    //   children: List.generate(3, (dotIndex) {
+                    //     return Container(
+                    //       margin: const EdgeInsets.symmetric(horizontal: 4),
+                    //       width: 8,
+                    //       height: 8,
+                    //       decoration: BoxDecoration(
+                    //         shape: BoxShape.circle,
+                    //         color: dotIndex == currentIndex ? Colors.black : Colors.grey[400],
+                    //       ),
+                    //     );
+                    //   }),
+                    // ),
+      
+                    const SizedBox(height: 20),
+      
+                    ListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: notifications.length,
+                      itemBuilder: (context, index) {
+                        final item = notifications[index];
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            GestureDetector(
+                              onTap: () =>
+                                  Util.pushPage(const AttendancePage(), context),
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 6),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  image: const DecorationImage(
+                                    image: AssetImage('assets/png/bg_petty.png'),
+                                    fit: BoxFit.cover,
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black
+                                          .withAlpha((0.08 * 255).toInt()),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
                                     ),
                                   ],
                                 ),
+                                child: IntrinsicHeight(
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Image.asset(
+                                        item['icon'] ?? '',
+                                        width: 29,
+                                        height: 29,
+                                        color: appFontColor,
+                                      ),
+                                      const SizedBox(width: 7),
+                                      Expanded(
+                                        child: Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            item['message'] ?? '',
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w400,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.only(left: 6, bottom: 10),
-                            child: Text(
-                              item['time'] ?? '',
-                              style: const TextStyle(
-                                fontSize: 9,
-                                color: Colors.black54,
-                                fontWeight: FontWeight.bold,
+                            Padding(
+                              padding: const EdgeInsets.only(left: 6, bottom: 10),
+                              child: Text(
+                                item['time'] ?? '',
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
+                          ],
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
-          )
-        ],
+            )
+          ],
+        ),
       ),
     );
   }

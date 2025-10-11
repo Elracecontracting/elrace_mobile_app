@@ -8,6 +8,8 @@ class SliderProvider extends ChangeNotifier {
     'assets/png/slider.png',
   ];
 
+
+
   final List<String> titles = [
     "A Closing Ceremony Was Held To Communicate The Achievement",
     "A Closing Ceremony Was Held To Communicate The Achievement",

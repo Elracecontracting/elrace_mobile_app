@@ -235,7 +235,7 @@ class _LpoListScreenState extends State<LpoListScreen> {
                           ),
                         ),
                       )
-                    : ListView.separated(
+                    : ListView.builder(
                         padding: const EdgeInsets.only(top: 10),
                         controller: _scrollController,
                         itemCount: _items.length,
@@ -270,8 +270,6 @@ class _LpoListScreenState extends State<LpoListScreen> {
                             lpoCount: lpoCount,
                           );
                         },
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(height: 10),
                       ),
           ),
         ],

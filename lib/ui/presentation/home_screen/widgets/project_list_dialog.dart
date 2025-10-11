@@ -12,7 +12,8 @@ void showLeftToRightPopupClean({
   required bool isCheckedIn,
   required VoidCallback onConfirmed,
   required VoidCallback onCancelled,
-}) {
+})
+{
   Project? selectedProject;
   List<Project> projects = [];
   bool isLoading = true;
@@ -54,10 +55,8 @@ void showLeftToRightPopupClean({
               <dynamic>[];
 
           return Dialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            insetPadding:
-                const EdgeInsets.symmetric(horizontal: 30, vertical: 24),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            insetPadding: const EdgeInsets.symmetric(horizontal: 30, vertical: 24),
             child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 26, 24, 20),
@@ -67,8 +66,7 @@ void showLeftToRightPopupClean({
                   children: [
                     const SizedBox(height: 18),
 
-                    if (!isLoading &&
-                        (projects.isNotEmpty || branchIds.isNotEmpty))
+                    if (!isLoading && (projects.isNotEmpty || branchIds.isNotEmpty))
                       Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
@@ -251,10 +249,11 @@ void showLeftToRightPopupClean({
                         ),
                         const SizedBox(width: 12),
                         ElevatedButton(
-                          onPressed: (selectedProject != null ||
-                                      selectedBranch != null) &&
-                                  !isSubmitting
-                              ? () async {
+                          onPressed: (selectedProject != null || selectedBranch != null)
+                              && !isSubmitting ? () async {
+                            print("object");
+                            print("object");
+                            print("object");
                                   setState(() {
                                     isSubmitting = true;
                                     errorMessage = null;

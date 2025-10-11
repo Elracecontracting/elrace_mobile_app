@@ -30,9 +30,8 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
   String amount = '';
   String selectedExpenseType = 'EXPENSE TYPE'; // Default display text
   final List<String> expenseTypes = [
-    'Fuel',
-    'Hospitality',
-    'Site Material',
+    'Petrol ',
+    'Hospitality ',
     'Others'
   ];
   String empID = '';
@@ -161,10 +160,13 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                               onPressed: selectedUser != null
                                   ? () {
                                       setState(() {
+                                        print(selectedUser);
+                                        user.text="${selectedUser['name']}";
                                         // Use selectedUser['name'] or ['id'] as needed
                                       });
                                       Navigator.pop(context);
-                                    }
+                                      FocusScope.of(context).unfocus();
+                              }
                                   : null,
                               child: Text(translate('pettycash.ok')),
                             ),
@@ -217,12 +219,14 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
       lastDate: DateTime(2100),
     );
     if (picked != null && picked != selectedDate) {
-      setState(() => selectedDate = picked);
+      setState(() {
+        selectedDate = picked;
+        date.text="${selectedDate.year}-${selectedDate.month}-${selectedDate.day}";
+      });
     }
   }
 
-  Widget _buildInfoRow(String imagePath, String title, String value,
-      {VoidCallback? onTap}) {
+  Widget _buildInfoRow(String imagePath, String title, String value, {VoidCallback? onTap}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: GestureDetector(
@@ -334,6 +338,10 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
     }
   }
 
+  TextEditingController user=TextEditingController();
+  TextEditingController date=TextEditingController();
+  TextEditingController amout=TextEditingController();
+
   @override
   Widget build(BuildContext context) {
     final String formattedDate = DateFormat('dd/MM/yyyy').format(selectedDate);
@@ -371,81 +379,222 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
 
             const SizedBox(height: 10),
             Center(
-              child: PopupMenuButton<String>(
-                onSelected: (value) {
-                  setState(() {
-                    selectedExpenseType = value;
-                  });
-                },
-                position: PopupMenuPosition.under,
-                itemBuilder: (BuildContext context) =>
-                    expenseTypes.map((String type) {
-                  return PopupMenuItem<String>(
-                    value: type,
-                    child: Text(
-                      type,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return PopupMenuButton<String>(
+                    onSelected: (value) {
+                      setState(() {
+                        selectedExpenseType = value;
+                      });
+                    },
+                    position: PopupMenuPosition.under,
+                    itemBuilder: (BuildContext context) =>
+                        expenseTypes.map((String type) {
+                          return PopupMenuItem<String>(
+                            value: type,
+                            child: SizedBox(
+                              width: 200, // 👈 نفس عرض الزرّ
+                              child: Text(
+                                type,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                    color: Colors.white,
+                    elevation: 6,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: SizedBox(
+                      width: 240, // 👈 الزرّ الأساسي
+                      child: Container(
+                        padding:
+                        const EdgeInsets.symmetric(vertical: 8, horizontal: 36),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF1A237E), Color(0xFF3F51B5)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Flexible(
+                              child: Text(
+                                selectedExpenseType,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            const Icon(Icons.arrow_drop_down, color: Colors.white),
+                          ],
+                        ),
                       ),
                     ),
                   );
-                }).toList(),
-                color: Colors.white,
-                elevation: 6,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: SizedBox(
-                  width: 240, // Optional: adjust to your design
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 36),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF1A237E), Color(0xFF3F51B5)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            selectedExpenseType,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const Icon(Icons.arrow_drop_down, color: Colors.white),
-                      ],
-                    ),
-                  ),
-                ),
+                },
               ),
             ),
 
             const SizedBox(height: 20),
+            // Padding(
+            //   padding: const EdgeInsets.symmetric(horizontal: 40),
+            //   child: Column(
+            //     crossAxisAlignment: CrossAxisAlignment.start,
+            //     children: [
+            //       _buildInfoRow('assets/png/calendar_icon.png',
+            //           translate('pettycash.date'), formattedDate,
+            //           onTap: _pickDate),
+            //       _buildInfoRow(
+            //         'assets/png/supplier_icon.png',
+            //         translate('pettycash.holder'),
+            //         selectedUser?['name'] ?? translate('pettycash.select_user'),
+            //         onTap: _showPettyCashUserDialog,
+            //       ),
+            //       Padding(
+            //         padding: const EdgeInsets.symmetric(vertical: 8),
+            //         child: Row(
+            //           crossAxisAlignment: CrossAxisAlignment.center,
+            //           children: [
+            //             Image.asset(
+            //               'assets/png/money_icon.png',
+            //               width: 34,
+            //               height: 34,
+            //               fit: BoxFit.contain,
+            //             ),
+            //             const SizedBox(width: 22),
+            //             Expanded(
+            //               child: Column(
+            //                 crossAxisAlignment: CrossAxisAlignment.start,
+            //                 children: [
+            //                   const Text(
+            //                     'Amount',
+            //                     style: TextStyle(
+            //                         fontSize: 15, fontWeight: FontWeight.bold),
+            //                   ),
+            //                   TextField(
+            //                     keyboardType: TextInputType.number,
+            //                     onChanged: (value) {
+            //                       // You can parse or validate here
+            //                       setState(() {
+            //                         amount = value;
+            //                       });
+            //                     },
+            //                     decoration: InputDecoration(
+            //                       hintText: translate('pettycash.enter_amount'),
+            //                       isDense: true,
+            //                       contentPadding:
+            //                           const EdgeInsets.symmetric(vertical: 4),
+            //                     ),
+            //                   ),
+            //                 ],
+            //               ),
+            //             ),
+            //           ],
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildInfoRow('assets/png/calendar_icon.png',
-                      translate('pettycash.date'), formattedDate,
-                      onTap: _pickDate),
-                  _buildInfoRow(
-                    'assets/png/supplier_icon.png',
-                    translate('pettycash.holder'),
-                    selectedUser?['name'] ?? translate('pettycash.select_user'),
-                    onTap: _showPettyCashUserDialog,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/png/calendar_icon.png',
+                          width: 34,
+                          height: 34,
+                          fit: BoxFit.contain,
+                        ),
+                        const SizedBox(width: 22),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                                Text(
+                                  "Select ${translate('pettycash.date')}",
+                                style: TextStyle(
+                                    fontSize: 15, fontWeight: FontWeight.bold),
+                              ),
+                              TextField(
+                                keyboardType: TextInputType.none,
+                                controller: date,
+                                onTap:  _pickDate,
+                                enabled: true,
+                                onTapOutside: (b) {
+                                  FocusScope.of(context).unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
+                                },
+                                decoration: InputDecoration(
+                                  hintText: translate('pettycash.date'),
+                                  isDense: true,
+                                  contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 4),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/png/supplier_icon.png',
+                          width: 34,
+                          height: 34,
+                          fit: BoxFit.contain,
+                        ),
+                        const SizedBox(width: 22),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                                Text(
+                                translate('pettycash.holder'),
+                                style: TextStyle(
+                                    fontSize: 15, fontWeight: FontWeight.bold),
+                              ),
+                              TextField(
+                                keyboardType: TextInputType.none,
+                                controller: user,
+                                onTap:  _showPettyCashUserDialog,
+                                enabled: true,
+                                onTapOutside: (b) {
+                                  FocusScope.of(context).unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
+                                },
+                                decoration: InputDecoration(
+                                  hintText:translate('pettycash.select_user'),
+                                  isDense: true,
+                                  contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 4),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
@@ -470,11 +619,15 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                               ),
                               TextField(
                                 keyboardType: TextInputType.number,
+                                controller: amout,
                                 onChanged: (value) {
                                   // You can parse or validate here
                                   setState(() {
                                     amount = value;
                                   });
+                                },
+                                onTapOutside: (b) {
+                                  FocusScope.of(context).unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
                                 },
                                 decoration: InputDecoration(
                                   hintText: translate('pettycash.enter_amount'),
@@ -656,7 +809,9 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
-        onPressed: () {},
+        onPressed: () {
+          Navigator.pop(context);
+        },
         child: Text(text, style: const TextStyle(color: Colors.white)),
       ),
     );

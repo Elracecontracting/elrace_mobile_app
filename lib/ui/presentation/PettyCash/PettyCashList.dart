@@ -49,7 +49,7 @@ class _PettyCashListState extends State<PettyCashList> {
 
           // ✅ Petty Cash Title
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 10.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -64,26 +64,18 @@ class _PettyCashListState extends State<PettyCashList> {
                       fontWeight: FontWeight.bold,
                       color: appFontColor),
                 ),
-                Container(
-                  width: 25,
-                  height: 25,
-                  decoration: const BoxDecoration(
-                    color: appFontColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.add, size: 20, color: Colors.white),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const PettyCashPopUpScreen(),
-                        ),
-                      );
-                    },
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.add, size: 40, color: Colors.white),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const PettyCashPopUpScreen(),
+                      ),
+                    );
+                  },
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                 ),
               ],
             ),
@@ -102,19 +94,19 @@ class _PettyCashListState extends State<PettyCashList> {
                     decoration: BoxDecoration(
                       image: const DecorationImage(
                         image: AssetImage(
-                            'assets/png/item_bg.png'), // Make sure the path is correct
+                            'assets/png/item_bg_green.png'), // Make sure the path is correct
                         fit: BoxFit
                             .cover, // Makes the image cover the entire container
                       ),
                       color: Colors.transparent,
                       borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withAlpha((2 * 255).toInt()),
-                          blurRadius: 4,
-                          spreadRadius: 1,
-                        ),
-                      ],
+                      // boxShadow: [
+                      //   BoxShadow(
+                      //     color: Colors.grey.withAlpha((2 * 255).toInt()),
+                      //     blurRadius: 4,
+                      //     spreadRadius: 1,
+                      //   ),
+                      // ],
                     ),
                     child: Padding(
                       padding: const EdgeInsets.fromLTRB(25, 9, 15, 12),

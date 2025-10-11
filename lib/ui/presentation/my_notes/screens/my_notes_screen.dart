@@ -59,6 +59,7 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
                     Util.pushPage(const AddNoteScreen(), context);
                   },
                 ),
+
                 if (state is NotesLoading)
                   const Padding(
                     padding: EdgeInsets.all(50.0),
@@ -100,28 +101,33 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
                             ),
                           ),
                         )
-                      : RefreshIndicator(
-                          onRefresh: () async {
-                            context.read<NotesBloc>().add(const FetchNotes());
-                          },
-                          child: ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: state.notes.length,
-                            itemBuilder: (context, index) {
-                              final note = state.notes[index];
-                              return NoteItemWidget(
-                                note: note,
-                                onTap: () {
-                                  // _showNoteDetailsDialog(context, note);
+                      : Column(
+                        children: [
+                          searchWidget(state.notes ),
+                          RefreshIndicator(
+                              onRefresh: () async {
+                                context.read<NotesBloc>().add(const FetchNotes());
+                              },
+                              child: ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount:searchlist.length!=0?searchlist.length:state.notes.length,
+                                itemBuilder: (context, index) {
+                                  final note = searchlist.length!=0?searchlist[index]:state.notes[index];
+                                  return NoteItemWidget(
+                                    note: note,
+                                    onTap: () {
+                                      // _showNoteDetailsDialog(context, note);
+                                    },
+                                    onLongPress: () {
+                                      // _showDeleteConfirmation(context, note.id);
+                                    },
+                                  );
                                 },
-                                onLongPress: () {
-                                  // _showDeleteConfirmation(context, note.id);
-                                },
-                              );
-                            },
-                          ),
-                        )
+                              ),
+                            ),
+                        ],
+                      )
                 else if (state is NotesError)
                   Padding(
                     padding: const EdgeInsets.all(50.0),
@@ -167,6 +173,75 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
             ),
           );
         },
+      ),
+    );
+
+  }
+  List<NoteModel> searchlist=[];
+  Widget searchWidget(List<NoteModel> list) {
+    return Container(
+      height: 40,
+      width: 250,
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: Colors.grey,
+        ),
+        // boxShadow: const [
+        //   BoxShadow(color: darkGrey, offset: Offset(2, 4), blurRadius: 12)
+        // ],
+        borderRadius: BorderRadius.circular(25),
+        gradient: const LinearGradient(
+            begin: Alignment.centerRight,
+            end: Alignment.centerLeft,
+            colors: [ Color(0xff999999),Color(0xffFFFFFF),])
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: TextFormField(
+          onChanged: (value) {
+            searchlist.clear();
+             final filtered = list
+                 .where((note) => note.title.toLowerCase().contains(value.toLowerCase()))
+                 .toList();
+            setState(() {
+              searchlist.addAll(filtered);
+              print(searchlist.length);
+            });
+
+          },
+          style: const TextStyle(
+            color: Color(0xFF1A1A53),
+            fontSize: 15,
+            fontFamily: 'Koulen',
+            fontWeight: FontWeight.w400,
+          ),
+          decoration: InputDecoration(
+              border: InputBorder.none,
+              // hintText: 'SEARCH CONTACT',
+              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              hintStyle: const TextStyle(
+                  fontSize: 12,
+                  fontFamily: 'Koulen',
+                  fontWeight: FontWeight.w400,
+                  color: Color(0xFF1A1A53)),
+              prefixIcon: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Image.asset(
+                  'assets/png/menu.png',
+                  color: Colors.black,
+                  width: 10,
+                  height: 10,
+                ),
+              ),
+              suffixIcon: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Image.asset(
+                    "assets/png/search_icon.png",
+                    width: 14,
+                    height: 14,
+                    color: Colors.black,
+                  ))),
+        ),
       ),
     );
   }

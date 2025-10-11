@@ -802,8 +802,122 @@ class AuthenticateFaceViewController extends GetxController {
     }
     return "Not Checked In";
   }
-
   Future<void> processImage(InputImage inputImage, BuildContext context) async {
+    if (!canProcess || isBusy) return;
+    isBusy = true;
+
+    // بدء مؤقت فشل التعرف إذا لم يُكتشف وجه
+    if (faceDetectionTimer == null) {
+      print("⏰ بدء مؤقت فشل التعرف (${faceDetectionTimeoutSeconds} ثانية)");
+      faceDetectionTimer = Timer(Duration(seconds: faceDetectionTimeoutSeconds), () {
+        if (hasFace.value == false) {
+          print("❌ انتهت المهلة بدون اكتشاف وجه");
+          faceDetectionTimer = null;
+          failedToMatch(context);
+        }
+      });
+    }
+
+    try {
+      final faces = await faceDetector.processImage(inputImage);
+      print('🔍 تم اكتشاف ${faces.length} وجه');
+
+      if (faces.isNotEmpty) {
+        // إلغاء المؤقت عند اكتشاف الوجه
+        if (faceDetectionTimer != null) {
+          faceDetectionTimer!.cancel();
+          faceDetectionTimer = null;
+        }
+
+        hasFace.value = false;
+
+        if (cameraController != null && cameraController!.value.isInitialized) {
+          final face = faces.first;
+          final camera = cameraController!.description;
+          final Size imageSize = cameraController!.value.previewSize!;
+          final Rect faceRect = face.boundingBox;
+
+          final double viewWidth = 0.30.sh;
+          final double viewHeight = 0.30.sh;
+
+          final double scaleX = viewWidth / imageSize.height;
+          final double scaleY = viewHeight / imageSize.width;
+
+          final bool isFrontCamera = camera.lensDirection == CameraLensDirection.front;
+
+          Rect scaledRect = Rect.fromLTRB(
+            faceRect.left * scaleX,
+            faceRect.top * scaleY,
+            faceRect.right * scaleX,
+            faceRect.bottom * scaleY,
+          );
+
+          if (isFrontCamera) {
+            final double centerX = viewWidth / 2;
+            scaledRect = Rect.fromLTRB(
+              2 * centerX - scaledRect.right,
+              scaledRect.top,
+              2 * centerX - scaledRect.left,
+              scaledRect.bottom,
+            );
+          }
+
+          final Offset circleCenter = Offset(viewWidth / 2, viewHeight / 2);
+          final double circleRadius = viewWidth / 2;
+
+          if (isFaceInsideCircle(scaledRect, circleCenter, circleRadius)) {
+            hasFace.value = true;
+
+            final double faceWidth = scaledRect.width;
+            final double faceHeight = scaledRect.height;
+
+            final double minFaceSize = viewWidth * 0.4;
+            final double maxFaceSize = viewWidth * 0.7;
+            const double buffer = 10;
+
+            FaceSizeZone newZone;
+
+            if (faceWidth < (minFaceSize - buffer) || faceHeight < (minFaceSize - buffer)) {
+              newZone = FaceSizeZone.tooSmall;
+              runtimeInstruction.value = "اقترب من الكاميرا";
+            } else if (faceWidth > (maxFaceSize + buffer) || faceHeight > (maxFaceSize + buffer)) {
+              newZone = FaceSizeZone.tooBig;
+              runtimeInstruction.value = "ابتعد قليلاً عن الكاميرا";
+            } else {
+              newZone = FaceSizeZone.perfect;
+              runtimeInstruction.value = "تم التعرف على الوجه ✔";
+            }
+
+            currentZone.value = newZone;
+
+            // ✅ عند وصول الوجه للحجم والمكان المناسب، التقط الصورة مباشرة
+            if (newZone == FaceSizeZone.perfect && !isCaptured.value) {
+              print('📸 التقاط الصورة...');
+              await _captureImage(context);
+            }
+          } else {
+            print('❌ الوجه خارج الدائرة');
+            hasFace.value = false;
+            startFaceDetectionTimeout();
+          }
+        } else {
+          print('⚠️ الكاميرا غير جاهزة');
+          startFaceDetectionTimeout();
+        }
+      } else {
+        print('❌ لم يتم اكتشاف أي وجه');
+        startFaceDetectionTimeout();
+      }
+    } catch (e) {
+      print('❌ خطأ أثناء معالجة الصورة: $e');
+      startFaceDetectionTimeout();
+    } finally {
+      isBusy = false;
+      update();
+    }
+  }
+
+  Future<void> processImage2(InputImage inputImage, BuildContext context) async {
     if (!canProcess || isBusy) return;
     isBusy = true;
 

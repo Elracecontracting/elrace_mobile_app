@@ -110,7 +110,8 @@ class _MyProjectState extends State<MyProject> {
                   builder: (context, state) {
                     if (state is PartnerLoading) {
                       return const Center(child: CircularProgressIndicator());
-                    } else if (state is PartnerError) {
+                    }
+                    else if (state is PartnerError) {
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -134,8 +135,8 @@ class _MyProjectState extends State<MyProject> {
                           ],
                         ),
                       );
-                    } else if (state is PartnerLoaded ||
-                        state is PartnerSearchLoaded) {
+                    }
+                    else if (state is PartnerLoaded || state is PartnerSearchLoaded) {
                       final partners = state is PartnerLoaded
                           ? state.partners
                           : (state as PartnerSearchLoaded).partners;
@@ -213,89 +214,72 @@ class _MyProjectState extends State<MyProject> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Flexible(
-                                      child: partner.icon != null
-                                          ? Image.network(
-                                              partner.icon!,
-                                              width: 45.w,
-                                              height: 45.h,
-                                              fit: BoxFit.contain,
-                                              errorBuilder: (context, error,
-                                                      stackTrace) =>
-                                                  Image.asset(
-                                                "assets/png/police.png",
-                                                width: 45.w,
-                                                height: 45.h,
-                                                fit: BoxFit.contain,
-                                              ),
-                                            )
-                                          : Image.asset(
+                                    partner.icon != null
+                                        ? Image.network(
+                                            partner.icon!,
+                                            width: 70,
+                                            height: 70,
+                                            fit: BoxFit.contain,
+                                            errorBuilder: (context, error,
+                                                    stackTrace) =>
+                                                Image.asset(
                                               "assets/png/police.png",
-                                              width: 45.w,
-                                              height: 45.h,
-                                              fit: BoxFit.contain,
-                                            ),
-                                    ),
-                                    SizedBox(height: 3.h),
-                                    Flexible(
-                                      child: Text(
-                                        partner.name,
-                                        style: GoogleFonts.koulen(
-                                          fontSize: 16.sp,
-                                          fontWeight: FontWeight.w400,
-                                        ),
-                                        textAlign: TextAlign.center,
-                                        overflow: TextOverflow.ellipsis,
-                                        maxLines: 2,
-                                      ),
-                                    ),
-                                    SizedBox(height: 1.h),
-                                    Flexible(
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(
-                                            '# ',
-                                            style: GoogleFonts.koulen(
-                                              fontSize: 10.sp,
-                                              fontWeight: FontWeight.w400,
-                                              color: Colors.black,
-                                            ),
-                                          ),
-                                          Flexible(
-                                            child: Text(
-                                              'work orders',
-                                              style: GoogleFonts.koulen(
-                                                fontSize: 10.sp,
-                                                fontWeight: FontWeight.w400,
-                                                color: Colors.black,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          SizedBox(width: 3.w),
-                                          Container(
-                                            width: 20.w,
-                                            height: 20.h,
-                                            decoration: const BoxDecoration(
-                                              color: Colors.white,
-                                              shape: BoxShape.circle,
-                                            ),
-                                            child: Center(
-                                              child: Text(
-                                                partner.workOrdersCount
-                                                    .toString(),
-                                                style: GoogleFonts.montserrat(
-                                                  fontWeight: FontWeight.w700,
-                                                  fontSize: 9.sp,
-                                                ),
-                                              ),
+                                                  width: 70,
+                                                  height: 70,
+                                                  fit: BoxFit.contain,
                                             ),
                                           )
-                                        ],
+                                        : Image.asset(
+                                            "assets/png/police.png",
+                                      width: 70,
+                                      height: 70,
+                                      fit: BoxFit.contain,
+                                          ),
+                                    SizedBox(height: 5.h),
+                                    Text(
+                                      partner.name,
+                                      style: GoogleFonts.koulen(
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.w400,
                                       ),
+                                      textAlign: TextAlign.center,
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 1,
+                                    ),
+                                    SizedBox(height: 5.h),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(Icons.tag,size: 20,),
+                                        Text(
+                                          'work orders',
+                                          style: GoogleFonts.koulen(
+                                            fontSize: 15.sp,
+                                            fontWeight: FontWeight.w400,
+                                            color: Colors.black,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        SizedBox(width: 3.w),
+                                        Container(
+                                          width: 25.w,
+                                          height:25.h,
+                                          decoration: const BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              partner.workOrdersCount.toString(),
+                                              style: GoogleFonts.montserrat(
+                                                fontWeight: FontWeight.w700,
+                                                fontSize:partner.workOrdersCount.toString().length>=3?10.sp:12.sp,
+                                              ),
+                                            ),
+                                          ),
+                                        )
+                                      ],
                                     )
                                   ],
                                 ),

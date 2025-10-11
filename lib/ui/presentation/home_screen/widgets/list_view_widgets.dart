@@ -2,6 +2,7 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/report_module/presentation/screens/report_listing/report_app_home_screen.dart';
 import 'package:el_race/ui/presentation/Attendace_list/attendance_page.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashList.dart';
+import 'package:el_race/ui/presentation/PettyCash/PettyCashScreen.dart';
 import 'package:el_race/ui/presentation/home_screen/data/widget_model.dart';
 import 'package:el_race/ui/presentation/home_screen/services/widget_service.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/card_tile.dart';
@@ -36,11 +37,12 @@ class ListViewWidgets extends StatefulWidget {
 class _ListViewWidgetsState extends State<ListViewWidgets> {
   List<WidgetModel> activeWidgets = [];
   bool isLoading = true;
-
-  @override
+  DateTime now = DateTime.now();
+   @override
   void initState() {
     super.initState();
     _loadActiveWidgets();
+
   }
 
   @override
@@ -148,7 +150,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       child: Stack(
         children: [
           GrayCardComponent(
-            onClick: () => Util.pushPage(const PettyCashList(), context),
+            onClick: () => Util.pushPage(const PettyCashScreen(), context),
             cardTitle: translate('home.petty_cash'),
             backgroundImagePath: 'assets/png/pettycash_new_bg.png',
             childWidget: const SizedBox.shrink(),
@@ -250,9 +252,9 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                 child: Padding(
                   padding: const EdgeInsets.only(top: 52),
                   child: SizedBox(
-                    width: SizeConfig().getWidth(270),
+                    width: SizeConfig().getWidth(MediaQuery.of(context).size.width - 50),
                     height: SizeConfig().getHeight(50),
-                    child: Image.asset('assets/newapp/simple_cards.png'),
+                    child: Center(child: Image.asset('assets/newapp/simple_cards.png')),
                   ),
                 ),
               ),
@@ -263,6 +265,15 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           right: 6,
           top: 30,
           child: Image.asset('assets/png/icons/doc_icon.png'),
+        ),
+        Positioned(
+          right: 10.w,
+          top: 10.w,
+          child: CountWidget(
+            count: '2',
+            countColor: Colors.black,
+            containerColor: Colors.white,
+          ),
         ),
       ],
     );
@@ -280,25 +291,25 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
             textDirection: TextDirection.ltr,
             child: Stack(
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 66),
-                  child: SizedBox(
-                    width: SizeConfig().getWidth(190),
-                    height: SizeConfig().getHeight(85),
-                    child: Column(
-                      children: [
-                        CustomBulletPoint(
-                          // bulletColor: Color(0xFF009859),
-                          text: translate('home.my_notes'),
-                          textColor: Colors.black,
-                          countColor: Colors.black,
-                          count: '15',
-                          containerColor: Colors.white,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                // Padding(
+                //   padding: const EdgeInsets.only(top: 66),
+                //   child: SizedBox(
+                //     width: SizeConfig().getWidth(190),
+                //     height: SizeConfig().getHeight(85),
+                //     child: Column(
+                //       children: [
+                //         CustomBulletPoint(
+                //           // bulletColor: Color(0xFF009859),
+                //           text: translate('home.my_notes'),
+                //           textColor: Colors.black,
+                //           countColor: Colors.black,
+                //           count: '15',
+                //           containerColor: Colors.white,
+                //         ),
+                //       ],
+                //     ),
+                //   ),
+                // ),
               ],
             ),
           ),
@@ -336,6 +347,15 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           child: Opacity(
             opacity: 0.20,
             child: Image.asset('assets/png/notes_icon.png'),
+          ),
+        ),
+        Positioned(
+          right: 10.w,
+          top: 10.w,
+          child: CountWidget(
+            count: '2',
+            countColor: Colors.black,
+            containerColor: Colors.white,
           ),
         ),
       ],
@@ -573,6 +593,91 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     );
   }
 
+  Widget _buildAttendanceWidget() {
+    return BlocBuilder<HomeBloc, HomeState>(
+      builder: (cxt, state) {
+        var bloc = HomeBloc.get(cxt);
+        return Stack(
+          alignment: Alignment.centerRight,
+          children: [
+            GrayCardComponent(
+              cardTitle: translate('home.attendance'),
+              backgroundImagePath: 'assets/png/attendace_new_bg.png',
+              onClick: () => Util.pushPage(const AttendancePage(), context),
+              childWidget: Directionality(
+                textDirection: TextDirection.ltr,
+                child: DefaultTextStyle(
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 80),
+                    child: SizedBox(
+                     // width: SizeConfig().getWidth(190),
+                      height: SizeConfig().getHeight(85),
+                      child: Column(
+                        children: [
+                          CustomBulletPoint(
+                            isAttendance: true,
+                            //bulletColor: const Color(0xFF009859),
+                            text: translate('home.attendance'),
+                            textColor: Colors.black,
+                            countColor: Colors.white,
+                            count: bloc.attendedDays.toString(),
+                            containerColor: const Color(0xff1A1A53),
+                          ),
+                          const SizedBox(
+                            height: 4,
+                          ),
+                          CustomBulletPoint(
+                            isAttendance: true,
+                            // bulletColor: Color(0xFFBA1719),
+                            text: translate('home.absent'),
+                            textColor: Colors.black,
+                            countColor: Colors.white,
+                            count: '2',
+                            containerColor: const Color(0xff1A1A53),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              right: 30.w,
+              top: 10.w,
+              child: Row(
+                children: [
+                  Image.asset(
+                    'assets/png/date_attendance.png',
+                    width: 20.w,
+                    height: 20.w,
+                  ),
+                  const SizedBox(
+                    width: 2,
+                  ),
+                  Text(
+                    '${bloc.monthName}',
+                    style: GoogleFonts.aBeeZee(
+                      color: Colors.white,
+                      fontSize: 17.sp,
+                      fontWeight: FontWeight.w400,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Opacity(
@@ -582,89 +687,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         child: Column(
           children: [
             // Always show attendance widget
-            BlocBuilder<HomeBloc, HomeState>(
-              builder: (cxt, state) {
-                var bloc = HomeBloc.get(cxt);
-                return Stack(
-                  alignment: Alignment.centerRight,
-                  children: [
-                    GrayCardComponent(
-                      cardTitle: translate('home.attendance'),
-                      backgroundImagePath: 'assets/png/attendace_new_bg.png',
-                      onClick: () =>
-                          Util.pushPage(const AttendancePage(), context),
-                      childWidget: Directionality(
-                        textDirection: TextDirection.ltr,
-                        child: DefaultTextStyle(
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.only(top: 80),
-                            child: SizedBox(
-                              width: SizeConfig().getWidth(190),
-                              height: SizeConfig().getHeight(85),
-                              child: Column(
-                                children: [
-                                  CustomBulletPoint(
-                                    isAttendance: true,
-                                    //bulletColor: const Color(0xFF009859),
-                                    text: translate('home.attendance'),
-                                    textColor: Colors.black,
-                                    countColor: Colors.white,
-                                    count: bloc.attendedDays.toString(),
-                                    containerColor: const Color(0xff1A1A53),
-                                  ),
-                                  const SizedBox(
-                                    height: 4,
-                                  ),
-                                  CustomBulletPoint(
-                                    isAttendance: true,
-                                    // bulletColor: Color(0xFFBA1719),
-                                    text: translate('home.absent'),
-                                    textColor: Colors.black,
-                                    countColor: Colors.white,
-                                    count: '2',
-                                    containerColor: const Color(0xff1A1A53),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      right: 30.w,
-                      top: 10.w,
-                      child: Row(
-                        children: [
-                          Image.asset(
-                            'assets/png/date_attendance.png',
-                            width: 20.w,
-                            height: 20.w,
-                          ),
-                          const SizedBox(
-                            width: 4,
-                          ),
-                          Text(
-                            'March',
-                            style: GoogleFonts.aBeeZee(
-                              color: Colors.white,
-                              fontSize: 20.sp,
-                              fontWeight: FontWeight.w500,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
+            _buildAttendanceWidget(),
 
             const SizedBox(height: 10),
 

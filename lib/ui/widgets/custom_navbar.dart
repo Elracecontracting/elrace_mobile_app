@@ -23,6 +23,7 @@ class CustomBottomNavbarState extends State<CustomBottomNavbar> {
 
   // Handle bottom nav bar tap logic here
   void _onItemTapped(int index) {
+
     if (index == 0) {
       // Show a message for the first tab
       ScaffoldMessenger.of(context).showSnackBar(

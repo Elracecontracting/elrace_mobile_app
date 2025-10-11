@@ -15,6 +15,115 @@ class CustomSliderButton extends StatefulWidget {
   @override
   CustomSliderButtonState createState() => CustomSliderButtonState();
 }
+class CustomSliderButtonState2 extends State<CustomSliderButton> {
+  double _position = 5.0;
+  bool _isCompleted = false;
+
+  void resetSlider() {
+    setState(() {
+      _position = 5.0;
+      _isCompleted = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // 🔹 احسب نسبة السحب (0 → 1)
+    double progress = (_position - 5) / (230 - 5);
+    progress = progress.clamp(0.0, 1.0);
+
+    // 🔹 اللون يتحول من أبيض إلى أخضر تدريجيًا
+    Color dynamicColor = Color.lerp(Colors.white, Colors.green, progress)!;
+
+
+    return Center(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // ✅ الخلفية تتغيّر حسب التقدم
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            width: 280,
+            height: 39,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              gradient: LinearGradient(
+                colors: [
+                  dynamicColor.withOpacity(0.9),
+                  dynamicColor.withOpacity(0.7),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: dynamicColor.withOpacity(0.4),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+          ),
+
+          // 🔘 زرّ السحب (الدائرة)
+          Positioned(
+            left: _position,
+            child: GestureDetector(
+              onHorizontalDragUpdate: (details) {
+                setState(() {
+                  _position = (details.localPosition.dx + 5).clamp(5, 230);
+                });
+              },
+              onHorizontalDragEnd: (details) async {
+                if (_position > 168) {
+                  setState(() {
+                    _position = 230;
+                    _isCompleted = true;
+                  });
+
+                  await widget.onSlideComplete();
+                } else {
+                  setState(() => _position = 5);
+                }
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: dynamicColor, // 👈 اللون يتغير أثناء السحب
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ),
+            ),
+          ),
+
+          // 📝 نص "SUBMIT"
+          Positioned.fill(
+            child: Align(
+              alignment: Alignment.center,
+              child: Text(
+                "SUBMIT",
+                style: GoogleFonts.koulen(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white,
+                  letterSpacing: 2.2,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 
 class CustomSliderButtonState extends State<CustomSliderButton> {
@@ -30,21 +139,33 @@ class CustomSliderButtonState extends State<CustomSliderButton> {
 
   @override
   Widget build(BuildContext context) {
+    // 🔹 احسب نسبة السحب (0 → 1)
+    double progress = (_position - 5) / (230 - 5);
+    progress = progress.clamp(0.0, 1.0);
+
+    // 🔹 اللون يتحول من أبيض إلى أخضر تدريجيًا
+    Color dynamicColor = Color.lerp(Colors.white, Colors.green, progress)!;
+
     return Center(
       child: Stack(
         alignment: Alignment.center,
         children: [
           // Background Container
-          Container(
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
             width: 280,
             height: 39,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(30),
-              image: const DecorationImage(
-                image: AssetImage('assets/png/button_background.png'),
-                fit: BoxFit.contain,
+              border: Border.all(width: 2,color: Colors.grey),
+              gradient: LinearGradient(
+                colors: [
+                  dynamicColor.withOpacity(0.9),
+                  dynamicColor.withOpacity(0.7),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              color: Colors.white,
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey.withAlpha((0.5 * 255).toInt()),
@@ -55,6 +176,26 @@ class CustomSliderButtonState extends State<CustomSliderButton> {
               ],
             ),
           ),
+          // Container(
+          //   width: 280,
+          //   height: 39,
+          //   decoration: BoxDecoration(
+          //     borderRadius: BorderRadius.circular(30),
+          //     image: const DecorationImage(
+          //       image: AssetImage('assets/png/button_background.png'),
+          //       fit: BoxFit.contain,
+          //     ),
+          //     color: Colors.white,
+          //     boxShadow: [
+          //       BoxShadow(
+          //         color: Colors.grey.withAlpha((0.5 * 255).toInt()),
+          //         spreadRadius: 0,
+          //         blurRadius: 0,
+          //         offset: const Offset(0, 0),
+          //       ),
+          //     ],
+          //   ),
+          // ),
 
           // Draggable Circle Button
           Positioned(

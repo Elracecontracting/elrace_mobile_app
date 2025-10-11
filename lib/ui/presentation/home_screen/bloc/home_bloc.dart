@@ -12,7 +12,8 @@ part 'home_state.dart';
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
   
   static HomeBloc get(BuildContext context) => BlocProvider.of(context);
-  
+  DateTime now = DateTime.now();
+  String monthName = '';
   HomeBloc() : super(HomeInitial()) {
     on<CheckInStatusChangedEvent>(checkedInMethod);
     on<FetchLastMonthAttendanceSummary>(_fetchLastMonthAttendanceSummary  );      
@@ -26,9 +27,10 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       faceRecognitionStatus = event.status;
       emit(FaceRecognitionStatusChanged(event.status));
     });
-  
+    monthName = DateFormat('MMMM').format(now);
   }
-
+  bool isNotOpen=false;
+  bool isEdit=false;
   int currentIndex = 1;
   changeCurrentIndex(ChangeCurrentIndex event,emit){
     emit(ChangeIndexLoading());

@@ -25,7 +25,9 @@ class LpoCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: () {
+        showAttachmentDialog(context);
+      },
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -55,18 +57,15 @@ class LpoCardWidget extends StatelessWidget {
                                 width: 26.w,
                               ),
                               const SizedBox(width: 8),
-                              SizedBox(
-                                width: 100,
-                                child: Text(
-                                  name ?? 'item.name',
-                                  style: GoogleFonts.koulen(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.black,
-                                    letterSpacing: 1.2,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                              Text(
+                                name ?? 'item.name',
+                                style: GoogleFonts.koulen(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black,
+                                  letterSpacing: 1.2,
                                 ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
@@ -77,88 +76,11 @@ class LpoCardWidget extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 25),
-                  Row(
-                    children: [
-                      Image.asset(
-                        "assets/png/icons/tag.png",
-                        height: 11.86.w,
-                        width: 11.2.w,
-                        color: black,
-                      ),
-                      const SizedBox(width: 16),
-                      SizedBox(
-                        width: 100,
-                        child: Text(
-                          (lpoCount ?? '').toString(),
-                          style: GoogleFonts.koulen(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: black,
-                          ),
-                        ),
-                      ),
-                      // const SizedBox(width: 8),
-                      // Text(
-                      //   (lpoCount ?? '').toString(),
-                      //   style: GoogleFonts.koulen(
-                      //     fontSize: 12,
-                      //     fontWeight: FontWeight.w600,
-                      //     color: black,
-                      //   ),
-                      // ),
-                    ],
-                  ),
-                  //const SizedBox(height: 3),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Image.asset(
-                            "assets/png/icons/hand.png",
-                            height: 12.8.w,
-                            width: 19.57.w,
-                            color: black,
-                          ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 170.w,
-                            child: Text(
-                              vendorName ?? 'Vendor Name',
-                              maxLines: 1,
-                              style: GoogleFonts.koulen(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w400,
-                                color: black,
-                                //letterSpacing: 1.0,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
 
-                      // Container(
-                      //     padding: const EdgeInsets.all(6),
-                      //     margin: const EdgeInsets.only(right: 10, bottom: 20),
-                      //     decoration: BoxDecoration(
-                      //       color: Colors.transparent,
-                      //       shape: BoxShape.circle,
-                      //       border: Border.all(color: greyText, width: 2),
-                      //     ),
-                      //     child: Text(
-                      //       '+12',
-                      //       style: GoogleFonts.koulen(
-                      //         fontSize: 20.sp,
-                      //         fontWeight: FontWeight.w500,
-                      //         color: AppColors.green,
-                      //       ),
-                      //     )),
-                    ],
-                  ),
                   Transform.translate(
                     offset: Offset(0, -15.w),
                     child: Row(
+
                       children: [
                         // SizedBox(
                         //   width: 200,
@@ -174,21 +96,107 @@ class LpoCardWidget extends StatelessWidget {
                         //     softWrap: false,
                         //   ),
                         // ),
-                        Container(
-                          width: 50.w,
-                          height: 50.w,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: ClipOval(
-                            child: Image.asset(
-                              'assets/png/profile_1.png',
-                              fit: BoxFit.cover,
-                              width: double.infinity,
-                              height: double.infinity,
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Image.asset(
+                                  "assets/png/icons/tag.png",
+                                  height: 11.86.w,
+                                  width: 11.2.w,
+                                  color: black,
+                                ),
+                                const SizedBox(width: 16),
+                                SizedBox(
+                                  width: 100,
+                                  child: Text(
+                                    'LPO NO',
+                                    //  (lpoCount ?? 'LPO NO').toString(),
+                                    style: GoogleFonts.koulen(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: black,
+                                    ),
+                                  ),
+                                ),
+                                // const SizedBox(width: 8),
+                                // Text(
+                                //   (lpoCount ?? '').toString(),
+                                //   style: GoogleFonts.koulen(
+                                //     fontSize: 12,
+                                //     fontWeight: FontWeight.w600,
+                                //     color: black,
+                                //   ),
+                                // ),
+                              ],
                             ),
-                          ),
+                            //const SizedBox(height: 3),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Image.asset(
+                                      "assets/png/icons/hand.png",
+                                      height: 12.8.w,
+                                      width: 19.57.w,
+                                      color: black,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    SizedBox(
+                                      width: 170.w,
+                                      child: Text(
+                                        vendorName ?? 'Vendor Name',
+                                        maxLines: 1,
+                                        style: GoogleFonts.koulen(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w400,
+                                          color: black,
+                                          //letterSpacing: 1.0,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                // Container(
+                                //     padding: const EdgeInsets.all(6),
+                                //     margin: const EdgeInsets.only(right: 10, bottom: 20),
+                                //     decoration: BoxDecoration(
+                                //       color: Colors.transparent,
+                                //       shape: BoxShape.circle,
+                                //       border: Border.all(color: greyText, width: 2),
+                                //     ),
+                                //     child: Text(
+                                //       '+12',
+                                //       style: GoogleFonts.koulen(
+                                //         fontSize: 20.sp,
+                                //         fontWeight: FontWeight.w500,
+                                //         color: AppColors.green,
+                                //       ),
+                                //     )),
+                              ],
+                            ),
+                            Container(
+                              width: 40.w,
+                              height: 40.w,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
+                              ),
+                              child: ClipOval(
+                                child: Image.asset(
+                                  'assets/png/profile_1.png',
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const Spacer(),
                         Container(
@@ -326,3 +334,165 @@ class LpoCardWidget extends StatelessWidget {
     );
   }
 }
+
+
+void showAttachmentDialog(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        child: _buildDialogContent(context),
+      );
+    },
+  );
+}
+
+Widget _buildDialogContent(BuildContext context) {
+  return Container(
+    width: double.infinity,
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.2),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 🔹 Title
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Transform.rotate(
+              angle: -0.8, // in radians (not degrees)
+              child: const Icon(
+                Icons.attachment,
+                color: Colors.black,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              "ATTACHMENTS",
+              style: GoogleFonts.koulen(
+                fontSize: 20,
+                fontWeight: FontWeight.w400,
+                color: Colors.black,
+                //letterSpacing: 1.2,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // 🔸 LPO No
+        Row(
+          children: [
+            const Icon(Icons.tag, color: Colors.red, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              "LPO NO",
+              style: GoogleFonts.koulen(
+                color: Colors.red,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // 🔸 Vendor Name
+        Row(
+          children: [
+            const Icon(Icons.handshake, color: Colors.blue, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              "VENDOR NAME",
+              style: GoogleFonts.koulen(
+                color: Colors.blue,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+
+        // 🔸 Project Name
+        Row(
+          children: [
+            const Icon(Icons.business_center, color: Colors.black, size: 20),
+            const SizedBox(width: 8),
+            Text(
+              "PROJECT NAME",
+              style: GoogleFonts.koulen(
+                color: Colors.black,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 15),
+
+        // 🔘 Button
+        Center(
+          child: SizedBox(
+            width: 180,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF191F52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                // TODO: Add your view attachment logic here
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Transform.rotate(
+                    angle: -0.8, // in radians (not degrees)
+                    child: const Icon(
+                      Icons.attachment,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    "VIEW ATTACHMENT",
+                    style: GoogleFonts.koulen(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+

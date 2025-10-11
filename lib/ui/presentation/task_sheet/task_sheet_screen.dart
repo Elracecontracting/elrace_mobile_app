@@ -1,11 +1,14 @@
 import 'dart:convert';
 
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/ui/presentation/task_sheet/EmployeeShiftRequestPage.dart';
 import 'package:el_race/ui/presentation/task_sheet/TaskDetailsPage.dart';
+import 'package:el_race/ui/presentation/task_sheet/add_task_sheet.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hexcolor/hexcolor.dart';
 import 'package:http/http.dart' as http;
 
 import '../../widgets/header_widget.dart';
@@ -108,8 +111,25 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                       color: appFontColor,
                     ),
                   ),
-
-                  const SizedBox(width: 40), // Spacer for alignment
+                  Container(
+                    width: 25,
+                    height: 25,
+                    decoration: const BoxDecoration(
+                        color: appFontColor, shape: BoxShape.circle),
+                    child: IconButton(
+                      icon: const Icon(Icons.add, size: 20, color: Colors.white),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AddTaskSheet(),
+                          ),
+                        );
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -209,9 +229,9 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                                       children: [
                                         Text(
                                           task["name"] ?? '',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w700,
+                                          style: GoogleFonts.koulen(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w400,
                                             color: appFontColor,
                                           ),
                                         ),

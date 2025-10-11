@@ -121,10 +121,7 @@ class _FaceRecognitionStatusIconState extends State<FaceRecognitionStatusIcon>
                 const SizedBox(
                   height: 6,
                 ),
-                const Text(
-                  '*** Blink both eyes once clearly for detection',
-                  textAlign: TextAlign.center,
-                )
+
               ],
             ),
           ),

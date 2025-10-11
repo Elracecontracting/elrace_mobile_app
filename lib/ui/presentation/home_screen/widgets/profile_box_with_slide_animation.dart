@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hexcolor/hexcolor.dart';
 import 'package:provider/provider.dart';
 
 class ProfileBoxWithSlideAnimation extends StatefulWidget {
@@ -144,6 +145,7 @@ class _ProfileBoxWithSlideAnimationState
 
     overlayState.insert(entry);
   }
+  bool muteNotifications=false;
 
   @override
   Widget build(BuildContext context) {
@@ -196,8 +198,8 @@ class _ProfileBoxWithSlideAnimationState
                         child: Container(
                           width: drawerWidth,
                           height: MediaQuery.of(context).size.height *
-                              0.72, // Increased height to 65% to accommodate content
-                          padding: const EdgeInsets.only(bottom: 15),
+                              0.83, // Increased height to 65% to accommodate content
+                         // padding: const EdgeInsets.only(bottom: 15),
                           child: Container(
                             decoration: BoxDecoration(
                               color: Colors.grey[300],
@@ -213,44 +215,61 @@ class _ProfileBoxWithSlideAnimationState
                               children: [
                                 Column(
                                   children: [
-                                    const SizedBox(height: 10),
-                                    Row(
-                                      children: [
-                                        const SizedBox(
-                                          width: 120.0,
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.all(2),
-                                          decoration: BoxDecoration(
-                                            shape: BoxShape.circle,
-                                            border: Border.all(
-                                                color: Colors.black, width: 2),
-                                          ),
-                                          child: CircleAvatar(
-                                            radius: 28,
-                                            backgroundImage: hasValidImage
-                                                ? MemoryImage(
-                                                    base64Decode(base64Image))
-                                                : const AssetImage(
-                                                        'assets/png/profile_1.png')
-                                                    as ImageProvider,
-                                          ),
-                                        ),
-                                        const SizedBox(
-                                          width: 12.4,
-                                        ),
-                                        // Container(
-                                        //   width: 48,
-                                        //   height: 48,
-                                        //   decoration: BoxDecoration(
-                                        //       color: Colors.white,
-                                        //       borderRadius:
-                                        //           BorderRadius.circular(24)),
-                                        //   child: Image.asset(
-                                        //       'assets/png/name_tag_icon.png'),
-                                        // ),
-                                      ],
+
+                                    Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                            color: Colors.black, width: 2),
+                                      ),
+                                      child: CircleAvatar(
+                                        radius: 28,
+                                        backgroundImage: hasValidImage
+                                            ? MemoryImage(
+                                            base64Decode(base64Image))
+                                            : const AssetImage(
+                                            'assets/png/profile_1.png')
+                                        as ImageProvider,
+                                      ),
                                     ),
+                                    // Row(
+                                    //   children: [
+                                    //     const SizedBox(
+                                    //       width: 120.0,
+                                    //     ),
+                                    //     Container(
+                                    //       padding: const EdgeInsets.all(2),
+                                    //       decoration: BoxDecoration(
+                                    //         shape: BoxShape.circle,
+                                    //         border: Border.all(
+                                    //             color: Colors.black, width: 2),
+                                    //       ),
+                                    //       child: CircleAvatar(
+                                    //         radius: 28,
+                                    //         backgroundImage: hasValidImage
+                                    //             ? MemoryImage(
+                                    //                 base64Decode(base64Image))
+                                    //             : const AssetImage(
+                                    //                     'assets/png/profile_1.png')
+                                    //                 as ImageProvider,
+                                    //       ),
+                                    //     ),
+                                    //     const SizedBox(
+                                    //       width: 12.4,
+                                    //     ),
+                                    //     // Container(
+                                    //     //   width: 48,
+                                    //     //   height: 48,
+                                    //     //   decoration: BoxDecoration(
+                                    //     //       color: Colors.white,
+                                    //     //       borderRadius:
+                                    //     //           BorderRadius.circular(24)),
+                                    //     //   child: Image.asset(
+                                    //     //       'assets/png/name_tag_icon.png'),
+                                    //     // ),
+                                    //   ],
+                                    // ),
                                     const SizedBox(height: 1),
                                     Text(
                                       loginData.result?.data?.name
@@ -320,12 +339,15 @@ class _ProfileBoxWithSlideAnimationState
                                       ),
                                     ),
                                     SizedBox(height: 1.h),
-                                    Text(
-                                      'Status : Not Active',
-                                      style: GoogleFonts.inter(
-                                          fontSize: 11.26,
-                                          fontWeight: FontWeight.bold,
-                                          color: const Color(0xff6D6D6D)),
+                                    Container(
+                                      width: 200.w,
+                                      child:Text(
+                                        'Status : Not Active',
+                                        style: GoogleFonts.inter(
+                                            fontSize: 11.26,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xff6D6D6D)),
+                                      ),
                                     ),
                                     SizedBox(height: 1.h),
                                     Container(
@@ -352,16 +374,14 @@ class _ProfileBoxWithSlideAnimationState
                                                   Colors.grey.shade200,
                                                 ],
                                               ),
-                                              borderRadius:
-                                                  BorderRadius.circular(28),
+                                              borderRadius: BorderRadius.circular(28),
                                               border: Border.all(
-                                                color: Colors.grey.shade400,
-                                                width: 1,
+                                                color: HexColor("#009859"), // ✅ outer green border
+                                                width: 1.5,
                                               ),
                                               boxShadow: [
                                                 BoxShadow(
-                                                  color: Colors.black
-                                                      .withOpacity(0.1),
+                                                  color: Colors.black.withOpacity(0.1),
                                                   blurRadius: 4,
                                                   offset: const Offset(0, 2),
                                                 ),
@@ -372,20 +392,22 @@ class _ProfileBoxWithSlideAnimationState
                                           ),
                                           // QR Code (rotated 45 degrees)
                                           Transform.rotate(
-                                            angle:
-                                                0.785398, // 45 degrees in radians
+                                            angle: 0.785398, // 45 degrees in radians
                                             child: Container(
                                               width: 120,
                                               height: 120,
                                               decoration: BoxDecoration(
                                                 color: Colors.black,
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
+                                                border: Border.all(
+                                                  color: HexColor("#009859"), // ✅ outer green border
+                                                  width: 1.5,
+                                                ),
+                                                //borderRadius: BorderRadius.circular(8),
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: Colors.grey.shade600,
-                                                    blurRadius: 2,
-                                                    offset: const Offset(0, 1),
+                                                    color:HexColor("#009859"),
+                                                    blurRadius: 5,
+                                                    offset: const Offset(1, 1),
                                                   ),
                                                 ],
                                               ),
@@ -409,451 +431,789 @@ class _ProfileBoxWithSlideAnimationState
                                         ],
                                       ),
                                     ),
-                                    Stack(
-                                      clipBehavior: Clip.none,
-                                      children: [
-                                        Container(
-                                          margin: const EdgeInsets.only(top: 0),
-                                          padding: const EdgeInsets.only(
-                                              top: 4, bottom: 4),
-                                          color: Colors.grey.shade100,
-                                          child: Column(
-                                            children: [
-                                              const SizedBox(height: 0),
-                                              Container(
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.black
-                                                          .withAlpha(
-                                                              (0.15 * 255)
-                                                                  .toInt()),
-                                                      offset:
-                                                          const Offset(0, 1.68),
-                                                      // blurRadius: 4,
-                                                    ),
-                                                  ],
+                                    Container(
+                                      margin: const EdgeInsets.only(top: 0),
+                                      padding: const EdgeInsets.only(top: 4, bottom: 4),
+                                      color: Colors.grey.shade100,
+                                      child: Column(
+                                        children: [
+                                          const SizedBox(height: 0),
+                                          Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withAlpha(
+                                                      (0.15 * 255)
+                                                          .toInt()),
+                                                  offset:
+                                                  const Offset(0, 1.68),
+                                                  // blurRadius: 4,
                                                 ),
-                                                child: Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.center,
-                                                  children: [
-                                                    Padding(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                          vertical: 8),
-                                                      child: Container(
-                                                        width: 94.13,
-                                                        height: 30.03,
-                                                        decoration:
-                                                            BoxDecoration(
-                                                          gradient:
-                                                              LinearGradient(
-                                                            colors: !SharedPref()
-                                                                    .isArabic()
-                                                                ? [
-                                                                    const Color(
-                                                                        0xFF151544),
-                                                                    const Color(
-                                                                        0xFF3535AA)
-                                                                  ] // لو مش عربي
-                                                                : [
-                                                                    Colors
-                                                                        .white,
-                                                                    Colors.grey[
-                                                                        300]!
-                                                                  ], // لو عربي
-                                                            begin: Alignment
-                                                                .centerLeft,
-                                                            end: Alignment
-                                                                .centerRight,
-                                                          ),
-                                                          borderRadius:
-                                                              BorderRadius
-                                                                  .circular(
-                                                                      20.3),
-                                                        ),
-                                                        child: ElevatedButton(
-                                                          onPressed: () async {
-                                                            if (profileBoxProvider
-                                                                .isProfileVisible) {
-                                                              profileBoxProvider
-                                                                  .hideProfileBox();
-                                                            }
-                                                            await Util
-                                                                .saveAndChangeLocale(
-                                                                    context,
-                                                                    'en');
-                                                          },
-                                                          style: ElevatedButton
-                                                              .styleFrom(
-                                                            backgroundColor:
-                                                                Colors
-                                                                    .transparent,
-                                                            //  backgroundColor: !SharedPref().isArabic()
-                                                            //       ? appFontColor
-                                                            //       : Colors.white,
-                                                            minimumSize:
-                                                                const Size(
-                                                                    100, 16),
-                                                            shape: RoundedRectangleBorder(
-                                                                borderRadius:
-                                                                    BorderRadius
-                                                                        .circular(
-                                                                            20.3)),
-                                                          ),
-                                                          child: Text(
-                                                              translate(
-                                                                  'profile.english'),
-                                                              style: TextStyle(
-                                                                  color: !SharedPref()
-                                                                          .isArabic()
-                                                                      ? Colors
-                                                                          .white
-                                                                      : Colors
-                                                                          .black,
-                                                                  fontSize:
-                                                                      10)),
-                                                        ),
+                                              ],
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                              children: [
+                                                Padding(
+                                                  padding: const EdgeInsets
+                                                      .symmetric(
+                                                      vertical: 8),
+                                                  child: Container(
+                                                    width: 94.13,
+                                                    height: 30.03,
+                                                    decoration:
+                                                    BoxDecoration(
+                                                      gradient:
+                                                      LinearGradient(
+                                                        colors: !SharedPref()
+                                                            .isArabic()
+                                                            ? [
+                                                          const Color(
+                                                              0xFF151544),
+                                                          const Color(
+                                                              0xFF3535AA)
+                                                        ] // لو مش عربي
+                                                            : [
+                                                          Colors
+                                                              .white,
+                                                          Colors.grey[
+                                                          300]!
+                                                        ], // لو عربي
+                                                        begin: Alignment
+                                                            .centerLeft,
+                                                        end: Alignment
+                                                            .centerRight,
                                                       ),
+                                                      borderRadius:
+                                                      BorderRadius
+                                                          .circular(
+                                                          20.3),
                                                     ),
-                                                    const SizedBox(width: 10),
-                                                    Container(
-                                                      width: 94.13,
-                                                      height: 30.03,
-                                                      decoration: BoxDecoration(
-                                                        borderRadius:
+                                                    child: ElevatedButton(
+                                                      onPressed: () async {
+                                                        if (profileBoxProvider
+                                                            .isProfileVisible) {
+                                                          profileBoxProvider
+                                                              .hideProfileBox();
+                                                        }
+                                                        await Util
+                                                            .saveAndChangeLocale(
+                                                            context,
+                                                            'en');
+                                                      },
+                                                      style: ElevatedButton
+                                                          .styleFrom(
+                                                        backgroundColor:
+                                                        Colors
+                                                            .transparent,
+                                                        //  backgroundColor: !SharedPref().isArabic()
+                                                        //       ? appFontColor
+                                                        //       : Colors.white,
+                                                        minimumSize:
+                                                        const Size(
+                                                            100, 16),
+                                                        shape: RoundedRectangleBorder(
+                                                            borderRadius:
                                                             BorderRadius
-                                                                .circular(20.3),
+                                                                .circular(
+                                                                20.3)),
                                                       ),
-                                                      child: ElevatedButton(
-                                                        onPressed: () async {
-                                                          if (profileBoxProvider
-                                                              .isProfileVisible) {
-                                                            profileBoxProvider
-                                                                .hideProfileBox();
-                                                          }
-                                                          await Util
-                                                              .saveAndChangeLocale(
-                                                                  context,
-                                                                  'ar');
-                                                        },
-                                                        style: ElevatedButton
-                                                            .styleFrom(
-                                                          backgroundColor:
-                                                              SharedPref()
-                                                                      .isArabic()
-                                                                  ? appFontColor
-                                                                  : Colors.grey
-                                                                      .shade200,
-                                                          minimumSize:
-                                                              const Size(
-                                                                  100, 16),
-                                                          shape: RoundedRectangleBorder(
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          20.3)),
-                                                        ),
-                                                        child: Text(
-                                                            translate(
-                                                                'profile.arabic'),
-                                                            style: TextStyle(
-                                                                color: SharedPref()
-                                                                        .isArabic()
-                                                                    ? Colors
-                                                                        .white
-                                                                    : Colors
-                                                                        .black,
-                                                                fontSize: 12)),
-                                                      ),
+                                                      child: Text(
+                                                          translate(
+                                                              'profile.english'),
+                                                          style: TextStyle(
+                                                              color: !SharedPref()
+                                                                  .isArabic()
+                                                                  ? Colors
+                                                                  .white
+                                                                  : Colors
+                                                                  .black,
+                                                              fontSize:
+                                                              10)),
                                                     ),
-                                                  ],
+                                                  ),
                                                 ),
-                                              ),
-
-                                              const SizedBox(height: 1),
-                                              // Container(
-                                              //   height: 2,
-                                              //   width: double.infinity,
-                                              //   decoration: BoxDecoration(
-                                              //     color: Colors.grey.shade300,
-                                              //     // boxShadow: [
-                                              //     //   BoxShadow(
-                                              //     //     color: Colors.black.withAlpha(
-                                              //     //         (0.15 * 255).toInt()),
-                                              //     //     offset: const Offset(0, 2),
-                                              //     //     blurRadius: 4,
-                                              //     //   ),
-                                              //     // ],
-                                              //   ),
-                                              // ),
-
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                        horizontal: 12,
-                                                        vertical: 12),
-                                                decoration: BoxDecoration(
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.black
-                                                          .withAlpha(
-                                                              (0.15 * 255)
-                                                                  .toInt()),
-                                                      offset:
-                                                          const Offset(0, 1.68),
-                                                      //blurRadius: 4,
-                                                    )
-                                                  ],
-                                                  color: Colors.white,
-                                                ),
-                                                child: Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.start,
-                                                  children: [
-                                                    Image.asset(
-                                                        'assets/png/notification_filled_icon.png'),
-                                                    const SizedBox(width: 12),
-                                                    Text(
+                                                const SizedBox(width: 10),
+                                                Container(
+                                                  width: 94.13,
+                                                  height: 30.03,
+                                                  decoration: BoxDecoration(
+                                                    borderRadius:
+                                                    BorderRadius
+                                                        .circular(20.3),
+                                                  ),
+                                                  child: ElevatedButton(
+                                                    onPressed: () async {
+                                                      if (profileBoxProvider
+                                                          .isProfileVisible) {
+                                                        profileBoxProvider
+                                                            .hideProfileBox();
+                                                      }
+                                                      await Util
+                                                          .saveAndChangeLocale(
+                                                          context,
+                                                          'ar');
+                                                    },
+                                                    style: ElevatedButton
+                                                        .styleFrom(
+                                                      backgroundColor:
+                                                      SharedPref()
+                                                          .isArabic()
+                                                          ? appFontColor
+                                                          : Colors.grey
+                                                          .shade200,
+                                                      minimumSize:
+                                                      const Size(
+                                                          100, 16),
+                                                      shape: RoundedRectangleBorder(
+                                                          borderRadius:
+                                                          BorderRadius
+                                                              .circular(
+                                                              20.3)),
+                                                    ),
+                                                    child: Text(
                                                         translate(
-                                                            'profile.mute_notifications'),
-                                                        style:
-                                                            GoogleFonts.inter(
-                                                                fontSize: 11)),
-                                                    const Spacer(),
-                                                    SizedBox(
-                                                      height: 10.57,
-                                                      child: Transform.scale(
-                                                        scale:
-                                                            0.7, // تصغير الحجم
-                                                        child: const Switch(
-                                                          value: false,
-                                                          onChanged: null,
-                                                          activeColor:
-                                                              appFontColor, // لون الزر لما يكون ON
-                                                          activeTrackColor: Color(
-                                                              0xffD9D9D9), // لون الخلفية لما يكون ON
-                                                          inactiveThumbColor: Color(
-                                                              0xff3E3C3C), // لون الزر لما يكون OFF
-                                                          inactiveTrackColor: Color(
-                                                              0xffD9D9D9), // لون الخلفية لما يكون OFF
-                                                        ),
-                                                      ),
-                                                    )
-                                                    // Switch.adaptive(
-                                                    //   value: isMuted,
-                                                    //   onChanged: (val) => _updateMuteStatus(val),
-                                                    //   activeColor: const Color(0xFF1A1A53),
-                                                    //   activeTrackColor: Colors.grey.shade400,
-                                                    // ),
-                                                  ],
+                                                            'profile.arabic'),
+                                                        style: TextStyle(
+                                                            color: SharedPref()
+                                                                .isArabic()
+                                                                ? Colors
+                                                                .white
+                                                                : Colors
+                                                                .black,
+                                                            fontSize: 12)),
+                                                  ),
                                                 ),
-                                              ),
-                                              // 🔹 Divider with shadow
-                                              // Container(
-                                              //   height: 2,
-                                              //   width: double.infinity,
-                                              //   decoration: BoxDecoration(
-                                              //     color: Colors.grey.shade300,
-                                              // boxShadow: [
-                                              //   BoxShadow(
-                                              //     color: Colors.black.withAlpha(
-                                              //         (0.15 * 255).toInt()),
-                                              //     offset: const Offset(0, 2),
-                                              //     blurRadius: 4,
-                                              //   ),
-                                              // ],
-                                              //   ),
-                                              // ),
-                                              const SizedBox(
-                                                height: 8,
-                                              ),
-                                              // Container(
-                                              //   padding: const EdgeInsets.symmetric(
-                                              //         horizontal: 20, vertical: 12),
-                                              //   decoration: BoxDecoration(
-                                              //       color: Colors.white,
-                                              //       boxShadow: [
-                                              //         BoxShadow(
-                                              //           color: Colors.black.withAlpha(
-                                              //               (0.15 * 255).toInt()),
-                                              //           offset: const Offset(0, 1.68),
-                                              //           // blurRadius: 4,
-                                              //         )
-                                              //       ]),
-                                              //   child: Row(
-                                              //     children: [
-                                              //       SizedBox(
-                                              //         child: Image.asset(
-                                              //             'assets/png/dark_mode_icon.png'),
-                                              //       ),
-                                              //       const SizedBox(width: 22),
-                                              //       Text(
-                                              //           translate(
-                                              //               'profile.dark_mode'),
-                                              //           style: const TextStyle(
-                                              //               fontSize: 12)),
-                                              //     ],
-                                              //   ),
-                                              // ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
-                                        ),
-                                        // Positioned(
-                                        //   top: -10,
-                                        //   left: 0,
-                                        //   right: 0,
-                                        //   child: Center(
-                                        //     child: // QR Code section
-                                        //         Container(
-                                        //       margin: const EdgeInsets.only(
-                                        //           top: 20, bottom: 36),
-                                        //       width: 200,
-                                        //       height: 200,
-                                        //       child: Stack(
-                                        //         alignment: Alignment.center,
-                                        //         clipBehavior: Clip.hardEdge,
-                                        //         children: [
-                                        //           // Background with repeated numbers
-                                        //           Container(
-                                        //             width: 200,
-                                        //             height: 200,
-                                        //             decoration: BoxDecoration(
-                                        //               gradient: LinearGradient(
-                                        //                 begin: Alignment.topLeft,
-                                        //                 end: Alignment.bottomRight,
-                                        //                 colors: [
-                                        //                   Colors.grey.shade100,
-                                        //                   Colors.grey.shade200,
-                                        //                 ],
-                                        //               ),
-                                        //               borderRadius:
-                                        //                   BorderRadius.circular(16),
-                                        //               border: Border.all(
-                                        //                 color: Colors.grey.shade400,
-                                        //                 width: 1,
-                                        //               ),
-                                        //               boxShadow: [
-                                        //                 BoxShadow(
-                                        //                   color: Colors.black
-                                        //                       .withOpacity(0.1),
-                                        //                   blurRadius: 4,
-                                        //                   offset: const Offset(0, 2),
-                                        //                 ),
-                                        //               ],
-                                        //             ),
-                                        //             child: _buildQRBackground(),
-                                        //           ),
-                                        //           // QR Code (rotated 45 degrees)
-                                        //           Transform.rotate(
-                                        //             angle:
-                                        //                 0.785398, // 45 degrees in radians
-                                        //             child: Container(
-                                        //               width: 100,
-                                        //               height: 100,
-                                        //               decoration: BoxDecoration(
-                                        //                 color: Colors.black,
-                                        //                 borderRadius:
-                                        //                     BorderRadius.circular(8),
-                                        //                 boxShadow: [
-                                        //                   BoxShadow(
-                                        //                     color:
-                                        //                         Colors.grey.shade600,
-                                        //                     blurRadius: 2,
-                                        //                     offset:
-                                        //                         const Offset(0, 1),
-                                        //                   ),
-                                        //                 ],
-                                        //               ),
-                                        //               child: Image.asset(
-                                        //                 'assets/png/qr_code.png',
-                                        //                 fit: BoxFit.cover,
-                                        //               ),
-                                        //             ),
-                                        //           ),
-                                        //         ],
-                                        //       ),
-                                        //     ),
-                                        //   ),
-                                        // ),
-                                      ],
+
+                                          const SizedBox(height: 1),
+                                          // Container(
+                                          //   height: 2,
+                                          //   width: double.infinity,
+                                          //   decoration: BoxDecoration(
+                                          //     color: Colors.grey.shade300,
+                                          //     // boxShadow: [
+                                          //     //   BoxShadow(
+                                          //     //     color: Colors.black.withAlpha(
+                                          //     //         (0.15 * 255).toInt()),
+                                          //     //     offset: const Offset(0, 2),
+                                          //     //     blurRadius: 4,
+                                          //     //   ),
+                                          //     // ],
+                                          //   ),
+                                          // ),
+
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                            decoration: BoxDecoration(
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black.withAlpha((0.15 * 255).toInt()),
+                                                  offset: const Offset(0, 1.68),
+                                                  //blurRadius: 4,
+                                                )
+                                              ],
+                                              color: Colors.white,
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                              MainAxisAlignment.start,
+                                              children: [
+                                                Image.asset(
+                                                    'assets/png/notification_filled_icon.png'),
+                                                const SizedBox(width: 12),
+                                                Text(
+                                                    translate(
+                                                        'profile.mute_notifications'),
+                                                    style:
+                                                    GoogleFonts.inter(
+                                                        fontSize: 11)),
+                                                const Spacer(),
+                                                SizedBox(
+                                                  height: 10.57,
+                                                  child: Transform.scale(
+                                                    scale:
+                                                    0.7, // تصغير الحجم
+                                                    child:  Switch(
+                                                      value: muteNotifications,
+                                                      onChanged: (v){
+                                                       setState(() {
+                                                         muteNotifications=v;
+                                                       });
+                                                      },
+                                                      activeColor: appFontColor, // لون الزر لما يكون ON
+                                                      activeTrackColor: Color(0xffD9D9D9), // لون الخلفية لما يكون ON
+                                                      inactiveThumbColor: Color(0xff3E3C3C), // لون الزر لما يكون OFF
+                                                      inactiveTrackColor: Color(0xffD9D9D9), // لون الخلفية لما يكون OFF
+                                                    ),
+                                                  ),
+                                                )
+                                                // Switch.adaptive(
+                                                //   value: isMuted,
+                                                //   onChanged: (val) => _updateMuteStatus(val),
+                                                //   activeColor: const Color(0xFF1A1A53),
+                                                //   activeTrackColor: Colors.grey.shade400,
+                                                // ),
+                                              ],
+                                            ),
+                                          ),
+                                          //🔹 Divider with shadow
+                                          Container(
+                                            height: 2,
+                                            width: double.infinity,
+                                            decoration: BoxDecoration(
+                                              color: Colors.grey.shade300,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withAlpha(
+                                                  (0.15 * 255).toInt()),
+                                              offset: const Offset(0, 2),
+                                              blurRadius: 4,
+                                            ),
+                                          ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4,),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                            decoration: BoxDecoration(
+                                                color: Colors.white,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withAlpha(
+                                                        (0.15 * 255).toInt()),
+                                                    offset: const Offset(0, 1.68),
+                                                    // blurRadius: 4,
+                                                  )
+                                                ]),
+                                            child: Row(
+                                              children: [
+                                                SizedBox(
+                                                  child: Image.asset(
+                                                      'assets/png/dark_mode_icon.png'),
+                                                ),
+                                                const SizedBox(width: 22),
+                                                Text(
+                                                    translate(
+                                                        'profile.dark_mode'),
+                                                    style: const TextStyle(
+                                                        fontSize: 12)),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4,),
+                                        ],
+                                      ),
+                                    ),
+                                    // Stack(
+                                    //   clipBehavior: Clip.none,
+                                    //   children: [
+                                    //     Container(
+                                    //       margin: const EdgeInsets.only(top: 0),
+                                    //       padding: const EdgeInsets.only(
+                                    //           top: 4, bottom: 4),
+                                    //       color: Colors.grey.shade100,
+                                    //       child: Column(
+                                    //         children: [
+                                    //           const SizedBox(height: 0),
+                                    //           Container(
+                                    //             decoration: BoxDecoration(
+                                    //               color: Colors.white,
+                                    //               boxShadow: [
+                                    //                 BoxShadow(
+                                    //                   color: Colors.black
+                                    //                       .withAlpha(
+                                    //                           (0.15 * 255)
+                                    //                               .toInt()),
+                                    //                   offset:
+                                    //                       const Offset(0, 1.68),
+                                    //                   // blurRadius: 4,
+                                    //                 ),
+                                    //               ],
+                                    //             ),
+                                    //             child: Row(
+                                    //               mainAxisAlignment:
+                                    //                   MainAxisAlignment.center,
+                                    //               children: [
+                                    //                 Padding(
+                                    //                   padding: const EdgeInsets
+                                    //                       .symmetric(
+                                    //                       vertical: 8),
+                                    //                   child: Container(
+                                    //                     width: 94.13,
+                                    //                     height: 30.03,
+                                    //                     decoration:
+                                    //                         BoxDecoration(
+                                    //                       gradient:
+                                    //                           LinearGradient(
+                                    //                         colors: !SharedPref()
+                                    //                                 .isArabic()
+                                    //                             ? [
+                                    //                                 const Color(
+                                    //                                     0xFF151544),
+                                    //                                 const Color(
+                                    //                                     0xFF3535AA)
+                                    //                               ] // لو مش عربي
+                                    //                             : [
+                                    //                                 Colors
+                                    //                                     .white,
+                                    //                                 Colors.grey[
+                                    //                                     300]!
+                                    //                               ], // لو عربي
+                                    //                         begin: Alignment
+                                    //                             .centerLeft,
+                                    //                         end: Alignment
+                                    //                             .centerRight,
+                                    //                       ),
+                                    //                       borderRadius:
+                                    //                           BorderRadius
+                                    //                               .circular(
+                                    //                                   20.3),
+                                    //                     ),
+                                    //                     child: ElevatedButton(
+                                    //                       onPressed: () async {
+                                    //                         if (profileBoxProvider
+                                    //                             .isProfileVisible) {
+                                    //                           profileBoxProvider
+                                    //                               .hideProfileBox();
+                                    //                         }
+                                    //                         await Util
+                                    //                             .saveAndChangeLocale(
+                                    //                                 context,
+                                    //                                 'en');
+                                    //                       },
+                                    //                       style: ElevatedButton
+                                    //                           .styleFrom(
+                                    //                         backgroundColor:
+                                    //                             Colors
+                                    //                                 .transparent,
+                                    //                         //  backgroundColor: !SharedPref().isArabic()
+                                    //                         //       ? appFontColor
+                                    //                         //       : Colors.white,
+                                    //                         minimumSize:
+                                    //                             const Size(
+                                    //                                 100, 16),
+                                    //                         shape: RoundedRectangleBorder(
+                                    //                             borderRadius:
+                                    //                                 BorderRadius
+                                    //                                     .circular(
+                                    //                                         20.3)),
+                                    //                       ),
+                                    //                       child: Text(
+                                    //                           translate(
+                                    //                               'profile.english'),
+                                    //                           style: TextStyle(
+                                    //                               color: !SharedPref()
+                                    //                                       .isArabic()
+                                    //                                   ? Colors
+                                    //                                       .white
+                                    //                                   : Colors
+                                    //                                       .black,
+                                    //                               fontSize:
+                                    //                                   10)),
+                                    //                     ),
+                                    //                   ),
+                                    //                 ),
+                                    //                 const SizedBox(width: 10),
+                                    //                 Container(
+                                    //                   width: 94.13,
+                                    //                   height: 30.03,
+                                    //                   decoration: BoxDecoration(
+                                    //                     borderRadius:
+                                    //                         BorderRadius
+                                    //                             .circular(20.3),
+                                    //                   ),
+                                    //                   child: ElevatedButton(
+                                    //                     onPressed: () async {
+                                    //                       if (profileBoxProvider
+                                    //                           .isProfileVisible) {
+                                    //                         profileBoxProvider
+                                    //                             .hideProfileBox();
+                                    //                       }
+                                    //                       await Util
+                                    //                           .saveAndChangeLocale(
+                                    //                               context,
+                                    //                               'ar');
+                                    //                     },
+                                    //                     style: ElevatedButton
+                                    //                         .styleFrom(
+                                    //                       backgroundColor:
+                                    //                           SharedPref()
+                                    //                                   .isArabic()
+                                    //                               ? appFontColor
+                                    //                               : Colors.grey
+                                    //                                   .shade200,
+                                    //                       minimumSize:
+                                    //                           const Size(
+                                    //                               100, 16),
+                                    //                       shape: RoundedRectangleBorder(
+                                    //                           borderRadius:
+                                    //                               BorderRadius
+                                    //                                   .circular(
+                                    //                                       20.3)),
+                                    //                     ),
+                                    //                     child: Text(
+                                    //                         translate(
+                                    //                             'profile.arabic'),
+                                    //                         style: TextStyle(
+                                    //                             color: SharedPref()
+                                    //                                     .isArabic()
+                                    //                                 ? Colors
+                                    //                                     .white
+                                    //                                 : Colors
+                                    //                                     .black,
+                                    //                             fontSize: 12)),
+                                    //                   ),
+                                    //                 ),
+                                    //               ],
+                                    //             ),
+                                    //           ),
+                                    //
+                                    //           const SizedBox(height: 1),
+                                    //           // Container(
+                                    //           //   height: 2,
+                                    //           //   width: double.infinity,
+                                    //           //   decoration: BoxDecoration(
+                                    //           //     color: Colors.grey.shade300,
+                                    //           //     // boxShadow: [
+                                    //           //     //   BoxShadow(
+                                    //           //     //     color: Colors.black.withAlpha(
+                                    //           //     //         (0.15 * 255).toInt()),
+                                    //           //     //     offset: const Offset(0, 2),
+                                    //           //     //     blurRadius: 4,
+                                    //           //     //   ),
+                                    //           //     // ],
+                                    //           //   ),
+                                    //           // ),
+                                    //
+                                    //           Container(
+                                    //             padding:
+                                    //                 const EdgeInsets.symmetric(
+                                    //                     horizontal: 12,
+                                    //                     vertical: 12),
+                                    //             decoration: BoxDecoration(
+                                    //               boxShadow: [
+                                    //                 BoxShadow(
+                                    //                   color: Colors.black
+                                    //                       .withAlpha(
+                                    //                           (0.15 * 255)
+                                    //                               .toInt()),
+                                    //                   offset:
+                                    //                       const Offset(0, 1.68),
+                                    //                   //blurRadius: 4,
+                                    //                 )
+                                    //               ],
+                                    //               color: Colors.white,
+                                    //             ),
+                                    //             child: Row(
+                                    //               mainAxisAlignment:
+                                    //                   MainAxisAlignment.start,
+                                    //               children: [
+                                    //                 Image.asset(
+                                    //                     'assets/png/notification_filled_icon.png'),
+                                    //                 const SizedBox(width: 12),
+                                    //                 Text(
+                                    //                     translate(
+                                    //                         'profile.mute_notifications'),
+                                    //                     style:
+                                    //                         GoogleFonts.inter(
+                                    //                             fontSize: 11)),
+                                    //                 const Spacer(),
+                                    //                 SizedBox(
+                                    //                   height: 10.57,
+                                    //                   child: Transform.scale(
+                                    //                     scale:
+                                    //                         0.7, // تصغير الحجم
+                                    //                     child: const Switch(
+                                    //                       value: false,
+                                    //                       onChanged: null,
+                                    //                       activeColor:
+                                    //                           appFontColor, // لون الزر لما يكون ON
+                                    //                       activeTrackColor: Color(
+                                    //                           0xffD9D9D9), // لون الخلفية لما يكون ON
+                                    //                       inactiveThumbColor: Color(
+                                    //                           0xff3E3C3C), // لون الزر لما يكون OFF
+                                    //                       inactiveTrackColor: Color(
+                                    //                           0xffD9D9D9), // لون الخلفية لما يكون OFF
+                                    //                     ),
+                                    //                   ),
+                                    //                 )
+                                    //                 // Switch.adaptive(
+                                    //                 //   value: isMuted,
+                                    //                 //   onChanged: (val) => _updateMuteStatus(val),
+                                    //                 //   activeColor: const Color(0xFF1A1A53),
+                                    //                 //   activeTrackColor: Colors.grey.shade400,
+                                    //                 // ),
+                                    //               ],
+                                    //             ),
+                                    //           ),
+                                    //           // 🔹 Divider with shadow
+                                    //           // Container(
+                                    //           //   height: 2,
+                                    //           //   width: double.infinity,
+                                    //           //   decoration: BoxDecoration(
+                                    //           //     color: Colors.grey.shade300,
+                                    //           // boxShadow: [
+                                    //           //   BoxShadow(
+                                    //           //     color: Colors.black.withAlpha(
+                                    //           //         (0.15 * 255).toInt()),
+                                    //           //     offset: const Offset(0, 2),
+                                    //           //     blurRadius: 4,
+                                    //           //   ),
+                                    //           // ],
+                                    //           //   ),
+                                    //           // ),
+                                    //           const SizedBox(
+                                    //             height: 8,
+                                    //           ),
+                                    //           // Container(
+                                    //           //   padding: const EdgeInsets.symmetric(
+                                    //           //         horizontal: 20, vertical: 12),
+                                    //           //   decoration: BoxDecoration(
+                                    //           //       color: Colors.white,
+                                    //           //       boxShadow: [
+                                    //           //         BoxShadow(
+                                    //           //           color: Colors.black.withAlpha(
+                                    //           //               (0.15 * 255).toInt()),
+                                    //           //           offset: const Offset(0, 1.68),
+                                    //           //           // blurRadius: 4,
+                                    //           //         )
+                                    //           //       ]),
+                                    //           //   child: Row(
+                                    //           //     children: [
+                                    //           //       SizedBox(
+                                    //           //         child: Image.asset(
+                                    //           //             'assets/png/dark_mode_icon.png'),
+                                    //           //       ),
+                                    //           //       const SizedBox(width: 22),
+                                    //           //       Text(
+                                    //           //           translate(
+                                    //           //               'profile.dark_mode'),
+                                    //           //           style: const TextStyle(
+                                    //           //               fontSize: 12)),
+                                    //           //     ],
+                                    //           //   ),
+                                    //           // ),
+                                    //         ],
+                                    //       ),
+                                    //     ),
+                                    //     // Positioned(
+                                    //     //   top: -10,
+                                    //     //   left: 0,
+                                    //     //   right: 0,
+                                    //     //   child: Center(
+                                    //     //     child: // QR Code section
+                                    //     //         Container(
+                                    //     //       margin: const EdgeInsets.only(
+                                    //     //           top: 20, bottom: 36),
+                                    //     //       width: 200,
+                                    //     //       height: 200,
+                                    //     //       child: Stack(
+                                    //     //         alignment: Alignment.center,
+                                    //     //         clipBehavior: Clip.hardEdge,
+                                    //     //         children: [
+                                    //     //           // Background with repeated numbers
+                                    //     //           Container(
+                                    //     //             width: 200,
+                                    //     //             height: 200,
+                                    //     //             decoration: BoxDecoration(
+                                    //     //               gradient: LinearGradient(
+                                    //     //                 begin: Alignment.topLeft,
+                                    //     //                 end: Alignment.bottomRight,
+                                    //     //                 colors: [
+                                    //     //                   Colors.grey.shade100,
+                                    //     //                   Colors.grey.shade200,
+                                    //     //                 ],
+                                    //     //               ),
+                                    //     //               borderRadius:
+                                    //     //                   BorderRadius.circular(16),
+                                    //     //               border: Border.all(
+                                    //     //                 color: Colors.grey.shade400,
+                                    //     //                 width: 1,
+                                    //     //               ),
+                                    //     //               boxShadow: [
+                                    //     //                 BoxShadow(
+                                    //     //                   color: Colors.black
+                                    //     //                       .withOpacity(0.1),
+                                    //     //                   blurRadius: 4,
+                                    //     //                   offset: const Offset(0, 2),
+                                    //     //                 ),
+                                    //     //               ],
+                                    //     //             ),
+                                    //     //             child: _buildQRBackground(),
+                                    //     //           ),
+                                    //     //           // QR Code (rotated 45 degrees)
+                                    //     //           Transform.rotate(
+                                    //     //             angle:
+                                    //     //                 0.785398, // 45 degrees in radians
+                                    //     //             child: Container(
+                                    //     //               width: 100,
+                                    //     //               height: 100,
+                                    //     //               decoration: BoxDecoration(
+                                    //     //                 color: Colors.black,
+                                    //     //                 borderRadius:
+                                    //     //                     BorderRadius.circular(8),
+                                    //     //                 boxShadow: [
+                                    //     //                   BoxShadow(
+                                    //     //                     color:
+                                    //     //                         Colors.grey.shade600,
+                                    //     //                     blurRadius: 2,
+                                    //     //                     offset:
+                                    //     //                         const Offset(0, 1),
+                                    //     //                   ),
+                                    //     //                 ],
+                                    //     //               ),
+                                    //     //               child: Image.asset(
+                                    //     //                 'assets/png/qr_code.png',
+                                    //     //                 fit: BoxFit.cover,
+                                    //     //               ),
+                                    //     //             ),
+                                    //     //           ),
+                                    //     //         ],
+                                    //     //       ),
+                                    //     //     ),
+                                    //     //   ),
+                                    //     // ),
+                                    //   ],
+                                    // ),
+                                  ],
+                                ),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(
+                                      width: 20,
+                                    ),
+                                    Image.asset(
+                                        'assets/png/log_out_icon.png'),
+                                    const SizedBox(
+                                      width: 26,
+                                    ),
+                                    TextButton(
+                                      onPressed: () async {
+                                        try {
+                                          print('🚪 Logout button pressed');
+
+                                          // Hide profile box first
+                                          if (profileBoxProvider
+                                              .isProfileVisible) {
+                                            profileBoxProvider
+                                                .hideProfileBox();
+                                          }
+
+                                          // Clear user preferences
+                                          print('🧹 Clearing preferences...');
+                                          await SharedPref()
+                                              .clearPreferences();
+                                          print('✅ Preferences cleared');
+
+                                          // Use global navigation key for navigation
+                                          print(
+                                              '🧭 Navigating to sign in...');
+                                          if (navKey.currentContext != null) {
+                                            Navigator.pushAndRemoveUntil(
+                                              navKey.currentContext!,
+                                              MaterialPageRoute(
+                                                  builder: (context) =>
+                                                  const SignInScreen()),
+                                                  (route) => false,
+                                            );
+                                          } else {
+                                            // Fallback to local context
+                                            Navigator.pushAndRemoveUntil(
+                                              context,
+                                              MaterialPageRoute(
+                                                  builder: (context) =>
+                                                  const SignInScreen()),
+                                                  (route) => false,
+                                            );
+                                          }
+                                          print('✅ Navigation completed');
+                                        } catch (e) {
+                                          print('❌ Logout error: $e');
+                                        }
+                                      },
+                                      child: Text(translate('profile.logout'),
+                                          style: const TextStyle(
+                                              color: Color(0xffBA1719))),
                                     ),
                                   ],
                                 ),
-                                const Spacer(),
-                                Container(
-                                  margin:
-                                      const EdgeInsets.only(top: 8, bottom: 20),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[300],
-                                    borderRadius: const BorderRadius.only(
-                                      bottomRight: Radius.circular(20),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: [
-                                      const SizedBox(
-                                        width: 20,
-                                      ),
-                                      Image.asset(
-                                          'assets/png/log_out_icon.png'),
-                                      const SizedBox(
-                                        width: 26,
-                                      ),
-                                      TextButton(
-                                        onPressed: () async {
-                                          try {
-                                            print('🚪 Logout button pressed');
-
-                                            // Hide profile box first
-                                            if (profileBoxProvider
-                                                .isProfileVisible) {
-                                              profileBoxProvider
-                                                  .hideProfileBox();
-                                            }
-
-                                            // Clear user preferences
-                                            print('🧹 Clearing preferences...');
-                                            await SharedPref()
-                                                .clearPreferences();
-                                            print('✅ Preferences cleared');
-
-                                            // Use global navigation key for navigation
-                                            print(
-                                                '🧭 Navigating to sign in...');
-                                            if (navKey.currentContext != null) {
-                                              Navigator.pushAndRemoveUntil(
-                                                navKey.currentContext!,
-                                                MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        const SignInScreen()),
-                                                (route) => false,
-                                              );
-                                            } else {
-                                              // Fallback to local context
-                                              Navigator.pushAndRemoveUntil(
-                                                context,
-                                                MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        const SignInScreen()),
-                                                (route) => false,
-                                              );
-                                            }
-                                            print('✅ Navigation completed');
-                                          } catch (e) {
-                                            print('❌ Logout error: $e');
-                                          }
-                                        },
-                                        child: Text(translate('profile.logout'),
-                                            style: const TextStyle(
-                                                color: Color(0xffBA1719))),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                // Container(
+                                //
+                                //   decoration: BoxDecoration(
+                                //     color: Colors.grey[300],
+                                //     borderRadius: const BorderRadius.only(
+                                //       bottomRight: Radius.circular(20),
+                                //     ),
+                                //   ),
+                                //   child: Row(
+                                //     mainAxisAlignment: MainAxisAlignment.start,
+                                //     children: [
+                                //       const SizedBox(
+                                //         width: 20,
+                                //       ),
+                                //       Image.asset(
+                                //           'assets/png/log_out_icon.png'),
+                                //       const SizedBox(
+                                //         width: 26,
+                                //       ),
+                                //       TextButton(
+                                //         onPressed: () async {
+                                //           try {
+                                //             print('🚪 Logout button pressed');
+                                //
+                                //             // Hide profile box first
+                                //             if (profileBoxProvider
+                                //                 .isProfileVisible) {
+                                //               profileBoxProvider
+                                //                   .hideProfileBox();
+                                //             }
+                                //
+                                //             // Clear user preferences
+                                //             print('🧹 Clearing preferences...');
+                                //             await SharedPref()
+                                //                 .clearPreferences();
+                                //             print('✅ Preferences cleared');
+                                //
+                                //             // Use global navigation key for navigation
+                                //             print(
+                                //                 '🧭 Navigating to sign in...');
+                                //             if (navKey.currentContext != null) {
+                                //               Navigator.pushAndRemoveUntil(
+                                //                 navKey.currentContext!,
+                                //                 MaterialPageRoute(
+                                //                     builder: (context) =>
+                                //                         const SignInScreen()),
+                                //                 (route) => false,
+                                //               );
+                                //             } else {
+                                //               // Fallback to local context
+                                //               Navigator.pushAndRemoveUntil(
+                                //                 context,
+                                //                 MaterialPageRoute(
+                                //                     builder: (context) =>
+                                //                         const SignInScreen()),
+                                //                 (route) => false,
+                                //               );
+                                //             }
+                                //             print('✅ Navigation completed');
+                                //           } catch (e) {
+                                //             print('❌ Logout error: $e');
+                                //           }
+                                //         },
+                                //         child: Text(translate('profile.logout'),
+                                //             style: const TextStyle(
+                                //                 color: Color(0xffBA1719))),
+                                //       ),
+                                //     ],
+                                //   ),
+                                // ),
                               ],
                             ),
                           ),
@@ -872,8 +1232,8 @@ class _ProfileBoxWithSlideAnimationState
 class AnimatedQRBackgroundPainter extends CustomPainter {
   final double animationValue;
 
-  static const textStyle = TextStyle(
-    color: Colors.grey,
+  static var textStyle = TextStyle(
+    color: HexColor("#009859"),
     fontSize: 12,
     fontWeight: FontWeight.w400,
   );
@@ -883,7 +1243,7 @@ class AnimatedQRBackgroundPainter extends CustomPainter {
 
   // Pre-compute text painter once to avoid recreation
   static final _textPainter = TextPainter(
-    text: const TextSpan(text: text, style: textStyle),
+    text:   TextSpan(text: text, style: textStyle),
     textDirection: ui.TextDirection.ltr,
   );
 
@@ -940,8 +1300,8 @@ class AnimatedQRBackgroundPainter extends CustomPainter {
 
 // Keep the original painter for reference (can be removed if not needed)
 class QRBackgroundPainter extends CustomPainter {
-  static const textStyle = TextStyle(
-    color: Colors.grey,
+  static var textStyle = TextStyle(
+    color: HexColor("#009859"),
     fontSize: 12,
     fontWeight: FontWeight.w400,
   );
@@ -951,7 +1311,7 @@ class QRBackgroundPainter extends CustomPainter {
 
   // Pre-compute text painter once to avoid recreation
   static final _textPainter = TextPainter(
-    text: const TextSpan(text: text, style: textStyle),
+    text:  TextSpan(text: text, style: textStyle),
     textDirection: ui.TextDirection.ltr,
   );
 

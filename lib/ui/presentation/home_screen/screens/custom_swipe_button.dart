@@ -65,6 +65,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   }
 
   void _resetPosition() {
+
     setState(() {
       dragOffset = isCheckedIn ? (buttonWidth - knobSize) : 0;
       isDragging = false;
@@ -178,6 +179,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           loginResponseModel: SharedPref.getLoginData(),
           isCheckedIn: isCheckedIn,
           onConfirmed: () async {
+
             context.read<HomeBloc>().add(const UpdateFaceRecognitionStatus(
                 FaceRecognitionStatus.matching));
             _resetPosition();

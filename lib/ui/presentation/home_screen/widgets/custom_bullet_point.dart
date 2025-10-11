@@ -32,6 +32,8 @@ class CustomBulletPoint extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           // Custom bullet design
           // Container(
@@ -44,14 +46,15 @@ class CustomBulletPoint extends StatelessWidget {
           // ),
           // const SizedBox(width: 4), // Spacing between bullet and text
           SizedBox(
-            width: 100.w,
+            width: 120.w,
             child: Text(
               text,
               maxLines: 2,
               style: GoogleFonts.leagueSpartan(
                 color: Colors.black,
                 fontSize: 14.sp,
-                fontWeight: FontWeight.bold, // ✅ Bold applied
+                letterSpacing: 1.0,
+                fontWeight: FontWeight.w600, // ✅ Bold applied
               ),
             ),
           ),
@@ -102,9 +105,9 @@ class CountWidget extends StatelessWidget {
         count.toUpperCase(),
         style: GoogleFonts.koulen(
             color: countColor,
-            fontSize: 16.sp,
-            fontWeight: FontWeight.bold, // ✅ Bold applied
-            letterSpacing: 1),
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w500, // ✅ Bold applied
+            letterSpacing: 0.09),
       ),
     );
   }

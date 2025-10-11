@@ -124,7 +124,7 @@ class _HomeScreenState extends State<HomeScreenPage>
           // Face Recognition Status Icon (top center)
           FaceRecogenizeCheck(),
           // Bottom Nav Arrow
-          ArraowVisibalityBottomNav(),
+        //  ArraowVisibalityBottomNav(),
         ],
       ),
     );

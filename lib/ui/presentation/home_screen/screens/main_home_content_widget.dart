@@ -25,6 +25,7 @@ class MainHomeContentWidget extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: SizeConfig().getHeight(10)),
         child: Column(
           children: [
+            const SizedBox(height: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -36,7 +37,7 @@ class MainHomeContentWidget extends StatelessWidget {
                           int pageViewIndex) {
                         return GestureDetector(
                           onTap: () => Util.pushPage(
-                              const ProjectAnnouncementPage(), context),
+                                NewsPage(), context),
                           child: Padding(
                             padding: EdgeInsets.symmetric(
                                 horizontal: SizeConfig().getWidth(7)),
@@ -148,26 +149,26 @@ class MainHomeContentWidget extends StatelessWidget {
                     ),
                   ],
                 ),
-
-                // "See All" Button
-                Padding(
-                  padding: const EdgeInsets.only(top: 12.0, right: 16),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      onTap: () => Util.pushPage(
-                          const ProjectAnnouncementPage(), context),
-                      child: Text(
-                        translate('home.see_all'),
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                //
+                // // "See All" Button
+                // Padding(
+                //   padding: const EdgeInsets.only(top: 12.0, right: 16),
+                //   child: Align(
+                //     alignment: Alignment.centerRight,
+                //     child: GestureDetector(
+                //       onTap: () => Util.pushPage(
+                //           const ProjectAnnouncementPage(), context),
+                //       child: Text(
+                //         translate('home.see_all'),
+                //         style: GoogleFonts.inter(
+                //           fontSize: 16,
+                //           color: Colors.grey[700],
+                //           fontWeight: FontWeight.w500,
+                //         ),
+                //       ),
+                //     ),
+                //   ),
+                // ),
               ],
             ),
             const SizedBox(height: 10),

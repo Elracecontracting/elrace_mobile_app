@@ -148,7 +148,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                 // Page Title (Fixed)
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 10),
+                      horizontal: 10.0, vertical: 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -169,13 +169,13 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                         ),
                       ),
                       IconButton(
-                        iconSize: 34,
+                        iconSize: 40,
                         icon: const Icon(Icons.add, color: appFontColor),
                         onPressed: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const PettyCashAddExpense(),
+                              builder: (context) => const PettyCashPopUpScreen(),
                             ),
                           );
                         },
@@ -516,7 +516,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
     return Container(
       decoration: BoxDecoration(
         image: const DecorationImage(
-          image: AssetImage('assets/png/item_bg.png'),
+          image: AssetImage(
+              'assets/png/item_bg_green.png'),
           fit: BoxFit.cover,
         ),
         color: Colors.transparent,

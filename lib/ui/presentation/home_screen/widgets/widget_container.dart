@@ -21,13 +21,13 @@ class WidgetContainer extends StatelessWidget {
       width: double.infinity,
       decoration: BoxDecoration(
         color: white,
-        boxShadow: [
-          BoxShadow(
-            color: black.withAlpha((0.3 * 255).toInt()),
-            spreadRadius: 10,
-            blurRadius: 9,
-          )
-        ],
+        // boxShadow: [
+        //   BoxShadow(
+        //     color: black.withAlpha((0.3 * 255).toInt()),
+        //     spreadRadius: 10,
+        //     blurRadius: 9,
+        //   )
+        // ],
         borderRadius: const BorderRadius.only(
           topRight: Radius.circular(20),
           topLeft: Radius.circular(20),

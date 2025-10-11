@@ -516,8 +516,8 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                 Image.asset('assets/png/document_icon.png',
                                     width: 30, height: 30),
                                 Positioned(
-                                  top: -3,
-                                  right: -3,
+                                  top: -10,
+                                  left: -3,
                                   child: CircleAvatar(
                                     radius: 8,
                                     backgroundColor: Colors.red,
@@ -560,65 +560,65 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                   ),
                 ),
 
-                if (attachments.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Center(
-                      child: ElevatedButton(
-                        onPressed: _generateAttachmentPdf,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.redAccent,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 24, vertical: 12),
-                        ),
-                        child: Text(
-                          "Generate Report",
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16),
-                        ),
-                      ),
-                    ),
-                  ),
-
-                if (savedPdfs.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Generated Reports",
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold, fontSize: 18),
-                        ),
-                        const SizedBox(height: 10),
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: savedPdfs.length,
-                          itemBuilder: (context, index) {
-                            final file = savedPdfs[index];
-                            final filename = file.path.split('/').last;
-                            return ListTile(
-                              title: Text(filename),
-                              trailing: const Icon(Icons.picture_as_pdf,
-                                  color: Colors.red),
-                              onTap: () {
-                                _openPdf(file.path);
-                              },
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                // Add Expense Button (unchanged)
+                // if (attachments.isNotEmpty)
+                //   Padding(
+                //     padding: const EdgeInsets.symmetric(vertical: 16),
+                //     child: Center(
+                //       child: ElevatedButton(
+                //         onPressed: _generateAttachmentPdf,
+                //         style: ElevatedButton.styleFrom(
+                //           backgroundColor: Colors.redAccent,
+                //           shape: RoundedRectangleBorder(
+                //             borderRadius: BorderRadius.circular(8),
+                //           ),
+                //           padding: const EdgeInsets.symmetric(
+                //               horizontal: 24, vertical: 12),
+                //         ),
+                //         child: Text(
+                //           "Generate Report",
+                //           style: const TextStyle(
+                //               color: Colors.white,
+                //               fontWeight: FontWeight.bold,
+                //               fontSize: 16),
+                //         ),
+                //       ),
+                //     ),
+                //   ),
+                //
+                // if (savedPdfs.isNotEmpty)
+                //   Padding(
+                //     padding: const EdgeInsets.all(16.0),
+                //     child: Column(
+                //       crossAxisAlignment: CrossAxisAlignment.start,
+                //       children: [
+                //         const Text(
+                //           "Generated Reports",
+                //           style: TextStyle(
+                //               fontWeight: FontWeight.bold, fontSize: 18),
+                //         ),
+                //         const SizedBox(height: 10),
+                //         ListView.builder(
+                //           shrinkWrap: true,
+                //           physics: const NeverScrollableScrollPhysics(),
+                //           itemCount: savedPdfs.length,
+                //           itemBuilder: (context, index) {
+                //             final file = savedPdfs[index];
+                //             final filename = file.path.split('/').last;
+                //             return ListTile(
+                //               title: Text(filename),
+                //               trailing: const Icon(Icons.picture_as_pdf,
+                //                   color: Colors.red),
+                //               onTap: () {
+                //                 _openPdf(file.path);
+                //               },
+                //             );
+                //           },
+                //         ),
+                //       ],
+                //     ),
+                //   ),
+                //
+                // // Add Expense Button (unchanged)
                 Padding(
                   padding: const EdgeInsets.symmetric(
                       horizontal: 26.0, vertical: 10.0),

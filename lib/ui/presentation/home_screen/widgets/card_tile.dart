@@ -185,7 +185,7 @@ class GrayCardComponent extends StatelessWidget {
                   ),
                 ),
                 Positioned(
-                  left: 36,
+                  left: 25,
                   top: 16,
                   child: SizedBox(
                     height: SizeConfig().getHeight(43),
@@ -205,8 +205,9 @@ class GrayCardComponent extends StatelessWidget {
                           cardTitle.toUpperCase(),
                           style: GoogleFonts.koulen(
                             color: const Color(0xFF151544),
-                            fontSize: 26.w,
+                            fontSize: 24.w,
                             fontWeight: FontWeight.w400,
+                            letterSpacing: 1.9,
                           ),
                         ),
                       ],
@@ -215,7 +216,7 @@ class GrayCardComponent extends StatelessWidget {
                 ),
                 Positioned(
                   top: topPadding ? topPaddingValue : 0,
-                  left: 36,
+                  left: 25,
                   child: DefaultTextStyle(
                     style: GoogleFonts.nunito(
                       fontSize: 12.w, // ✅ Use a realistic size instead of 1
@@ -234,3 +235,4 @@ class GrayCardComponent extends StatelessWidget {
     );
   }
 }
+

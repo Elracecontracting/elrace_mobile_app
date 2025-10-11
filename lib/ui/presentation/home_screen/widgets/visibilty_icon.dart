@@ -15,16 +15,20 @@ class ArraowVisibalityBottomNav extends StatelessWidget {
         return InkWell(
           onTap: () => bloc.add(const ChangeVisiablityIcon()),
           child: Container(
+            alignment: Alignment.bottomRight,
             height: 50.w,
-            margin: EdgeInsets.only(bottom: 120.w),
+            margin:const EdgeInsets.symmetric(horizontal: 10),
             child: !bloc.enableBottomNav
                 ? Image.asset(
                     "assets/newapp/arrow_appear.png",
                     width: 40.w,
                   )
-                : Image.asset(
-                    "assets/newapp/arrow.png",
-                    width: 40.w,
+                : Opacity(
+                    opacity: 0.5,
+                    child: Image.asset(
+                      "assets/newapp/arrow.png",
+                      width: 35.w,
+                    ),
                   ),
           ),
         );

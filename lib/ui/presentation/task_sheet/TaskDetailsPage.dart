@@ -126,8 +126,8 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
                   ),
                 ),
                 Container(
-                  width: 25,
-                  height: 25,
+                  width: 30,
+                  height: 30,
                   decoration: const BoxDecoration(
                       color: appFontColor, shape: BoxShape.circle),
                   child: IconButton(

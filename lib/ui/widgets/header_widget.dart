@@ -12,6 +12,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../../main.dart';
+import '../presentation/home_screen/bloc/home_bloc.dart';
+import '../presentation/home_screen/screens/home_screen.dart';
+
 class HeaderWidget extends StatefulWidget implements PreferredSizeWidget {
   const HeaderWidget({super.key});
 
@@ -47,8 +51,10 @@ class _HeaderWidgetState extends State<HeaderWidget> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
+    var bloc = HomeBloc.get(context);
     return AppBar(
       automaticallyImplyLeading: false,
       backgroundColor: Colors.transparent,
@@ -69,21 +75,35 @@ class _HeaderWidgetState extends State<HeaderWidget> {
           alignment: Alignment.center,
           children: [
             PositionedDirectional(
-              top: SizeConfig().getHeight(36),
-              start: SizeConfig().getWidth(15),
+              top: SizeConfig().getHeight(25),
+              start: SizeConfig().getWidth(10),
               //left: SizeConfig().getWidth(15),
-              child: Image.asset(
-                'assets/png/logo.gif',
-                fit: BoxFit.cover,
-                height: SizeConfig().getHeight(110),
-                width: SizeConfig().getWidth(130),
+              child: GestureDetector(
+                onTap: (){
+                  bloc.isNotOpen=false;
+                  setState(() {
+                    bloc.add(ChangeCurrentIndex(index: 1));
+                  });
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const HomeScreen(),
+                    ),
+                        (route) => true,
+                  );
+                },
+                child: Image.asset(
+                  'assets/png/logo.gif',
+                  fit: BoxFit.cover,
+                  height: SizeConfig().getHeight(100),
+                  width: SizeConfig().getWidth(120),
+                ),
               ),
             ),
             SafeArea(
               bottom: false,
               child: Padding(
-                padding: EdgeInsets.symmetric(
-                    horizontal: SizeConfig().getWidth(20), vertical: 0),
+                padding: EdgeInsets.symmetric(horizontal: SizeConfig().getWidth(20), vertical: 0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -141,12 +161,15 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                         GestureDetector(
                           onTap: () {
                             if (SharedPref.isUserAuthenticated()) {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => const NotificationScreen(),
-                                ),
-                              );
+                              if(!bloc.isNotOpen){
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const NotificationScreen(),
+                                  ),
+                                );
+                                bloc.isNotOpen=true;
+                              }
                             }
                           },
                           child: Stack(
