@@ -31,10 +31,26 @@
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>We need camera access for face recognition check-in and taking photos.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need access to your photo library to select and upload photos.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>We need permission to save photos to your library.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>We need microphone access for video recording.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>We are using Face ID for checking in.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>We use your location to calculate accurate prayer times.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>We use your location to calculate accurate prayer times and track attendance.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>We use your location to calculate accurate prayer times and track attendance.</string>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>INSendMessageIntent</string>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>
