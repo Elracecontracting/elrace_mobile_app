@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
+  final ValueChanged<String>? onChange;
   final String hintText;
   final int? maxLine;
   final int? maxCharacter;
@@ -24,6 +25,7 @@ class CustomTextField extends StatelessWidget {
     this.verticalPadding = 13,
     this.inputType = TextInputType.text,
     this.onValidate,
+    this.onChange,
     this.showLabel = false,
     this.maxCharacter,
   });
@@ -33,6 +35,7 @@ class CustomTextField extends StatelessWidget {
     return TextFormField(
       maxLines: maxLine,
       controller: controller,
+      onChanged: onChange,
       style:
           CustomTextStyle.reportTitle.copyWith(fontWeight: FontWeight.normal),
       cursorColor: Colors.black,

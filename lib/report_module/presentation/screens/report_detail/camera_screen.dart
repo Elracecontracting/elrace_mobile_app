@@ -75,6 +75,9 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
       final XFile file = await controller.takePicture();
       _images.add(file);
       setState(() {});
+      if (widget.onePicture) {
+        Navigator.pop(context, _images);
+      }
     } catch (e) {
       debugPrint("Error capturing photo: $e");
     }
@@ -97,7 +100,8 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
             color: CustomColors.white,
             borderColor: CustomColors.black,
             onPressed: () {
-              Navigator.pop(context);
+              // Navigator.pop(context);
+              Navigator.pop(context, _images);
             },
           ),
         ),
@@ -106,15 +110,15 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
           height: 60,
         ),
         actions: [
-          SquareButton(
-            icon: Icons.check,
-            color: CustomColors.blue,
-            borderColor: CustomColors.white,
-            onPressed: () {
-              Navigator.pop(context, _images);
-            },
-          ),
-          const SizedBox(width: 12),
+          // SquareButton(
+          //   icon: Icons.check,
+          //   color: CustomColors.blue,
+          //   borderColor: CustomColors.white,
+          //   onPressed: () {
+          //     Navigator.pop(context, _images);
+          //   },
+          // ),
+          // const SizedBox(width: 12),
         ],
       ),
       body: _showCameraAccessDeniedView
@@ -218,8 +222,8 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
                             child: CupertinoButton(
                               onPressed: takePhoto,
                               child: Container(
-                                height: 50,
-                                width: 50,
+                                height: 70,
+                                width: 70,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: (widget.onePicture &&

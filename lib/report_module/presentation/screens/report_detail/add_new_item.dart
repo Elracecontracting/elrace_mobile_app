@@ -140,15 +140,17 @@ class _AddNewItemState extends State<AddNewItem> {
                           color: CustomColors.containerColor,
                           borderRadius: BorderRadius.circular(8)),
                       child: Image.file(
-                          key: Key(_imageBust.toString()),
-                          File(widget.report.reportItems[currentIndex].image)),
+                        key: Key(_imageBust.toString()),
+                        File(widget.report.reportItems[currentIndex].image),
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   Positioned(
                     top: 10,
                     right: 10,
                     child: SquareButton(
-                      icon: Icons.camera_alt_rounded,
+                      icon: Icons.flip_camera_ios,
                       color: CustomColors.white,
                       borderColor: CustomColors.black,
                       onPressed: () async {
@@ -184,23 +186,60 @@ class _AddNewItemState extends State<AddNewItem> {
               widget.report.reportItems[currentIndex].type == "image")
             const SizedBox(height: 16),
           CustomTextField(
-            maxCharacter: 100,
-            showLabel: true,
-            required: false,
-            controller: locationController,
-            inputType: TextInputType.text,
-            hintText: "Location",
-          ),
+              maxCharacter: 100,
+              showLabel: true,
+              required: false,
+              controller: locationController,
+              inputType: TextInputType.text,
+              hintText: "Location",
+              onChange: (v) async {
+                if (currentIndex > -1 &&
+                    widget.report.reportItems[currentIndex] != -1) {
+                  ReportItemModel updatedItem = widget
+                      .report.reportItems[currentIndex]
+                      .copyWith(location: v);
+                  List<ReportItemModel> itemsUpdated =
+                      widget.report.reportItems;
+                  itemsUpdated[currentIndex] = updatedItem;
+                  await reportProvider.updateReportDetail(
+                    widget.report.copyWith(reportItems: itemsUpdated),
+                  );
+
+                  if (!context.mounted) return;
+                  _loading = false;
+                  setState(() {});
+
+                  return;
+                }
+              }),
           const SizedBox(height: 8),
           CustomTextField(
-            maxCharacter: 1000,
-            showLabel: true,
-            required: false,
-            controller: descriptionController,
-            inputType: TextInputType.multiline,
-            maxLine: 4,
-            hintText: "Description",
-          ),
+              maxCharacter: 1000,
+              showLabel: true,
+              required: false,
+              controller: descriptionController,
+              inputType: TextInputType.multiline,
+              maxLine: 4,
+              hintText: "Description",
+              onChange: (v) async {
+                if (currentIndex > -1 &&
+                    widget.report.reportItems[currentIndex] != -1) {
+                  ReportItemModel updatedItem = widget
+                      .report.reportItems[currentIndex]
+                      .copyWith(description: v);
+                  List<ReportItemModel> itemsUpdated =
+                      widget.report.reportItems;
+                  itemsUpdated[currentIndex] = updatedItem;
+                  await reportProvider.updateReportDetail(
+                    widget.report.copyWith(reportItems: itemsUpdated),
+                  );
+
+                  if (!context.mounted) return;
+                  _loading = false;
+                  setState(() {});
+                  return;
+                }
+              }),
           // const SizedBox(height: 12),
           Center(
             child: Text(
@@ -208,71 +247,71 @@ class _AddNewItemState extends State<AddNewItem> {
               style: CustomTextStyle.reportHeader.copyWith(color: black),
             ),
           ),
-          const SizedBox(height: 12),
-          MaterialButton(
-            onPressed: () async {
-              _loading = true;
-              setState(() {});
-
-              if (currentIndex > -1 &&
-                  widget.report.reportItems[currentIndex] != -1) {
-                ReportItemModel updatedItem =
-                    widget.report.reportItems[currentIndex].copyWith(
-                  location: locationController.text,
-                  description: descriptionController.text,
-                );
-                List<ReportItemModel> itemsUpdated = widget.report.reportItems;
-                itemsUpdated[currentIndex] = updatedItem;
-                await reportProvider.updateReportDetail(
-                  widget.report.copyWith(reportItems: itemsUpdated),
-                );
-
-                if (!context.mounted) return;
-                _loading = false;
-                setState(() {});
-                Navigator.pop(context, updatedItem);
-                return;
-              }
-
-              ReportItemModel _newItem = ReportItemModel(
-                  id: DateTime.now().millisecondsSinceEpoch.toString(),
-                  reportId: widget.report.report.id,
-                  type: "text",
-                  image: "",
-                  location: locationController.text,
-                  description: descriptionController.text,
-                  createdAt: DateTime.now(),
-                  updatedAt: DateTime.now());
-
-              await reportProvider.updateReportDetail(
-                widget.report.copyWith(
-                  reportItems: [...widget.report.reportItems, _newItem],
-                ),
-              );
-              if (!context.mounted) return;
-              _loading = false;
-              setState(() {});
-              Navigator.pop(context, _newItem);
-            },
-            height: 44,
-            color: CustomColors.maroon,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-            child: _loading
-                ? SizedBox(
-                    height: 30,
-                    width: 30,
-                    child: CircularProgressIndicator(
-                      color: CustomColors.white,
-                    ))
-                : Text(
-                    "Save",
-                    style: CustomTextStyle.reportTitle.copyWith(
-                      color: CustomColors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-          ),
+          // const SizedBox(height: 12),
+          // MaterialButton(
+          //   onPressed: () async {
+          //     _loading = true;
+          //     setState(() {});
+          //
+          //     if (currentIndex > -1 &&
+          //         widget.report.reportItems[currentIndex] != -1) {
+          //       ReportItemModel updatedItem =
+          //           widget.report.reportItems[currentIndex].copyWith(
+          //         location: locationController.text,
+          //         description: descriptionController.text,
+          //       );
+          //       List<ReportItemModel> itemsUpdated = widget.report.reportItems;
+          //       itemsUpdated[currentIndex] = updatedItem;
+          //       await reportProvider.updateReportDetail(
+          //         widget.report.copyWith(reportItems: itemsUpdated),
+          //       );
+          //
+          //       if (!context.mounted) return;
+          //       _loading = false;
+          //       setState(() {});
+          //       Navigator.pop(context, updatedItem);
+          //       return;
+          //     }
+          //
+          //     ReportItemModel _newItem = ReportItemModel(
+          //         id: DateTime.now().millisecondsSinceEpoch.toString(),
+          //         reportId: widget.report.report.id,
+          //         type: "text",
+          //         image: "",
+          //         location: locationController.text,
+          //         description: descriptionController.text,
+          //         createdAt: DateTime.now(),
+          //         updatedAt: DateTime.now());
+          //
+          //     await reportProvider.updateReportDetail(
+          //       widget.report.copyWith(
+          //         reportItems: [...widget.report.reportItems, _newItem],
+          //       ),
+          //     );
+          //     if (!context.mounted) return;
+          //     _loading = false;
+          //     setState(() {});
+          //     Navigator.pop(context, _newItem);
+          //   },
+          //   height: 44,
+          //   color: CustomColors.maroon,
+          //   shape:
+          //       RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          //   child: _loading
+          //       ? SizedBox(
+          //           height: 30,
+          //           width: 30,
+          //           child: CircularProgressIndicator(
+          //             color: CustomColors.white,
+          //           ))
+          //       : Text(
+          //           "Save",
+          //           style: CustomTextStyle.reportTitle.copyWith(
+          //             color: CustomColors.white,
+          //             fontWeight: FontWeight.w500,
+          //           ),
+          //         ),
+          // ),
           const SizedBox(height: 16),
           Row(
             children: [

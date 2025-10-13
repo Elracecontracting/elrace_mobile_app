@@ -25,7 +25,7 @@ class ReportItem extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+          margin: const EdgeInsets.only(top: 8, left: 16, right: 16),
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
@@ -43,8 +43,8 @@ class ReportItem extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Container(
-                              width: 52,
-                              height: 52,
+                              width: 80,
+                              height: 80,
                               clipBehavior: Clip.antiAlias,
                               decoration: BoxDecoration(
                                   color: CustomColors.white,
