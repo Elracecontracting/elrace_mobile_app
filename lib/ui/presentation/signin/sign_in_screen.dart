@@ -163,7 +163,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             'Password', 'lock.png', passwordController, true),
                         SizedBox(height: SizeConfig().getHeight(6)),
                         Padding(
-                          padding: const EdgeInsets.only(top: 20),
+                          padding: const EdgeInsets.only(top: 5),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.end,
                             crossAxisAlignment: CrossAxisAlignment.center,
@@ -188,6 +188,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                   style: GoogleFonts.tajawal(
                                     fontWeight: FontWeight.w600,
                                     color: const Color(0xff30309B),
+                                    fontSize: 15
                                   ),
                                 ),
                               ),

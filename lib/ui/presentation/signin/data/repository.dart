@@ -30,7 +30,7 @@ class UserRepo {
     Map<String, dynamic> body = {
       "jsonrpc": "2.0",
       "params": {
-        "db": "test.elrace.com",
+        "db": "test2.elrace.com",
         "login": email,
         "password": password,
         "device_id": deviceId,
