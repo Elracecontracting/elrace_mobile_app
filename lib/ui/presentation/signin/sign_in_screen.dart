@@ -1,22 +1,20 @@
 import 'dart:convert';
 import 'dart:developer';
+
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/instruction/views/instruction_view.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
-import 'package:el_race/ui/presentation/splash_screen/splash_screen.dart';
 import 'package:el_race/utils/Util.dart';
-import 'package:el_race/utils/di.dart';
+import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/orientation_helper.dart';
+import 'package:el_race/utils/string_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:el_race/utils/color_utils.dart';
-import 'package:el_race/utils/string_utils.dart';
+import 'package:hexcolor/hexcolor.dart';
 
 import '../home_screen/screens/home_screen.dart';
-
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -29,8 +27,8 @@ class _SignInScreenState extends State<SignInScreen> {
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
   bool isChecked = false;
-  late SignInBloc signInBloc ;
-  
+  late SignInBloc signInBloc;
+
   @override
   void didChangeDependencies() {
     signInBloc = SignInBloc.get(context);
@@ -41,7 +39,7 @@ class _SignInScreenState extends State<SignInScreen> {
   void dispose() {
     usernameController.dispose();
     passwordController.dispose();
-    
+
     super.dispose();
   }
 
@@ -50,7 +48,7 @@ class _SignInScreenState extends State<SignInScreen> {
     return BlocConsumer<SignInBloc, SignInState>(
       listener: (context, state) async {
         log('Listener state: $state');
-    
+
         if (state is ErrMsg) {
           Navigator.of(context, rootNavigator: true).maybePop();
           await Future.delayed(const Duration(milliseconds: 100));
@@ -69,7 +67,7 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
           );
         }
-    
+
         if (state is LoadingST) {
           if (state.isLoading) {
             showDialog(
@@ -83,23 +81,28 @@ class _SignInScreenState extends State<SignInScreen> {
         }
         if (state is InitialSignedInST) {
           Util.fetchHomeScreenData(context);
-        
-          SharedPref().setPreferencesString('loginResponse', jsonEncode(state.loginResponse.toJson()));
-          SharedPref().setPreferencesBoolean('isRegistered', true); 
-    
+
+          SharedPref().setPreferencesString(
+              'loginResponse', jsonEncode(state.loginResponse.toJson()));
+          SharedPref().setPreferencesBoolean('isRegistered', true);
+
           // final name = state.loginResponse.result?.data?.username?.toLowerCase() ?? "";
-          
+
           // if (name == "jawad@elrace.com" || name == "aziz@elrace.com") {
           //   Util.pushPageAndRemoveRoutes(const SplashScreen(), context);
           // } else {
-            Util.pushPageAndRemoveRoutes(InstructionView(loginResponseModel: state.loginResponse), context);
+          Util.pushPageAndRemoveRoutes(
+              InstructionView(loginResponseModel: state.loginResponse),
+              context);
           // }
         }
-    
       },
-      buildWhen: (previous, current) => current is LoadingST || current is InitialSignedInST || current is ErrMsg,
+      buildWhen: (previous, current) =>
+          current is LoadingST ||
+          current is InitialSignedInST ||
+          current is ErrMsg,
       builder: (context, state) {
-         return Scaffold(
+        return Scaffold(
           backgroundColor: Colors.white,
           resizeToAvoidBottomInset: false,
           body: SafeArea(
@@ -118,12 +121,13 @@ class _SignInScreenState extends State<SignInScreen> {
                 SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   child: Padding(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: SizeConfig().getWidth(15)),
+                    padding: EdgeInsets.symmetric(horizontal: SizeConfig().getWidth(15)),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        SizedBox(height: SizeConfig().getHeight(110),),
+                        SizedBox(
+                          height: SizeConfig().getHeight(110),
+                        ),
                         Image.asset(
                           'assets/png/logo.gif',
                           fit: BoxFit.cover,
@@ -135,32 +139,41 @@ class _SignInScreenState extends State<SignInScreen> {
                         // ),
                         Text(
                           'sign in to your Account',
-                          style:GoogleFonts.tajawal(fontSize: SizeConfig().getTextSize(20)),
+                          style: GoogleFonts.tajawal(
+                            fontWeight: FontWeight.w400,
+                              fontSize: SizeConfig().getTextSize(20)),
                         ),
                         SizedBox(height: SizeConfig().getHeight(20)),
-                        textForms('Email ID', 'account.png', usernameController,
-                            false),
+                        textForms('Email ID', 'account.png', usernameController, false),
                         SizedBox(height: SizeConfig().getHeight(40)),
-                        textForms(
-                            'Password', 'lock.png', passwordController, true),
+                        textForms('Password', 'lock.png', passwordController, true),
                         SizedBox(height: SizeConfig().getHeight(6)),
-                        Row(
+                         Row(
                           mainAxisAlignment: MainAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Checkbox(
                               value: isChecked,
+                              activeColor:const Color(0xff00264D) ,
                               onChanged: (bool? value) {
                                 setState(() {
                                   isChecked = value!;
                                 });
                               },
                             ),
-                            const Text(
-                              'Remember Password',
-                              style: TextStyle(color: Color(0xff30309B)),
+                            Padding(
+                              padding: const EdgeInsets.only(top: 5.0),
+                              child: Text(
+                                'Remember Password',
+                                style: GoogleFonts.tajawal(
+                                  fontWeight: FontWeight.w600,
+                                    color:const Color(0xff30309B),
+                                    ),
+                              ),
                             ),
+
                             SizedBox(
-                              width: SizeConfig().getHeight(30),
+                              width: SizeConfig().getHeight(12),
                             ),
                           ],
                         ),
@@ -179,23 +192,27 @@ class _SignInScreenState extends State<SignInScreen> {
                             deviceId: '776655',
                           ));
                         }),
-                        const SizedBox(
-                          height: 7,
-                        ),
+                        const SizedBox(height: 7,),
                         InkWell(
                           onTap: () => Util.pushPageAndRemoveRoutes(
                               const HomeScreen(), context),
-                          child: const Text(
+                          child:   Text(
                             'Continue as a Guest',
-                            style: const TextStyle(
+                            style:   TextStyle(
+                                color:HexColor("#999999"),
+                                fontWeight: FontWeight.bold,
                                 decoration: TextDecoration.underline,
-                                fontSize: 13.0),
+                                fontSize: 12.0),
                           ),
                         ),
                         SizedBox(height: SizeConfig().getHeight(70)),
-                        Text('Contact with Support',
-                            style: TextStyle(
-                                fontSize: SizeConfig().getTextSize(18))),
+                        Text(
+                          'Contact with Support',
+                          style: GoogleFonts.tajawal(
+                              fontWeight: FontWeight.w600,
+                              fontSize: SizeConfig().getTextSize(18)),
+                        ),
+
                       ],
                     ),
                   ),
@@ -231,18 +248,19 @@ Widget loginButton(Function() onTapped) {
       child: Center(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // const Icon(Icons.person_add_alt, color: Colors.white),
-            SizedBox(width: SizeConfig().getWidth(8)),
+            //SizedBox(width: SizeConfig().getWidth(8)),
             Text(
-              'sign in ',
+              'sign in',
               style: TextStyle(
                 color: Colors.black,
                 fontSize: SizeConfig().getTextSize(19),
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(width: SizeConfig().getWidth(10)),
+            SizedBox(width: SizeConfig().getWidth(8)),
             const Icon(Icons.arrow_forward, color: Colors.black),
           ],
         ),
@@ -251,8 +269,7 @@ Widget loginButton(Function() onTapped) {
   );
 }
 
-Widget textForms(
-    String title, String icon, TextEditingController controller, bool obscure) {
+Widget textForms(String title, String icon, TextEditingController controller, bool obscure) {
   return Container(
     height: SizeConfig().getHeight(55),
     decoration: BoxDecoration(
@@ -273,9 +290,9 @@ Widget textForms(
         border: InputBorder.none,
         hintText: title,
         contentPadding: const EdgeInsets.symmetric(vertical: 14),
-        hintStyle: TextStyle(
-            fontSize: 16, color: Colors.black.withAlpha((0.5 * 255).toInt())),
-        prefixIcon: Image.asset('$imagePrefixIcons/$icon'),
+        hintStyle: const TextStyle(
+            fontSize: 14, color: Color(0xFF545454)),
+        prefixIcon: Image.asset('$imagePrefixIcons/$icon',color: const Color(0xFF545454),),
       ),
     ),
   );

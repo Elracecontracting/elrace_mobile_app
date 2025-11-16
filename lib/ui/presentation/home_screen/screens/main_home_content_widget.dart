@@ -1,14 +1,11 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:el_race/ui/presentation/News%20Banner/banner.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/widget_container.dart';
-import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_translate/flutter_translate.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../provider/slider_provider.dart';
@@ -26,10 +23,12 @@ class MainHomeContentWidget extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: SizeConfig().getHeight(10)),
         child: Column(
           children: [
+            const SizedBox(height: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Stack(
+                  alignment: Alignment.center,
                   children: [
                     CarouselSlider.builder(
                       itemCount: sliderProvider.sliderImages.length,
@@ -37,7 +36,7 @@ class MainHomeContentWidget extends StatelessWidget {
                           int pageViewIndex) {
                         return GestureDetector(
                           onTap: () => Util.pushPage(
-                              const ProjectAnnouncementPage(), context),
+                                NewsPage(), context),
                           child: Padding(
                             padding: EdgeInsets.symmetric(
                                 horizontal: SizeConfig().getWidth(7)),
@@ -121,7 +120,9 @@ class MainHomeContentWidget extends StatelessWidget {
                       bottom: 10,
                       left: 0,
                       right: 0,
-                      child: Row(
+                      child: Center(
+                        child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: List.generate(sliderProvider.titles.length,
                             (index) {
@@ -146,32 +147,33 @@ class MainHomeContentWidget extends StatelessWidget {
                           );
                         }),
                       ),
+                     )
                     ),
                   ],
                 ),
-
-                // "See All" Button
-                Padding(
-                  padding: const EdgeInsets.only(top: 12.0, right: 16),
-                  child: Align(
-                    alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      onTap: () => Util.pushPage(
-                          const ProjectAnnouncementPage(), context),
-                      child: Text(
-                        translate('home.see_all'),
-                        style: GoogleFonts.inter(
-                          fontSize: 16,
-                          color: Colors.grey[700],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                //
+                // // "See All" Button
+                // Padding(
+                //   padding: const EdgeInsets.only(top: 12.0, right: 16),
+                //   child: Align(
+                //     alignment: Alignment.centerRight,
+                //     child: GestureDetector(
+                //       onTap: () => Util.pushPage(
+                //           const ProjectAnnouncementPage(), context),
+                //       child: Text(
+                //         translate('home.see_all'),
+                //         style: GoogleFonts.inter(
+                //           fontSize: 16,
+                //           color: Colors.grey[700],
+                //           fontWeight: FontWeight.w500,
+                //         ),
+                //       ),
+                //     ),
+                //   ),
+                // ),
               ],
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 15.w),
             const WidgetContainer(),
             SizedBox(height: 120.h),
           ],

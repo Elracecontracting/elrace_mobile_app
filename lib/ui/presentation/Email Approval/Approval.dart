@@ -1,21 +1,24 @@
 import 'dart:convert';
+
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/widgets/approve_card.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_card_type_one.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_card_type_two.dart';
-import 'package:el_race/utils/Util.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/widgets/hr_and_pettycash_card.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/widgets/invoice_and_rfq_card.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/widgets/my_action_card.dart';
+import 'package:el_race/ui/presentation/home_screen/widgets/visibilty_icon.dart';
+import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:http/http.dart' as http;
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hexcolor/hexcolor.dart';
+import 'package:http/http.dart' as http;
 import '../../widgets/header_widget.dart';
-import 'package:el_race/utils/color_utils.dart';
-
+import '../home_screen/screens/main_screens.dart';
 
 class ApprovalsScreen extends StatefulWidget {
-
-  const ApprovalsScreen({Key? key, }) : super(key: key);
+  const ApprovalsScreen({
+    Key? key,
+  }) : super(key: key);
 
   @override
   State<ApprovalsScreen> createState() => _ApprovalsScreenState();
@@ -29,24 +32,56 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   List<dynamic> invoiceItems = [];
   List<dynamic> pettyCashItems = [];
   List<dynamic> allItems = [];
-
   List<dynamic> approvalItems = [];
   bool isLoading = false;
   String error = '';
 
   // Add a field to store errors per category
   Map<String, String> categoryErrors = {};
-  
-  // Add expanded state management for the new cards
-  Set<int> expandedTypeOneItems = {};
-  Set<int> expandedTypeTwoItems = {};
 
   @override
   void initState() {
     super.initState();
-    _fetchApprovalData(); // Initially fetch HR data
+    selectedCategory=categories.first;
+    searchController.addListener(_onSearchChanged);
+    _fetchApprovalData(); 
   }
-
+  
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+  
+  void _onSearchChanged() {
+    setState(() {
+      approvalItems = _getFilteredItems();
+    });
+  }
+  
+  List<dynamic> _getFilteredItems() {
+    final allFiltered = _getApprovalListForSelectedCategory();
+    if (searchController.text.isEmpty) {
+      return allFiltered;
+    }
+    
+    final searchLower = searchController.text.toLowerCase();
+    return allFiltered.where((item) {
+      final name = item["name"]?.toString().toLowerCase() ?? "";
+      final requestNo = item["request_no"]?.toString().toLowerCase() ?? "";
+      final reqNo = item["req_no"]?.toString().toLowerCase() ?? "";
+      final title = item["title"]?.toString().toLowerCase() ?? "";
+      final employeeName = item["employee_name"]?.toString().toLowerCase() ?? "";
+      final vendor = item["vendor"]?.toString().toLowerCase() ?? "";
+      
+      return name.contains(searchLower) ||
+          requestNo.contains(searchLower) ||
+          reqNo.contains(searchLower) ||
+          title.contains(searchLower) ||
+          employeeName.contains(searchLower) ||
+          vendor.contains(searchLower);
+    }).toList();
+  }
 
   Future<List<dynamic>> _fetchCategoryData(String groupType) async {
     final token = SharedPref.getLoginData().result?.token;
@@ -72,7 +107,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
-    debugPrint("fetchCategoryData: ${request.url} $groupType \n${response.body}");
+    debugPrint(
+        "fetchCategoryData: ${request.url} $groupType \n${response.body}");
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -120,13 +156,15 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       // Add type info to each item
       hrItems = results[0].map((item) => {...item, 'type': 'HR'}).toList();
       rfqItems = results[1].map((item) => {...item, 'type': 'RFQ'}).toList();
-      invoiceItems = results[2].map((item) => {...item, 'type': 'INVOICE'}).toList();
-      pettyCashItems = results[3].map((item) => {...item, 'type': 'PETTY CASH'}).toList();
+      invoiceItems =
+          results[2].map((item) => {...item, 'type': 'INVOICE'}).toList();
+      pettyCashItems =
+          results[3].map((item) => {...item, 'type': 'PETTY CASH'}).toList();
 
       allItems = [...hrItems, ...rfqItems, ...invoiceItems, ...pettyCashItems];
 
       setState(() {
-        approvalItems = _getApprovalListForSelectedCategory();
+        approvalItems = _getFilteredItems();
         isLoading = false;
         // If all failed, show a general error
         if (categoryErrors.length == 4) {
@@ -157,178 +195,224 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     }
   }
 
-
-  final Map<String, String> categoryIcons = {
-    "My Actions": "assets/png/all-icon.png",
-    "HR": "assets/png/hr-icon.png",
-    "RFQ": "assets/png/rfq-icon.png",
-    "INVOICE": "assets/png/invoice-icon.png",
-    "PETTY CASH": "assets/png/petty-cash-icon.png",
+  Map<String, String> get categoryIcons => {
+    translate('home.my_action'): "assets/png/all-icon.png",
+    translate('home.hr'): "assets/png/hr-icon.png",
+    translate('home.rfq'): "assets/png/rfq-icon.png",
+    translate('home.invoice'): "assets/png/invoice-icon.png",
+    translate('home.petty_cash'): "assets/png/petty-cash-icon.png",
   };
 
-  final List<String> categories = ["My Actions", "HR", "RFQ", "INVOICE", "PETTY CASH"];
-
+  final List<String> categories = [
+    translate('home.my_action'),
+    translate('home.hr'),
+    translate('home.rfq'),
+    translate('home.invoice'),
+    translate('home.petty_cash'),
+  ];
+  bool isSearch = false;
 
   @override
   Widget build(BuildContext context) {
-    print('${SharedPref.getLoginData().result?.token}');
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
+      bottomNavigationBar: const CustomBottomNavBar(isMain: false,),
       body: RefreshIndicator(
         onRefresh: _fetchApprovalData,
-        child: Column(
+        child: Stack(
           children: [
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const BackButton(),
-                  Text(
-                    'MY APPROVAL',
-                    style: GoogleFonts.koulen(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w400,
-                      color: appFontColor,
-                      letterSpacing: 1.9,
-                    ),
-                  ),
-                  const SizedBox(width: 40),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
+            Column(
+              children: [
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const BackButton(),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeInOut,
+                        height: 40,
+                        width: isSearch ? 310.w : 43.w,
+                        decoration: BoxDecoration(
+                          color: isSearch ? Colors.white : HexColor("#ADB2BD"),
+                          border: isSearch ? Border.all(color: Colors.grey) : null,
+                          borderRadius: BorderRadius.circular(20),
+                          gradient: isSearch ? const LinearGradient(
+                                  colors: [
+                                    Color(0xffD6D6D6),
+                                    Color(0xffADB2BD),
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                )
+                           : null,
+                        ),
+                        child: Row(
+                          children: [
+                            if (isSearch)
+                              Expanded(
+                                child: TextFormField(
+                                  controller: searchController,
+                                  autofocus: true,
+                                  style: const TextStyle(
+                                    color: Color(0xFF1A1A53),
+                                    fontSize: 14,
+                                    fontFamily: 'Koulen',
+                                    fontWeight: FontWeight.w400,
+                                  ),
+                                  decoration: const InputDecoration(
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.only(bottom: 10,left: 10),
+                                    hintText: 'Search...',
+                                    hintStyle: TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ),
+                              ),
 
-            // Top Category Tabs (Only HR for now)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: categories.map((cat) {
-                  bool isSelected = selectedCategory == cat;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 5.0),
-                    child: GestureDetector(
+                            GestureDetector(
                       onTap: () {
                         setState(() {
-                          selectedCategory = cat;
-                          approvalItems = _getApprovalListForSelectedCategory();
+                          isSearch = !isSearch;
+                          if (!isSearch) {
+                            searchController.clear();
+                          }
                         });
                       },
-                      child: Container(
-                        width: 90.w,
-                        margin: const EdgeInsets.only(right: 4),
-                        padding: const EdgeInsets.symmetric(vertical: 7),
-                        decoration: BoxDecoration(
-                          color: isSelected ? appFontColor : Colors.grey[300],
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Column(
-                          children: [
-                            Image.asset(
-                              categoryIcons[cat] ?? "assets/icons/default.png",
-                              height: 30.w,
-                              width: 30.w,
-                              // color: isSelected ? Colors.white : Colors.black87,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              cat,
-                              style: GoogleFonts.koulen(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.bold,
-                                color: isSelected ? Colors.white : Colors.black87,
-                                letterSpacing: 1.0,
+                              child: Container(
+                                width: 40.w,
+                                height: 40.w,
+                                alignment: Alignment.center,
+                                child: Image.asset(
+                                  "assets/png/search_icon.png",
+                                  width: 20.w,
+                                  height: 20.w,
+                                  color: Colors.black,
+                                  fit: BoxFit.cover,
+                                  alignment: Alignment.center,
+                                ),
                               ),
-                            ),
+                            ), 
                           ],
                         ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Loader or Error Message
-            if (isLoading)
-              const Center(child: CircularProgressIndicator())
-            else if (error.isNotEmpty)
-              Center(child: Text("Error: $error"))
-            else if (approvalItems.isEmpty)
-                const Expanded(
-                  child: Center(
-                    child: Text("No approvals in this category."),
+                      )
+                    ],
                   ),
-                )
-              else
-                Expanded(
-                  child: ListView.separated(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(horizontal: 10)+EdgeInsets.only(bottom: 40.w),
-                    itemCount: approvalItems.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final item = approvalItems[index];
-                       List<String> statuses = ['approved', 'pending', 'rejected'];
-                       String sampleStatus = statuses[index % statuses.length];
-                       
-                       final itemData = {
-                         "id": "${item["id"] ?? ""}",
-                         "name": "${item["name"] ?? ""}",
-                         "type": "${item["type"] ?? ""}",
-                         "requester": "${item["requester_name"] ?? ""}",
-                         "approver": "${item["emp_name"] ?? ""}",
-                         "location": "${item["location"] ?? ""}",
-                         "date": "${item["date"] ?? ""}",
-                         "image_emp": "${item["image_emp"] ?? ""}",
-                         "req_no": "REQ-${(item["id"] ?? "").toString().padLeft(6, '0')}",
-                         "title": "${item["name"] ?? ""}",
-                         "status": item["status"] ?? sampleStatus,
-                       };
+                ),
+                const SizedBox(height: 10),
 
-                      if(selectedCategory  != 'My Actions'){
-                          return ApprovalCardTypeTwo(
-                            item: itemData,
-                            isExpanded: false,
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return ApprovalConfirmationScreen(
-                                    requestId: itemData["id"],
-                                    type: itemData["type"],
-                                  );
-                                },
-                              );
-                            },
-                          );
-                        }
-
-                        return ApprovalCardTypeOne(
-                          item: itemData,
-                          isExpanded: expandedTypeOneItems.contains(index),
+                // Top Category Tabs (Only HR for now)
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    children: categories.map((cat) {
+                      bool isSelected = selectedCategory == cat;
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 5.0),
+                        child: GestureDetector(
                           onTap: () {
                             setState(() {
-                              if (expandedTypeOneItems.contains(index)) {
-                                expandedTypeOneItems.remove(index);
-                              } else {
-                                expandedTypeOneItems.add(index);
-                              }
+                              selectedCategory = cat;
+                              approvalItems = _getFilteredItems();
                             });
                           },
-                        );
-                    },
+                          child: Container(
+                            width: 90.w,
+                            margin: const EdgeInsets.only(right: 4),
+                            padding: const EdgeInsets.symmetric(vertical: 7),
+                            decoration: BoxDecoration(
+                              color: isSelected ? appFontColor : Colors.grey[300],
+                              borderRadius: BorderRadius.circular(10),
+                               gradient:isSelected ? const LinearGradient(
+                                  colors: [
+                                    Color.fromARGB(255, 27, 27, 27),
+                                    appFontColor,
+                                  ],
+                                  stops: [
+                                    0.02, 
+                                    0.9, 
+                                  ],
+                                  begin: Alignment.centerLeft,
+                                  end: Alignment.centerRight,
+                                ) :  const LinearGradient(
+                                  colors: [
+                                    Color(0xffD6D6D6),
+                                    Color(0xffADB2BD),
+                                  ],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                ),
+                            ),
+                            child: Column(
+                              children: [
+                                Image.asset(
+                                  categoryIcons[cat] ?? "assets/icons/default.png",
+                                  height: 30.w,
+                                  width: 30.w,
+                                  // color: isSelected ? Colors.white : Colors.black87,
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  cat,
+                                  style: GoogleFonts.koulen(
+                                    fontSize: 13.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        isSelected ? Colors.white : Colors.black87,
+                                    letterSpacing: 1.0,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                )
+                ),
+                const SizedBox(height: 20),
+                body()
+              
+              ],
+            ),
+
+            const ArraowVisibalityBottomNav(bottomMargin: 120,),
           ],
         ),
       ),
     );
   }
 
+
+  body(){
+    if(isLoading){
+      return const Center(child: CircularProgressIndicator(),);
+    }
+    //MY ACTION
+    if(selectedCategory.toLowerCase()=="MY ACTION".toLowerCase()){
+      return MyActionCard(approvalItems: approvalItems);
+    }
+    else if(selectedCategory.toLowerCase()=="HR".toLowerCase()){
+      return HrAndPettycashCard(approvalItems: approvalItems);
+    }
+    else if(selectedCategory.toLowerCase()=="Petty Cash".toLowerCase()){
+      return HrAndPettycashCard(approvalItems: approvalItems);
+    }
+    else if(selectedCategory.toLowerCase()=="RFQ".toLowerCase()){
+      return InvoiceAndRfqCard(approvalItems: approvalItems);
+    }
+    else if(selectedCategory.toLowerCase()=="INVOICE".toLowerCase()){
+      return InvoiceAndRfqCard(approvalItems: approvalItems);
+    }
+    else{
+      return const SizedBox.shrink();
+    }
+  }
 }

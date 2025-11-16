@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+
 import 'package:http/http.dart' as http;
 
 import '../../../../utils/di.dart';
@@ -23,16 +24,16 @@ class MediaRepository implements IMediaRepository {
         "Authorization": "Bearer $token"
       };
 
-      final body = jsonEncode({
-        "jsonrpc": "2.0",
-        "params": {}
-      });
+      final body = jsonEncode({"jsonrpc": "2.0", "params": {}});
+      final url = Uri.parse("${UrlUtil.baseUrl}${UrlUtil.mediaAttachmentsApi}");
+      final request = http.Request('GET', url)
+        ..headers.addAll(headers)
+        ..body = body;
+      print(token);
+      print(url);
 
-      final response = await http.post(
-        Uri.parse("${UrlUtil.baseUrl}${UrlUtil.mediaAttachmentsApi}"),
-        headers: headers,
-        body: body,
-      );
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
       log('Media Attachments API Response: ${response.statusCode}');
       log('Response body: ${response.body}');
@@ -58,12 +59,14 @@ class MediaRepository implements IMediaRepository {
 
   @override
   Future<void> updateMedia(MediaModel media) async {
-    throw UnimplementedError('Update media functionality not implemented in API');
+    throw UnimplementedError(
+        'Update media functionality not implemented in API');
   }
 
   @override
   Future<void> deleteMedia(String mediaId) async {
-    throw UnimplementedError('Delete media functionality not implemented in API');
+    throw UnimplementedError(
+        'Delete media functionality not implemented in API');
   }
 
   @override
@@ -71,4 +74,15 @@ class MediaRepository implements IMediaRepository {
     final allMedia = await getMediaList();
     return allMedia.where((media) => media.type == type).toList();
   }
-} 
+
+  @override
+  Future<List<MediaModel>> searchMedia(String keyword) async {
+    final allMedia = await getMediaList();
+    return allMedia
+        .where((media) =>
+            media.name.toLowerCase().contains(keyword.toLowerCase()) ||
+            media.type.name.toLowerCase().contains(keyword.toLowerCase()) ||
+            media.fileExtension.toLowerCase().contains(keyword.toLowerCase()))
+        .toList();
+  }
+}

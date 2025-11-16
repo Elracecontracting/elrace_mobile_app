@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../../../utils/color_utils.dart';
+import '../../../../../../utils/dimens.dart';
 import '../../../../../../utils/orientation_helper.dart';
 
 class CardTile extends StatelessWidget {
@@ -103,7 +104,7 @@ class CardTile extends StatelessWidget {
                           radius: 3,
                         ),
                       ),
-                      child: Center(
+                      child: const Center(
                         child: Icon(
                           CupertinoIcons.arrow_right,
                           color: shadowBlueDark,
@@ -156,7 +157,6 @@ class GrayCardComponent extends StatelessWidget {
     required this.childWidget,
     this.topPadding = false,
     this.topPaddingValue = 60,
-
   });
   final double? topPaddingValue;
   final bool topPadding;
@@ -170,68 +170,68 @@ class GrayCardComponent extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onClick,
-      child: Column(
-        children: [
-          SizedBox(
-            width: MediaQuery.of(context).size.width,
-            height: 180.w,
-            child: Stack(
-              children: [
-                SizedBox(
-                  width: MediaQuery.of(context).size.width - 20,
-                  height: 190.w,
-                  child: Image.asset(
-                    backgroundImagePath,
-                    fit: BoxFit.fill,
-                  ),
-                ),
-                Positioned(
-                  left: 36,
-                  top: 16,
-                  child: SizedBox(
-                    height: SizeConfig().getHeight(43),
-                    child: Row(
-                      children: [
-                        // SizedBox(
-                        //   width: SizeConfig().getWidth(40.26),
-                        //   height: SizeConfig().getHeight(40.31),
-                        //   child: Image.asset(
-                        //     mainIcon,
-                        //     width: SizeConfig().getWidth(40),
-                        //     height: SizeConfig().getHeight(40),
-                        //   ),
-                        // ),
-                        // const SizedBox(width: 10),
-                        Text(
-                          cardTitle.toUpperCase(),
-                          style: GoogleFonts.koulen(
-                            color: const Color(0xFF151544),
-                            fontSize: 26.w,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: topPadding? topPaddingValue:0,
-                  left: 36,
-                  child: DefaultTextStyle(
-                    style: GoogleFonts.nunito(
-                      fontSize: 12.w, // ✅ Use a realistic size instead of 1
-                      color: Colors.black,
-                    ),
-                    child: Column(
-                      children: [childWidget],
-                    ),
-                  ),
-                ),
-              ],
+      child: SizedBox(
+        width: double.infinity,
+        height: AppDimen.homeWidgetCardHeight.w,
+        child: Container(
+          width: double.infinity,
+          height: AppDimen.homeWidgetCardHeight.w,
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage(backgroundImagePath),
+              fit: BoxFit.fill,
             ),
           ),
-        ],
+          child: Stack(
+            children: [
+              Positioned(
+                left: 25,
+                top: 16,
+                child: SizedBox(
+                  height: SizeConfig().getHeight(43),
+                  child: Row(
+                    children: [
+                      // SizedBox(
+                      //   width: SizeConfig().getWidth(40.26),
+                      //   height: SizeConfig().getHeight(40.31),
+                      //   child: Image.asset(
+                      //     mainIcon,
+                      //     width: SizeConfig().getWidth(40),
+                      //     height: SizeConfig().getHeight(40),
+                      //   ),
+                      // ),
+                      // const SizedBox(width: 10),
+                      Text(
+                        cardTitle.toUpperCase(),
+                        style: GoogleFonts.koulen(
+                          color: const Color(0xFF151544),
+                          fontSize: 24.w,
+                          fontWeight: FontWeight.w400,
+                          letterSpacing: 1.9,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                top: topPadding ? topPaddingValue : 0,
+                left: 25,
+                child: DefaultTextStyle(
+                  style: GoogleFonts.nunito(
+                    fontSize: 12.w, 
+                    color: Colors.black,
+                  ),
+                  child: Column(
+                    children: [childWidget],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
+

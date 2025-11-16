@@ -1,26 +1,29 @@
 import 'dart:convert';
-import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/ui/presentation/authenticate_face/views/authenticate_face_view.dart';
-import 'package:http/http.dart' as http;
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:camera/camera.dart';
-import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_in_bloc/check_in_bloc.dart';
 import 'dart:math';
-import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_out_bloc/check_out_bloc.dart';
-import 'package:location/location.dart';
-import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:ui';
 
+import 'package:camera/camera.dart';
+import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/ui/presentation/authenticate_face/views/authenticate_face_view.dart';
+import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_in_bloc/check_in_bloc.dart';
+import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_out_bloc/check_out_bloc.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:http/http.dart' as http;
+import 'package:location/location.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class GradientSliderWidget extends StatefulWidget {
   final Function(double) onValueChanged;
   final dynamic loginResponseModel;
 
-
-  const GradientSliderWidget({Key? key, required this.onValueChanged,required this.loginResponseModel}) : super(key: key);
+  const GradientSliderWidget(
+      {Key? key,
+      required this.onValueChanged,
+      required this.loginResponseModel})
+      : super(key: key);
 
   @override
   GradientSliderState createState() => GradientSliderState();
@@ -35,10 +38,9 @@ class GradientSliderState extends State<GradientSliderWidget> {
   String? errorMessage;
   bool isSubmitting = false;
 
-
-
   final CheckInBloc _checkInBloc = CheckInBloc(); // Bloc instance for Check-In
-  final CheckOutBloc _checkOutBloc = CheckOutBloc(); // Bloc instance for Check-Out
+  final CheckOutBloc _checkOutBloc =
+      CheckOutBloc(); // Bloc instance for Check-Out
 
   @override
   void initState() {
@@ -50,7 +52,7 @@ class GradientSliderState extends State<GradientSliderWidget> {
     _prefs = await SharedPreferences.getInstance();
     setState(() {
       _sliderValue = _prefs.getDouble('sliderValue') ?? 0.0;
-      _isTimerRunning = SharedPref().getPreferenceBoolean('isTimerRunning') ?? false;
+      _isTimerRunning = SharedPref().getPreferenceBoolean('isTimerRunning');
       int seconds = _prefs.getInt('remainingTimeInSeconds') ?? 8 * 3600;
       _remainingTime = Duration(seconds: seconds);
 
@@ -146,7 +148,8 @@ class GradientSliderState extends State<GradientSliderWidget> {
     return landmarks;
   }
 
-  bool _landmarksMatch(Map<String, Point<int>> captured, Map<String, Point<int>> stored) {
+  bool _landmarksMatch(
+      Map<String, Point<int>> captured, Map<String, Point<int>> stored) {
     const double threshold = 50.0; // Define a similarity threshold (pixels)
 
     double calculateDistance(Point<int> p1, Point<int> p2) {
@@ -179,7 +182,8 @@ class GradientSliderState extends State<GradientSliderWidget> {
           _isTimerRunning = false;
         }
       });
-      _startTime = DateTime.now(); // Reset the start time for future calculations
+      _startTime =
+          DateTime.now(); // Reset the start time for future calculations
       _saveTimerState();
     }
   }
@@ -225,31 +229,26 @@ class GradientSliderState extends State<GradientSliderWidget> {
               final isMatched = await compareFaceWithStoredImages(capturedFile);
 
               if (isMatched) {
-
                 showDialog(
-
                   context: currentContext,
 
-                  barrierDismissible: false, // Prevent closing dialog by tapping outside
+                  barrierDismissible:
+                      false, // Prevent closing dialog by tapping outside
 
                   builder: (BuildContext context) {
-
                     return Stack(
-
                       children: [
-
                         // Background blur
 
                         Positioned.fill(
-
                           child: BackdropFilter(
+                            filter: ImageFilter.blur(
+                                sigmaX: 5.0, sigmaY: 5.0), // Blur effect
 
-                            filter: ImageFilter.blur(sigmaX: 5.0, sigmaY: 5.0), // Blur effect
-
-                            child: Container(color: Colors.black.withAlpha((0.5 * 255).toInt())), // Semi-transparent background
-
+                            child: Container(
+                                color: Colors.black.withAlpha((0.5 * 255)
+                                    .toInt())), // Semi-transparent background
                           ),
-
                         ),
 
                         // Loader in the center
@@ -257,22 +256,16 @@ class GradientSliderState extends State<GradientSliderWidget> {
                         const Center(
                           child: CircularProgressIndicator(),
                         ),
-
                       ],
-
                     );
-
                   },
-
                 );
                 // Trigger appropriate API based on direction
 
                 Future.delayed(const Duration(seconds: 2), () {
-
                   Navigator.of(currentContext).pop(); // Close the loader dialog
 
                   //onSuccess(); // Proceed with the timer or other logic
-
                 });
                 if (isLeftToRight) {
                   _checkInBloc.add(CheckInET()); // Trigger check-in API
@@ -280,16 +273,20 @@ class GradientSliderState extends State<GradientSliderWidget> {
                   final checkInRecordId = _prefs.getInt('checkInRecordId') ?? 0;
 
                   if (checkInRecordId != 0) {
-                    _checkOutBloc.add(CheckOutET(checkInRecordId)); // Trigger check-out API
+                    _checkOutBloc.add(
+                        CheckOutET(checkInRecordId)); // Trigger check-out API
                   } else {
                     ScaffoldMessenger.of(currentContext).showSnackBar(
-                      const SnackBar(content: Text('Check-In Record ID not found. Please check in first.')),
+                      const SnackBar(
+                          content: Text(
+                              'Check-In Record ID not found. Please check in first.')),
                     );
                   }
                 }
               } else {
                 ScaffoldMessenger.of(currentContext).showSnackBar(
-                  const SnackBar(content: Text('Face didn’t match. Please try again.')),
+                  const SnackBar(
+                      content: Text('Face didn’t match. Please try again.')),
                 );
                 setState(() {
                   _sliderValue = isLeftToRight ? 0.0 : 1.0; // Reset slider
@@ -320,10 +317,7 @@ class GradientSliderState extends State<GradientSliderWidget> {
       };
 
       // Body
-      Map<String, dynamic> body = {
-        "jsonrpc": "2.0",
-        "params": {}
-      };
+      Map<String, dynamic> body = {"jsonrpc": "2.0", "params": {}};
 
       // URL
       var url = Uri.parse("https://test.elrace.com/api/get_projects");
@@ -384,14 +378,19 @@ class GradientSliderState extends State<GradientSliderWidget> {
             }
 
             List<Project> filteredProjects = projects
-                .where((proj) => proj.name.toLowerCase().contains(searchQuery.toLowerCase()))
+                .where((proj) =>
+                    proj.name.toLowerCase().contains(searchQuery.toLowerCase()))
                 .toList();
 
-            final List<dynamic> branchIds = widget.loginResponseModel.result?.data?.userBranches?.allowedBranch ?? [];
+            final List<dynamic> branchIds = widget.loginResponseModel.result
+                    ?.data?.userBranches?.allowedBranch ??
+                [];
 
             return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              insetPadding: const EdgeInsets.symmetric(horizontal: 30, vertical: 24),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              insetPadding:
+                  const EdgeInsets.symmetric(horizontal: 30, vertical: 24),
               child: SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 26, 24, 20),
@@ -401,28 +400,35 @@ class GradientSliderState extends State<GradientSliderWidget> {
                     children: [
                       const SizedBox(height: 18),
 
-                      if (!isLoading && (projects.isNotEmpty || branchIds.isNotEmpty))
+                      if (!isLoading &&
+                          (projects.isNotEmpty || branchIds.isNotEmpty))
                         Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.grey.withAlpha((0.1 * 255).toInt()),
+                                color:
+                                    Colors.grey.withAlpha((0.1 * 255).toInt()),
                                 blurRadius: 6,
                                 offset: const Offset(0, 3),
                               )
                             ],
                           ),
                           child: TextField(
-                            onChanged: (value) => setState(() => searchQuery = value),
+                            onChanged: (value) =>
+                                setState(() => searchQuery = value),
                             decoration: InputDecoration(
                               prefixIcon: const Icon(Icons.search, size: 18),
-                              hintText: projects.isNotEmpty ? 'Search Project...' : 'Search Branch...',
+                              hintText: projects.isNotEmpty
+                                  ? 'Search Project...'
+                                  : 'Search Branch...',
                               hintStyle: const TextStyle(fontSize: 13),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 10),
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
-                                borderSide: BorderSide(color: Colors.grey.shade300),
+                                borderSide:
+                                    BorderSide(color: Colors.grey.shade300),
                               ),
                             ),
                           ),
@@ -431,96 +437,118 @@ class GradientSliderState extends State<GradientSliderWidget> {
                       const SizedBox(height: 14),
 
                       if (isLoading)
-                        const SizedBox(height: 80, child: Center(child: CircularProgressIndicator()))
+                        const SizedBox(
+                            height: 80,
+                            child: Center(child: CircularProgressIndicator()))
                       else if (projects.isEmpty && branchIds.isEmpty)
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Text("No projects or branches found.",
+                          child: Text(
+                            "No projects or branches found.",
                             style: TextStyle(color: Colors.red, fontSize: 13),
                           ),
                         )
                       else if (projects.isNotEmpty)
-                          Container(
-                            height: 200,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.grey.shade400),
-                            ),
-                            child: ListView.separated(
-                              itemCount: filteredProjects.length,
-                              itemBuilder: (context, index) {
-                                final project = filteredProjects[index];
-                                return ListTile(
-                                  dense: true,
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                  title: Text(project.name, style: const TextStyle(fontSize: 12)),
-                                  tileColor: selectedProject == project
-                                      ? Colors.deepPurple.withAlpha((0.1 * 255).toInt())
-                                      : Colors.transparent,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                  onTap: () => setState(() {
-                                    selectedProject = project;
-                                    selectedBranch = null;
-                                  }),
-                                );
-                              },
-                              separatorBuilder: (_, __) => Divider(height: 2, thickness: 1, color: Colors.grey.shade500),
-                            ),
-                          )
-                        else
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 10),
-                                child: Center(
-                                  child: Text(
-                                    'No project is associated, that’s why branches are shown.',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: Colors.red.shade700,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                height: 200,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.grey.shade400),
-                                ),
-                                child: ListView.separated(
-                                  itemCount: branchIds.length,
-                                  itemBuilder: (context, index) {
-                                    final branch = branchIds[index];
-                                    final branchLabel = 'Branch ID: $branch';
-
-                                    if (!branchLabel.toLowerCase().contains(searchQuery.toLowerCase())) return const SizedBox();
-
-                                    return ListTile(
-                                      dense: true,
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                                      title: Text(
-                                        (branch is List && branch.length > 1) ? branch[1].toString() : 'Branch',
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                      tileColor: selectedBranch == branch
-                                          ? Colors.deepPurple.withAlpha((0.1 * 255).toInt())
-                                          : Colors.transparent,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                      onTap: () => setState(() {
-                                        selectedBranch = branch;
-                                        selectedProject = null;
-                                      }),
-                                    );
-                                  },
-                                  separatorBuilder: (_, __) => Divider(height: 2, thickness: 1, color: Colors.grey.shade500),
-                                ),
-                              ),
-                            ],
+                        Container(
+                          height: 200,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade400),
                           ),
+                          child: ListView.separated(
+                            itemCount: filteredProjects.length,
+                            itemBuilder: (context, index) {
+                              final project = filteredProjects[index];
+                              return ListTile(
+                                dense: true,
+                                contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 4),
+                                title: Text(project.name,
+                                    style: const TextStyle(fontSize: 12)),
+                                tileColor: selectedProject == project
+                                    ? Colors.deepPurple
+                                        .withAlpha((0.1 * 255).toInt())
+                                    : Colors.transparent,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10)),
+                                onTap: () => setState(() {
+                                  selectedProject = project;
+                                  selectedBranch = null;
+                                }),
+                              );
+                            },
+                            separatorBuilder: (_, __) => Divider(
+                                height: 2,
+                                thickness: 1,
+                                color: Colors.grey.shade500),
+                          ),
+                        )
+                      else
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Center(
+                                child: Text(
+                                  'No project is associated, that’s why branches are shown.',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.red.shade700,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              height: 200,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade400),
+                              ),
+                              child: ListView.separated(
+                                itemCount: branchIds.length,
+                                itemBuilder: (context, index) {
+                                  final branch = branchIds[index];
+                                  final branchLabel = 'Branch ID: $branch';
+
+                                  if (!branchLabel
+                                      .toLowerCase()
+                                      .contains(searchQuery.toLowerCase()))
+                                    return const SizedBox();
+
+                                  return ListTile(
+                                    dense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12, vertical: 4),
+                                    title: Text(
+                                      (branch is List && branch.length > 1)
+                                          ? branch[1].toString()
+                                          : 'Branch',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    tileColor: selectedBranch == branch
+                                        ? Colors.deepPurple
+                                            .withAlpha((0.1 * 255).toInt())
+                                        : Colors.transparent,
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(10)),
+                                    onTap: () => setState(() {
+                                      selectedBranch = branch;
+                                      selectedProject = null;
+                                    }),
+                                  );
+                                },
+                                separatorBuilder: (_, __) => Divider(
+                                    height: 2,
+                                    thickness: 1,
+                                    color: Colors.grey.shade500),
+                              ),
+                            ),
+                          ],
+                        ),
 
                       // 🔴 Error Message (inline)
                       if (errorMessage != null) ...[
@@ -554,9 +582,13 @@ class GradientSliderState extends State<GradientSliderWidget> {
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFFBA1719),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
                               ),
-                              child: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+                              child: const Text('Cancel',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white)),
                             ),
                           ),
 
@@ -565,83 +597,102 @@ class GradientSliderState extends State<GradientSliderWidget> {
                             width: 100,
                             height: 45,
                             child: ElevatedButton(
-                              onPressed: ((selectedProject != null || selectedBranch != null) &&
-                                  (projects.isNotEmpty || branchIds.isNotEmpty) && !isSubmitting)
+                              onPressed: ((selectedProject != null ||
+                                          selectedBranch != null) &&
+                                      (projects.isNotEmpty ||
+                                          branchIds.isNotEmpty) &&
+                                      !isSubmitting)
                                   ? () async {
-                                setState(() {
-                                  isSubmitting = true;
-                                  errorMessage = null;
-                                });
+                                      setState(() {
+                                        isSubmitting = true;
+                                        errorMessage = null;
+                                      });
 
-                                try {
-                                  // Get location
-                                  Location location = Location();
-                                  LocationData locationData = await location.getLocation();
-                                  double currentLat = locationData.latitude ?? 0.0;
-                                  double currentLong = locationData.longitude ?? 0.0;
+                                      try {
+                                        // Get location
+                                        Location location = Location();
+                                        LocationData locationData =
+                                            await location.getLocation();
+                                        double currentLat =
+                                            locationData.latitude ?? 0.0;
+                                        double currentLong =
+                                            locationData.longitude ?? 0.0;
 
-                                  int selectedProjectId = selectedProject?.agreementId ?? 0;
+                                        int selectedProjectId =
+                                            selectedProject?.agreementId ?? 0;
 
-                                  if (selectedProjectId == 0) {
-                                    setState(() {
-                                      errorMessage = "Project ID is missing or invalid.";
-                                      _sliderValue = 0.0;
-                                      isSubmitting = false;
-                                    });
-                                    return;
-                                  }
+                                        if (selectedProjectId == 0) {
+                                          setState(() {
+                                            errorMessage =
+                                                "Project ID is missing or invalid.";
+                                            _sliderValue = 0.0;
+                                            isSubmitting = false;
+                                          });
+                                          return;
+                                        }
 
-                                  // Call location validation API
-                                  final result = await _validateUserLocation(selectedProjectId, currentLat, currentLong);
+                                        // Call location validation API
+                                        final result =
+                                            await _validateUserLocation(
+                                                selectedProjectId,
+                                                currentLat,
+                                                currentLong);
 
-                                  if (result['status'] != 'success') {
-                                    Navigator.of(context).pop();
+                                        if (result['status'] != 'success') {
+                                          Navigator.of(context).pop();
 
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => AuthenticateFaceView(
-                                          loginResponseModel: widget.loginResponseModel,
-                                          isLeftToRight: true,
-                                        ),
-                                      ),
-                                    );
-
-                                  } else {
-                                    setState(() {
-                                      errorMessage = result['message'] ?? "Validation failed.";
-                                      _sliderValue = 0.0;
-                                      isSubmitting = false;
-                                    });
-                                  }
-                                } catch (e) {
-                                  setState(() {
-                                    errorMessage = "Something went wrong. Please try again.";
-                                    isSubmitting = false;
-                                  });
-                                }
-                              }
+                                          Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  AuthenticateFaceView(
+                                                loginResponseModel:
+                                                    widget.loginResponseModel,
+                                                isLeftToRight: true,
+                                              ),
+                                            ),
+                                          );
+                                        } else {
+                                          setState(() {
+                                            errorMessage = result['message'] ??
+                                                "Validation failed.";
+                                            _sliderValue = 0.0;
+                                            isSubmitting = false;
+                                          });
+                                        }
+                                      } catch (e) {
+                                        setState(() {
+                                          errorMessage =
+                                              "Something went wrong. Please try again.";
+                                          isSubmitting = false;
+                                        });
+                                      }
+                                    }
                                   : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF1A1A53),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
                                 elevation: 4,
                               ),
                               child: isSubmitting
                                   ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
-                              )
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                                Colors.white),
+                                      ),
+                                    )
                                   : const Text(
-                                'OK',
-                                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
-                              ),
+                                      'OK',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white),
+                                    ),
                             ),
                           ),
-
                         ],
                       ),
                     ],
@@ -649,14 +700,14 @@ class GradientSliderState extends State<GradientSliderWidget> {
                 ),
               ),
             );
-
           },
         );
       },
     );
   }
 
-  Future<Map<String, dynamic>> _validateUserLocation(int projectId, double latitude, double longitude) async {
+  Future<Map<String, dynamic>> _validateUserLocation(
+      int projectId, double latitude, double longitude) async {
     final loginResponse = widget.loginResponseModel;
     final token = loginResponse.result.token;
 
@@ -727,11 +778,13 @@ class GradientSliderState extends State<GradientSliderWidget> {
     }
   }
 
-  void _showStyledDialog(BuildContext context, String title, String message, Color color, IconData icon, VoidCallback onPressed) {
+  void _showStyledDialog(BuildContext context, String title, String message,
+      Color color, IconData icon, VoidCallback onPressed) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), // Rounded corners
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12)), // Rounded corners
         title: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
@@ -762,7 +815,8 @@ class GradientSliderState extends State<GradientSliderWidget> {
         actions: [
           TextButton(
             onPressed: onPressed,
-            child: const Text('OK', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            child: const Text('OK',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -771,7 +825,6 @@ class GradientSliderState extends State<GradientSliderWidget> {
 
   @override
   Widget build(BuildContext context) {
-
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
@@ -803,9 +856,6 @@ class GradientSliderState extends State<GradientSliderWidget> {
           ),
         ),
         const SizedBox(height: 10),
-
-
-
         BlocConsumer<CheckInBloc, CheckInState>(
           bloc: _checkInBloc,
           listener: (context, state) {
@@ -816,7 +866,7 @@ class GradientSliderState extends State<GradientSliderWidget> {
                 state.message,
                 const Color(0xFF28A745), // Success Green
                 Icons.check_circle, // Success Icon
-                    () {
+                () {
                   Navigator.of(context).pop();
                   setState(() {
                     _sliderValue = 1.0;
@@ -831,7 +881,7 @@ class GradientSliderState extends State<GradientSliderWidget> {
                 state.errorMessage,
                 const Color(0xFFDC3545), // Error Red
                 Icons.error, // Error Icon
-                    () {
+                () {
                   Navigator.of(context).pop();
                   setState(() {
                     _sliderValue = 0.0;
@@ -845,7 +895,7 @@ class GradientSliderState extends State<GradientSliderWidget> {
                 state.warningMessage,
                 const Color(0xFFFFC107), // Warning Yellow
                 Icons.warning, // Warning Icon
-                    () {
+                () {
                   Navigator.of(context).pop();
                   setState(() {
                     _sliderValue = 1.0;
@@ -860,7 +910,6 @@ class GradientSliderState extends State<GradientSliderWidget> {
             return Container();
           },
         ),
-
         BlocConsumer<CheckOutBloc, CheckOutState>(
           bloc: _checkOutBloc,
           listener: (context, state) {
@@ -871,7 +920,7 @@ class GradientSliderState extends State<GradientSliderWidget> {
                 state.message,
                 const Color(0xFF28A745), // Success Green
                 Icons.check_circle, // Success Icon
-                    () {
+                () {
                   Navigator.of(context).pop();
                   setState(() {
                     _sliderValue = 0.0;
@@ -886,7 +935,7 @@ class GradientSliderState extends State<GradientSliderWidget> {
                 state.errorMessage,
                 const Color(0xFFDC3545), // Error Red
                 Icons.error, // Error Icon
-                    () {
+                () {
                   Navigator.of(context).pop();
                   setState(() {
                     _sliderValue = 1.0;
@@ -900,7 +949,7 @@ class GradientSliderState extends State<GradientSliderWidget> {
                 state.warningMessage,
                 const Color(0xFFFFC107), // Warning Yellow
                 Icons.warning, // Warning Icon
-                    () {
+                () {
                   Navigator.of(context).pop();
                   setState(() {
                     _sliderValue = 0.0;
@@ -914,9 +963,6 @@ class GradientSliderState extends State<GradientSliderWidget> {
             return Container();
           },
         ),
-
-
-
         Text(
           '${_remainingTime.inHours.toString().padLeft(2, '0')}:${(_remainingTime.inMinutes % 60).toString().padLeft(2, '0')}:${(_remainingTime.inSeconds % 60).toString().padLeft(2, '0')}',
           style: const TextStyle(
@@ -934,7 +980,9 @@ class CameraWithOverlay extends StatefulWidget {
   final String overlayImage;
   final Function(File?) onCapture;
 
-  const CameraWithOverlay({Key? key, required this.overlayImage, required this.onCapture}) : super(key: key);
+  const CameraWithOverlay(
+      {Key? key, required this.overlayImage, required this.onCapture})
+      : super(key: key);
 
   @override
   State<CameraWithOverlay> createState() => _CameraWithOverlayState();
@@ -953,15 +1001,17 @@ class _CameraWithOverlayState extends State<CameraWithOverlay> {
     initializeCamera();
     _initializePreferences();
   }
+
   Future<void> _initializePreferences() async {
     _prefs = await SharedPreferences.getInstance();
   }
+
   Future<void> initializeCamera() async {
     _cameras = await availableCameras();
 
     // Default to the front camera if available
     _selectedCameraIndex = _cameras.indexWhere(
-          (camera) => camera.lensDirection == CameraLensDirection.front,
+      (camera) => camera.lensDirection == CameraLensDirection.front,
     );
 
     if (_selectedCameraIndex == -1) {

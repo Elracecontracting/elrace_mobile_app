@@ -123,7 +123,7 @@ class _AddCoverScreenState extends State<AddCoverScreen> {
                   return;
                 }
 
-                Navigator.pop(context);
+                // Navigator.pop(context);
               },
               height: 44,
               color: CustomColors.maroon,

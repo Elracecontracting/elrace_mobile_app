@@ -6,6 +6,7 @@ import 'package:el_race/ui/presentation/PettyCash/PettyCashList.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashPopUpScreen.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
@@ -144,11 +145,10 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
           : Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
                 // Page Title (Fixed)
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16.0, vertical: 10),
+                      horizontal: 10.0, vertical: 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -160,7 +160,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                         onPressed: () => Navigator.pop(context),
                       ),
                       Text(
-                        'PETTYCASH',
+                        translate('home.petty_cash'),
                         style: GoogleFonts.koulen(
                           fontSize: 20,
                           fontWeight: FontWeight.w400,
@@ -169,13 +169,13 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                         ),
                       ),
                       IconButton(
-                        iconSize: 34,
+                        iconSize: 40,
                         icon: const Icon(Icons.add, color: appFontColor),
                         onPressed: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const PettyCashAddExpense(),
+                              builder: (context) => const PettyCashPopUpScreen(),
                             ),
                           );
                         },
@@ -199,7 +199,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                           child: LayoutBuilder(
                             builder: (context, constraints) {
                               final double screenWidth = constraints.maxWidth;
-                              final double circleSize = 121;
+                              const double circleSize = 121;
                               final double sideOffset =
                                   screenWidth / 3 - circleSize / 1.5;
 
@@ -516,7 +516,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
     return Container(
       decoration: BoxDecoration(
         image: const DecorationImage(
-          image: AssetImage('assets/png/item_bg.png'),
+          image: AssetImage(
+              'assets/png/item_bg_green.png'),
           fit: BoxFit.cover,
         ),
         color: Colors.transparent,
@@ -661,9 +662,9 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
           height: 30,
         ),
         const SizedBox(width: 12),
-        const Expanded(
+        Expanded(
           child: Text(
-            'you have received 2,500 AED from accounts department transferred by Mohamed Jouda on 25/03/2025',
+            translate('pettycash.received_message'),
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
           ),
         ),

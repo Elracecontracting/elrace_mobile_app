@@ -14,6 +14,7 @@ class HiveService {
   static Box<ReportDetailModel>? _reportDetailBox;
   static Box<CompanyModel>? _companyBox;
   static Box<PdfModel>? _pdfBox;
+  static Box? _preferencesBox;
 
   static Future<void> setupHive() async {
     Directory appDocDir = await getApplicationDocumentsDirectory();
@@ -51,5 +52,23 @@ class HiveService {
       _reportDetailBox = await Hive.openBox(HiveConstants.reportDetailBox);
     }
     return _reportDetailBox!;
+  }
+
+  static Future<Box> getPreferencesBox() async {
+    if (_preferencesBox == null || !_preferencesBox!.isOpen) {
+      _preferencesBox = await Hive.openBox(HiveConstants.preferencesBox);
+    }
+    return _preferencesBox!;
+  }
+
+  // Prayer sound mute preference methods
+  static Future<bool> isPrayerSoundMuted() async {
+    final box = await getPreferencesBox();
+    return box.get(HiveConstants.prayerSoundMutedKey, defaultValue: false);
+  }
+
+  static Future<void> setPrayerSoundMuted(bool isMuted) async {
+    final box = await getPreferencesBox();
+    await box.put(HiveConstants.prayerSoundMutedKey, isMuted);
   }
 }

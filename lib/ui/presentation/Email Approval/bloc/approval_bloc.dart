@@ -6,9 +6,11 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
-  ApprovalBloc() : super(ApprovalInitial()) {
+  ApprovalBloc() : super(const ApprovalInitial()) {
     on<ApproveRequest>(_onApproveRequest);
     on<RejectRequest>(_onRejectRequest);
+    on<ToggleItemExpansion>(_onToggleItemExpansion);
+    on<CollapseItem>(_onCollapseItem);
   }
 
   Future<http.Response> _sendApprovalRequest({
@@ -36,7 +38,8 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
   }
 
   Future<void> _onApproveRequest(ApproveRequest event, Emitter<ApprovalState> emit) async {
-    emit(ApprovalLoading());
+    final currentExpandedItems = state.expandedItems;
+    emit(ApprovalLoading(expandedItems: currentExpandedItems));
     try {
       final List<String> userIds = event.userIds;
       List<String> messages = [];
@@ -52,18 +55,19 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
         if (data["result"] != null && data["result"]["message"] != null) {
           messages.add(data["result"]["message"]);
         } else {
-          emit(const ApprovalFailure("Unknown response from server."));
+          emit(ApprovalFailure("Unknown response from server.", expandedItems: currentExpandedItems));
           return;
         }
       }
-      emit(ApprovalSuccess(messages.join("\n")));
+      emit(ApprovalSuccess(messages.join("\n"), expandedItems: currentExpandedItems));
     } catch (e) {
-      emit(ApprovalFailure(e.toString()));
+      emit(ApprovalFailure(e.toString(), expandedItems: currentExpandedItems));
     }
   }
 
   Future<void> _onRejectRequest(RejectRequest event, Emitter<ApprovalState> emit) async {
-    emit(ApprovalLoading());
+    final currentExpandedItems = state.expandedItems;
+    emit(ApprovalLoading(expandedItems: currentExpandedItems));
     try {
       final List<String> userIds = event.userIds;
       List<String> messages = [];
@@ -79,13 +83,35 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
         if (data["result"] != null && data["result"]["message"] != null) {
           messages.add(data["result"]["message"]);
         } else {
-          emit(const ApprovalFailure("Unknown response from server."));
+          emit(ApprovalFailure("Unknown response from server.", expandedItems: currentExpandedItems));
           return;
         }
       }
-      emit(ApprovalSuccess(messages.join("\n")));
+      emit(ApprovalSuccess(messages.join("\n"), expandedItems: currentExpandedItems));
     } catch (e) {
-      emit(ApprovalFailure(e.toString()));
+      emit(ApprovalFailure(e.toString(), expandedItems: currentExpandedItems));
     }
+  }
+
+  void _onToggleItemExpansion(ToggleItemExpansion event, Emitter<ApprovalState> emit) {
+    final currentExpandedItems = Set<int>.from(state.expandedItems);
+    
+    if (currentExpandedItems.contains(event.index)) {
+      currentExpandedItems.remove(event.index);
+    } else {
+      currentExpandedItems.add(event.index);
+      // Auto-collapse after 3 seconds
+      Future.delayed(const Duration(seconds: 3), () {
+        add(CollapseItem(event.index));
+      });
+    }
+    
+    emit(ApprovalItemsExpanded(expandedItems: currentExpandedItems));
+  }
+
+  void _onCollapseItem(CollapseItem event, Emitter<ApprovalState> emit) {
+    final currentExpandedItems = Set<int>.from(state.expandedItems);
+    currentExpandedItems.remove(event.index);
+    emit(ApprovalItemsExpanded(expandedItems: currentExpandedItems));
   }
 } 

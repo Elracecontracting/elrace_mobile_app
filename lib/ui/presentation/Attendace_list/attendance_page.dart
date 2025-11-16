@@ -1,13 +1,16 @@
 import 'dart:convert';
-import 'dart:developer';
-import 'package:el_race/ui/presentation/Attendace_list/model/attendance_model.dart'; // Import the login model
-import 'package:el_race/ui/presentation/Attendace_list/repository/attendance_repository.dart';
+import 'package:el_race/ui/presentation/Attendace_list/attendance_widgets/colleasped_card.dart';
+import 'package:el_race/ui/presentation/Attendace_list/attendance_widgets/expand_card.dart';
+import 'package:el_race/ui/presentation/Attendace_list/attendance_widgets/report_dialog.dart';
+import 'package:el_race/ui/presentation/Attendace_list/model/attendance_model.dart'; // Import the logi
 import 'package:el_race/utils/color_utils.dart'; // Import global colors
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+
 import '../../widgets/header_widget.dart';
 import 'bloc/attendance_bloc.dart';
 
@@ -114,7 +117,7 @@ class _AttendancePageState extends State<AttendancePage> {
                   onPressed: () => Navigator.pop(context),
                 ),
                 Text(
-                  'MY ATTENDANCE',
+                  translate('home.attendance'),
                   style: GoogleFonts.koulen(
                     fontSize: 20,
                     fontWeight: FontWeight.w400,
@@ -123,7 +126,7 @@ class _AttendancePageState extends State<AttendancePage> {
                   ),
                 ),
                 TextButton(
-                  onPressed: () => _showAttendancePopup(context),
+                  onPressed: () => AttendanceDialogs.showAttendancePopup(context, selectedStartDate, selectedEndDate),
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                       vertical: 3,
@@ -143,7 +146,7 @@ class _AttendancePageState extends State<AttendancePage> {
                       ],
                     ),
                     child: Text(
-                      'Report',
+                      translate('home.report'),
                       style: GoogleFonts.koulen(
                         fontSize: 14,
                         color: appFontColor,
@@ -279,6 +282,8 @@ class _AttendancePageState extends State<AttendancePage> {
                         status = "$lateMinutes MINS LATE";
                         backgroundImage = 'assets/png/item_bg_red.png';
                         textColor = red;
+                      } else {
+                        textColor = const Color(0xff535353);
                       }
 
                       // ⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇⬇
@@ -320,206 +325,54 @@ class _AttendancePageState extends State<AttendancePage> {
                           alignment: Alignment.center,
                           children: [
                             isExpanded
-                                ? Container(
-                                    key: const ValueKey("expanded"),
-                                    height: 70.w,
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                          colors: [bgColorStart, bgColorEnd]),
-                                      borderRadius: BorderRadius.circular(30),
-                                      // boxShadow: [
-                                      //   BoxShadow(
-                                      //     color: bgColorEnd
-                                      //         .withAlpha((0.3 * 255).toInt()),
-                                      //     blurRadius: 6,
-                                      //     spreadRadius: 1,
-                                      //     offset: const Offset(0, 4),
-                                      //   )
-                                      // ],
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const SizedBox(
-                                          width: 11,
-                                        ),
-                                      
-                                        const Spacer(),
-                                        Text(
-                                          status,
-                                          style: TextStyle(
-                                            color: textColor,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            letterSpacing: 1,
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                      ],
-                                    ),
-                                  )
-                                : Stack(
-                                    alignment: Alignment.centerLeft,
-                                    children: [
-                                      if (backgroundImage != '' && !isExpanded)
-                                        Container(
-                                          width: 70.w,
-                                          height: 71.w,
-                                          margin: const EdgeInsets.only(top: 3,),
-                                          decoration: BoxDecoration(
-                                            color: textColor,
-                                            borderRadius: BorderRadius.circular(30),
-                                          ),
-                                        ),
-                                      Container(
-                                        height: 70.w,
-                                        key: const ValueKey("collapsed"),
-                                        padding:EdgeInsets.symmetric(horizontal: 10.w),
-                                        margin: EdgeInsets.only(left: 4.w, top: 3),
-                                        decoration: backgroundImage == ''
-                                            ? BoxDecoration(
-                                                color: Colors.grey[300],
-                                                borderRadius:
-                                                    BorderRadius.circular(30),
-                                              )
-                                            : BoxDecoration(
-                                                gradient: const LinearGradient(
-                                                  colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
-                                                  begin: Alignment.bottomRight,
-                                                  end: Alignment.topLeft,
-                                                ),
-                                                borderRadius: BorderRadius.circular(30),
-                                              ),
-                                        child: Row(
-                                          children: [
-                                            // Date
-                                            SizedBox(
-                                              width: 80,
-                                              child: Text(
-                                                DateFormat('dd MMM yy')
-                                                    .format(checkInTime),
-                                                textAlign: TextAlign.center,
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 16.sp,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: appFontColor,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(
-                                              height: 39.5,
-                                              child: VerticalDivider(
-                                                  color: Colors.grey, thickness: 1),
-                                            ),
-                            
-                                            // Check-in
-                                            SizedBox(
-                                              width: 90.w,
-                                              child: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.center,
-                                                children: [
-                                                  Text(
-                                                    'Check-in',
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: appFontColor,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    DateFormat('HH:mm:ss')
-                                                        .format(checkInTime),
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.w500,
-                                                      color: Colors.black,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            const SizedBox(width: 5),
-                                           
-                            
-                                            // Check-out
-                                            Expanded(
-                                              child: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.center,
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.center,
-                                                children: [
-                                                  Text(
-                                                    'Check-out',
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 12,
-                                                      fontWeight: FontWeight.bold,
-                                                      color: appFontColor,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    checkOutTime != null
-                                                        ? DateFormat('HH:mm:ss')
-                                                            .format(checkOutTime)
-                                                        : '--:--:--',
-                                                    textAlign: TextAlign.center,
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 10,
-                                                      fontWeight: FontWeight.w500,
-                                                      color: Colors.black,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                            SizedBox(width: 40.w), 
-
-                                           
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-
-                                 
+                                ? ExpandCard(
+                                    status: status,
+                                    textColor: textColor,
+                                    bgColorStart: bgColorStart,
+                                    bgColorEnd: bgColorEnd)
+                                : ColleaspedCard(
+                                    status: status,
+                                    textColor: textColor,
+                                    bgColorStart: bgColorStart,
+                                    bgColorEnd: bgColorEnd,
+                                    isExpanded: isExpanded,
+                                    checkInTime: checkInTime,
+                                    checkOutTime: checkOutTime,
+                                    backgroundImage: backgroundImage),
                             AnimatedAlign(
-                              alignment:
-                                  isExpanded ? Alignment.centerLeft : Alignment.centerRight,
+                              alignment: isExpanded
+                                  ? Alignment.centerLeft
+                                  : Alignment.centerRight,
                               duration: const Duration(milliseconds: 900),
                               curve: Curves.easeInOut,
                               child: Container(
-                                  margin: EdgeInsets.symmetric(horizontal: 10.w),
-                                  key: ValueKey( isExpanded), // triggers rebuild on expand/collapse
-                                  width: 50.w,
-                                  height: 50.w,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                        color: Colors.white,
-                                        width: 2),
-                                  ),
-                                  child: ClipOval(
-                                    child: _isValidBase64(
-                                            _imageBase64)
-                                        ? Image.memory(
-                                            base64Decode(
-                                                _imageBase64),
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                          )
-                                        : Image.asset(
-                                            'assets/png/profile_1.png',
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                          ),
-                                  ),
+                                margin: EdgeInsets.symmetric(horizontal: 10.w),
+                                key: ValueKey(
+                                    isExpanded), // triggers rebuild on expand/collapse
+                                width: 53.w,
+                                height: 53.w,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border:
+                                      Border.all(color: Colors.white, width: 2),
                                 ),
-                            ),      
+                                child: ClipOval(
+                                  child: _isValidBase64(_imageBase64)
+                                      ? Image.memory(
+                                          base64Decode(_imageBase64),
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                        )
+                                      : Image.asset(
+                                          'assets/png/profile_1.png',
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                        ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       );
@@ -540,198 +393,5 @@ class _AttendancePageState extends State<AttendancePage> {
     );
   }
 
-  void _showAttendancePopup(BuildContext context) async {
-    final startDateStr = DateFormat('yyyy-MM-dd').format(selectedStartDate);
-    final endDateStr = DateFormat('yyyy-MM-dd').format(selectedEndDate);
-
-    try {
-      final summaryData = await AttendanceRepo().getAttendanceSummary(
-        startDate: startDateStr,
-        endDate: endDateStr,
-      );
-
-      showDialog(
-        context: context,
-        builder: (BuildContext context) {
-          return Dialog(
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            backgroundColor: const Color(0xFFD9D9D9),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16.0, 26, 16, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    "ATTENDANCE REPORT",
-                    style: GoogleFonts.koulen(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 1.5, // Adjust as needed
-                      color: appFontColor,
-                    ),
-                  ),
-                  Text(
-                    DateFormat('MMM yyyy').format(selectedEndDate),
-                    style: GoogleFonts.koulen(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w300,
-                      color: appFontColor,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  _buildReportItem("Working Days",
-                      "${summaryData['working_days']} Days", Colors.green),
-                  const Divider(color: Colors.grey, thickness: 0.5),
-                  _buildReportItem("Late Hours",
-                      "${summaryData['late_hours']} min", Colors.red),
-                  const Divider(color: Colors.grey, thickness: 0.5),
-                  _buildReportItem("Absent",
-                      "${summaryData['absent_days']} Days", Colors.black),
-                  const Divider(color: Colors.grey, thickness: 0.5),
-                  _buildReportItem("Sick Leave",
-                      "${summaryData['sick_leaves']} Days", Colors.orange),
-                  const Divider(color: Colors.grey, thickness: 0.5),
-                  _buildReportItem("Annual Leave",
-                      "${summaryData['annual_leaves']} Days", Colors.blue),
-                  const Divider(color: Colors.grey, thickness: 0.5),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text("Close",
-                          style: TextStyle(color: appFontColor, fontSize: 12)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-    } catch (e) {
-      log("Failed to fetch summary: $e");
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text("Failed to load report")));
-    }
-  }
-
-  Widget _buildReportItem(String title, String value, Color dotColor) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                  width: 8,
-                  height: 8,
-                  decoration:
-                      BoxDecoration(color: dotColor, shape: BoxShape.circle)),
-              const SizedBox(width: 8),
-              Text(title,
-                  style: const TextStyle(
-                      fontSize: 11, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          Text(value,
-              style:
-                  const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
 }
 
-
-
-class BouncingIconToggle extends StatefulWidget {
-  final IconData icon;
-  final bool isExpanded;
-  final ValueChanged<bool> onToggle;
-
-  const BouncingIconToggle({
-    Key? key,
-    required this.icon,
-    required this.isExpanded,
-    required this.onToggle,
-  }) : super(key: key);
-
-  @override
-  State<BouncingIconToggle> createState() => _BouncingIconToggleState();
-}
-
-class _BouncingIconToggleState extends State<BouncingIconToggle>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _offsetAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-
-    _setAnimation();
-  }
-
-  void _setAnimation() {
-    final double bounceAmount = 10; // how far it bounces
-    final double start = widget.isExpanded ? 0.0 : 0.0;
-    final double peak =
-        widget.isExpanded ? -bounceAmount : bounceAmount; // direction
-    final double end = widget.isExpanded ? bounceAmount : -bounceAmount;
-
-    _offsetAnimation = TweenSequence([
-      TweenSequenceItem(
-        tween: Tween(begin: start, end: peak)
-            .chain(CurveTween(curve: Curves.easeOut)),
-        weight: 40,
-      ),
-      TweenSequenceItem(
-        tween: Tween(begin: peak, end: end)
-            .chain(CurveTween(curve: Curves.easeInOut)),
-        weight: 60,
-      ),
-    ]).animate(_controller);
-  }
-
-  void _handleTap() {
-    _setAnimation();
-    _controller.forward(from: 0).whenComplete(() {
-      widget.onToggle(!widget.isExpanded);
-    });
-  }
-
-  @override
-  void didUpdateWidget(covariant BouncingIconToggle oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    _setAnimation();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _handleTap,
-      child: AnimatedBuilder(
-        animation: _offsetAnimation,
-        builder: (context, child) {
-          return Transform.translate(
-            offset: Offset(_offsetAnimation.value, 0),
-            child: Icon(widget.icon, size: 28),
-          );
-        },
-      ),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-}

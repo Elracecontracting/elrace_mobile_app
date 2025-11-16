@@ -1,15 +1,22 @@
 import 'dart:convert';
+
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:el_race/utils/color_utils.dart';
-import 'package:el_race/ui/presentation/signin/data/model.dart';
-import '../../widgets/header_widget.dart';
+import 'package:el_race/ui/presentation/task_sheet/EmployeeShiftRequestPage.dart';
 import 'package:el_race/ui/presentation/task_sheet/TaskDetailsPage.dart';
+import 'package:el_race/ui/presentation/task_sheet/add_task_sheet.dart';
+import 'package:el_race/utils/color_utils.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hexcolor/hexcolor.dart';
+import 'package:http/http.dart' as http;
+
+import '../../widgets/header_widget.dart';
 
 class TaskSheetPage extends StatefulWidget {
-  const TaskSheetPage({Key? key,}) : super(key: key);
+  const TaskSheetPage({
+    Key? key,
+  }) : super(key: key);
 
   @override
   State<TaskSheetPage> createState() => _TaskSheetPageState();
@@ -88,17 +95,15 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
         body: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-      
             const SizedBox(height: 10),
-      
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children:  [
+                children: [
                   const BackButton(),
                   Text(
-                    'TIME SHEET',
+                    translate('home.time_sheet'),
                     style: GoogleFonts.koulen(
                       fontSize: 19,
                       fontWeight: FontWeight.w300,
@@ -106,13 +111,28 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                       color: appFontColor,
                     ),
                   ),
-      
-      
-                  const SizedBox(width: 40), // Spacer for alignment
+                  Container(
+                    width: 25,
+                    height: 25,
+                    decoration: const BoxDecoration(
+                        color: appFontColor, shape: BoxShape.circle),
+                    child: IconButton(
+                      icon: const Icon(Icons.add, size: 20, color: Colors.white),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => AddTaskSheet(),
+                          ),
+                        );
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ),
                 ],
               ),
             ),
-      
             if (isLoading)
               const Expanded(
                 child: Center(child: CircularProgressIndicator()),
@@ -133,7 +153,8 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                   itemBuilder: (context, index) {
                     final task = tasks[index];
                     return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 7.0, horizontal: 14.0),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 7.0, horizontal: 14.0),
                       child: GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -141,15 +162,17 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                             MaterialPageRoute(
                               builder: (context) => TaskDetailsPage(
                                 loginResponseModel: SharedPref.getLoginData(),
-                                taskId: tasks[index]['id'], // <-- Make sure 'id' exists in your task map
-                                project_id: tasks[index]['project_id'], // <-- Make sure 'id' exists in your task map
+                                taskId: tasks[index][
+                                    'id'], // <-- Make sure 'id' exists in your task map
+                                project_id: tasks[index][
+                                    'project_id'], // <-- Make sure 'id' exists in your task map
                               ),
                             ),
                           );
                         },
-      
                         child: Container(
-                          width: MediaQuery.of(context).size.width * 0.9, // 90% of screen width
+                          width: MediaQuery.of(context).size.width *
+                              0.9, // 90% of screen width
                           height: 120,
                           decoration: BoxDecoration(
                             image: const DecorationImage(
@@ -160,7 +183,8 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.grey.withAlpha((0.2 * 255).toInt()),
+                                color:
+                                    Colors.grey.withAlpha((0.2 * 255).toInt()),
                                 blurRadius: 3,
                                 spreadRadius: 1,
                                 offset: const Offset(0, 4),
@@ -192,19 +216,22 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                                   width: 0.5,
                                   height: 40,
                                   color: Colors.grey,
-                                  margin: const EdgeInsets.symmetric(horizontal: 10),
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 10),
                                 ),
                                 Expanded(
                                   child: Center(
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           task["name"] ?? '',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w700,
+                                          style: GoogleFonts.koulen(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w400,
                                             color: appFontColor,
                                           ),
                                         ),
@@ -235,7 +262,8 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                                 ),
                                 const Padding(
                                   padding: EdgeInsets.only(right: 18.0),
-                                  child: Icon(Icons.arrow_forward_ios, size: 19, color: appFontColor),
+                                  child: Icon(Icons.arrow_forward_ios,
+                                      size: 19, color: appFontColor),
                                 ),
                               ],
                             ),

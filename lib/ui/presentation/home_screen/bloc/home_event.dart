@@ -38,3 +38,20 @@ class CheckInStatusChangedEvent extends HomeEvent {
   @override
   List<Object> get props => [isCheckedIn];
 }
+
+// Prayer Events
+class InitPrayerTimesEvent extends HomeEvent {
+  const InitPrayerTimesEvent();
+}
+
+class LoadPrayerMuteStateEvent extends HomeEvent {
+  const LoadPrayerMuteStateEvent();
+}
+
+class TogglePrayerMuteStateEvent extends HomeEvent {
+  const TogglePrayerMuteStateEvent();
+}
+
+class UpdatePrayerTickEvent extends HomeEvent {
+  const UpdatePrayerTickEvent();
+}

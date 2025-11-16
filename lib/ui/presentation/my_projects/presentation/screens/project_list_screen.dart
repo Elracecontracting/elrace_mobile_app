@@ -9,9 +9,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-
 class ProjectListScreen extends StatefulWidget {
-  const ProjectListScreen({super.key});
+  final ProjectListBloc bloc;
+  final int? partnerId;
+
+  const ProjectListScreen({super.key, required this.bloc, this.partnerId});
 
   @override
   State<ProjectListScreen> createState() => _ProjectListScreenState();
@@ -25,13 +27,14 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-  }
+    bloc = widget.bloc;
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    bloc = ProjectListBloc.get(context);
-    bloc.add(LoadProjectsEvent());
+    // Load projects based on whether we have a partnerId or not
+    if (widget.partnerId != null) {
+      bloc.add(LoadProjectsByPartnerEvent(partnerId: widget.partnerId!));
+    } else {
+      bloc.add(LoadProjectsEvent());
+    }
   }
 
   void _onScroll() {
@@ -55,7 +58,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
       body: Column(
         children: [
           // 🔹 Always-visible header
-          const SizedBox(height: 10), 
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -66,12 +69,12 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
               Row(
                 children: [
                   Image.asset(
-                    "assets/newapp/my_projects.png",
+                    "assets/png/police.png",
                     height: 30.w,
                     width: 30.w,
                   ),
                   Text(
-                    ' My Projects',
+                    ' ABU DHABI POLICE',
                     style: GoogleFonts.koulen(
                       fontSize: 26.sp,
                       fontWeight: FontWeight.w500,
@@ -80,7 +83,16 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                   ),
                 ],
               ),
-              const SizedBox(width: 40),
+              Row(
+                children: [
+                  Image.asset(
+                    'assets/png/search.png',
+                    width: 38.w,
+                    height: 38.h,
+                  ),
+                  SizedBox(width: 23.w),
+                ],
+              ),
             ],
           ),
 
@@ -88,30 +100,39 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
           Expanded(
             child: BlocBuilder<ProjectListBloc, ProjectListState>(
               builder: (ctx, state) {
-                if (state is ProjectListLoading && bloc.visibleProjects.isEmpty) {
+                if (state is ProjectListLoading &&
+                    bloc.visibleProjects.isEmpty) {
                   return const Center(child: CircularProgressIndicator());
-                } else if (!(state is ProjectListLoading) && bloc.visibleProjects.isEmpty) {
+                } else if (!(state is ProjectListLoading) &&
+                    bloc.visibleProjects.isEmpty) {
                   return const Center(child: Text('No data available'));
-                } else if (state is ProjectListLoaded || bloc.visibleProjects.isNotEmpty) {
+                } else if (state is ProjectListLoaded ||
+                    bloc.visibleProjects.isNotEmpty) {
                   var list = bloc.visibleProjects;
                   return RefreshIndicator(
-                    onRefresh: () async => bloc.add(LoadProjectsEvent(refresh: true)),
+                    onRefresh: () async {
+                      if (widget.partnerId != null) {
+                        bloc.add(LoadProjectsByPartnerEvent(
+                            partnerId: widget.partnerId!, refresh: true));
+                      } else {
+                        bloc.add(LoadProjectsEvent(refresh: true));
+                      }
+                    },
                     child: ListView.separated(
                       padding: const EdgeInsets.only(top: 10),
                       controller: _scrollController,
-                      itemCount: list.length + 1, // ✅ Removed header from list
+                      itemCount: list
+                          .length, // ✅ Fixed: removed +1 to prevent index issues
                       itemBuilder: (context, index) {
                         if (index < list.length) {
                           final item = list[index];
-                          return ProjectCardWidget(item: item);
+                          return ProjectCardWidget(item: item, bloc: bloc);
                         } else {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16),
-                            child: Center(child: CircularProgressIndicator()),
-                          );
+                          return const SizedBox(); // ✅ Fallback widget
                         }
                       },
-                      separatorBuilder: (context, index) => const SizedBox(height: 10),
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 10),
                     ),
                   );
                 } else if (state is ProjectListError) {

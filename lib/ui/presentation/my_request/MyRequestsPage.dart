@@ -1,18 +1,24 @@
+import 'dart:async';
 import 'dart:convert';
+
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
-import '../../widgets/header_widget.dart';
+import 'package:el_race/ui/presentation/my_request/RequestEffectiveDate.dart';
+import 'package:el_race/ui/presentation/my_request/RequestJobMissionPage.dart';
+import 'package:el_race/ui/presentation/my_request/RequestLeavePage.dart';
+import 'package:el_race/ui/presentation/my_request/RequestPermission.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:el_race/ui/presentation/my_request/RequestLeavePage.dart';
-import 'package:el_race/ui/presentation/my_request/RequestJobMissionPage.dart';
-import 'package:el_race/ui/presentation/my_request/RequestEffectiveDate.dart';
-import 'package:el_race/ui/presentation/my_request/RequestPermission.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+
+import '../../widgets/header_widget.dart';
 
 class MyRequestsPage extends StatefulWidget {
-  const MyRequestsPage({Key? key,}) : super(key: key);
+  const MyRequestsPage({
+    Key? key,
+  }) : super(key: key);
 
   @override
   _MyRequestsPageState createState() => _MyRequestsPageState();
@@ -25,6 +31,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
   Set<int> expandedItems = {};
   String error = '';
   List<dynamic> requests = [];
+  List<dynamic> _allRequests = [];
 
   final List<String> requestOptions = [
     'Leave',
@@ -33,16 +40,34 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     'Temporary Permission',
   ];
   TextEditingController searchController = TextEditingController();
+  Timer? _searchDebounce;
 
-
- 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-     _fetchRequests();
+    _fetchRequests();
     searchController.addListener(() {
-      _fetchRequests(keyword: searchController.text.trim());
+      final text = searchController.text.trim();
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+        if (!mounted) return;
+        if (text.isEmpty) {
+          setState(() {
+            requests = List<dynamic>.from(_allRequests);
+          });
+        } else {
+          // Prefer server-side search if available
+          _fetchRequests(keyword: text);
+        }
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchRequests({String keyword = ""}) async {
@@ -81,11 +106,18 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
 
         if (!mounted) return; // ✅ Check again after async call
         setState(() {
-          requests = items;
+          if (keyword.isEmpty) {
+            _allRequests = List<dynamic>.from(items);
+            requests = List<dynamic>.from(items);
+          } else {
+            // If backend supports keyword, it already filtered; still guard locally
+            requests = items;
+          }
           isLoading = false;
         });
       } else {
-        throw Exception("Failed to load requests: ${response.statusCode}\n${response.body}");
+        throw Exception(
+            "Failed to load requests: ${response.statusCode}\n${response.body}");
       }
     } catch (e) {
       if (!mounted) return;
@@ -95,8 +127,6 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       });
     }
   }
-
-
 
   void _showRequestTypeDialog() {
     String dialogSelectedRequest = selectedRequestType;
@@ -108,7 +138,8 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return Dialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               child: Stack(
                 children: [
                   Container(
@@ -128,7 +159,8 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                             });
                           },
                           child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 16),
                             decoration: const BoxDecoration(
                               image: DecorationImage(
                                 image: AssetImage('assets/png/dropdown_bg.png'),
@@ -149,12 +181,14 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                                     fontSize: 14,
                                     fontWeight: FontWeight.w300,
                                     color: Colors.white,
-                                    letterSpacing: 1.2, // Adjust this value as needed
+                                    letterSpacing:
+                                        1.2, // Adjust this value as needed
                                   ),
                                 ),
-
                                 Icon(
-                                  isDropdownOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                                  isDropdownOpen
+                                      ? Icons.arrow_drop_up
+                                      : Icons.arrow_drop_down,
                                   color: Colors.white,
                                 ),
                               ],
@@ -170,10 +204,12 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                                 bottomLeft: Radius.circular(18),
                                 bottomRight: Radius.circular(18),
                               ),
-                              border: Border.all(color: Colors.grey, width: 0.3),
+                              border:
+                                  Border.all(color: Colors.grey, width: 0.3),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withAlpha((0.1 * 255).toInt()),
+                                  color: Colors.black
+                                      .withAlpha((0.1 * 255).toInt()),
                                   blurRadius: 4,
                                   spreadRadius: 4,
                                   offset: const Offset(0, 2),
@@ -181,53 +217,65 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                               ],
                             ),
                             child: Column(
-                              children: List.generate(requestOptions.length * 2 - 1, (index) {
+                              children: List.generate(
+                                  requestOptions.length * 2 - 1, (index) {
                                 if (index.isEven) {
                                   final option = requestOptions[index ~/ 2];
                                   return GestureDetector(
-                                      onTap: () async {
-                                        setState(() => selectedRequestType = option);
-                                        Navigator.of(context).pop();
+                                    onTap: () async {
+                                      setState(  () => selectedRequestType = option);
+                                      Navigator.of(context).pop();
 
-                                        bool? shouldRefresh;
+                                      bool? shouldRefresh;
 
-                                        if (option == 'Leave') {
-                                          shouldRefresh = await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => RequestDetailsPage(loginResponseModel: SharedPref.getLoginData()),
-                                            ),
-                                          );
-                                        } else if (option == 'Job Mission') {
-                                          shouldRefresh = await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => RequestJobMissionPage(loginResponseModel: SharedPref.getLoginData()),
-                                            ),
-                                          );
-                                        } else if (option == 'Effective Date') {
-                                          shouldRefresh = await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => EffectiveDatePage(loginResponseModel: SharedPref.getLoginData()),
-                                            ),
-                                          );
-                                        } else if (option == 'Temporary Permission') {
-                                          shouldRefresh = await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) => RequestPermission(loginResponseModel: SharedPref.getLoginData()),
-                                            ),
-                                          );
-                                        }
+                                      if (option == 'Leave') {
+                                        shouldRefresh = await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => RequestDetailsPage(
+                                                loginResponseModel:
+                                                    SharedPref.getLoginData()),
+                                          ),
+                                        );
+                                      } else if (option == 'Job Mission') {
+                                        shouldRefresh = await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                RequestJobMissionPage(
+                                                    loginResponseModel:
+                                                        SharedPref
+                                                            .getLoginData()),
+                                          ),
+                                        );
+                                      } else if (option == 'Effective Date') {
+                                        shouldRefresh = await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => EffectiveDatePage(
+                                                loginResponseModel:
+                                                    SharedPref.getLoginData()),
+                                          ),
+                                        );
+                                      } else if (option ==
+                                          'Temporary Permission') {
+                                        shouldRefresh = await Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => RequestPermission(
+                                                loginResponseModel:
+                                                    SharedPref.getLoginData()),
+                                          ),
+                                        );
+                                      }
 
-                                        if (shouldRefresh == true) {
-                                          _fetchRequests(); // 🔁 Refresh the list
-                                        }
-                                      },
-
+                                      if (shouldRefresh == true) {
+                                        _fetchRequests(); // 🔁 Refresh the list
+                                      }
+                                    },
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 10, horizontal: 16),
                                       child: Text(
                                         option,
                                         style: GoogleFonts.inter(
@@ -238,7 +286,6 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                                               : appFontColor,
                                         ),
                                       ),
-
                                     ),
                                   );
                                 } else {
@@ -257,7 +304,8 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(Icons.info, size: 14, color: appFontColor),
+                            const Icon(Icons.info,
+                                size: 14, color: appFontColor),
                             const SizedBox(width: 4),
                             Expanded(
                               child: Text(
@@ -268,7 +316,6 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
-
                             ),
                           ],
                         ),
@@ -289,7 +336,8 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                           shape: BoxShape.circle,
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withAlpha((0.2 * 255).toInt()),
+                              color:
+                                  Colors.black.withAlpha((0.2 * 255).toInt()),
                               blurRadius: 6,
                               spreadRadius: 1,
                               offset: const Offset(0, 2),
@@ -365,134 +413,132 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
           },
           child: isExpanded
               ? Container(
-            key: const ValueKey("expanded"),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            width: double.infinity,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [bgStart, bgEnd]),
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: bgEnd.withAlpha((0.3 * 255).toInt()),
-                  blurRadius: 6,
-                  spreadRadius: 1,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: Center(
-              child: Text(
-                statusLabel,
-                style: TextStyle(
-                  color: textColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  letterSpacing: 1,
-                ),
-              ),
-            ),
-          )
-              : Container(
-            key: const ValueKey("collapsed"),
-            padding: const EdgeInsets.fromLTRB(15, 8, 8, 11),
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage(backgroundImage),
-                fit: BoxFit.cover,
-              ),
-              borderRadius: BorderRadius.circular(30),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha((0.08 * 255).toInt()),
-                  blurRadius: 4,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                // Date
-                SizedBox(
-                  width: 80,
-                  child: Text(
-                    item['create_date'] ?? '',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: appFontColor,
-                    ),
-
+                  height: 70.w,
+                  key: const ValueKey("expanded"),
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: [bgStart, bgEnd]),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: bgEnd.withAlpha((0.3 * 255).toInt()),
+                        blurRadius: 6,
+                        spreadRadius: 1,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 0),
-                const SizedBox(
-                  height: 30,
-                  child: VerticalDivider(color: Colors.grey, thickness: 2),
-                ),
-                const SizedBox(width: 5),
-
-                // REQ NO
-                SizedBox(
-                  width: 100,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.center,
+                  child: Center(
+                    child: Text(
+                      statusLabel,
+                      style: TextStyle(
+                        color: textColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        letterSpacing: 1,
+                      ),
+                    ),
+                  ),
+                )
+              : Container(
+                  key: const ValueKey("collapsed"),
+                  height: 70.w,
+                  alignment: Alignment.center,
+                  padding: EdgeInsets.symmetric(horizontal: 19.w,)+EdgeInsets.only(bottom: 6.w),
+                  // padding: EdgeInsets.fromLTRB(15.w, 8.w, 1.w, 20.w),
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: AssetImage(backgroundImage),
+                      fit: BoxFit.fill,
+                    ),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withAlpha((0.08 * 255).toInt()),
+                        blurRadius: 4,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: Row(
                     children: [
-                      Text(
-                        'REQ NO',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: appFontColor,
+                      // Date
+                      SizedBox(
+                        width: 80.w,
+                        child: Text(
+                          item['create_date'] ?? '',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.bold,
+                            color: appFontColor,
+                          ),
                         ),
                       ),
-                      Text(
-                        item['name'] ?? '',
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black,
-                        ),
-                        overflow: TextOverflow.ellipsis,
+                      const SizedBox(width: 0),
+                      const SizedBox(
+                        height: 30,
+                        child:
+                            VerticalDivider(color: Colors.grey, thickness: 2),
                       ),
+                      const SizedBox(width: 5),
 
+                      // REQ NO
+                      SizedBox(
+                        width: 100,
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(
+                              'REQ NO',
+                              style: GoogleFonts.inter(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: appFontColor,
+                              ),
+                            ),
+                            Text(
+                              item['name'] ?? '',
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.inter(
+                                fontSize: 15.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 5),
+                      const SizedBox(
+                        height: 30,
+                        child:
+                            VerticalDivider(color: Colors.grey, thickness: 2),
+                      ),
+                      const SizedBox(width: 0),
+
+                      // Request Type
+                      Expanded(
+                        child: Text(
+                          item['request_type_name']?.trim() ?? '',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 15.sp,
+                            fontWeight: FontWeight.bold,
+                            color: appFontColor,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(width: 5),
-                const SizedBox(
-                  height: 30,
-                  child: VerticalDivider(color: Colors.grey, thickness: 2),
-                ),
-                const SizedBox(width: 0),
-
-                // Request Type
-                Expanded(
-                  child: Text(
-                    item['request_type_name']?.trim() ?? '',
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: appFontColor,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
   }
-
-
-
-
 
   void _showStatusDialog(Map item) {
     showModalBottomSheet(
@@ -511,15 +557,18 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
               const SizedBox(height: 20),
               Text(
                 "Date: ${item['create_date']}",
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
               Text(
                 "Request No: ${item['name']}",
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
               Text(
                 "Type: ${item['request_type_name']}",
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                style:
+                    const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),
             ],
           ),
@@ -527,7 +576,6 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       },
     );
   }
-
 
   Widget buildStatusPill(String status) {
     Color bgColor;
@@ -550,7 +598,8 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [bgColor.withOpacity(0.8), bgColor]),
+        gradient:
+            LinearGradient(colors: [bgColor.withValues(alpha: 0.8), bgColor]),
         borderRadius: BorderRadius.circular(30),
         boxShadow: [
           BoxShadow(
@@ -567,17 +616,15 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     );
   }
 
-
-
   @override
   Widget build(BuildContext context) {
-    return  RefreshIndicator(
-        onRefresh: () async {
-          await _fetchRequests();
-        },
-        child: Scaffold(
-          backgroundColor: Colors.white,
-          appBar: const HeaderWidget(),
+    return RefreshIndicator(
+      onRefresh: () async {
+        await _fetchRequests();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: const HeaderWidget(),
         body: Column(
           children: [
             const SizedBox(height: 10),
@@ -591,10 +638,10 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.arrow_back),
-                        onPressed: () => Navigator.pop(context,true),
+                        onPressed: () => Navigator.pop(context, true),
                       ),
                       Text(
-                        'MY REQUESTS',
+                        translate('home.my_request'),
                         style: GoogleFonts.koulen(
                           fontSize: 18,
                           fontWeight: FontWeight.w400,
@@ -605,9 +652,11 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                       Container(
                         width: 25,
                         height: 25,
-                        decoration: const BoxDecoration(color: appFontColor, shape: BoxShape.circle),
+                        decoration: const BoxDecoration(
+                            color: appFontColor, shape: BoxShape.circle),
                         child: IconButton(
-                          icon: const Icon(Icons.add, size: 20, color: Colors.white),
+                          icon: const Icon(Icons.add,
+                              size: 20, color: Colors.white),
                           onPressed: _showRequestTypeDialog,
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
@@ -634,44 +683,42 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                     ),
                     child: TextField(
                       controller: searchController,
-                      decoration: const InputDecoration(
-                        hintText: "Find your request",
-                        hintStyle: TextStyle(fontSize: 12, color: appFontColor), // Reduced font size
-                        prefixIcon: Padding(
-                          padding: EdgeInsets.all(8.0), // Adjust padding to control icon size
-                          child: Icon(Icons.menu, size: 18, color: appFontColor), // Reduced icon size
+                      decoration: InputDecoration(
+                        hintText: translate('home.Find_your_request'),
+                        hintStyle: const TextStyle(
+                            fontSize: 12,
+                            color: appFontColor), // Reduced font size
+                        prefixIcon: const Padding(
+                          padding: EdgeInsets.all(
+                              8.0), // Adjust padding to control icon size
+                          child: Icon(Icons.menu,
+                              size: 18,
+                              color: appFontColor), // Reduced icon size
                         ),
-                        suffixIcon: Padding(
-                          padding: EdgeInsets.all(8.0), // Adjust padding for consistency
-                          child: Icon(Icons.search, size: 18, color: appFontColor), // Search icon at the end
-                        ),
+                        suffixIcon: const Icon(Icons.search,
+                            size: 18, color: appFontColor),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(vertical: 10, horizontal: 10), // Adjust padding
+                        contentPadding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 10), // Adjust padding
                       ),
-                      onChanged: (query) {
-                        setState(() {
-                          // Implement filtering logic here if needed
-                        });
-                      },
+                      onChanged: (query) {},
                     ),
                   ),
-        
                 ],
               ),
             ),
-        
-        
             Expanded(
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : error.isNotEmpty
-                  ? Center(child: Text(error))
-                  : ListView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
-                    itemCount: requests.length,
-                    itemBuilder: (context, index) => _buildRequestItem(requests[index], index),
-              ),
+                      ? Center(child: Text(error))
+                      : ListView.builder(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(vertical: 16.0),
+                          itemCount: requests.length,
+                          itemBuilder: (context, index) =>
+                              _buildRequestItem(requests[index], index),
+                        ),
             ),
           ],
         ),

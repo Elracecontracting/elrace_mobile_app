@@ -14,15 +14,23 @@ final class FetchMediaList extends MediaEvent {
 final class FetchMediaByType extends MediaEvent {
   final MediaType type;
   const FetchMediaByType(this.type);
-  
+
   @override
   List<Object> get props => [type];
+}
+
+final class SearchMedia extends MediaEvent {
+  final String keyword;
+  const SearchMedia(this.keyword);
+
+  @override
+  List<Object> get props => [keyword];
 }
 
 final class AddMedia extends MediaEvent {
   final MediaModel media;
   const AddMedia(this.media);
-  
+
   @override
   List<Object> get props => [media];
 }
@@ -30,7 +38,7 @@ final class AddMedia extends MediaEvent {
 final class UpdateMedia extends MediaEvent {
   final MediaModel media;
   const UpdateMedia(this.media);
-  
+
   @override
   List<Object> get props => [media];
 }
@@ -38,7 +46,7 @@ final class UpdateMedia extends MediaEvent {
 final class DeleteMedia extends MediaEvent {
   final String mediaId;
   const DeleteMedia(this.mediaId);
-  
+
   @override
   List<Object> get props => [mediaId];
-} 
+}

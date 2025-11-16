@@ -1,4 +1,3 @@
-
 import 'package:el_race/resources/app_colors.dart';
 import 'package:el_race/ui/presentation/register_face/views/register_face_view.dart';
 import 'package:el_race/ui/presentation/signin/data/model.dart';
@@ -6,6 +5,8 @@ import 'package:el_race/ui/widgets/custom_button.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/extensions/size_extension.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_translate/flutter_translate.dart';
+
 import '../view_model/instruction_view_model.dart';
 
 class InstructionView extends StatelessWidget {
@@ -25,7 +26,7 @@ class InstructionView extends StatelessWidget {
         elevation: 0,
       ),
       body: SafeArea(
-        child: Padding(     
+        child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -38,7 +39,7 @@ class InstructionView extends StatelessWidget {
               ),
               SizedBox(height: 0.02.sh),
               Text(
-                "Selfie Time!",
+                translate('instruction.selfie_time'),
                 style: TextStyle(
                   fontSize: 0.05.sh,
                   fontWeight: FontWeight.bold,
@@ -55,7 +56,7 @@ class InstructionView extends StatelessWidget {
               ),
               SizedBox(height: 0.01.sh),
               Text(
-                "Get ready for the best shot",
+                translate('instruction.get_ready'),
                 style: TextStyle(
                   fontSize: 0.025.sh,
                   fontWeight: FontWeight.w500,
@@ -69,7 +70,8 @@ class InstructionView extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: controller.instructions.map((tip) {
-                  final icon = controller.instructionIcons[tip] ?? Icons.info_rounded;
+                  final icon =
+                      controller.instructionIcons[tip] ?? Icons.info_rounded;
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: Row(
@@ -101,7 +103,7 @@ class InstructionView extends StatelessWidget {
 
               // Action Button
               CustomButton(
-                text: "Let's Go",
+                text: translate('instruction.lets_go'),
                 onTap: () => Util.pushPage(const RegisterFaceView(), context),
               ),
               const Spacer(flex: 2),

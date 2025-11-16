@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 class BottomWidget extends StatelessWidget {
   final Function() onTapped;
-  const BottomWidget({super.key,required this.onTapped});
+  const BottomWidget({super.key, required this.onTapped});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +25,7 @@ class BottomWidget extends StatelessWidget {
               decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   color: white,
-                  boxShadow: [
+                  boxShadow: const [
                     BoxShadow(
                         color: lightGrey,
                         offset: const Offset(1, 4),
@@ -34,15 +34,15 @@ class BottomWidget extends StatelessWidget {
               child: Center(
                 child: Padding(
                   padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Image.asset('assets/png/icons/signout.png'),
-                      Text(
+                      const Text(
                         'SIGN OUT',
                         style:
-                        TextStyle(fontWeight: FontWeight.bold, color: blue),
+                            TextStyle(fontWeight: FontWeight.bold, color: blue),
                       )
                     ],
                   ),

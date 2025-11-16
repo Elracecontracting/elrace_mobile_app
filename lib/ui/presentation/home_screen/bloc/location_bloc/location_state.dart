@@ -7,3 +7,11 @@ sealed class LocationState extends Equatable {
 }
 
 final class LocationInitial extends LocationState {}
+
+class LocationError extends LocationState {
+  final String message;
+  const LocationError(this.message);
+
+  @override
+  List<Object> get props => [message];
+}

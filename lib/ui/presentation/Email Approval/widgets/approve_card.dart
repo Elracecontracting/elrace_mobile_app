@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -7,8 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class ApproveCard extends StatelessWidget {
-  final Map<dynamic,dynamic> item;
-  const ApproveCard({super.key,required this.item});
+  final Map<dynamic, dynamic> item;
+  const ApproveCard({super.key, required this.item});
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +29,8 @@ class ApproveCard extends StatelessWidget {
     String year = parsedDate.year.toString();
 
     // Get icon dynamically based on category type
-    String iconPath = categoryIcons[type.toUpperCase()] ?? "assets/icons/default.png";
+    String iconPath =
+        categoryIcons[type.toUpperCase()] ?? "assets/icons/default.png";
     return GestureDetector(
       onTap: () {
         print('Navigating with ID: $id'); // 👈 print before navigation
@@ -101,7 +101,8 @@ class ApproveCard extends StatelessWidget {
               const SizedBox(height: 2),
               Row(
                 children: [
-                  const Icon(Icons.person_outline, size: 16, color: Colors.black54),
+                  const Icon(Icons.person_outline,
+                      size: 16, color: Colors.black54),
                   const SizedBox(width: 8),
                   Text(
                     requesterName,
@@ -127,7 +128,8 @@ class ApproveCard extends StatelessWidget {
               const SizedBox(height: 2),
               Row(
                 children: [
-                  const Icon(Icons.location_on_outlined, size: 16, color: Colors.black54),
+                  const Icon(Icons.location_on_outlined,
+                      size: 16, color: Colors.black54),
                   const SizedBox(width: 8),
                   Text(
                     location,
@@ -150,17 +152,18 @@ class ApproveCard extends StatelessWidget {
                         padding: const EdgeInsets.all(2),
                         child: ClipOval(
                           child: (item["image_emp"] != null &&
-                              item["image_emp"] is String &&
-                              (item["image_emp"] as String).isNotEmpty &&
-                              (item["image_emp"] as String).toLowerCase() != "false")
+                                  item["image_emp"] is String &&
+                                  (item["image_emp"] as String).isNotEmpty &&
+                                  (item["image_emp"] as String).toLowerCase() !=
+                                      "false")
                               ? Image.memory(
-                            base64Decode(item["image_emp"] as String),
-                            fit: BoxFit.cover,
-                          )
+                                  base64Decode(item["image_emp"] as String),
+                                  fit: BoxFit.cover,
+                                )
                               : const Image(
-                            image: AssetImage("assets/png/profile_1.png"),
-                            fit: BoxFit.cover,
-                          ),
+                                  image: AssetImage("assets/png/profile_1.png"),
+                                  fit: BoxFit.cover,
+                                ),
                         ),
                       ),
                     ),
@@ -194,7 +197,8 @@ class ApproveCard extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 6),
                               decoration: const BoxDecoration(
                                 image: DecorationImage(
                                   image: AssetImage("assets/png/date-bg.png"),

@@ -1,17 +1,20 @@
 import 'dart:convert';
+
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
-import 'package:http/http.dart' as http;
-import '../../widgets/custom_slider_button.dart';
 import 'package:el_race/utils/color_utils.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+
+import '../../widgets/custom_slider_button.dart';
 
 class EffectiveDatePage extends StatefulWidget {
   final loginResponseModel;
 
-  const EffectiveDatePage({Key? key, required this.loginResponseModel}) : super(key: key);
+  const EffectiveDatePage({Key? key, required this.loginResponseModel})
+      : super(key: key);
 
   @override
   _EffectiveDatePageState createState() => _EffectiveDatePageState();
@@ -22,7 +25,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
   DateTime joinedDate = DateTime.now();
   DateTime leaveEndDate = DateTime.now();
   String description = '';
-  final GlobalKey<CustomSliderButtonState> _sliderKey = GlobalKey<CustomSliderButtonState>();
+  final GlobalKey<CustomSliderButtonState> _sliderKey =
+      GlobalKey<CustomSliderButtonState>();
 
   Future<void> _selectDate(BuildContext context, bool isJoinedDate) async {
     DateTime initialDate = isJoinedDate ? joinedDate : leaveEndDate;
@@ -48,7 +52,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
   }
 
   String _formatDate(DateTime date) => DateFormat('dd/MM/yyyy').format(date);
-  String _formatDateTime(DateTime date) => DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
+  String _formatDateTime(DateTime date) =>
+      DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
 
   Future<void> _submitEffectiveDateRequest() async {
     final token = SharedPref.getLoginData().result?.token;
@@ -95,12 +100,13 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
       Navigator.pop(context);
       final data = jsonDecode(response.body);
 
-      if (response.statusCode == 200 && data["result"]?['status'] == 'success') {
+      if (response.statusCode == 200 &&
+          data["result"]?['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Request submitted successfully!")),
         );
-        Navigator.pop(context, true); // ✅ Go back to MyRequestsPage with refresh flag
-
+        Navigator.pop(
+            context, true); // ✅ Go back to MyRequestsPage with refresh flag
       } else {
         _sliderKey.currentState?.resetSlider(); // 👈 Reset the slider position
         _showErrorDialog(data["result"]?['message'] ?? "Request failed");
@@ -150,7 +156,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withAlpha((0.1 * 255).toInt()),
+                              color:
+                                  Colors.black.withAlpha((0.1 * 255).toInt()),
                               blurRadius: 10,
                               spreadRadius: 2,
                             ),
@@ -159,9 +166,11 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                         child: Column(
                           children: [
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 16.0),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   IconButton(
                                     icon: const Icon(Icons.arrow_back),
@@ -183,14 +192,17 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                             _buildDateRow("JOINED DATE :  ", joinedDate, true),
                             const SizedBox(height: 10),
                             if (selectedMissionType == "Work Resumption")
-                              _buildDateRow("LEAVE END DATE :  ", leaveEndDate, false),
+                              _buildDateRow(
+                                  "LEAVE END DATE :  ", leaveEndDate, false),
                             const SizedBox(height: 10),
                             Padding(
                               padding: const EdgeInsets.only(left: 36.0),
                               child: Align(
                                 alignment: Alignment.centerLeft,
                                 child: Text(
-                                  translate('common.late_days', args: {'days': calculateLateDays().toString()}),
+                                  translate('common.late_days', args: {
+                                    'days': calculateLateDays().toString()
+                                  }),
                                   style: GoogleFonts.koulen(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
@@ -202,7 +214,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                             ),
                             const SizedBox(height: 20),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 36.0),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 36.0),
                               child: Align(
                                 alignment: Alignment.centerLeft,
                                 child: Text(
@@ -210,8 +223,10 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                                   style: GoogleFonts.koulen(
                                     fontSize: 17, // Adjust as needed
                                     fontWeight: FontWeight.w500,
-                                    color: Color(0xFFB0B0B0), // Your specified color
-                                    letterSpacing: 2.2, // Optional for visual spacing
+                                    color: const Color(
+                                        0xFFB0B0B0), // Your specified color
+                                    letterSpacing:
+                                        2.2, // Optional for visual spacing
                                   ),
                                 ),
                               ),
@@ -389,7 +404,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                 ),
                 filled: true,
                 fillColor: Colors.transparent,
-                contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+                contentPadding:
+                    const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
               ),
             ),
           ),
@@ -400,10 +416,12 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
               children: [
                 Text(
                   '${description.trim().isEmpty ? 1 : description.trim().split(RegExp(r'\s+')).length}/50',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      fontSize: 12, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 2),
-                Text(translate('request_permission.max_words'), style: const TextStyle(fontSize: 10, color: Colors.black)),
+                Text(translate('request_permission.max_words'),
+                    style: const TextStyle(fontSize: 10, color: Colors.black)),
               ],
             ),
           ),
@@ -454,8 +472,10 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
     );
   }
 
-  TextStyle _infoTextStyle_1() => const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey);
+  TextStyle _infoTextStyle_1() => const TextStyle(
+      fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey);
 }
+
 String _mapReasonToApiValue(String reason) {
   switch (reason) {
     case 'New Hire':

@@ -1,3 +1,6 @@
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+
 allprojects {
     repositories {
         google()
@@ -12,20 +15,35 @@ subprojects {
         if (project.hasProperty('android')) {
             project.android {
                 if (namespace == null) {
-                    namespace project.group
+                    def candidate = project.group?.toString()
+                    if (candidate == null || candidate.trim().isEmpty()) {
+                        candidate = "com.el_race.generated.${project.name.replaceAll(/[^A-Za-z0-9_]/, '_')}"
+                    }
+                    namespace candidate
                 }
+                
+                // Ensure all plugins use at least compileSdk 35 (required for lStar attribute and dependencies)
+                // This fixes the "resource android:attr/lStar not found" error
+                // Force compileSdk to 35 for all plugins to ensure compatibility with all dependencies
+                compileSdkVersion 36
                 
                 // Ensure consistent JVM target across all plugins
                 compileOptions {
-                    sourceCompatibility JavaVersion.VERSION_17
-                    targetCompatibility JavaVersion.VERSION_17
+                    sourceCompatibility = JavaVersion.VERSION_21
+                    targetCompatibility = JavaVersion.VERSION_21
+                }
+
+                packagingOptions {
+                    if (it.hasProperty('jniLibs') && jniLibs != null) {
+                        jniLibs.useLegacyPackaging = false
+                    }
                 }
             }
             
             // Set Kotlin JVM target for all subprojects
             project.tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
                 kotlinOptions {
-                    jvmTarget = '17'
+                    jvmTarget = '21'
                 }
             }
         }

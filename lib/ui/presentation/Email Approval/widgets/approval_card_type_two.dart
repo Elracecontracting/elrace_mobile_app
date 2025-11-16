@@ -120,7 +120,7 @@ class ApprovalCardTypeTwo extends StatelessWidget {
                       SizedBox(height: 6.w),
                       InfoContainer(
                         text: date,
-                        icon: Icon(Icons.date_range, size: 14.w, color: const Color(0xFF1A1A53)),
+                        icon: Image.asset('assets/newapp/calendar.png', width: 14.w, height: 14.w),
                       ),
                     ],
                   ),
@@ -157,7 +157,7 @@ class InfoContainer extends StatelessWidget {
       width: width ?? 120.w,
       decoration: BoxDecoration(
         border: Border.all(color: const Color(0xFF1A1A53), width: 1),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(13.r),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -169,7 +169,7 @@ class InfoContainer extends StatelessWidget {
           ],
           Text(
             text,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.nunito(
               fontSize: fontSize ?? 11.sp,
               fontWeight: FontWeight.bold,
               color: const Color(0xFF1A1A53),

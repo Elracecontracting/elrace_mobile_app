@@ -1,13 +1,17 @@
+import 'dart:async';
+
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../bloc/media_bloc.dart';
 import '../data/media_model.dart';
 import '../widgets/media_item_widget.dart';
+import 'yoyo_video_player_screen.dart';
 
 class MediaListScreen extends StatefulWidget {
   const MediaListScreen({super.key});
@@ -17,10 +21,28 @@ class MediaListScreen extends StatefulWidget {
 }
 
 class _MediaListScreenState extends State<MediaListScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
+  bool _showSearch = false;
   @override
   void initState() {
     super.initState();
     context.read<MediaBloc>().add(const FetchMediaList());
+    _searchController.addListener(() {
+      final text = _searchController.text.trim();
+      _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 350), () {
+        if (!mounted) return;
+        context.read<MediaBloc>().add(SearchMedia(text));
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -42,18 +64,19 @@ class _MediaListScreenState extends State<MediaListScreen> {
           }
           if (state is MediaActionSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Media action completed successfully')),
+              const SnackBar(
+                  content: Text('Media action completed successfully')),
             );
           }
         },
         builder: (context, state) {
           return SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
             padding: EdgeInsets.symmetric(horizontal: 14.w),
             child: Column(
               children: [
                 const SizedBox(height: 10),
                 _buildHeader(),
-             
                 SizedBox(height: 16.h),
                 if (state is MediaLoading)
                   const Padding(
@@ -63,25 +86,58 @@ class _MediaListScreenState extends State<MediaListScreen> {
                     ),
                   )
                 else if (state is MediaLoaded)
-                  state.mediaList.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: state.mediaList.length,
-                          itemBuilder: (context, index) {
-                            final media = state.mediaList[index];
-                            return MediaItemWidget(
-                              media: media,
-                              onTap: () {
-                                _showMediaDetails(context, media);
-                              },
-                              onLongPress: () {
-                                _showDeleteConfirmation(context, media.id);
-                              },
-                            );
-                          },
-                        )
+                  (() {
+                    final q = _searchController.text.trim().toLowerCase();
+                    final list = q.isEmpty
+                        ? state.mediaList
+                        : state.mediaList.where((m) {
+                            final name = m.name.toLowerCase();
+                            final typeLabel = m.isImage ? 'image' : 'video';
+                            final id = m.id.toLowerCase();
+                            final url = (m.url).toLowerCase();
+                            final s3 = (m.xWebUrl ?? '').toLowerCase();
+                            final ext = m.fileExtension.toLowerCase();
+                            return name.contains(q) ||
+                                typeLabel.contains(q) ||
+                                id.contains(q) ||
+                                url.contains(q) ||
+                                s3.contains(q) ||
+                                ext.contains(q);
+                          }).toList();
+
+                    return list.isEmpty
+                        ? _buildEmptyState()
+                        : ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: list.length,
+                            itemBuilder: (context, index) {
+                              final media = list[index];
+                              return MediaItemWidget(
+                                media: media,
+                                onTap: () {
+                                  if (media.isVideo) {
+                                    print(media.previewUrl);
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            YoYoVideoPlayerScreen(media: media),
+                                      ),
+                                    );
+                                  } else {
+                                    _showMediaDetails(context, media);
+                                  }
+                                },
+                                onLongPress: () {
+                                  _showDeleteConfirmation(context, media.id);
+                                },
+                              );
+                            },
+                            separatorBuilder:
+                                (BuildContext context, int index) =>
+                                    SizedBox(height: 20.w),
+                          );
+                  })()
                 else if (state is MediaError)
                   _buildErrorState(state.message),
               ],
@@ -97,23 +153,118 @@ class _MediaListScreenState extends State<MediaListScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         const BackButton(),
-        Row(
-          children: [
-            Image.asset('assets/png/camera.png', width: 40.w, height: 40.w),
-            const SizedBox(width: 4),
-            Text(
-              'Media Gallery',
-              style: GoogleFonts.koulen(
-                fontSize: 28.sp,
-                fontWeight: FontWeight.w400,
-                color: appFontColor,
-                letterSpacing: 2.0,
-              ),
+        Expanded(
+          child: Align(
+            alignment: Alignment.center,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset('assets/png/camera.png', width: 44.w, height: 44.w),
+                const SizedBox(width: 7),
+                if (!_showSearch)
+                  Text(
+                    translate('home.media'),
+                    style: GoogleFonts.koulen(
+                      fontSize: 28.sp,
+                      fontWeight: FontWeight.w400,
+                      color: appFontColor,
+                      letterSpacing: 2.0,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  )
+                else
+                  Expanded(child: _buildInlineSearchField()),
+              ],
             ),
-          ],
+          ),
         ),
-        Image.asset('assets/png/search.png', width: 40.w, height: 40.w),
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _showSearch = !_showSearch;
+              if (!_showSearch) {
+                _searchController.clear();
+                context.read<MediaBloc>().add(const FetchMediaList());
+              }
+            });
+          },
+          child:
+              Image.asset('assets/png/search.png', width: 35.w, height: 35.w),
+        ),
       ],
+    );
+  }
+
+  Widget _buildSearchField() {
+    return Container(
+      decoration: BoxDecoration(
+        image: const DecorationImage(
+          image: AssetImage('assets/png/bg_atten.png'),
+          fit: BoxFit.none,
+        ),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(29.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha((0.2 * 255).toInt()),
+            blurRadius: 4,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        decoration: InputDecoration(
+          hintText: 'Find media',
+          hintStyle: TextStyle(fontSize: 12.sp, color: appFontColor),
+          prefixIcon: const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Icon(Icons.menu, size: 18, color: appFontColor),
+          ),
+          suffixIcon: const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Icon(Icons.search, size: 18, color: appFontColor),
+          ),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInlineSearchField() {
+    return Container(
+      decoration: BoxDecoration(
+        image: const DecorationImage(
+          image: AssetImage('assets/png/bg_atten.png'),
+          fit: BoxFit.none,
+        ),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(29.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha((0.2 * 255).toInt()),
+            blurRadius: 4,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        autofocus: true,
+        decoration: InputDecoration(
+          hintText: 'Find media',
+          hintStyle: TextStyle(fontSize: 12.sp, color: appFontColor),
+          prefixIcon: const Padding(
+            padding: EdgeInsets.all(8.0),
+            child: Icon(Icons.search, size: 18, color: appFontColor),
+          ),
+          border: InputBorder.none,
+          contentPadding:
+              const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+        ),
+      ),
     );
   }
 
@@ -125,10 +276,14 @@ class _MediaListScreenState extends State<MediaListScreen> {
           context.read<MediaBloc>().add(const FetchMediaList());
         }),
         _buildFilterButton('Images', () {
-          context.read<MediaBloc>().add(const FetchMediaByType(MediaType.image));
+          context
+              .read<MediaBloc>()
+              .add(const FetchMediaByType(MediaType.image));
         }),
         _buildFilterButton('Videos', () {
-          context.read<MediaBloc>().add(const FetchMediaByType(MediaType.video));
+          context
+              .read<MediaBloc>()
+              .add(const FetchMediaByType(MediaType.video));
         }),
       ],
     );
@@ -363,4 +518,4 @@ class _MediaListScreenState extends State<MediaListScreen> {
       ),
     );
   }
-} 
+}

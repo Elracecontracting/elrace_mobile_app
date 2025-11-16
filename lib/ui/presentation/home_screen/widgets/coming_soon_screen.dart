@@ -22,33 +22,35 @@ class ComingSoonScreen extends StatelessWidget {
             children: [
               Icon(
                 Icons.construction,
-                color: Color(0xFF1A1A53),
+                color: const Color(0xFF1A1A53),
                 size: 100.sp,
               ),
               SizedBox(height: 30.h),
               Text(
                 "Coming Soon",
-                style: TextStyle(fontSize: 40.sp,color: const Color(0xFF1A1A53)),
+                style:
+                    TextStyle(fontSize: 40.sp, color: const Color(0xFF1A1A53)),
               ),
               SizedBox(height: 15.h),
-              
               Text(
                 "We're working hard to bring you this feature. Stay tuned!",
-                style: TextStyle(fontSize: 20.sp,color: const Color(0xFF1A1A53)),
+                style:
+                    TextStyle(fontSize: 20.sp, color: const Color(0xFF1A1A53)),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 40.h),
-              
-
               TextButton(
-                onPressed: (){
+                onPressed: () {
                   HomeBloc.get(context).add(const ChangeCurrentIndex(index: 1));
                   Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
                 },
                 child: Text(
                   "Go To Home >> ",
-                  style: TextStyle(fontSize: 20.sp,color: const Color(0xFF1A1A53),decoration: TextDecoration.underline),
-               ),
+                  style: TextStyle(
+                      fontSize: 20.sp,
+                      color: const Color(0xFF1A1A53),
+                      decoration: TextDecoration.underline),
+                ),
               )
             ],
           ),

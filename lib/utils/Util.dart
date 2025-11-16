@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/call_screen/bloc/contact_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
-import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_event.dart';
 import 'package:el_race/ui/widgets/custom_toast.dart';
@@ -14,21 +13,21 @@ import 'package:flutter_translate/flutter_translate.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class Util {
-  static fetchHomeScreenData(cxt){
+  static fetchHomeScreenData(cxt) {
     BlocProvider.of<HomeBloc>(cxt, listen: false)
-    .add(const FetchLastMonthAttendanceSummary());
-
+        .add(const FetchLastMonthAttendanceSummary());
 
     BlocProvider.of<RequestsBloc>(cxt, listen: false)
-    .add(const FetchRequestsCount());
+        .add(const FetchRequestsCount());
 
     BlocProvider.of<ContactBloc>(cxt, listen: false).add(GetEmployeeLisET());
   }
 
-  static Future<void> saveAndChangeLocale(BuildContext context, String languageCode) async {
+  static Future<void> saveAndChangeLocale(
+      BuildContext context, String languageCode) async {
     await SharedPref().setAppLanguage(languageCode);
     await changeLocale(context, languageCode);
-    pushPage(const HomeScreen(), context);
+    // pushPage(const HomeScreen(), context);
   }
 
   static pushPage(Widget route, BuildContext cxt) {
@@ -55,15 +54,27 @@ class Util {
   }
 
   static void showComingSoonToast() {
-    CustomToast().showToast("Coming Soon 🚧");
+    CustomToast().showToast("Coming Soon 🚧", isCenter: true);
   }
 
   static String monthName(int month) {
     const monthNames = [
-      "Jan", "Feb", "Mar", "Apr", "May", "June", "July", "Aug", "Sept", "Oct", "Nov", "Dec"
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "June",
+      "July",
+      "Aug",
+      "Sept",
+      "Oct",
+      "Nov",
+      "Dec"
     ];
     return month >= 1 && month <= 12 ? monthNames[month - 1] : "";
   }
+
   static void hideKeyBoard(BuildContext context) {
     FocusScope.of(context).requestFocus(FocusNode());
   }
@@ -82,8 +93,7 @@ class Util {
     }
   }
 
-
-  static  isValidDateTime(String? value) {
+  static isValidDateTime(String? value) {
     if (value == null || value.isEmpty) return false;
 
     try {
@@ -93,6 +103,4 @@ class Util {
       return false;
     }
   }
-
 }
-

@@ -1,30 +1,30 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
+import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:el_race/ui/presentation/call_screen/bloc/contact_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/provider/slider_provider.dart';
-import 'package:el_race/ui/presentation/my_notes/bloc/notes_bloc.dart';
+import 'package:el_race/ui/presentation/home_screen/widgets/profile_box_with_slide_animation.dart';
 import 'package:el_race/ui/presentation/media/bloc/media_bloc.dart';
-import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_bloc.dart';
+import 'package:el_race/ui/presentation/my_notes/bloc/notes_bloc.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
+import 'package:el_race/ui/presentation/qr_code/bloc/qr_code_bloc.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
 import 'package:el_race/ui/presentation/splash_screen/splash_screen.dart';
 import 'package:el_race/utils/di.dart';
 import 'package:el_race/utils/generated_routes.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:el_race/utils/screen_size_util.dart';
-import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-import 'package:el_race/providers/profile_box_provider.dart';
-import 'package:el_race/ui/presentation/home_screen/widgets/profile_box_with_slide_animation.dart';
 import 'firebase_service.dart';
 import 'report_module/data/provider/reports_provider.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:flutter_translate/flutter_translate.dart';
 import 'ui/presentation/Email Approval/bloc/approval_bloc.dart';
 
 void main() async {
@@ -43,6 +43,10 @@ void main() async {
     supportedLocales: ['en', 'ar'],
     basePath: 'assets/i18n',
   );
+
+  if (SharedPref().isArabic()) {
+    await delegate.changeLocale(const Locale('ar'));
+  }
 
   runApp(
     BlocProvider(
@@ -74,10 +78,11 @@ class MyApp extends StatelessWidget {
             BlocProvider(create: (ctx) => sl<HomeBloc>()),
             BlocProvider(create: (ctx) => sl<RequestsBloc>()),
             BlocProvider(create: (ctx) => sl<ApprovalBloc>()),
-            BlocProvider(create: (ctx) => sl<ProjectListBloc>()),
+            // BlocProvider(create: (ctx) => sl<ProjectListBloc>()), // Temporarily disabled for iOS simulator
             BlocProvider(create: (ctx) => sl<ContactBloc>()),
             BlocProvider(create: (ctx) => sl<NotesBloc>()),
             BlocProvider(create: (ctx) => sl<MediaBloc>()),
+            BlocProvider(create: (ctx) => QrCodeBloc()),
           ],
           child: ScreenUtilInit(
             designSize: const Size(411.4, 843.4),
@@ -140,3 +145,4 @@ class MyApp extends StatelessWidget {
 }
 
 GlobalKey<NavigatorState> navKey = GlobalKey();
+final GlobalKey<OverlayState> appOverlayKey = GlobalKey<OverlayState>();

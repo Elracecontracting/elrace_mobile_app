@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:camera/camera.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:el_race/data/models/gesture_description.dart';
@@ -16,10 +17,10 @@ import 'package:image/image.dart' as img;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
-import 'dart:typed_data';
-import 'dart:math' as math;
+
 import '../../../../utils/extract_face_feature.dart';
 import '../../authenticate_face/view_model/authenticate_face_view_model.dart';
+
 class RegisterFaceViewController extends GetxController {
   var faceDetector = FaceDetector(
     options: FaceDetectorOptions(
@@ -53,7 +54,6 @@ class RegisterFaceViewController extends GetxController {
   String currentInstruction = '';
   DateTime? gestureStartTime;
 
-
   bool _isBusy = false;
   bool canProcess = true;
   bool _eyesClosedDetected = false;
@@ -72,20 +72,20 @@ class RegisterFaceViewController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    InternetConnectionChecker().onStatusChange.listen((InternetConnectionStatus status) {
+    InternetConnectionChecker.createInstance()
+        .onStatusChange
+        .listen((InternetConnectionStatus status) {
       hasInternet.value = status == InternetConnectionStatus.connected;
       update();
     });
 
     gestureDescriptions = [
-    
       GestureDescription(
         icon: Icons.face,
         step: "Blink",
         title: "Blink both eyes once clearly for detection.",
         statusKey: "Pending".obs,
       ),
-   
     ]..shuffle();
     // gestureDescriptions.add(
     //   GestureDescription(
@@ -100,7 +100,6 @@ class RegisterFaceViewController extends GetxController {
 
     // Initialize FaceService
     faceService = FaceService();
-
   }
 
   // Extract face embedding using FaceService
@@ -120,7 +119,8 @@ class RegisterFaceViewController extends GetxController {
 
       // Extract embedding using FaceService
       final embedding = await faceService.getEmbedding(bytes);
-      print('✅ FaceService embedding extracted: ${embedding.length} dimensions');
+      print(
+          '✅ FaceService embedding extracted: ${embedding.length} dimensions');
       return embedding;
     } catch (e) {
       print('❌ Error extracting FaceService embedding: $e');
@@ -134,10 +134,10 @@ class RegisterFaceViewController extends GetxController {
     try {
       // Extract face features using ML Kit
       final features = await extractFaceFeatures(inputImage, faceDetector);
-      
+
       // Create a simple geometric embedding from face landmarks
       final embedding = <double>[];
-      
+
       // Add normalized landmark positions
       if (features.leftEye != null) {
         embedding.add(features.leftEye!.x!.toDouble());
@@ -159,12 +159,12 @@ class RegisterFaceViewController extends GetxController {
         embedding.add(features.rightMouth!.x!.toDouble());
         embedding.add(features.rightMouth!.y!.toDouble());
       }
-      
+
       // Pad to 192 dimensions to match FaceService embedding size
       while (embedding.length < 192) {
         embedding.add(0.0);
       }
-      
+
       print('✅ Created geometric embedding: ${embedding.length} dimensions');
       return embedding;
     } catch (e) {
@@ -185,24 +185,24 @@ class RegisterFaceViewController extends GetxController {
     cameraController = controller;
   }
 
-
   Future<void> processImage(InputImage inputImage, BuildContext context) async {
     if (!canProcess || _isBusy) return;
     _isBusy = true;
     print("processImage called");
 
-
     final faces = await faceDetector.processImage(inputImage);
     hasFace.value = false;
 
-    if (faces.isNotEmpty && cameraController != null && cameraController!.value.isInitialized) {
+    if (faces.isNotEmpty &&
+        cameraController != null &&
+        cameraController!.value.isInitialized) {
       final face = faces.first;
       final camera = cameraController!.description;
       final imageSize = cameraController!.value.previewSize!;
       final faceRect = face.boundingBox;
       final double viewWidth = 0.30.sh;
       final double viewHeight = 0.30.sh;
-      
+
       final scaleX = viewWidth / imageSize.height;
       final scaleY = viewHeight / imageSize.width;
       final isFrontCamera = camera.lensDirection == CameraLensDirection.front;
@@ -239,8 +239,10 @@ class RegisterFaceViewController extends GetxController {
 
         FaceSizeZone newZone;
 
-        final bool isTooSmall = faceWidth < (minFaceSize - buffer) || faceHeight < (minFaceSize - buffer);
-        final bool isTooBig = faceWidth > (maxFaceSize + buffer) || faceHeight > (maxFaceSize + buffer);
+        final bool isTooSmall = faceWidth < (minFaceSize - buffer) ||
+            faceHeight < (minFaceSize - buffer);
+        final bool isTooBig = faceWidth > (maxFaceSize + buffer) ||
+            faceHeight > (maxFaceSize + buffer);
 
         if (isTooSmall) {
           newZone = FaceSizeZone.tooSmall;
@@ -272,17 +274,19 @@ class RegisterFaceViewController extends GetxController {
           if (gestureStartTime == null) {
             gestureStartTime = DateTime.now();
           } else {
-            final elapsed = DateTime.now().difference(gestureStartTime!).inMilliseconds;
+            final elapsed =
+                DateTime.now().difference(gestureStartTime!).inMilliseconds;
             gestureProgress.value = (elapsed / 3000).clamp(0.0, 1.0);
 
             if (elapsed >= 3000) {
               gestureDescriptions[currentStep].statusKey!.value = "Approved";
               gestureStartTime = null;
               gestureProgress.value = 0.0;
-              if(currentStep< gestureDescriptions.length) {
+              if (currentStep < gestureDescriptions.length) {
                 currentStep++;
               }
-              if (currentStep >= gestureDescriptions.length && !isCaptured.value) {
+              if (currentStep >= gestureDescriptions.length &&
+                  !isCaptured.value) {
                 await _captureImage();
               } else {
                 currentInstruction = _buildInstruction();
@@ -304,7 +308,8 @@ class RegisterFaceViewController extends GetxController {
   }
 
   bool _validateGesture(Face face) {
-    if (currentStep >= gestureDescriptions.length) return false; // ✅ Prevent out-of-bounds access
+    if (currentStep >= gestureDescriptions.length)
+      return false; // ✅ Prevent out-of-bounds access
 
     final gesture = gestureDescriptions[currentStep].step;
     switch (gesture) {
@@ -317,8 +322,10 @@ class RegisterFaceViewController extends GetxController {
         final left = face.leftEyeOpenProbability;
         final right = face.rightEyeOpenProbability;
 
-        final eyesClosed = (left != null && left < 0.3) && (right != null && right < 0.3);
-        final eyesOpen = (left != null && left > 0.6) && (right != null && right > 0.6);
+        final eyesClosed =
+            (left != null && left < 0.3) && (right != null && right < 0.3);
+        final eyesOpen =
+            (left != null && left > 0.6) && (right != null && right > 0.6);
 
         if (!_eyesClosedDetected && eyesClosed) _eyesClosedDetected = true;
         if (_eyesClosedDetected && eyesOpen) {
@@ -341,13 +348,14 @@ class RegisterFaceViewController extends GetxController {
         final pitch = face.headEulerAngleX ?? 0;
         final yaw = face.headEulerAngleY ?? 0;
         final roll = face.headEulerAngleZ ?? 0;
-        return (pitch > -5 && pitch < 5) && (yaw > -5 && yaw < 5) && (roll > -10 && roll < 10);
+        return (pitch > -5 && pitch < 5) &&
+            (yaw > -5 && yaw < 5) &&
+            (roll > -10 && roll < 10);
 
       default:
         return false;
     }
   }
-
 
   Future<void> _captureImage() async {
     try {
@@ -362,14 +370,16 @@ class RegisterFaceViewController extends GetxController {
       // Extract TensorFlow face embedding
       try {
         faceEmbedding = await extractFaceEmbedding(inputImage);
-        print('✅ TensorFlow face embedding extracted: ${faceEmbedding!.length} dimensions');
+        print(
+            '✅ TensorFlow face embedding extracted: ${faceEmbedding!.length} dimensions');
       } catch (e) {
         print('❌ Failed to extract TensorFlow embedding: $e');
         faceEmbedding = null;
       }
 
       File displayFile = originalFile;
-      if (cameraController!.description.lensDirection == CameraLensDirection.front) {
+      if (cameraController!.description.lensDirection ==
+          CameraLensDirection.front) {
         displayFile = await _flipImageHorizontally(originalFile);
       }
 
@@ -421,7 +431,6 @@ class RegisterFaceViewController extends GetxController {
   //   );
   // }
 
-
   Color getStatusColor(String status) {
     switch (status) {
       case 'Approved':
@@ -432,7 +441,7 @@ class RegisterFaceViewController extends GetxController {
         return Colors.grey;
     }
   }
-  
+
   Future<void> registerUser(String name, String uuid) async {
     if (imageBase64 == null || faceFeatures == null) {
       CustomToast().showToast("Face data missing");
@@ -454,15 +463,20 @@ class RegisterFaceViewController extends GetxController {
       debugPrint('--------------userID: $userId');
       debugPrint('--------------user: ${user.toJson()}');
       if (faceEmbedding != null) {
-        debugPrint('--------------faceEmbedding: ${faceEmbedding!.length} dimensions');
+        debugPrint(
+            '--------------faceEmbedding: ${faceEmbedding!.length} dimensions');
       }
-      await FirebaseFirestore.instance.collection("users").doc(uuid).set(user.toJson());
+      await FirebaseFirestore.instance
+          .collection("users")
+          .doc(uuid)
+          .set(user.toJson());
       CustomToast().showToast("Registration Success!");
     } catch (e) {
       print("Registration Error: $e");
       CustomToast().showToast("Registration Failed! Try Again.");
     }
   }
+
   void openSettings() async {
     bool opened = await openAppSettings();
     if (!opened) {
@@ -470,5 +484,4 @@ class RegisterFaceViewController extends GetxController {
       print("Failed to open app settings.");
     }
   }
-
 }

@@ -37,4 +37,6 @@ final class NoteActionError extends NotesState {
 
   @override
   List<Object> get props => [message];
-} 
+}
+
+

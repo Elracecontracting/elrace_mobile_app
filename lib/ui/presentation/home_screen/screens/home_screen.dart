@@ -1,4 +1,6 @@
 import 'dart:async';
+
+import 'package:el_race/ui/presentation/home_screen/bloc/location_bloc/location_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/main_home_content_widget.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/main_screens.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/check_in_widgets/face_recogenize_check.dart';
@@ -7,12 +9,11 @@ import 'package:el_race/ui/presentation/home_screen/widgets/visibilty_icon.dart'
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:get/get.dart';
-import 'package:el_race/ui/presentation/home_screen/bloc/location_bloc/location_bloc.dart';
 import 'package:location/location.dart';
 
-
-class HomeScreen extends StatelessWidget{
+class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
   @override
   Widget build(BuildContext context) {
@@ -20,16 +21,17 @@ class HomeScreen extends StatelessWidget{
   }
 }
 
-
 class HomeScreenPage extends StatefulWidget {
-  const HomeScreenPage({super.key,});
+  const HomeScreenPage({
+    super.key,
+  });
 
   @override
   State<HomeScreenPage> createState() => _HomeScreenState();
 }
 
-
-class _HomeScreenState extends State<HomeScreenPage> {
+class _HomeScreenState extends State<HomeScreenPage>
+    with WidgetsBindingObserver {
   // bool isMuted = false; // default value
   bool isCheckedIn = false;
   final _locationBloc = LocationBloc();
@@ -44,6 +46,7 @@ class _HomeScreenState extends State<HomeScreenPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // مراقبة حالة التطبيق
     Get.put(TimerController()); // only once!
     // _loadMuteStatus();
     // Future.delayed(const Duration(seconds: 5), () {
@@ -52,6 +55,20 @@ class _HomeScreenState extends State<HomeScreenPage> {
     _checkLocationService(); // Check location service on initialization
     _locationBloc.add(GetCurrentLocationET());
     // List of pages or widgets that you want to display for each navigation ite
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // إزالة المراقبة
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _checkLocationService(); // إعادة التحقق عند العودة
+      _locationBloc.add(GetCurrentLocationET()); // إعادة جلب اللوكيشن
+    }
   }
 
   Future<void> _checkLocationService() async {
@@ -69,8 +86,8 @@ class _HomeScreenState extends State<HomeScreenPage> {
       barrierDismissible: false, // Prevent dismissing by tapping outside
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text("Enable Location Service"),
-          content: const Text("Please enable location services to proceed."),
+          title: Text(translate('location.enable_service')),
+          content: Text(translate('location.please_enable')),
           actions: [
             TextButton(
               onPressed: () async {
@@ -81,7 +98,7 @@ class _HomeScreenState extends State<HomeScreenPage> {
                   _showLocationServiceDialog();
                 }
               },
-              child: const Text("OK"),
+              child: Text(translate('common.ok')),
             ),
           ],
         );
@@ -96,11 +113,12 @@ class _HomeScreenState extends State<HomeScreenPage> {
     return const Scaffold(
       appBar: HeaderWidget(),
       backgroundColor: lightGrey,
+      extendBody: true, 
       // bottomNavigationBar: CustomBottomNavbar(
       //   currentIndex: _selectedIndex,
       //   onItemTapped: _onItemTapped,
       // ),
-      body: Stack(
+      body: const Stack(
         children: [
           // Main Content
           MainHomeContentWidget(),
@@ -113,4 +131,3 @@ class _HomeScreenState extends State<HomeScreenPage> {
     );
   }
 }
-

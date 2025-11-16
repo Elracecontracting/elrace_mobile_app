@@ -384,7 +384,7 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
                                           final item = projects[index];
                                           return Container(
                                             margin: const EdgeInsets.symmetric(vertical: 5),
-                                            padding: const EdgeInsets.all(12),
+                                            padding: EdgeInsets.all(5.w),
                                             decoration: BoxDecoration(
                                               color: AppColors.separatorColor,
                                               borderRadius: BorderRadius.circular(20),
@@ -398,9 +398,8 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
                                                   width: 75.w,
                                                   icon: Icon(Icons.date_range, size: 14.w, color: const Color(0xFF1A1A53)),
                                                 ),
-                                                const SizedBox(width: 10),
                                                 SizedBox(
-                                                  width: 70.w,
+                                                  width: 65.w,
                                                   child: Text(
                                                     "${item["product"]}",
                                                     style: GoogleFonts.koulen(
@@ -412,10 +411,9 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
                                                     maxLines: 2,
                                                   ),
                                                 ),
-                                                const SizedBox(width: 10),
                                                 InfoContainer(
                                                   text: "${item["total"]} AED",
-                                                  width: 75.w,
+                                                  width: 90.w,
                                                 ),
                                               ],
                                             ),
