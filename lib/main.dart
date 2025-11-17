@@ -3,7 +3,6 @@ import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:el_race/ui/presentation/call_screen/bloc/contact_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
-import 'package:el_race/ui/presentation/home_screen/provider/slider_provider.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/profile_box_with_slide_animation.dart';
 import 'package:el_race/ui/presentation/media/bloc/media_bloc.dart';
 import 'package:el_race/ui/presentation/my_notes/bloc/notes_bloc.dart';
@@ -26,6 +25,7 @@ import 'package:provider/provider.dart';
 import 'firebase_service.dart';
 import 'report_module/data/provider/reports_provider.dart';
 import 'ui/presentation/Email Approval/bloc/approval_bloc.dart';
+import 'ui/presentation/home_screen/provider/slider_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -94,20 +94,26 @@ class MyApp extends StatelessWidget {
                     children: [
                       GestureDetector(
                         onTap: () {
-                          final profileBoxProvider = Provider.of<ProfileBoxProvider>(context, listen: false);
+                          final profileBoxProvider =
+                              Provider.of<ProfileBoxProvider>(context,
+                                  listen: false);
                           if (profileBoxProvider.isProfileVisible) {
-                            profileBoxProvider.hideProfileBox(); // Close the profile box
+                            profileBoxProvider
+                                .hideProfileBox(); // Close the profile box
                           }
                         },
                         child: child!,
                       ),
                       Theme(
                         data: ThemeData(
-                          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+                          colorScheme: ColorScheme.fromSeed(
+                              seedColor: Colors.deepPurple),
                           useMaterial3: true,
                           textTheme: TextTheme(
-                            displayLarge: GoogleFonts.koulen(fontSize: 28, fontWeight: FontWeight.w400),
-                            titleMedium: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+                            displayLarge: GoogleFonts.koulen(
+                                fontSize: 28, fontWeight: FontWeight.w400),
+                            titleMedium: GoogleFonts.inter(
+                                fontSize: 16, fontWeight: FontWeight.w600),
                             bodyMedium: GoogleFonts.inter(fontSize: 14),
                           ),
                         ),
@@ -119,11 +125,14 @@ class MyApp extends StatelessWidget {
                 navigatorKey: navKey,
                 title: 'El Race',
                 theme: ThemeData(
-                  colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+                  colorScheme:
+                      ColorScheme.fromSeed(seedColor: Colors.deepPurple),
                   useMaterial3: true,
                   textTheme: TextTheme(
-                    displayLarge: GoogleFonts.koulen(fontSize: 28, fontWeight: FontWeight.w400),
-                    titleMedium: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+                    displayLarge: GoogleFonts.koulen(
+                        fontSize: 28, fontWeight: FontWeight.w400),
+                    titleMedium: GoogleFonts.inter(
+                        fontSize: 16, fontWeight: FontWeight.w600),
                     bodyMedium: GoogleFonts.inter(fontSize: 14),
                   ),
                 ),
@@ -134,7 +143,9 @@ class MyApp extends StatelessWidget {
                   GlobalCupertinoLocalizations.delegate,
                 ],
                 supportedLocales: localizationDelegate.supportedLocales,
-                locale: SharedPref().isArabic() ? localizationDelegate.supportedLocales.last : localizationDelegate.supportedLocales.first,
+                locale: SharedPref().isArabic()
+                    ? localizationDelegate.supportedLocales.last
+                    : localizationDelegate.supportedLocales.first,
                 onGenerateRoute: onGeneratedRoutes.generatedRoutes,
                 home: const SplashScreen()),
           ),

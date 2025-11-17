@@ -24,10 +24,10 @@ class WidgetContainer extends StatelessWidget {
         color: white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3), // shadow color
-            spreadRadius: 6,                      // how wide the shadow is
-            blurRadius: 6,                        // how soft the shadow looks
-            offset: const Offset(0, -5),          // move shadow upward (-Y means top)
+            color: Colors.black.withOpacity(0.2), // shadow color
+            spreadRadius: 6, // how wide the shadow is
+            blurRadius: 10, // how soft the shadow looks
+            offset: const Offset(0, -2), // move shadow upward (-Y means top)
           ),
         ],
         borderRadius: const BorderRadius.only(
@@ -38,13 +38,15 @@ class WidgetContainer extends StatelessWidget {
       child: Column(
         children: [
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: SizeConfig().getWidth(20)),
+            padding:
+                EdgeInsets.symmetric(horizontal: SizeConfig().getWidth(20)),
             child: Column(
               children: [
                 const SizedBox(height: 15),
 
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: SizeConfig().getWidth(20)),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: SizeConfig().getWidth(20)),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -57,7 +59,8 @@ class WidgetContainer extends StatelessWidget {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () =>  Util.pushPage(const EditWidgetsScreen(), context),
+                        onTap: () =>
+                            Util.pushPage(const EditWidgetsScreen(), context),
                         child: Text(
                           translate('home.edit'),
                           style: GoogleFonts.nunito(
@@ -98,81 +101,81 @@ class WidgetContainer extends StatelessWidget {
                             child: const CustomSwipeButton(),
                           ),
 
-                        // Timer
-                        // Obx(() {
-                        //   final timer = Get.find<TimerController>().timeLeft.value;
-                        //   final formatted = timer.toString().split('.').first.padLeft(8, "0");
+                          // Timer
+                          // Obx(() {
+                          //   final timer = Get.find<TimerController>().timeLeft.value;
+                          //   final formatted = timer.toString().split('.').first.padLeft(8, "0");
 
-                        //   return Text(
-                        //     formatted,
-                        //     style: const TextStyle(
-                        //       fontSize: 16,
-                        //       fontWeight: FontWeight.bold,
-                        //       color: appFontColor,
-                        //     ),
-                        //   );
-                        // }),
-                        // Check-in / Check-out bar
-                        // FutureBuilder(
-                        //   future: null,
-                        //   builder: (ctx, state) {
-                        //     var isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
-                        //     return Row(
-                        //       mainAxisAlignment: MainAxisAlignment.center,
-                        //       children: [
-                        //         Text(
-                        //           'CHECK IN',
-                        //           style: GoogleFonts.koulen(
-                        //             fontSize: 11,
-                        //             fontWeight: FontWeight.bold,
-                        //             color: const Color(0xFF1A1A53),
-                        //           ),
-                        //         ),
-                        //         const SizedBox(width: 6),
-                        //         Container(
-                        //           width: 13,
-                        //           height: 13,
-                        //           decoration: BoxDecoration(
-                        //             shape: BoxShape.circle,
-                        //             color: isCheckedIn ? Colors.green : Colors.transparent,
-                        //             border: Border.all(color: Colors.green, width: 1),
-                        //           ),
-                        //         ),
-                        //         Container(
-                        //           width: 130,
-                        //           height: 5,
-                        //           decoration: BoxDecoration(
-                        //             color: Colors.white,
-                        //             borderRadius: BorderRadius.circular(2),
-                        //           ),
-                        //         ),
-                        //         Container(
-                        //           width: 13,
-                        //           height: 13,
-                        //           decoration: BoxDecoration(
-                        //             shape: BoxShape.circle,
-                        //             color: !isCheckedIn ? Colors.red : Colors.transparent,
-                        //             border: Border.all(color: Colors.red, width: 1),
-                        //           ),
-                        //         ),
-                        //         const SizedBox(width: 6),
-                        //         Text(
-                        //           translate('home.check_out'),
-                        //           style: GoogleFonts.koulen(
-                        //             fontSize: 11,
-                        //             fontWeight: FontWeight.bold,
-                        //             color: const Color(0xFF1A1A53),
-                        //           ),
-                        //         ),
-                        //       ],
-                        //     );
-                        //   },
-                        // ),
+                          //   return Text(
+                          //     formatted,
+                          //     style: const TextStyle(
+                          //       fontSize: 16,
+                          //       fontWeight: FontWeight.bold,
+                          //       color: appFontColor,
+                          //     ),
+                          //   );
+                          // }),
+                          // Check-in / Check-out bar
+                          // FutureBuilder(
+                          //   future: null,
+                          //   builder: (ctx, state) {
+                          //     var isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
+                          //     return Row(
+                          //       mainAxisAlignment: MainAxisAlignment.center,
+                          //       children: [
+                          //         Text(
+                          //           'CHECK IN',
+                          //           style: GoogleFonts.koulen(
+                          //             fontSize: 11,
+                          //             fontWeight: FontWeight.bold,
+                          //             color: const Color(0xFF1A1A53),
+                          //           ),
+                          //         ),
+                          //         const SizedBox(width: 6),
+                          //         Container(
+                          //           width: 13,
+                          //           height: 13,
+                          //           decoration: BoxDecoration(
+                          //             shape: BoxShape.circle,
+                          //             color: isCheckedIn ? Colors.green : Colors.transparent,
+                          //             border: Border.all(color: Colors.green, width: 1),
+                          //           ),
+                          //         ),
+                          //         Container(
+                          //           width: 130,
+                          //           height: 5,
+                          //           decoration: BoxDecoration(
+                          //             color: Colors.white,
+                          //             borderRadius: BorderRadius.circular(2),
+                          //           ),
+                          //         ),
+                          //         Container(
+                          //           width: 13,
+                          //           height: 13,
+                          //           decoration: BoxDecoration(
+                          //             shape: BoxShape.circle,
+                          //             color: !isCheckedIn ? Colors.red : Colors.transparent,
+                          //             border: Border.all(color: Colors.red, width: 1),
+                          //           ),
+                          //         ),
+                          //         const SizedBox(width: 6),
+                          //         Text(
+                          //           translate('home.check_out'),
+                          //           style: GoogleFonts.koulen(
+                          //             fontSize: 11,
+                          //             fontWeight: FontWeight.bold,
+                          //             color: const Color(0xFF1A1A53),
+                          //           ),
+                          //         ),
+                          //       ],
+                          //     );
+                          //   },
+                          // ),
 
-                        // Time Status Widget
-                        // const TimeStatusWidget(),
-                      ],
-                    ),
+                          // Time Status Widget
+                          // const TimeStatusWidget(),
+                        ],
+                      ),
                     ),
                   ),
                 ),
