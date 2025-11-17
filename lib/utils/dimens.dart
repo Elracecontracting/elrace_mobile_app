@@ -34,6 +34,5 @@ class AppDimen {
   static const double formSpacing = 15;
 
   // Home screen widget card height - change this value to adjust all card heights globally
-  static const double homeWidgetCardHeight = 185.0;
-
+  static const double homeWidgetCardHeight = 181.0;
 }

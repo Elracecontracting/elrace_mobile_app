@@ -78,15 +78,14 @@ class WidgetContainer extends StatelessWidget {
                   opacity: !SharedPref.isUserAuthenticated() ? 0.5 : 1,
                   child: SizedBox(
                     width: double.infinity,
-                    height: AppDimen.homeWidgetCardHeight.w,
+                    height: 192.w,
                     child: Container(
                       width: double.infinity,
-                      height: AppDimen.homeWidgetCardHeight.w,
                       margin: const EdgeInsets.only(top: 6),
                       padding: const EdgeInsets.symmetric(
-                          vertical: 20, horizontal: 16),
+                          vertical: 37, horizontal: 35),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(23),
                         image: const DecorationImage(
                           image: AssetImage(
                               'assets/png/gray_card.png'), // ✅ Update to your image path
