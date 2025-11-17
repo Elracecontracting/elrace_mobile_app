@@ -65,7 +65,6 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   }
 
   void _resetPosition() {
-
     setState(() {
       dragOffset = isCheckedIn ? (buttonWidth - knobSize) : 0;
       isDragging = false;
@@ -179,7 +178,6 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           loginResponseModel: SharedPref.getLoginData(),
           isCheckedIn: isCheckedIn,
           onConfirmed: () async {
-
             context.read<HomeBloc>().add(const UpdateFaceRecognitionStatus(
                 FaceRecognitionStatus.matching));
             _resetPosition();
@@ -220,7 +218,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                 if (dragOffset > 2.0) {
                   startSwipe = true;
                   // Smooth visual state transition based on swipe progress
-                  if (progress > 0.3) {
+                  if (progress > 0.5) {
                     if (_isVisualCheckedIn != !isCheckedIn) {
                       _isVisualCheckedIn = !isCheckedIn;
                       // Haptic feedback when visual state changes
@@ -256,147 +254,145 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
               ),
               child: Stack(
                 children: [
-                  // Dynamic background that transitions between light gray and dark blue
+                  // Base background image
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(40),
+                        image: const DecorationImage(
+                          image: AssetImage(
+                              'assets/newapp/check_in_background.png'),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Gradient overlay that appears with opacity based on swipe progress
                   Positioned.fill(
                     child: Opacity(
-                      opacity: 0.6,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(40),
-                          image: const DecorationImage(
-                            image: AssetImage('assets/newapp/check_in_background.png'),
-                            fit: BoxFit.cover,
-                          ),
-                          // color: _isVisualCheckedIn
-                          //     ? const Color(
-                          //         0xFF1E1E50) // Dark blue when checked in
-                          //     : const Color(
-                          //         0xFFE8E8E8), // Light gray when checked out
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(40),
-                          child: Stack(
-                            children: [
-                              // Inner shadow effect using gradient
-                              Positioned.fill(
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(40),
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Colors.black.withOpacity(0.0),
-                                        Colors.black.withOpacity(0.0),
-                                        Colors.black.withOpacity(0.15),
-                                        Colors.black.withOpacity(0.25),
-                                      ],
-                                      stops: const [0.0, 0.3, 0.7, 1.0],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              // Additional inner shadow from top
-                              Positioned(
-                                top: 0,
-                                left: 0,
-                                right: 0,
-                                height: 8,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: const BorderRadius.only(
-                                      topLeft: Radius.circular(40),
-                                      topRight: Radius.circular(40),
-                                    ),
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Colors.black.withOpacity(0.2),
-                                        Colors.black.withOpacity(0.0),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
+                      opacity: _isVisualCheckedIn
+                          ? 1.0
+                          : (dragOffset / (buttonWidth - knobSize))
+                              .clamp(0.0, 1.0),
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          borderRadius: BorderRadius.all(Radius.circular(40)),
+                          gradient: LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              Color(0xFF151544),
+                              Color(0xFF151544),
+                              Color(0xFF151544),
+                              Color(0xFF151544),
+                              Color(0xFF151544),
+                              Color(0xFF3535AA),
                             ],
+                            stops: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
                           ),
                         ),
                       ),
                     ),
                   ),
 
-                  // Center text with dynamic color
+                  // Center text with dynamic color and opacity transition
                   Center(
-                    child: AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 300),
-                      style: GoogleFonts.akatab(
-                        color: _isVisualCheckedIn
-                            ? Colors
-                                .white // White text when checked in (dark blue background)
-                            : const Color(
-                                0xFF1A1A53), // Dark blue text when checked out (light gray background)
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 0.5,
-                      ),
-                      child: Text(
-                        _isVisualCheckedIn
-                            ? translate(
-                                'custom_swipe_button.swipe_to_check_out')
-                            : translate(
-                                'custom_swipe_button.swipe_to_check_in'),
-                      ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // First text (SWIPE TO CHECK IN) - fades out during swipe
+                        Opacity(
+                          opacity: _isVisualCheckedIn
+                              ? 0.0
+                              : 1.0 -
+                                  (dragOffset / (buttonWidth - knobSize))
+                                      .clamp(0.0, 1.0),
+                          child: Text(
+                            translate('custom_swipe_button.swipe_to_check_in'),
+                            style: GoogleFonts.akatab(
+                              color: const Color(0xFF151544),
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                        // Second text (SWIPE TO CHECK OUT) - fades in during swipe
+                        Opacity(
+                          opacity: _isVisualCheckedIn
+                              ? 1.0
+                              : (dragOffset / (buttonWidth - knobSize))
+                                  .clamp(0.0, 1.0),
+                          child: Text(
+                            translate('custom_swipe_button.swipe_to_check_out'),
+                            style: GoogleFonts.akatab(
+                              color: const Color(0xFFFFFFFF),
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
-                  // Dynamic chevron icons that change position and direction based on state
-                  PositionedDirectional(
-                    start: _isVisualCheckedIn ? null : 8,
-                    end: _isVisualCheckedIn ? 8 : null,
-                    top: (buttonHeight - 32) / 2,
-                    child: AnimatedBuilder(
-                      animation: _bounceAnimation,
-                      builder: (context, _) {
-                        return Transform.translate(
-                          offset: Offset(_bounceAnimation.value, 0),
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 300),
-                            // مهم: نكدّس القديم والجديد فوق بعض عشان العرض ما يتغيّرش أثناء السويتش
-                            layoutBuilder: (current, previous) => Stack(
-                              alignment: Alignment.center,
-                              clipBehavior: Clip.none,
-                              children: [
-                                ...previous,
-                                if (current != null) current,
-                              ],
-                            ),
-                            transitionBuilder: (child, anim) =>
-                                FadeTransition(opacity: anim, child: child),
-                            child: SizedBox(
-                              key: ValueKey(
-                                  _isVisualCheckedIn), // نبدّل المجموعة ككتلة واحدة
-                              width: 44, // اضبطه حسب ذوقك
-                              height: 32, // نفس ارتفاع الأيقونة
-                              child: Stack(
-                                alignment: Alignment.centerLeft,
-                                clipBehavior: Clip.none,
-                                children: [
-                                  // السهم الأول (الأساسي)
-                                  Icon(iconData,
-                                      size: 32, weight: 900, color: iconColor),
+                  // Dynamic chevron GIF that changes based on state
+                  Positioned(
+                    left: _isVisualCheckedIn ? null : dragOffset + 2,
+                    right: _isVisualCheckedIn
+                        ? (buttonWidth - dragOffset - knobSize)
+                        : null,
+                    top: (buttonHeight - 40) / 2,
+                    child: Builder(
+                      builder: (context) {
+                        // Calculate progress (0.0 to 1.0)
+                        final progress = (dragOffset / (buttonWidth - knobSize))
+                            .clamp(0.0, 1.0);
 
-                                  // السهم الثاني متداخل لليمين/اليسار حسب اتجاه اللغة
-                                  Transform.translate(
-                                    offset:
-                                        Offset(isRTL ? overlap : -overlap, 0),
-                                    child: Icon(iconData,
-                                        size: 32,
-                                        weight: 900,
-                                        color: iconColor),
+                        // Calculate opacity and scaleX based on progress
+                        // Gradually fade out and shrink horizontally as approaching center
+                        // Then fade in and expand horizontally after passing center
+                        double opacity;
+                        double scaleX;
+
+                        if (progress <= 0.5) {
+                          // First half: gradually fade out and shrink towards center
+                          opacity = 1.0 - (progress * 2); // 1.0 -> 0.0
+                          scaleX = 1.0 - (progress * 2); // 1.0 -> 0.0
+                        } else {
+                          // Second half: gradually fade in and expand from center
+                          opacity = (progress - 0.5) * 2; // 0.0 -> 1.0
+                          scaleX = (progress - 0.5) * 2; // 0.0 -> 1.0
+                        }
+
+                        return AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          transitionBuilder: (child, anim) =>
+                              FadeTransition(opacity: anim, child: child),
+                          child: Transform(
+                            transform: Matrix4.identity()..scale(scaleX, 1.0),
+                            alignment: Alignment.center,
+                            child: Opacity(
+                              opacity: opacity,
+                              child: Transform.flip(
+                                key: ValueKey(_isVisualCheckedIn),
+                                flipX: _isVisualCheckedIn,
+                                child: ColorFiltered(
+                                  colorFilter: ColorFilter.mode(
+                                    _isVisualCheckedIn
+                                        ? const Color(0xFF81819d)
+                                        : const Color(0xFF848484),
+                                    BlendMode.srcIn,
                                   ),
-                                ],
+                                  child: Image.asset(
+                                    'assets/gif/arrow_animation.gif',
+                                    width: 50,
+                                    height: 36.88,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -405,24 +401,49 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                     ),
                   ),
 
-
-                  // Visual swipe progress indicator
-                  Positioned(
-                    left: 0,
-                    top: 0,
-                    child: Container(
-                      width: dragOffset + knobSize,
-                      height: buttonHeight,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(40),
-                        color: _isVisualCheckedIn
-                            ? const Color(0xFF1E1E50)
-                                .withOpacity(0.3) // Semi-transparent dark blue
-                            : const Color(0xFFE8E8E8).withOpacity(
-                                0.3), // Semi-transparent light gray
-                      ),
-                    ),
-                  ),
+                  // Old icon animation code (commented for reference)
+                  // PositionedDirectional(
+                  //   start: _isVisualCheckedIn ? null : 8,
+                  //   end: _isVisualCheckedIn ? 8 : null,
+                  //   top: (buttonHeight - 32) / 2,
+                  //   child: AnimatedBuilder(
+                  //     animation: _bounceAnimation,
+                  //     builder: (context, _) {
+                  //       return Transform.translate(
+                  //         offset: Offset(_bounceAnimation.value, 0),
+                  //         child: AnimatedSwitcher(
+                  //           duration: const Duration(milliseconds: 300),
+                  //           layoutBuilder: (current, previous) => Stack(
+                  //             alignment: Alignment.center,
+                  //             clipBehavior: Clip.none,
+                  //             children: [
+                  //               ...previous,
+                  //               if (current != null) current,
+                  //             ],
+                  //           ),
+                  //           transitionBuilder: (child, anim) =>
+                  //               FadeTransition(opacity: anim, child: child),
+                  //           child: SizedBox(
+                  //             key: ValueKey(_isVisualCheckedIn),
+                  //             width: 44,
+                  //             height: 32,
+                  //             child: Stack(
+                  //               alignment: Alignment.centerLeft,
+                  //               clipBehavior: Clip.none,
+                  //               children: [
+                  //                 Icon(iconData, size: 32, weight: 900, color: iconColor),
+                  //                 Transform.translate(
+                  //                   offset: Offset(isRTL ? overlap : -overlap, 0),
+                  //                   child: Icon(iconData, size: 32, weight: 900, color: iconColor),
+                  //                 ),
+                  //               ],
+                  //             ),
+                  //           ),
+                  //         ),
+                  //       );
+                  //     },
+                  //   ),
+                  // ),
 
                   // Swipe knob (invisible but functional)
                   Positioned(
@@ -455,10 +476,12 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                     // Left time label - shows remaining time from TimerController
                     Obx(() {
                       final timer = Get.find<TimerController>().timeLeft.value;
-                      final formatted = timer.toString().split('.').first.padLeft(8, "0");
+                      final formatted =
+                          timer.toString().split('.').first.padLeft(8, "0");
 
                       return Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 8.w, vertical: 2.h),
                         decoration: BoxDecoration(
                           color: Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
@@ -480,7 +503,8 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
 
                     // Right time label - shows 00:00:00 when checked out
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
                       decoration: BoxDecoration(
                         color: Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
@@ -510,7 +534,6 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                  
                       // Left green circle
                       Container(
                         width: 15.w,
@@ -523,7 +546,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                           ),
                         ),
                       ),
-                  
+
                       Expanded(
                         child: Container(
                           height: 3,
@@ -540,7 +563,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                           ),
                         ),
                       ),
-                  
+
                       // Right red circle
                       Container(
                         width: 15.w,

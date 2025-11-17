@@ -135,6 +135,7 @@ flutter:
     - assets/logo/
     - assets/i18n/
     - assets/mp4/
+    - assets/gif/
     - assets/fonts/arbicsupport.ttf
     - assets/mobilefacenet.tflite
   #  fonts:
