@@ -37,11 +37,10 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   List<WidgetModel> activeWidgets = [];
   bool isLoading = true;
   DateTime now = DateTime.now();
-   @override
+  @override
   void initState() {
     super.initState();
     _loadActiveWidgets();
-
   }
 
   @override
@@ -100,16 +99,16 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           children: [
             Padding(
               padding: EdgeInsets.only(
-                left: 210.w,
+                left: 190.w,
               ),
               child: Image.asset(
                 'assets/png/time_sheet.png',
                 width: SizeConfig().getWidth(140),
-                height: SizeConfig().getHeight(140),
+                height: SizeConfig().getHeight(130),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 66),
+              padding: EdgeInsets.only(top: 100.h),
               child: SizedBox(
                 width: SizeConfig().getWidth(190),
                 height: SizeConfig().getHeight(85),
@@ -162,7 +161,6 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       cardTitle: translate('home.lpo'),
       backgroundImagePath: 'assets/png/gray_card.png', // ✅ Add this
       topPadding: true,
-      topPaddingValue: 40,
       childWidget: Directionality(
         textDirection: TextDirection.ltr,
         child: Stack(
@@ -178,7 +176,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.only(top: 66),
+              padding: EdgeInsets.only(top: 80.h),
               child: SizedBox(
                 width: SizeConfig().getWidth(190),
                 height: SizeConfig().getHeight(85),
@@ -227,9 +225,11 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               Padding(
                 padding: EdgeInsets.only(top: 90.w),
                 child: SizedBox(
-                  width: SizeConfig().getWidth(MediaQuery.of(context).size.width - 50),
+                  width: SizeConfig()
+                      .getWidth(MediaQuery.of(context).size.width - 50),
                   height: SizeConfig().getHeight(50),
-                  child: Center(child: Image.asset('assets/newapp/simple_cards.png')),
+                  child: Center(
+                      child: Image.asset('assets/newapp/simple_cards.png')),
                 ),
               ),
             ],
@@ -261,7 +261,6 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           backgroundImagePath: 'assets/png/blue_card.png',
           onClick: () => Util.pushPage(const MyNotesScreen(), context),
           childWidget: const SizedBox.shrink(),
-        
         ),
         Positioned(
           right: 6,
@@ -435,10 +434,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
             color: Colors.black,
           ),
           child: Padding(
-            padding: const EdgeInsets.only(top: 61),
+            padding: EdgeInsets.only(top: 85.h),
             child: SizedBox(
-              width: SizeConfig().getWidth(190),
-              height: SizeConfig().getHeight(80),
               child: Column(
                 children: [
                   CustomBulletPoint(
@@ -501,7 +498,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                   child: Padding(
                     padding: const EdgeInsets.only(top: 80),
                     child: SizedBox(
-                     // width: SizeConfig().getWidth(190),
+                      // width: SizeConfig().getWidth(190),
                       height: SizeConfig().getHeight(85),
                       child: Column(
                         children: [

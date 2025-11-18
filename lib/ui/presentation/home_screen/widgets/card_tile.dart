@@ -185,7 +185,7 @@ class GrayCardComponent extends StatelessWidget {
           child: Stack(
             children: [
               Positioned(
-                left: 25,
+                left: 36.w,
                 top: 16,
                 child: SizedBox(
                   height: SizeConfig().getHeight(43),
@@ -215,11 +215,11 @@ class GrayCardComponent extends StatelessWidget {
                 ),
               ),
               Positioned(
-                top: topPadding ? topPaddingValue : 0,
-                left: 25,
+                top: topPadding ? topPaddingValue : 30.h,
+                left: 37.w,
                 child: DefaultTextStyle(
                   style: GoogleFonts.nunito(
-                    fontSize: 12.w, 
+                    fontSize: 12.w,
                     color: Colors.black,
                   ),
                   child: Column(
@@ -234,4 +234,3 @@ class GrayCardComponent extends StatelessWidget {
     );
   }
 }
-
