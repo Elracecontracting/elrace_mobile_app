@@ -51,7 +51,6 @@ class _HeaderWidgetState extends State<HeaderWidget> {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     var bloc = HomeBloc.get(context);
@@ -79,21 +78,21 @@ class _HeaderWidgetState extends State<HeaderWidget> {
               start: SizeConfig().getWidth(10),
               //left: SizeConfig().getWidth(15),
               child: GestureDetector(
-                onTap: (){
-                  bloc.isNotOpen=false;
+                onTap: () {
+                  bloc.isNotOpen = false;
                   bloc.add(const ChangeCurrentIndex(index: 1));
                   Navigator.pushAndRemoveUntil(
                     context,
                     MaterialPageRoute(
                       builder: (_) => const HomeScreen(),
                     ),
-                        (route) => true,
+                    (route) => true,
                   );
                 },
                 child: Image.asset(
                   'assets/png/logo.gif',
                   fit: BoxFit.cover,
-                  height: SizeConfig().getHeight(100),
+                  height: SizeConfig().getHeight(60),
                   width: SizeConfig().getWidth(120),
                 ),
               ),
@@ -101,7 +100,8 @@ class _HeaderWidgetState extends State<HeaderWidget> {
             SafeArea(
               bottom: false,
               child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: SizeConfig().getWidth(20), vertical: 0),
+                padding: EdgeInsets.symmetric(
+                    horizontal: SizeConfig().getWidth(20), vertical: 0),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -159,14 +159,14 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                         GestureDetector(
                           onTap: () {
                             if (SharedPref.isUserAuthenticated()) {
-                              if(!bloc.isNotOpen){
+                              if (!bloc.isNotOpen) {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => const NotificationScreen(),
                                   ),
                                 );
-                                bloc.isNotOpen=true;
+                                bloc.isNotOpen = true;
                               }
                             }
                           },

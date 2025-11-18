@@ -11,7 +11,7 @@ import 'package:provider/provider.dart';
 
 class AppSettingsWidget extends StatelessWidget {
   final navKey;
-  const AppSettingsWidget({super.key,required this.navKey});
+  const AppSettingsWidget({super.key, required this.navKey});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +23,6 @@ class AppSettingsWidget extends StatelessWidget {
           color: Colors.grey.shade100,
           child: Column(
             children: [
-              const SizedBox(height: 0),
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
@@ -58,7 +57,9 @@ class AppSettingsWidget extends StatelessWidget {
                         ),
                         child: ElevatedButton(
                           onPressed: () async {
-                            final provider = Provider.of<ProfileBoxProvider>(context, listen: false);
+                            final provider = Provider.of<ProfileBoxProvider>(
+                                context,
+                                listen: false);
                             if (provider.isProfileVisible) {
                               provider.hideProfileBox();
                             }
@@ -91,7 +92,9 @@ class AppSettingsWidget extends StatelessWidget {
                       ),
                       child: ElevatedButton(
                         onPressed: () async {
-                          final provider = Provider.of<ProfileBoxProvider>(context, listen: false);
+                          final provider = Provider.of<ProfileBoxProvider>(
+                              context,
+                              listen: false);
                           if (provider.isProfileVisible) {
                             provider.hideProfileBox();
                           }
@@ -168,8 +171,8 @@ class AppSettingsWidget extends StatelessWidget {
                               activeColor: appFontColor,
                               activeTrackColor: const Color(
                                   0xffD9D9D9), // لون الخلفية لما يكون ON
-                              inactiveThumbColor:
-                                  const Color(0xff3E3C3C), // لون الزر لما يكون OFF
+                              inactiveThumbColor: const Color(
+                                  0xff3E3C3C), // لون الزر لما يكون OFF
                               inactiveTrackColor: const Color(
                                   0xffD9D9D9), // لون الخلفية لما يكون OFF
                             ),
@@ -215,6 +218,7 @@ class AppSettingsWidget extends StatelessWidget {
             ],
           ),
         ),
+        SizedBox(height: 10.h),
         Container(
           padding: EdgeInsets.symmetric(
             horizontal: 12.w,
@@ -230,7 +234,11 @@ class AppSettingsWidget extends StatelessWidget {
             borderRadius: const BorderRadius.only(
               bottomRight: Radius.circular(20),
             ),
-            color: Colors.white,
+            gradient: const LinearGradient(
+              colors: [Color(0xFF999999), Color(0xFFFFFFFF)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.start,
@@ -245,7 +253,8 @@ class AppSettingsWidget extends StatelessWidget {
                     print('🚪 Logout button pressed');
 
                     // Hide profile box first
-                    final provider = Provider.of<ProfileBoxProvider>(context, listen: false);
+                    final provider =
+                        Provider.of<ProfileBoxProvider>(context, listen: false);
                     if (provider.isProfileVisible) {
                       provider.hideProfileBox();
                     }
@@ -279,7 +288,8 @@ class AppSettingsWidget extends StatelessWidget {
                   }
                 },
                 child: Text(translate('profile.logout'),
-                    style: const TextStyle(color: Color(0xffBA1719))),
+                    style: const TextStyle(
+                        color: Color(0xffBA1719), fontWeight: FontWeight.bold)),
               ),
             ],
           ),

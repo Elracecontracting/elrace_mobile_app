@@ -172,7 +172,7 @@ class _ProfileBoxWithSlideAnimationState
                       child: GestureDetector(
                         onTap: () => profileBoxProvider.hideProfileBox(),
                         child: Container(
-                          color: Colors.black.withOpacity(0.7),
+                          color: Colors.black.withOpacity(0.9),
                         ),
                       ),
                     ),
@@ -192,180 +192,183 @@ class _ProfileBoxWithSlideAnimationState
                         : null,
                     top: 0,
                     child: Material(
-                      color: Colors.grey[300],
+                      color: Colors.white,
                       borderRadius: const BorderRadius.only(
                         topRight: Radius.circular(20),
                         bottomRight: Radius.circular(20),
                       ),
-                      child: SafeArea(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            image: const DecorationImage(image: const AssetImage("assets/newapp/profile_background.png"),fit: BoxFit.fill),
-                            borderRadius: const BorderRadius.only(
-                              topRight: Radius.circular(20),
-                              bottomRight: Radius.circular(20),
-                            ),
-                          ), 
-                          width: drawerWidth,
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Column(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                          color: Colors.black, width: 2),
-                                    ),
-                                    child: CircleAvatar(
-                                      radius: 28,
-                                      backgroundImage: hasValidImage
-                                          ? MemoryImage(
-                                              base64Decode(base64Image))
-                                          : const AssetImage(
-                                                  'assets/png/profile_1.png')
-                                              as ImageProvider,
-                                    ),
+                      child: Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          image: const DecorationImage(
+                              image: const AssetImage(
+                                  "assets/newapp/profile_background.png"),
+                              fit: BoxFit.fill),
+                          borderRadius: const BorderRadius.only(
+                            topRight: Radius.circular(20),
+                            bottomRight: Radius.circular(20),
+                          ),
+                        ),
+                        width: drawerWidth,
+                        child: Column(
+                          // إزالة الفراغ السفلي الناتج عن التوسيط العمودي
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Column(
+                              children: [
+                                SizedBox(
+                                  height: 40.h,
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                        color: Colors.black, width: 2),
                                   ),
-                                  const SizedBox(height: 1),
-                                  Text(
-                                    loginData.result?.data?.name
-                                            ?.split(' ')
-                                            .take(2)
-                                            .join(' ') ??
-                                        translate(
-                                            'profile.name_not_available'),
-                                    style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 11.26),
+                                  child: CircleAvatar(
+                                    radius: 28,
+                                    backgroundImage: hasValidImage
+                                        ? MemoryImage(base64Decode(base64Image))
+                                        : const AssetImage(
+                                                'assets/png/profile_1.png')
+                                            as ImageProvider,
                                   ),
-                                  const SizedBox(height: 1),
-                                  Text(
-                                    loginData.result?.data?.job_id ??
-                                        translate('profile.job_id_not_available'),
+                                ),
+                                const SizedBox(height: 1),
+                                Text(
+                                  loginData.result?.data?.name
+                                          ?.split(' ')
+                                          .take(2)
+                                          .join(' ') ??
+                                      translate('profile.name_not_available'),
+                                  style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 11.26),
+                                ),
+                                const SizedBox(height: 1),
+                                Text(
+                                  loginData.result?.data?.job_id ??
+                                      translate('profile.job_id_not_available'),
+                                  style: GoogleFonts.inter(
+                                      fontSize: 11.26,
+                                      fontWeight: FontWeight.w400),
+                                ),
+                                const SizedBox(height: 1),
+                                Text(
+                                  loginData.result?.data?.emp_id?.toString() ??
+                                      translate('profile.id_not_available'),
+                                  style: GoogleFonts.inter(
+                                      fontSize: 11.26,
+                                      fontWeight: FontWeight.w400),
+                                ),
+                                const SizedBox(height: 1),
+                                GestureDetector(
+                                  onTap: _showCertificateOverEverything,
+                                  child: Image.asset(
+                                    'assets/png/cert_icon.png',
+                                    height: 26.52,
+                                    width: 26.52,
+                                    //fit: BoxFit.cover,
+                                  ),
+                                ),
+                                SizedBox(height: 4.h),
+                                Container(
+                                  width: 220.w,
+                                  child: Text(
+                                    'Status : Not Active',
                                     style: GoogleFonts.inter(
                                         fontSize: 11.26,
-                                        fontWeight: FontWeight.w400),
+                                        fontWeight: FontWeight.bold,
+                                        color: const Color(0xff6D6D6D)),
                                   ),
-                                  const SizedBox(height: 1),
-                                  Text(
-                                    loginData.result?.data?.emp_id
-                                            ?.toString() ??
-                                        translate('profile.id_not_available'),
-                                    style: GoogleFonts.inter(
-                                        fontSize: 11.26,
-                                        fontWeight: FontWeight.w400),
-                                  ),
-                                  const SizedBox(height: 1),
-                                  GestureDetector(
-                                    onTap: _showCertificateOverEverything,
-                                    child: Image.asset(
-                                      'assets/png/cert_icon.png',
-                                      height: 26.52,
-                                      width: 26.52,
-                                      //fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4.h),
-                                  Container(
-                                    width: 220.w,
-                                    child: Text(
-                                      'Status : Not Active',
-                                      style: GoogleFonts.inter(
-                                          fontSize: 11.26,
-                                          fontWeight: FontWeight.bold,
-                                          color: const Color(0xff6D6D6D)),
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 250.w,
-                                    height: 250.h,
-                                    child: Stack(
-                                      alignment: Alignment.center,
-                                      clipBehavior: Clip.hardEdge,
-                                      children: [
-                                        // Background with repeated numbers
-                                        Container(
-                                          width: 240.w,
-                                          height: 240.w,
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                              colors: [
-                                                Colors.grey.shade100,
-                                                Colors.grey.shade200,
-                                              ],
+                                ),
+                                Container(
+                                  width: 250.w,
+                                  height: 250.h,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    clipBehavior: Clip.hardEdge,
+                                    children: [
+                                      // Background with repeated numbers
+                                      Container(
+                                        width: 240.w,
+                                        height: 240.w,
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Colors.grey.shade100,
+                                              Colors.grey.shade200,
+                                            ],
+                                          ),
+                                          borderRadius:
+                                              BorderRadius.circular(28),
+                                          border: Border.all(
+                                            color: HexColor("#009859"),
+                                            width: 1.5,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color:
+                                                  Colors.black.withOpacity(0.1),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
                                             ),
-                                            borderRadius:
-                                                BorderRadius.circular(28),
+                                          ],
+                                        ),
+                                        child:
+                                            Center(child: _buildQRBackground()),
+                                      ),
+                                      // QR Code (rotated 45 degrees)
+                                      Transform.rotate(
+                                        angle:
+                                            0.785398, // 45 degrees in radians
+                                        child: Container(
+                                          width: 140.w,
+                                          height: 140.w,
+                                          decoration: BoxDecoration(
+                                            color: Colors.black,
                                             border: Border.all(
-                                              color: HexColor("#009859"),
+                                              color: HexColor(
+                                                  "#009859"), // ✅ outer green border
                                               width: 1.5,
                                             ),
+                                            //borderRadius: BorderRadius.circular(8),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: Colors.black
-                                                    .withOpacity(0.1),
-                                                blurRadius: 4,
-                                                offset: const Offset(0, 2),
+                                                color: HexColor("#009859"),
+                                                blurRadius: 5,
+                                                offset: const Offset(1, 1),
                                               ),
                                             ],
                                           ),
-                                          child: Center( child: _buildQRBackground()),
+                                          child: _isLoadingQr
+                                              ? const CircularProgressIndicator(
+                                                  color: Colors.white,
+                                                  strokeWidth: 2,
+                                                )
+                                              : _qrCodeData != null
+                                                  ? Image.memory(
+                                                      _qrCodeData!,
+                                                      fit: BoxFit.cover,
+                                                    )
+                                                  : const Icon(
+                                                      Icons.error_outline,
+                                                      color: Colors.white,
+                                                      size: 30,
+                                                    ),
                                         ),
-                                        // QR Code (rotated 45 degrees)
-                                        Transform.rotate(
-                                          angle:
-                                              0.785398, // 45 degrees in radians
-                                          child: Container(
-                                            width: 140.w,
-                                            height: 140.w,
-                                            decoration: BoxDecoration(
-                                              color: Colors.black,
-                                              border: Border.all(
-                                                color: HexColor(
-                                                    "#009859"), // ✅ outer green border
-                                                width: 1.5,
-                                              ),
-                                              //borderRadius: BorderRadius.circular(8),
-                                              boxShadow: [
-                                                BoxShadow(
-                                                  color: HexColor("#009859"),
-                                                  blurRadius: 5,
-                                                  offset: const Offset(1, 1),
-                                                ),
-                                              ],
-                                            ),
-                                            child: _isLoadingQr
-                                                ? const CircularProgressIndicator(
-                                                    color: Colors.white,
-                                                    strokeWidth: 2,
-                                                  )
-                                                : _qrCodeData != null
-                                                    ? Image.memory(
-                                                        _qrCodeData!,
-                                                        fit: BoxFit.cover,
-                                                      )
-                                                    : const Icon(
-                                                        Icons.error_outline,
-                                                        color: Colors.white,
-                                                        size: 30,
-                                                      ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                                      ),
+                                    ],
                                   ),
-                                ],
-                              ),
-                              AppSettingsWidget(navKey: navKey),
-                            ],
-                          ),
+                                ),
+                              ],
+                            ),
+                            AppSettingsWidget(navKey: navKey),
+                          ],
                         ),
                       ),
                     ),

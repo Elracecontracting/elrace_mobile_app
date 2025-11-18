@@ -6,7 +6,7 @@ import 'dart:ui' as ui;
 class QRBackgroundPainter extends CustomPainter {
   static var textStyle = TextStyle(
     color: HexColor("#009859"),
-    fontSize: 12,
+    fontSize: 16,
     fontWeight: FontWeight.w400,
   );
 
@@ -15,7 +15,7 @@ class QRBackgroundPainter extends CustomPainter {
 
   // Pre-compute text painter once to avoid recreation
   static final _textPainter = TextPainter(
-    text:  TextSpan(text: text, style: textStyle),
+    text: TextSpan(text: text, style: textStyle),
     textDirection: ui.TextDirection.ltr,
   );
 
@@ -83,8 +83,6 @@ class DecorativeStripPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-
-
 // Custom painter for QR background with animated moving numbers
 class AnimatedQRBackgroundPainter extends CustomPainter {
   final double animationValue;
@@ -95,12 +93,12 @@ class AnimatedQRBackgroundPainter extends CustomPainter {
     fontWeight: FontWeight.w400,
   );
 
-  static const spacing = 50.0;
+  static const spacing = 40;
   static const text = '920';
 
   // Pre-compute text painter once to avoid recreation
   static final _textPainter = TextPainter(
-    text:   TextSpan(text: text, style: textStyle),
+    text: TextSpan(text: text, style: textStyle),
     textDirection: ui.TextDirection.ltr,
   );
 
@@ -123,27 +121,21 @@ class AnimatedQRBackgroundPainter extends CustomPainter {
     final moveX = animationValue * spacing;
     final moveY = animationValue * spacing;
 
-    // Create multiple layers for infinite continuous effect
-    final gridWidth = (size.width / spacing).ceil() + 3;
-    final gridHeight = (size.height / spacing).ceil() + 3;
+    // Create grid and animate it by a small offset. Using a single layer
+    // prevents duplicate numbers overlapping in corners.
+    final gridWidth = (size.width / spacing).ceil() + 1;
+    final gridHeight = (size.height / spacing).ceil() + 1;
 
-    for (int i = -1; i < gridWidth; i++) {
-      for (int j = -1; j < gridHeight; j++) {
-        // Base position
+    for (int i = -1; i <= gridWidth; i++) {
+      for (int j = -1; j <= gridHeight; j++) {
         final baseX = i * spacing;
         final baseY = j * spacing;
 
-        // Create multiple flowing layers for infinite effect
-        for (int layer = 0; layer < 4; layer++) {
-          final layerOffsetX = layer * (size.width + spacing);
-          final layerOffsetY = layer * (size.height + spacing);
+        final animatedX = baseX - moveX;
+        final animatedY = baseY - moveY;
 
-          final animatedX = baseX + layerOffsetX - moveX;
-          final animatedY = baseY + layerOffsetY - moveY;
-
-          // Paint numbers - clipping will automatically constrain to square bounds
-          _textPainter.paint(canvas, Offset(animatedX, animatedY));
-        }
+        // Paint numbers - clipping will automatically constrain to square bounds
+        _textPainter.paint(canvas, Offset(animatedX, animatedY));
       }
     }
   }
@@ -154,4 +146,3 @@ class AnimatedQRBackgroundPainter extends CustomPainter {
         oldDelegate.animationValue != animationValue;
   }
 }
-
