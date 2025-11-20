@@ -14,12 +14,25 @@ class QrCodeRepository {
   Future<Uint8List?> getQrCodeImage() async {
     try {
       final loginResponse = await userRepo.getLoginResponse();
-      if (loginResponse?.result?.data?.emp_profile_id == null) {
-        log('❌ No employee profile ID found in login response');
+
+      if (loginResponse?.result?.data == null) {
+        log('❌ No login data found');
         return null;
       }
 
-      final empId = loginResponse!.result!.data!.emp_profile_id!;
+      // Try emp_profile_id first, fallback to emp_id
+      int? empId;
+      if (loginResponse!.result!.data!.emp_profile_id != null) {
+        empId = int.tryParse(loginResponse.result!.data!.emp_profile_id!);
+      } else if (loginResponse.result!.data!.emp_id != null) {
+        empId = int.tryParse(loginResponse.result!.data!.emp_id!);
+      }
+
+      if (empId == null) {
+        log('❌ No employee ID found in login response (tried emp_profile_id and emp_id)');
+        return null;
+      }
+
       log('🔍 Fetching QR code for employee ID: $empId');
 
       final token = loginResponse.result?.token;
@@ -67,13 +80,26 @@ class QrCodeRepository {
     try {
       // Get current user's login data
       final loginResponse = await userRepo.getLoginResponse();
-      if (loginResponse?.result?.data?.emp_profile_id == null) {
-        log('❌ No employee profile ID found in login response');
+
+      if (loginResponse?.result?.data == null) {
+        log('❌ No login data found');
         return null;
       }
 
-      final empId = loginResponse!.result!.data!.emp_profile_id!;
-      log('🔍 Fetching QR code directly for employee profile ID: $empId');
+      // Try emp_profile_id first, fallback to emp_id
+      int? empId;
+      if (loginResponse!.result!.data!.emp_profile_id != null) {
+        empId = int.tryParse(loginResponse.result!.data!.emp_profile_id!);
+      } else if (loginResponse.result!.data!.emp_id != null) {
+        empId = int.tryParse(loginResponse.result!.data!.emp_id!);
+      }
+
+      if (empId == null) {
+        log('❌ No employee ID found in login response (tried emp_profile_id and emp_id)');
+        return null;
+      }
+
+      log('🔍 Fetching QR code directly for employee ID: $empId');
 
       // Get authentication token
       final token = loginResponse.result?.token;

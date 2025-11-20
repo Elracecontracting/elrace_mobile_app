@@ -27,6 +27,7 @@ class _ProfileBoxWithSlideAnimationState
   final QrCodeRepository _qrCodeRepository = QrCodeRepository();
   Uint8List? _qrCodeData;
   bool _isLoadingQr = true;
+  String? _qrErrorMessage;
 
   // Animation controller for moving numbers
   late AnimationController _numbersAnimationController;
@@ -64,17 +65,23 @@ class _ProfileBoxWithSlideAnimationState
 
   Future<void> _loadQrCode() async {
     try {
+      print('🔄 Starting QR code load...');
       final qrData = await _qrCodeRepository.getQrCodeImageDirect();
+      print(
+          '✅ QR code loaded: ${qrData != null ? "${qrData.length} bytes" : "null"}');
       if (mounted) {
         setState(() {
           _qrCodeData = qrData;
           _isLoadingQr = false;
+          _qrErrorMessage = qrData == null ? 'Failed to load QR code' : null;
         });
       }
     } catch (e) {
+      print('❌ Error loading QR code: $e');
       if (mounted) {
         setState(() {
           _isLoadingQr = false;
+          _qrErrorMessage = 'Error: $e';
         });
       }
     }
@@ -355,10 +362,53 @@ class _ProfileBoxWithSlideAnimationState
                                                       _qrCodeData!,
                                                       fit: BoxFit.cover,
                                                     )
-                                                  : const Icon(
-                                                      Icons.error_outline,
-                                                      color: Colors.white,
-                                                      size: 30,
+                                                  : Column(
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: [
+                                                        const Icon(
+                                                          Icons.error_outline,
+                                                          color: Colors.white,
+                                                          size: 30,
+                                                        ),
+                                                        if (_qrErrorMessage !=
+                                                            null)
+                                                          Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .all(8.0),
+                                                            child: Text(
+                                                              _qrErrorMessage!,
+                                                              style:
+                                                                  const TextStyle(
+                                                                color: Colors
+                                                                    .white,
+                                                                fontSize: 10,
+                                                              ),
+                                                              textAlign:
+                                                                  TextAlign
+                                                                      .center,
+                                                            ),
+                                                          ),
+                                                        TextButton(
+                                                          onPressed: () {
+                                                            setState(() {
+                                                              _isLoadingQr =
+                                                                  true;
+                                                              _qrErrorMessage =
+                                                                  null;
+                                                            });
+                                                            _loadQrCode();
+                                                          },
+                                                          child: const Text(
+                                                            'Retry',
+                                                            style: TextStyle(
+                                                                color: Colors
+                                                                    .white),
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
                                         ),
                                       ),
