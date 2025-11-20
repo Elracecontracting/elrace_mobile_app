@@ -6,17 +6,21 @@ class ExpandCard extends StatelessWidget {
   final Color textColor;
   final Color bgColorStart;
   final Color bgColorEnd;
-  const ExpandCard({super.key, required this.status, required this.textColor, required this.bgColorStart, required this.bgColorEnd});
+  const ExpandCard(
+      {super.key,
+      required this.status,
+      required this.textColor,
+      required this.bgColorStart,
+      required this.bgColorEnd});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       key: const ValueKey("expanded"),
-      height: 70.w,
+      height: 54.h,
       width: double.infinity,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-            colors: [bgColorStart, bgColorEnd]),
+        gradient: LinearGradient(colors: [bgColorStart, bgColorEnd]),
         borderRadius: BorderRadius.circular(30),
         // boxShadow: [
         //   BoxShadow(

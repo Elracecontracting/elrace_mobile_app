@@ -32,28 +32,26 @@ class ColleaspedCard extends StatelessWidget {
         // if (backgroundImage != '' && !isExpanded)
         if (!isExpanded)
           Container(
-            width: 70.w,
-            height: 71.w,
-            margin: const EdgeInsets.only(
-              top: 3,
-            ),
+            width: 50.w,
+            height: 55.h,
+            margin: EdgeInsets.only(top: 2.h, left: 3.w),
             decoration: BoxDecoration(
               color: textColor,
-              borderRadius: BorderRadius.circular(30),
+              borderRadius: BorderRadius.circular(23),
             ),
           ),
         Container(
-          height: 70.w,
+          height: 54.h,
           key: const ValueKey("collapsed"),
           padding: EdgeInsets.symmetric(horizontal: 8.w),
           margin: EdgeInsets.only(left: 7.w, top: 2.w),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFFD6D6D6), Color.fromARGB(255, 200, 204, 213)],
-              begin: Alignment.bottomRight,
-              end: Alignment.topLeft,
+              colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
             ),
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(23),
           ),
           child: Row(
             children: [
@@ -61,23 +59,24 @@ class ColleaspedCard extends StatelessWidget {
               SizedBox(
                 width: 80,
                 child: Text(
-                  DateFormat('dd MMM yy').format(checkInTime),
+                  DateFormat('dd MMM yy').format(checkInTime).toUpperCase(),
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
-                    fontSize: 17.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.bold,
                     color: appFontColor,
                   ),
                 ),
               ),
-              const SizedBox(
-                height: 39.5,
-                child: VerticalDivider(color: Colors.grey, thickness: 1),
+              SizedBox(width: 10.w),
+              SizedBox(
+                height: 40.h,
+                child: const VerticalDivider(color: Colors.grey, thickness: 1),
               ),
 
               // Check-in
               SizedBox(
-                width: 90.w,
+                width: 80.w,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -85,7 +84,7 @@ class ColleaspedCard extends StatelessWidget {
                     Text(
                       'Check-in',
                       style: GoogleFonts.inter(
-                        fontSize: 16.sp,
+                        fontSize: 13.sp,
                         fontWeight: FontWeight.bold,
                         color: appFontColor,
                       ),
@@ -111,7 +110,7 @@ class ColleaspedCard extends StatelessWidget {
                     Text(
                       'Check-out',
                       style: GoogleFonts.inter(
-                        fontSize: 16.sp,
+                        fontSize: 13.sp,
                         fontWeight: FontWeight.bold,
                         color: appFontColor,
                       ),

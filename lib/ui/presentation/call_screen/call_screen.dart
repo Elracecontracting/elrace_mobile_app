@@ -27,6 +27,8 @@ class CallScreen extends StatefulWidget {
 class _CallScreenState extends State<CallScreen> {
   final _contactBloc = sl.get<ContactBloc>();
   int? expandedIndex;
+  final ScrollController _scrollController = ScrollController();
+  final GlobalKey _headerKey = GlobalKey();
 
   @override
   void initState() {
@@ -36,7 +38,6 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bloc = HomeBloc.get(context);
     return BlocListener<ContactBloc, ContactState>(
       listenWhen: (p, c) => c is ContactLoadingState,
       listener: (context, state) {
@@ -62,6 +63,7 @@ class _CallScreenState extends State<CallScreen> {
         backgroundColor: Colors.white,
         appBar: const HeaderWidget(),
         body: CustomScrollView(
+          controller: _scrollController,
           physics: const BouncingScrollPhysics(),
           slivers: [
             SliverPersistentHeader(
@@ -69,6 +71,7 @@ class _CallScreenState extends State<CallScreen> {
               delegate: _ContactHeaderDelegate(
                 minHeight: 70.h,
                 maxHeight: 90.h,
+                headerKey: _headerKey,
               ),
             ),
             SliverToBoxAdapter(
@@ -85,7 +88,7 @@ class _CallScreenState extends State<CallScreen> {
                         bool isExpanded = expandedIndex == index;
 
                         return Padding(
-                          padding: EdgeInsets.only(bottom: 20.h),
+                          padding: EdgeInsets.only(bottom: 5.h),
                           child: ContactTile(
                             color: const [darkGrey, darkGrey],
                             textColor: white,
@@ -155,10 +158,12 @@ class _CallScreenState extends State<CallScreen> {
 class _ContactHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double minHeight;
   final double maxHeight;
+  final GlobalKey? headerKey;
 
   _ContactHeaderDelegate({
     required this.minHeight,
     required this.maxHeight,
+    this.headerKey,
   });
 
   @override
@@ -186,6 +191,7 @@ class _ContactHeaderDelegate extends SliverPersistentHeaderDelegate {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
         child: Container(
+          key: headerKey,
           padding: EdgeInsets.symmetric(horizontal: 12.w),
           alignment: Alignment.center,
           decoration: BoxDecoration(
@@ -210,7 +216,10 @@ class _ContactHeaderDelegate extends SliverPersistentHeaderDelegate {
                   size: 28,
                   color: appFontColor,
                 ),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  // navigate back to home tab instead of popping
+                  HomeBloc.get(context).add(const ChangeCurrentIndex(index: 1));
+                },
               ),
 
               Text(
@@ -295,7 +304,7 @@ Widget searchWidget(ContactBloc bloc) {
   );
 }
 
-class ContactTile extends StatelessWidget {
+class ContactTile extends StatefulWidget {
   final List<Color> color;
   final Color textColor;
   final bool gradientAlignment;
@@ -309,6 +318,8 @@ class ContactTile extends StatelessWidget {
   final VoidCallback onTapCall;
   final VoidCallback onTapWhatsApp;
   final VoidCallback onTapEmail;
+  final ScrollController? scrollController;
+  final GlobalKey? headerKey;
 
   const ContactTile({
     super.key,
@@ -325,116 +336,171 @@ class ContactTile extends StatelessWidget {
     required this.onTapCall,
     required this.onTapWhatsApp,
     required this.onTapEmail,
+    this.scrollController,
+    this.headerKey,
   });
+  @override
+  State<ContactTile> createState() => _ContactTileState();
+}
+
+class _ContactTileState extends State<ContactTile> {
+  double _scale = 1.0;
+
+  void _updateScale() {
+    final headerContext = widget.headerKey?.currentContext;
+    final myContext = context;
+    if (headerContext == null || myContext.findRenderObject() == null) return;
+
+    try {
+      final RenderBox headerBox = headerContext.findRenderObject() as RenderBox;
+      final RenderBox myBox = myContext.findRenderObject() as RenderBox;
+      final headerBottom =
+          headerBox.localToGlobal(Offset.zero).dy + headerBox.size.height;
+      final myTop = myBox.localToGlobal(Offset.zero).dy;
+
+      final overlap = headerBottom - myTop; // positive when under header
+      final headerHeight = headerBox.size.height;
+
+      double newScale = 1.0;
+      if (overlap > 0) {
+        final ratio = (overlap.clamp(0.0, headerHeight)) / headerHeight;
+        newScale = 1.0 + (0.06 * ratio); // up to +6%
+      }
+
+      if ((newScale - _scale).abs() > 0.001) {
+        setState(() {
+          _scale = newScale;
+        });
+      }
+    } catch (_) {}
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    widget.scrollController?.addListener(_updateScale);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _updateScale());
+  }
+
+  @override
+  void dispose() {
+    widget.scrollController?.removeListener(_updateScale);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    List<String> nameParts = name.split(' ');
+    List<String> nameParts = widget.name.split(' ');
     String image =
         'https://t3.ftcdn.net/jpg/02/99/04/20/360_F_299042079_vGBD7wIlSeNl7vOevWHiL93G4koMM967.jpg';
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: GestureDetector(
-        onTap: onTapExpand,
-        child: Container(
-          height: 85.h,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            image: const DecorationImage(
-              image: AssetImage('assets/png/contact_back.png'),
-              fit: BoxFit.cover,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha((0.08 * 255).toInt()),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
+
+    return Transform.scale(
+      scale: _scale,
+      alignment: Alignment.topCenter,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 10),
+        child: GestureDetector(
+          onTap: widget.onTapExpand,
+          child: Container(
+            height: 85.h,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              image: const DecorationImage(
+                image: AssetImage('assets/png/contact_back.png'),
+                fit: BoxFit.cover,
               ),
-            ],
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 700),
-                  curve: Curves.easeInOut,
-                  margin: EdgeInsets.only(
-                    bottom: 12.h,
-                    top: 5.h,
-                  ),
-                  height: isExpanded ? 56.w : 80.w,
-                  width: isExpanded ? 56.w : 80.w,
-                  padding: EdgeInsets.all(9.w),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    image: DecorationImage(
-                      image: NetworkImage(image),
-                      fit: BoxFit.cover,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha((0.08 * 255).toInt()),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 15),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 700),
+                    curve: Curves.easeInOut,
+                    margin: EdgeInsets.only(
+                      bottom: 12.h,
+                      top: 5.h,
                     ),
-                    shape: BoxShape.circle,
-                    // gradient: const LinearGradient(colors: [darkPeach, lightPeach]),
-                    border: isExpanded
-                        ? Border.all(
-                            color: Colors.white,
-                            width: 2,
-                          )
-                        : null,
+                    height: widget.isExpanded ? 56.w : 80.w,
+                    width: widget.isExpanded ? 56.w : 80.w,
+                    padding: EdgeInsets.all(9.w),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      image: DecorationImage(
+                        image: NetworkImage(image),
+                        fit: BoxFit.cover,
+                      ),
+                      shape: BoxShape.circle,
+                      border: widget.isExpanded
+                          ? Border.all(
+                              color: Colors.white,
+                              width: 2,
+                            )
+                          : null,
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: AnimatedCrossFade(
-                    duration: const Duration(milliseconds: 450),
-                    crossFadeState: isExpanded
-                        ? CrossFadeState.showSecond
-                        : CrossFadeState.showFirst,
-                    firstChild: _buildInfoSection(nameParts, job, emp),
-                    secondChild: const SizedBox.shrink(),
-                    sizeCurve: Curves.easeInOut,
+                  Expanded(
+                    child: AnimatedCrossFade(
+                      duration: const Duration(milliseconds: 450),
+                      crossFadeState: widget.isExpanded
+                          ? CrossFadeState.showSecond
+                          : CrossFadeState.showFirst,
+                      firstChild:
+                          _buildInfoSection(nameParts, widget.job, widget.emp),
+                      secondChild: const SizedBox.shrink(),
+                      sizeCurve: Curves.easeInOut,
+                    ),
                   ),
-                ),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 400),
-                  switchInCurve: Curves.easeInOut,
-                  switchOutCurve: Curves.easeInOut,
-                  transitionBuilder: (child, anim) {
-                    return FadeTransition(opacity: anim, child: child);
-                  },
-                  child: isExpanded
-                      ? SizedBox(
-                          key: const ValueKey('icons'),
-                          width: 200.w,
-                          child: _buildIconsSection(
-                            onTapCall,
-                            onTapWhatsApp,
-                            onTapEmail,
-                          ),
-                        )
-                      : SizedBox(
-                          key: const ValueKey('button'),
-                          width: 105.w,
-                          child: Container(
-                            height: 32.h,
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                  color: const Color(0xFF1A1A53), width: 1),
-                              borderRadius: BorderRadius.circular(25),
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 400),
+                    switchInCurve: Curves.easeInOut,
+                    switchOutCurve: Curves.easeInOut,
+                    transitionBuilder: (child, anim) {
+                      return FadeTransition(opacity: anim, child: child);
+                    },
+                    child: widget.isExpanded
+                        ? SizedBox(
+                            key: const ValueKey('icons'),
+                            width: 200.w,
+                            child: _buildIconsSection(
+                              widget.onTapCall,
+                              widget.onTapWhatsApp,
+                              widget.onTapEmail,
                             ),
-                            child: Center(
-                              child: Text(
-                                translate('home.contact_me'),
-                                style: TextStyle(
-                                    color: const Color(0xFF1A1A53),
-                                    fontSize: 12.sp),
+                          )
+                        : SizedBox(
+                            key: const ValueKey('button'),
+                            width: 105.w,
+                            child: Container(
+                              height: 32.h,
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                    color: const Color(0xFF1A1A53), width: 1),
+                                borderRadius: BorderRadius.circular(25),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  translate('home.contact_me'),
+                                  style: TextStyle(
+                                      color: const Color(0xFF1A1A53),
+                                      fontSize: 12.sp),
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
