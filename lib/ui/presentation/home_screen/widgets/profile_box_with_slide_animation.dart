@@ -171,6 +171,14 @@ class _ProfileBoxWithSlideAnimationState
 
               final loginData = SharedPref.getLoginData();
 
+              // Debug: print qr_status to the log so we can inspect it
+              try {
+                print(
+                    'DEBUG: qr_status = ${loginData.result?.data?.qr_status}');
+              } catch (e) {
+                print('DEBUG: qr_status read error: $e');
+              }
+
               return Stack(
                 children: [
                   // Black transparent overlay
@@ -284,11 +292,17 @@ class _ProfileBoxWithSlideAnimationState
                                 Container(
                                   width: 220.w,
                                   child: Text(
-                                    'Status : Not Active',
+                                    loginData.result?.data?.qr_status == true
+                                        ? 'Status : Active'
+                                        : 'Status : Not Active',
                                     style: GoogleFonts.inter(
                                         fontSize: 11.26,
                                         fontWeight: FontWeight.bold,
-                                        color: const Color(0xff6D6D6D)),
+                                        color:
+                                            loginData.result?.data?.qr_status ==
+                                                    true
+                                                ? const Color(0xff4CAF50)
+                                                : const Color(0xffF44336)),
                                   ),
                                 ),
                                 Container(

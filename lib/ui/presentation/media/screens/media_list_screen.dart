@@ -178,23 +178,28 @@ class _MediaListScreenState extends State<MediaListScreen> {
             ),
           ),
         ),
-        GestureDetector(
-          onTap: () {
-            setState(() {
-              _showSearch = !_showSearch;
-              if (!_showSearch) {
-                _searchController.clear();
-                context.read<MediaBloc>().add(const FetchMediaList());
-              }
-            });
-          },
-          child:
-              Image.asset('assets/png/search.png', width: 35.w, height: 35.w),
+        Visibility(
+          visible: false, // hidden but kept in code
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _showSearch = !_showSearch;
+                if (!_showSearch) {
+                  _searchController.clear();
+                  context.read<MediaBloc>().add(const FetchMediaList());
+                }
+              });
+            },
+            child:
+                Image.asset('assets/png/search.png', width: 35.w, height: 35.w),
+          ),
         ),
       ],
     );
   }
 
+  // The search field is kept for future use but may be hidden in some screens.
+  // ignore: unused_element
   Widget _buildSearchField() {
     return Container(
       decoration: BoxDecoration(
@@ -268,6 +273,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildFilterButtons() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,

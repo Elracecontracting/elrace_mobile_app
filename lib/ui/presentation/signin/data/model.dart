@@ -92,6 +92,7 @@ class Data {
   final CacheHashes? cacheHashes;
   final List<dynamic>? allowedBranchIds;
   final List<String>? roles;
+  final bool? qr_status;
 
   Data({
     this.uid,
@@ -122,6 +123,7 @@ class Data {
     this.cacheHashes,
     this.allowedBranchIds,
     this.roles,
+    this.qr_status,
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
@@ -170,6 +172,7 @@ class Data {
         roles: json["roles"] == null
             ? []
             : List<String>.from(json["roles"]!.map((x) => x)),
+        qr_status: json["qr_status"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -208,6 +211,7 @@ class Data {
             ? []
             : List<dynamic>.from(allowedBranchIds!.map((x) => x)),
         "roles": roles == null ? [] : List<dynamic>.from(roles!.map((x) => x)),
+        "qr_status": qr_status,
       };
 }
 

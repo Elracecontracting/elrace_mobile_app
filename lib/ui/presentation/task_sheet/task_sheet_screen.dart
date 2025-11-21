@@ -117,7 +117,8 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                     decoration: const BoxDecoration(
                         color: appFontColor, shape: BoxShape.circle),
                     child: IconButton(
-                      icon: const Icon(Icons.add, size: 20, color: Colors.white),
+                      icon:
+                          const Icon(Icons.add, size: 20, color: Colors.white),
                       onPressed: () {
                         Navigator.push(
                           context,

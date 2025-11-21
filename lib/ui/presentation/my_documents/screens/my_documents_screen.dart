@@ -428,7 +428,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                   ),
                   SizedBox(height: 15.h),
                   GestureDetector(
-                    onTap: (){
+                    onTap: () {
                       showDocumentDialog(context);
                     },
                     child: Container(
@@ -536,6 +536,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
       ),
     );
   }
+
   void showDocumentDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -760,7 +761,6 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 //   }
 }
 
-
 class DocumentDialog extends StatefulWidget {
   const DocumentDialog({Key? key}) : super(key: key);
 
@@ -851,6 +851,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
       'file': _attachedFileName,
     });
   }
+
   final GlobalKey<CustomSliderButtonState> _sliderKey = GlobalKey();
   Future<void> _submitExpense() async {
     Navigator.pop(context);
@@ -871,8 +872,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
             borderRadius: BorderRadius.circular(18),
             image: DecorationImage(
                 image: AssetImage("assets/png/documents_back.png"),
-              fit: BoxFit.fill
-            ),
+                fit: BoxFit.fill),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.25),
@@ -919,7 +919,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
               _buildFieldWrapper(
                 child: TextField(
                   controller: _idController,
-                  onTapOutside: (v){
+                  onTapOutside: (v) {
                     FocusScope.of(context).unfocus();
                   },
                   decoration: const InputDecoration(
@@ -967,7 +967,11 @@ class _DocumentDialogState extends State<DocumentDialog> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                      Icon(Icons.cloud_upload_outlined, size: 20,color: HexColor("#002E6B"),),
+                    Icon(
+                      Icons.cloud_upload_outlined,
+                      size: 20,
+                      color: HexColor("#002E6B"),
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       _attachedFileName == null
@@ -982,7 +986,6 @@ class _DocumentDialogState extends State<DocumentDialog> {
                         fontSize: 16,
                         letterSpacing: 1,
                       ),
-
                     ),
                   ],
                 ),
@@ -993,10 +996,9 @@ class _DocumentDialogState extends State<DocumentDialog> {
                   padding: const EdgeInsets.symmetric(horizontal: 0),
                   child: CustomSliderButton(
                     key: _sliderKey, // ✅ <-- this is critical
-                    onSlideComplete:_submitExpense,
+                    onSlideComplete: _submitExpense,
                     loginResponseModel: SharedPref.getLoginData(),
                   )),
-
             ],
           ),
         ),
