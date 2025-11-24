@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -32,6 +33,12 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
   String selectedDuration = "Morning";
   String selectedDay = 'Today'; // or 'Tomorrow'
 
+  final List<String> options = [
+    "Client Visit",
+    "Media",
+    "Support",
+  ];
+  bool dropdownOpen = false;
   Future<void> _selectDate(BuildContext context) async {
     if (selectedDay == 'Tomorrow') return; // Disable manual selection
 
@@ -145,6 +152,131 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
     );
   }
 
+  Widget _buildDropdown() {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // ░░░░░ Header Button ░░░░░
+        GestureDetector(
+          onTap: () => setState(() => dropdownOpen = !dropdownOpen),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 35.w),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF020024), Color(0xFF090979)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(22.r),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: 6,
+                  offset: Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  selectedMissionType.toUpperCase(),
+                  style: GoogleFonts.koulen(
+                    fontSize: 14.sp,
+                    letterSpacing: 2,
+                    color: Colors.white,
+                  ),
+                ),
+                SizedBox(width: 6.w),
+                Icon(
+                  dropdownOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                  color: Colors.white,
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // ░░░░░ DropDown Overlay ░░░░░
+        // ░░░░░ DropDown Overlay ░░░░░
+        if (dropdownOpen)
+          Positioned(
+            top: 55, // تحت الزر مباشرة
+            left: 0,
+            right: 0,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              opacity: dropdownOpen ? 1.0 : 0.0,
+              child: IgnorePointer(
+                ignoring: !dropdownOpen,
+                child: Center(
+                  child: Container(
+                    width: 260.w, // نفس عرض التصميم
+                    padding: EdgeInsets.symmetric(vertical: 12.h),
+                    decoration: BoxDecoration(
+                      color: Colors.white, // 👈 خلفية بيضاء 100%
+                      borderRadius: BorderRadius.circular(22.r),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.15),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                          offset: Offset(0, 5),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: Colors.grey.shade300,
+                        width: 1,
+                      ),
+                    ),
+
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(options.length, (index) {
+                        return Column(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  selectedMissionType = options[index];
+                                  dropdownOpen = false;
+                                });
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.symmetric(
+                                    vertical: 12.h, horizontal: 20.w),
+                                child: Text(
+                                  options[index],
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            if (index != options.length - 1)
+                              Divider(
+                                height: 1,
+                                thickness: 0.7,
+                                color: Colors.grey.shade300,
+                              ),
+                          ],
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     String dateFormatted = formatDate(selectedDate);
@@ -201,69 +333,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                               ),
                             ),
                             const SizedBox(height: 10),
-                            Center(
-                              child: Builder(
-                                builder: (context) => PopupMenuButton<String>(
-                                  onSelected: (value) {
-                                    setState(() {
-                                      selectedMissionType = value;
-                                    });
-                                  },
-                                  position: PopupMenuPosition.under,
-                                  itemBuilder: (BuildContext context) =>
-                                      <PopupMenuEntry<String>>[
-                                    _buildMenuItem('Client Visit'),
-                                    _buildMenuItem('Media'),
-                                    _buildMenuItem('Support'),
-                                  ],
-                                  color: Colors.white,
-                                  elevation: 6,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: SizedBox(
-                                    width:
-                                        240, // 👈 Fixed width of dropdown button
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          vertical: 7, horizontal: 36),
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [
-                                            Color(0xFF1A237E),
-                                            Color(0xFF3F51B5)
-                                          ],
-                                          begin: Alignment.topLeft,
-                                          end: Alignment.bottomRight,
-                                        ),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Flexible(
-                                            child: Text(
-                                              selectedMissionType,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: GoogleFonts.koulen(
-                                                color: Colors.white,
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w500,
-                                                letterSpacing:
-                                                    2.2, // Optional for extra spacing
-                                              ),
-                                            ),
-                                          ),
-                                          const Icon(Icons.arrow_drop_down,
-                                              color: Colors.white),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
+                            Center(child: _buildDropdown()),
                             const SizedBox(height: 20),
                             Center(
                               child: Text(
@@ -649,24 +719,6 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  PopupMenuItem<String> _buildMenuItem(String text) {
-    return PopupMenuItem<String>(
-      value: text,
-      child: Container(
-        width: 145, // 👈 Set desired width
-        padding: const EdgeInsets.symmetric(vertical: 10),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
-            color: Colors.black,
-          ),
-        ),
       ),
     );
   }
