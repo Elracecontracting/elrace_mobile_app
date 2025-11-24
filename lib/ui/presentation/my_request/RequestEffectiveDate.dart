@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -27,6 +28,13 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
   String description = '';
   final GlobalKey<CustomSliderButtonState> _sliderKey =
       GlobalKey<CustomSliderButtonState>();
+
+  final List<String> options = [
+    "New Hire",
+    "Work Resumption",
+    "Temporary Work Permit",
+  ];
+  bool dropdownOpen = false;
 
   Future<void> _selectDate(BuildContext context, bool isJoinedDate) async {
     DateTime initialDate = isJoinedDate ? joinedDate : leaveEndDate;
@@ -187,13 +195,11 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                               ),
                             ),
                             const SizedBox(height: 20),
-                            _buildDropdown(),
+                            _buildDropdownHeader(),
                             const SizedBox(height: 20),
                             _buildDateRow("JOINED DATE :  ", joinedDate, true),
                             const SizedBox(height: 10),
-                            if (selectedMissionType == "Work Resumption")
-                              _buildDateRow(
-                                  "LEAVE END DATE :  ", leaveEndDate, false),
+                            _buildDateRow("LEAVE END DATE :  ", leaveEndDate, false),
                             const SizedBox(height: 10),
                             Padding(
                               padding: const EdgeInsets.only(left: 36.0),
@@ -276,6 +282,74 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
               ),
             ),
           ),
+
+          // ░░░░░ FLOATING DROPDOWN ░░░░░
+          Positioned(
+            top: 250.h,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              ignoring: !dropdownOpen,
+              child: AnimatedOpacity(
+                duration: Duration(milliseconds: 450),
+                curve: Curves.easeInOut,
+                opacity: dropdownOpen ? 1.0 : 0.0,
+                child: Center(
+                  child: Material(
+                    elevation: 4,
+                    borderRadius: BorderRadius.circular(22.r),
+                    child: Container(
+                      width: 260.w,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(22.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 8,
+                            spreadRadius: 0,
+                            offset: Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(options.length, (i) {
+                          return Column(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    selectedMissionType = options[i];
+                                    dropdownOpen = false;
+                                  });
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                      vertical: 14.h, horizontal: 20.w),
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    options[i],
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (i != options.length - 1)
+                                Divider(height: 1, color: Colors.grey.shade300)
+                            ],
+                          );
+                        }),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -318,48 +392,43 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
     );
   }
 
-  Widget _buildDropdown() {
-    return PopupMenuButton<String>(
-      onSelected: (value) => setState(() => selectedMissionType = value),
-      position: PopupMenuPosition.under,
-      itemBuilder: (context) => [
-        _buildMenuItem('New Hire'),
-        _buildMenuItem('Work Resumption'),
-        _buildMenuItem('Temporary Work Permit'),
-      ],
-      color: Colors.white,
-      elevation: 6,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: SizedBox(
-        width: 240,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 24),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF1A237E), Color(0xFF3F51B5)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+  Widget _buildDropdownHeader() {
+    return GestureDetector(
+      onTap: () => setState(() => dropdownOpen = !dropdownOpen),
+      child: Container(
+        width: 260.w,
+        padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 24.w),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF020024), Color(0xFF090979)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(22.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 6,
+              offset: Offset(0, 3),
             ),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Flexible(
-                child: Text(
-                  selectedMissionType,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.koulen(
-                    color: Colors.white,
-                    fontSize: 16, // original 14 + 2
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 1.9,
-                  ),
-                ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              selectedMissionType,
+              style: GoogleFonts.koulen(
+                color: Colors.white,
+                fontSize: 15.sp,
+                letterSpacing: 2,
               ),
-              const Icon(Icons.arrow_drop_down, color: Colors.white),
-            ],
-          ),
+            ),
+            Icon(
+              dropdownOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+              color: Colors.white,
+            ),
+          ],
         ),
       ),
     );

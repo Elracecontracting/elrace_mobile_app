@@ -152,128 +152,45 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
     );
   }
 
-  Widget _buildDropdown() {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        // ░░░░░ Header Button ░░░░░
-        GestureDetector(
-          onTap: () => setState(() => dropdownOpen = !dropdownOpen),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 35.w),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF020024), Color(0xFF090979)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(22.r),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.25),
-                  blurRadius: 6,
-                  offset: Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  selectedMissionType.toUpperCase(),
-                  style: GoogleFonts.koulen(
-                    fontSize: 14.sp,
-                    letterSpacing: 2,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(width: 6.w),
-                Icon(
-                  dropdownOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-                  color: Colors.white,
-                ),
-              ],
-            ),
+  Widget _buildDropdownHeader() {
+    return GestureDetector(
+      onTap: () => setState(() => dropdownOpen = !dropdownOpen),
+      child: Container(
+        width: 260.w,
+        padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 24.w),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF020024), Color(0xFF090979)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
+          borderRadius: BorderRadius.circular(22.r),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+          ],
         ),
-
-        // ░░░░░ DropDown Overlay ░░░░░
-        // ░░░░░ DropDown Overlay ░░░░░
-        if (dropdownOpen)
-          Positioned(
-            top: 55, // تحت الزر مباشرة
-            left: 0,
-            right: 0,
-            child: AnimatedOpacity(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              opacity: dropdownOpen ? 1.0 : 0.0,
-              child: IgnorePointer(
-                ignoring: !dropdownOpen,
-                child: Center(
-                  child: Container(
-                    width: 260.w, // نفس عرض التصميم
-                    padding: EdgeInsets.symmetric(vertical: 12.h),
-                    decoration: BoxDecoration(
-                      color: Colors.white, // 👈 خلفية بيضاء 100%
-                      borderRadius: BorderRadius.circular(22.r),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 12,
-                          spreadRadius: 1,
-                          offset: Offset(0, 5),
-                        ),
-                      ],
-                      border: Border.all(
-                        color: Colors.grey.shade300,
-                        width: 1,
-                      ),
-                    ),
-
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: List.generate(options.length, (index) {
-                        return Column(
-                          children: [
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  selectedMissionType = options[index];
-                                  dropdownOpen = false;
-                                });
-                              },
-                              child: Container(
-                                width: double.infinity,
-                                padding: EdgeInsets.symmetric(
-                                    vertical: 12.h, horizontal: 20.w),
-                                child: Text(
-                                  options[index],
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            if (index != options.length - 1)
-                              Divider(
-                                height: 1,
-                                thickness: 0.7,
-                                color: Colors.grey.shade300,
-                              ),
-                          ],
-                        );
-                      }),
-                    ),
-                  ),
-                ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              selectedMissionType,
+              style: GoogleFonts.koulen(
+                color: Colors.white,
+                fontSize: 15.sp,
+                letterSpacing: 2,
               ),
             ),
-          ),
-      ],
+            Icon(
+              dropdownOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+              color: Colors.white,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -301,7 +218,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                           boxShadow: [
                             BoxShadow(
                               color:
-                                  Colors.black.withAlpha((0.1 * 255).toInt()),
+                                  Colors.black.withAlpha((0.05 * 255).toInt()),
                               blurRadius: 10,
                               spreadRadius: 2,
                             ),
@@ -333,7 +250,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                               ),
                             ),
                             const SizedBox(height: 10),
-                            Center(child: _buildDropdown()),
+                            Center(child: _buildDropdownHeader()),
                             const SizedBox(height: 20),
                             Center(
                               child: Text(
@@ -714,6 +631,74 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                 ),
                 child: const Center(
                   child: Icon(Icons.close, size: 20, color: Colors.black),
+                ),
+              ),
+            ),
+          ),
+
+          // ░░░░░ FLOATING DROPDOWN ░░░░░
+          Positioned(
+            top: 210.h,
+            left: 0,
+            right: 0,
+            child: IgnorePointer(
+              ignoring: !dropdownOpen,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 450),
+                curve: Curves.easeInOut,
+                opacity: dropdownOpen ? 1.0 : 0.0,
+                child: Center(
+                  child: Material(
+                    elevation: 4,
+                    borderRadius: BorderRadius.circular(22.r),
+                    child: Container(
+                      width: 260.w,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(22.r),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 8,
+                            spreadRadius: 0,
+                            offset: Offset(0, 4),
+                          )
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: List.generate(options.length, (i) {
+                          return Column(
+                            children: [
+                              GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    selectedMissionType = options[i];
+                                    dropdownOpen = false;
+                                  });
+                                },
+                                child: Container(
+                                  padding: EdgeInsets.symmetric(
+                                      vertical: 14.h, horizontal: 20.w),
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    options[i],
+                                    style: GoogleFonts.inter(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              if (i != options.length - 1)
+                                Divider(height: 1, color: Colors.grey.shade300)
+                            ],
+                          );
+                        }),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
