@@ -411,7 +411,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                                 vertical: 8.5.h,
                               ),
                               child: Text(
-                                'totla : ${_filteredDocs().length}',
+                                'total : ${_filteredDocs().length}',
                                 style: GoogleFonts.aBeeZee(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w400,

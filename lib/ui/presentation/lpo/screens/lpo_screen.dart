@@ -71,7 +71,7 @@ class _LpoListScreenState extends State<LpoListScreen> {
       final token = SharedPref.getLoginData().result?.token ?? '';
       final url = Uri.parse('https://test.elrace.com/api/get_lpos');
       final headers = {
-        'Content-Type': 'application/json', 
+        'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': 'Bearer $token',
       };
@@ -198,26 +198,27 @@ class _LpoListScreenState extends State<LpoListScreen> {
                   ),
                 ),
               ),
-              Padding(
-                padding: const EdgeInsets.only(right: 16),
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _showSearch = !_showSearch;
-                      if (!_showSearch) {
-                        _searchController.clear();
-                        _keyword = '';
-                        _fetchLpos(keyword: '');
-                      }
-                    });
-                  },
-                  child: Image.asset(
-                    'assets/png/search.png',
-                    width: 35.w,
-                    height: 35.w,
-                  ),
-                ),
-              ),
+              // Padding(
+              //   padding: const EdgeInsets.only(right: 16),
+              //   child: GestureDetector(
+              //     onTap: () {
+              //       setState(() {
+              //         _showSearch = !_showSearch;
+              //         if (!_showSearch) {
+              //           _searchController.clear();
+              //           _keyword = '';
+              //           _fetchLpos(keyword: '');
+              //         }
+              //       });
+              //     },
+              //     child: Image.asset(
+              //       'assets/png/search.png',
+              //       width: 35.w,
+              //       height: 35.w,
+              //     ),
+              //   ),
+              // ),
+              SizedBox(width: 51.w), // Balance spacing
             ],
           ),
 

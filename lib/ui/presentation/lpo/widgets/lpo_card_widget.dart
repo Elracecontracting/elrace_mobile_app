@@ -1,8 +1,8 @@
-import 'package:el_race/utils/Util.dart';
+import 'dart:ui';
+
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -11,327 +11,264 @@ class LpoCardWidget extends StatelessWidget {
     super.key,
     this.name,
     this.vendorName,
+    this.projectName,
     this.date,
     this.amount,
+    this.attachments,
     this.lpoCount,
   });
 
   final String? name;
   final String? vendorName;
+  final String? projectName;
   final String? date;
   final String? amount;
-  final String? lpoCount;
+  final List<dynamic>? attachments;
+  final String? lpoCount; // kept for future use
+
+  static final _amountFormat = NumberFormat('#,##0.00', 'en');
+
+  String _formatAmount(String? raw) {
+    if (raw == null || raw.isEmpty) return '-- AED';
+    final cleaned = raw.replaceAll(RegExp(r'[^0-9.,]'), '');
+    final value = double.tryParse(cleaned.replaceAll(',', ''));
+    if (value == null) return '${raw} AED';
+    return '${_amountFormat.format(value)} AED';
+  }
+
+  String _formatDate(String? raw) {
+    if (raw == null || raw.isEmpty) return '';
+    try {
+      return DateFormat('dd/MM/yyyy').format(DateTime.parse(raw));
+    } catch (_) {
+      return raw;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        showAttachmentDialog(context);
-      },
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.fromLTRB(10, 0, 10, 0),
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/png/background.png"),
-                fit: BoxFit.fill,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(36, 16, 16, 2),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+    final formattedAmount = _formatAmount(amount);
+    final formattedDate = _formatDate(date);
+
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+      padding: const EdgeInsets.all(1),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22.r),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF151544), Color(0xFF3535AA)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(21.r),
+          gradient: const LinearGradient(
+            colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          children: [
+            // Top row: Vendor logo and title section
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // LEFT: Vendor Logo
+                Container(
+                  width: 90.w,
+                  height: 90.w,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey.shade300, width: 2),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    (vendorName != null && vendorName!.isNotEmpty)
+                        ? vendorName!.characters
+                            .take(2)
+                            .toString()
+                            .toUpperCase()
+                        : 'V',
+                    style: GoogleFonts.koulen(
+                      fontSize: 22.sp,
+                      fontWeight: FontWeight.w700,
+                      color: appFontColor,
+                    ),
+                  ),
+                ),
+                SizedBox(width: 16.w),
+                // CENTER: Title + Vendor + Project
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Expanded(
-                        child: Center(
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Image.asset(
-                                "assets/newapp/my_projects.png",
-                                height: 26.w,
-                                width: 26.w,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                name ?? 'item.name',
-                                style: GoogleFonts.koulen(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black,
-                                  letterSpacing: 1.2,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
-                          ),
+                      Text(
+                        name ?? 'RCC-PO-XXXX',
+                        style: GoogleFonts.koulen(
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black,
+                          letterSpacing: 1.5,
                         ),
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
-                      // const Icon(Icons.more_horiz,
-                      //     size: 20, color: Colors.black),
+                      SizedBox(height: 8.h),
+                      _braceChip(vendorName ?? 'VENDOR NAME'),
+                      SizedBox(height: 6.h),
+                      _braceChip(projectName ?? 'PROJECT NAME'),
                     ],
                   ),
-                  const SizedBox(height: 25),
-
-                  Transform.translate(
-                    offset: Offset(0, -15.w),
-                    child: Row(
-
-                      children: [
-                        // SizedBox(
-                        //   width: 200,
-                        //   child: Text(
-                        //     item.partnerId,
-                        //     style: GoogleFonts.koulen(
-                        //       fontSize: 12,
-                        //       color: Colors.black,
-                        //       letterSpacing: 1.0,
-                        //     ),
-                        //     overflow: TextOverflow.ellipsis,
-                        //     maxLines: 2,
-                        //     softWrap: false,
-                        //   ),
-                        // ),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Image.asset(
-                                  "assets/png/icons/tag.png",
-                                  height: 11.86.w,
-                                  width: 11.2.w,
-                                  color: black,
-                                ),
-                                const SizedBox(width: 16),
-                                SizedBox(
-                                  width: 100,
-                                  child: Text(
-                                    'LPO NO',
-                                    //  (lpoCount ?? 'LPO NO').toString(),
-                                    style: GoogleFonts.koulen(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: black,
-                                    ),
-                                  ),
-                                ),
-                                // const SizedBox(width: 8),
-                                // Text(
-                                //   (lpoCount ?? '').toString(),
-                                //   style: GoogleFonts.koulen(
-                                //     fontSize: 12,
-                                //     fontWeight: FontWeight.w600,
-                                //     color: black,
-                                //   ),
-                                // ),
-                              ],
-                            ),
-                            //const SizedBox(height: 3),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Row(
-                                  children: [
-                                    Image.asset(
-                                      "assets/png/icons/hand.png",
-                                      height: 12.8.w,
-                                      width: 19.57.w,
-                                      color: black,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    SizedBox(
-                                      width: 170.w,
-                                      child: Text(
-                                        vendorName ?? 'Vendor Name',
-                                        maxLines: 1,
-                                        style: GoogleFonts.koulen(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w400,
-                                          color: black,
-                                          //letterSpacing: 1.0,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                // Container(
-                                //     padding: const EdgeInsets.all(6),
-                                //     margin: const EdgeInsets.only(right: 10, bottom: 20),
-                                //     decoration: BoxDecoration(
-                                //       color: Colors.transparent,
-                                //       shape: BoxShape.circle,
-                                //       border: Border.all(color: greyText, width: 2),
-                                //     ),
-                                //     child: Text(
-                                //       '+12',
-                                //       style: GoogleFonts.koulen(
-                                //         fontSize: 20.sp,
-                                //         fontWeight: FontWeight.w500,
-                                //         color: AppColors.green,
-                                //       ),
-                                //     )),
-                              ],
-                            ),
-                            Container(
-                              width: 40.w,
-                              height: 40.w,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white, width: 2),
-                              ),
-                              child: ClipOval(
-                                child: Image.asset(
-                                  'assets/png/profile_1.png',
-                                  fit: BoxFit.cover,
-                                  width: double.infinity,
-                                  height: double.infinity,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Spacer(),
-                        Container(
-                          width: 60.w,
-                          height: 100.w,
-                          margin: EdgeInsets.only(
-                            right: 10.w,
-                          ),
-                          decoration: const BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.only(
-                                topLeft: Radius.circular(11.9),
-                                topRight: Radius.circular(11.9),
-                                bottomLeft: Radius.circular(11.9),
-                              )
-                              // image: DecorationImage(
-                              //   image: AssetImage("assets/png/date_box_bg.png"),
-                              //   fit: BoxFit.contain,
-                              // ),
-                              ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                width: 50.w,
-                                height: 50,
-                                alignment: Alignment.center,
-                                padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                    ) +
-                                    const EdgeInsets.only(top: 10),
-                                decoration: const BoxDecoration(
-                                  image: DecorationImage(
-                                    image: AssetImage(
-                                        "assets/png/date_box_bg.png"),
-                                    fit: BoxFit.fill,
-                                  ),
-                                ),
-                                child: Text(
-                                  Util.isValidDateTime(date ?? 'item.date')
-                                      ? DateTime.parse(date!).day.toString()
-                                      : '',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 17,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                Util.isValidDateTime(date ?? 'item.date')
-                                    ? DateFormat.MMMM()
-                                        .format(DateTime.parse(date!))
-                                    : '',
-                                style: GoogleFonts.inter(
-                                  fontSize: 9.w,
-                                  fontWeight: FontWeight.bold,
-                                  color: appFontColor,
-                                ),
-                              ),
-                              Text(
-                                Util.isValidDateTime(date ?? 'item.date')
-                                    ? DateTime.parse(date!).year.toString()
-                                    : '',
-                                style: GoogleFonts.inter(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: appFontColor,
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+                ),
+                SizedBox(width: 16.w),
+                SizedBox(width: 90.w), // Balance right side
+              ],
             ),
-          ),
-          Transform.translate(
-            offset: Offset(-20.w, -17.h),
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Stack(
-                alignment: Alignment.centerLeft,
+            SizedBox(height: 14.h),
+            // Bottom row: Amount + Avatar + Date (all aligned)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 8.w),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
+                  // LEFT: Amount with icon
+                  Row(
+                    children: [
+                      Image.asset(
+                        'assets/png/icons/Coin.png',
+                        width: 24.w,
+                        height: 24.w,
+                        color: const Color(0xFF151544),
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.attach_money,
+                          size: 24.w,
+                          color: const Color(0xFF151544),
+                        ),
+                      ),
+                      SizedBox(width: 6.w),
+                      Text(
+                        formattedAmount,
+                        style: GoogleFonts.koulen(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                  // CENTER: User Avatar
                   Container(
                     width: 40.w,
-                    height: 28.w,
-                    margin: EdgeInsets.only(
-                      right: 30.w, /// this will change to left 30.w if user select arabic language
-                    ),
+                    height: 40.w,
                     decoration: BoxDecoration(
-                      color: red,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1),
+                      color: Colors.white,
                       boxShadow: [
                         BoxShadow(
-                          color: red.withValues(alpha: 0.2),
+                          color: Colors.black.withOpacity(0.1),
                           blurRadius: 4,
-                          spreadRadius: 1,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
-                  ),
-                  Container(
-                    height: 37.w,
-                    width: 210.w,
-                    alignment: Alignment.centerLeft,
-                    margin: EdgeInsets.only(left: 1.w),
-                    padding: const EdgeInsets.symmetric(horizontal: 40),
-                    decoration: const BoxDecoration(
-                        image: DecorationImage(
-                            image: AssetImage(
-                                'assets/png/lpo_blue_container.png'))),
-                    child: Text(
-                      ('AMOUNT: $amount'),
-                      style: GoogleFonts.koulen(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white,
-                        letterSpacing: 1.2,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/png/profile_1.png',
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.person,
+                          size: 34.w,
+                          color: appFontColor,
+                        ),
                       ),
-                      overflow: TextOverflow.ellipsis,
                     ),
+                  ),
+                  // RIGHT: Date with icon
+                  Row(
+                    children: [
+                      Image.asset(
+                        'assets/png/calender.png',
+                        width: 24.w,
+                        height: 24.w,
+                        color: const Color(0xFF151544),
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.calendar_month,
+                          size: 24.w,
+                          color: const Color(0xFF151544),
+                        ),
+                      ),
+                      SizedBox(width: 6.w),
+                      Text(
+                        formattedDate,
+                        style: GoogleFonts.inter(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _braceChip(String text) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(10.r),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10.r),
+            color: Colors.white.withOpacity(0.25), // شفافية الزجاج
+            border: Border.all(
+              color: Colors.white.withOpacity(0.5), // إطار زجاجي
+              width: 1.2,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.white.withOpacity(0.4),
+                blurRadius: 6,
+                spreadRadius: -2,
+                offset: const Offset(-2, -2),
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 6,
+                spreadRadius: -2,
+                offset: const Offset(2, 2),
+              ),
+            ],
           ),
-        ],
+          child: Text(
+            text,
+            style: GoogleFonts.koulen(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w400,
+              color: Colors.black87,
+              letterSpacing: 1,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ),
     );
   }
 }
-
 
 void showAttachmentDialog(BuildContext context) {
   showDialog(
@@ -492,4 +429,3 @@ Widget _buildDialogContent(BuildContext context) {
     ),
   );
 }
-

@@ -199,7 +199,9 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                             const SizedBox(height: 20),
                             _buildDateRow("JOINED DATE :  ", joinedDate, true),
                             const SizedBox(height: 10),
-                            _buildDateRow("LEAVE END DATE :  ", leaveEndDate, false),
+                            if (selectedMissionType == "Work Resumption")
+                              _buildDateRow(
+                                  "LEAVE END DATE :  ", leaveEndDate, false),
                             const SizedBox(height: 10),
                             Padding(
                               padding: const EdgeInsets.only(left: 36.0),

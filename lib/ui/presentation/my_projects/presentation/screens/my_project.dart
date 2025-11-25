@@ -66,6 +66,7 @@ class _MyProjectState extends State<MyProject> {
                   onPressed: () => Navigator.pop(context),
                 ),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Image.asset(
                       "assets/newapp/my_projects.png",
@@ -82,7 +83,8 @@ class _MyProjectState extends State<MyProject> {
                     ),
                   ],
                 ),
-                Row(
+                const SizedBox(width: 48),
+                /*  Row(
                   children: [
                     GestureDetector(
                       onTap: () {
@@ -101,6 +103,7 @@ class _MyProjectState extends State<MyProject> {
                     SizedBox(width: 23.w),
                   ],
                 ),
+                */
               ],
             ),
             Expanded(
@@ -110,8 +113,7 @@ class _MyProjectState extends State<MyProject> {
                   builder: (context, state) {
                     if (state is PartnerLoading) {
                       return const Center(child: CircularProgressIndicator());
-                    }
-                    else if (state is PartnerError) {
+                    } else if (state is PartnerError) {
                       return Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -135,8 +137,8 @@ class _MyProjectState extends State<MyProject> {
                           ],
                         ),
                       );
-                    }
-                    else if (state is PartnerLoaded || state is PartnerSearchLoaded) {
+                    } else if (state is PartnerLoaded ||
+                        state is PartnerSearchLoaded) {
                       final partners = state is PartnerLoaded
                           ? state.partners
                           : (state as PartnerSearchLoaded).partners;
@@ -220,20 +222,20 @@ class _MyProjectState extends State<MyProject> {
                                             width: 70,
                                             height: 70,
                                             fit: BoxFit.contain,
-                                            errorBuilder: (context, error,
-                                                    stackTrace) =>
-                                                Image.asset(
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    Image.asset(
                                               "assets/png/police.png",
-                                                  width: 70,
-                                                  height: 70,
-                                                  fit: BoxFit.contain,
+                                              width: 70,
+                                              height: 70,
+                                              fit: BoxFit.contain,
                                             ),
                                           )
                                         : Image.asset(
                                             "assets/png/police.png",
-                                      width: 70,
-                                      height: 70,
-                                      fit: BoxFit.contain,
+                                            width: 70,
+                                            height: 70,
+                                            fit: BoxFit.contain,
                                           ),
                                     SizedBox(height: 5.h),
                                     Text(
@@ -248,10 +250,14 @@ class _MyProjectState extends State<MyProject> {
                                     ),
                                     SizedBox(height: 5.h),
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
-                                        Icon(Icons.tag,size: 20,),
+                                        Icon(
+                                          Icons.tag,
+                                          size: 20,
+                                        ),
                                         Text(
                                           'work orders',
                                           style: GoogleFonts.koulen(
@@ -264,17 +270,24 @@ class _MyProjectState extends State<MyProject> {
                                         SizedBox(width: 3.w),
                                         Container(
                                           width: 25.w,
-                                          height:25.h,
+                                          height: 25.h,
                                           decoration: const BoxDecoration(
                                             color: Colors.white,
                                             shape: BoxShape.circle,
                                           ),
                                           child: Center(
                                             child: Text(
-                                              partner.workOrdersCount.toString(),
+                                              partner.workOrdersCount
+                                                  .toString(),
                                               style: GoogleFonts.montserrat(
                                                 fontWeight: FontWeight.w700,
-                                                fontSize:partner.workOrdersCount.toString().length>=3?10.sp:12.sp,
+                                                fontSize: partner
+                                                            .workOrdersCount
+                                                            .toString()
+                                                            .length >=
+                                                        3
+                                                    ? 10.sp
+                                                    : 12.sp,
                                               ),
                                             ),
                                           ),
