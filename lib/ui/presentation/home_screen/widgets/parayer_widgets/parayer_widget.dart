@@ -114,9 +114,9 @@ class _ParayerWidgetState extends State<ParayerWidget>
                 Container(
                   width: double.infinity,
                   height: AppDimen.homeWidgetCardHeight.w + 13.w,
-                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  padding: EdgeInsets.symmetric(vertical: 6.h),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(12.r),
                     image: const DecorationImage(
                       image:
                           AssetImage('assets/png/prayer_time_background.png'),
@@ -153,12 +153,12 @@ class _ParayerWidgetState extends State<ParayerWidget>
                                 const Spacer(),
                                 if (error != null)
                                   Padding(
-                                    padding: const EdgeInsets.only(right: 8),
+                                    padding: EdgeInsets.only(right: 8.w),
                                     child: Icon(Icons.error_outline,
                                         color: Colors.yellow.shade200,
-                                        size: 18),
+                                        size: 18.sp),
                                   ),
-                                const SizedBox(width: 12),
+                                SizedBox(width: 12.w),
                                 InkWell(
                                   onTap: () {
                                     context
@@ -178,11 +178,11 @@ class _ParayerWidgetState extends State<ParayerWidget>
                               ],
                             ),
                             if (error != null) ...[
-                              const SizedBox(height: 8),
+                              SizedBox(height: 8.h),
                               Text(
                                 error,
                                 style: GoogleFonts.kanit(
-                                    fontSize: 12, color: Colors.white70),
+                                    fontSize: 12.sp, color: Colors.white70),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),

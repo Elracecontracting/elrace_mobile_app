@@ -1,13 +1,15 @@
 import 'dart:ui';
 
+import 'package:camera/camera.dart';
 import 'package:el_race/core/constants/app_images.dart';
 import 'package:el_race/ui/presentation/call_screen/call_screen.dart';
+import 'package:el_race/ui/presentation/camera/camera_screen.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
-import 'package:el_race/utils/Util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
@@ -105,10 +107,11 @@ class CustomBottomNavBar extends StatelessWidget {
     return IconButton(
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(),
-      onPressed: () {
+      onPressed: () async {
         if (isMain) {
           if (index == 2) {
-            Util.showComingSoonToast();
+            // Open camera
+            await _openCamera(context);
             return;
           }
           bloc.add(ChangeCurrentIndex(index: index));
@@ -133,5 +136,53 @@ class CustomBottomNavBar extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _openCamera(BuildContext context) async {
+    // Request camera permission
+    final status = await Permission.camera.request();
+
+    if (status.isGranted) {
+      try {
+        // Get available cameras
+        final cameras = await availableCameras();
+        if (cameras.isEmpty) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('No camera found')),
+            );
+          }
+          return;
+        }
+
+        // Open camera (you can create a custom camera screen later)
+        if (context.mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CameraScreen(camera: cameras.first),
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error opening camera: $e')),
+          );
+        }
+      }
+    } else if (status.isDenied || status.isPermanentlyDenied) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Camera permission is required'),
+            action: SnackBarAction(
+              label: 'Settings',
+              onPressed: openAppSettings,
+            ),
+          ),
+        );
+      }
+    }
   }
 }

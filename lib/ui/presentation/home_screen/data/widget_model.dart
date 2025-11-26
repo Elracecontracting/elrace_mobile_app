@@ -83,6 +83,12 @@ List<WidgetModel> getAvailableWidgets() {
       backgroundPath: 'assets/png/blue_card.png',
     ),
     const WidgetModel(
+      id: 'todo_list',
+      title: 'TO DO List',
+      iconPath: 'assets/png/todo_icon.png',
+      backgroundPath: 'assets/png/blue_card.png',
+    ),
+    const WidgetModel(
       id: 'projects',
       title: 'Projects',
       iconPath: 'assets/newapp/my_projects.svg',

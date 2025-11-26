@@ -14,10 +14,10 @@ class CardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 160,
-      width: 345,
+      height: 160.h,
+      width: 345.w,
       decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(20.r),
           gradient: LinearGradient(
             colors: itemIndex.isOdd
                 ? [buttonLight, Colors.white, buttonDark]
@@ -31,9 +31,9 @@ class CardTile extends StatelessWidget {
               Container(
                 width: SizeConfig().getWidth(40),
                 decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(20),
-                        bottomLeft: Radius.circular(20)),
+                    borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(20.r),
+                        bottomLeft: Radius.circular(20.r)),
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -44,8 +44,8 @@ class CardTile extends StatelessWidget {
                             ]
                           : [lightGrey, darkGrey],
                     )),
-                child: const SizedBox(
-                  height: 160,
+                child: SizedBox(
+                  height: 160.h,
                 ),
               ),
               /*  SizedBox(
@@ -60,9 +60,9 @@ class CardTile extends StatelessWidget {
               Container(
                 width: SizeConfig().getWidth(40),
                 decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.only(
-                        topRight: Radius.circular(20),
-                        bottomRight: Radius.circular(20)),
+                    borderRadius: BorderRadius.only(
+                        topRight: Radius.circular(20.r),
+                        bottomRight: Radius.circular(20.r)),
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       colors: itemIndex.isOdd
@@ -72,8 +72,8 @@ class CardTile extends StatelessWidget {
                             ]
                           : [lightGrey, darkGrey],
                     )),
-                child: const SizedBox(
-                  height: 160,
+                child: SizedBox(
+                  height: 160.h,
                 ),
               ),
             ],
@@ -89,10 +89,10 @@ class CardTile extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Container(
-                      height: 23,
-                      width: 45,
+                      height: 23.h,
+                      width: 45.w,
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(5),
+                        borderRadius: BorderRadius.circular(5.r),
                         color: white,
                         gradient: RadialGradient(
                           colors: [
@@ -116,8 +116,8 @@ class CardTile extends StatelessWidget {
                 Row(
                   children: [
                     Container(
-                      height: 40,
-                      width: 40,
+                      height: 40.h,
+                      width: 40.w,
                       color: shadowBlueDark,
                       child: Icon(
                         size: SizeConfig().getTextSize(24),
@@ -125,8 +125,8 @@ class CardTile extends StatelessWidget {
                         color: white,
                       ),
                     ),
-                    const SizedBox(
-                      width: 10,
+                    SizedBox(
+                      width: 10.w,
                     ),
                     Text(
                       'My Title',

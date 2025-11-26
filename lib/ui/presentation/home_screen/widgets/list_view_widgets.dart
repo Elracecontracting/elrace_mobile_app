@@ -14,6 +14,7 @@ import 'package:el_race/ui/presentation/my_notes/screens/my_notes_screen.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/screens/my_project.dart';
 import 'package:el_race/ui/presentation/my_request/MyRequestsPage.dart';
 import 'package:el_race/ui/presentation/task_sheet/task_sheet_screen.dart';
+import 'package:el_race/ui/presentation/todo_list/screens/todo_list_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:flutter/material.dart';
@@ -71,6 +72,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         return _buildDocumentsWidget();
       case 'my_notes':
         return _buildMyNotesWidget();
+      case 'todo_list':
+        return _buildTodoListWidget();
       case 'projects':
         return _buildProjectsWidget();
       case 'my_request':
@@ -236,8 +239,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           ),
         ),
         Positioned(
-          right: 6,
-          top: 30,
+          right: 6.w,
+          top: 30.h,
           child: Image.asset('assets/png/icons/doc_icon.png'),
         ),
         Positioned(
@@ -263,8 +266,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           childWidget: const SizedBox.shrink(),
         ),
         Positioned(
-          right: 6,
-          top: 30,
+          right: 6.w,
+          top: 30.h,
           child: Opacity(
             opacity: 0.20,
             child: Image.asset('assets/png/notes_icon.png'),
@@ -283,6 +286,43 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     );
   }
 
+  Widget _buildTodoListWidget() {
+    return Stack(
+      children: [
+        GrayCardComponent(
+          cardTitle: translate('home.todo_list'),
+          backgroundImagePath: 'assets/png/blue_card.png',
+          onClick: () => Util.pushPage(const TodoListScreen(), context),
+          childWidget: const SizedBox.shrink(),
+        ),
+        Positioned(
+          right: 6.w,
+          top: 30.h,
+          child: Opacity(
+            opacity: 0.20,
+            child: Image.asset(
+              'assets/png/todo_icon.png',
+              errorBuilder: (_, __, ___) => Icon(
+                Icons.check_box_outlined,
+                size: 80.w,
+                color: Colors.white.withOpacity(0.2),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          right: 10.w,
+          top: 10.w,
+          child: const CountWidget(
+            count: '5',
+            countColor: Colors.black,
+            containerColor: Colors.white,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildProjectsWidget() {
     return GrayCardComponent(
       cardTitle: translate('home.projects'),
@@ -291,13 +331,13 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       childWidget: Directionality(
         textDirection: TextDirection.ltr,
         child: DefaultTextStyle(
-          style: const TextStyle(
-            fontSize: 10,
+          style: TextStyle(
+            fontSize: 10.sp,
             fontWeight: FontWeight.w500,
             color: Colors.black,
           ),
           child: Padding(
-            padding: const EdgeInsets.only(top: 80),
+            padding: EdgeInsets.only(top: 80.h),
             child: SizedBox(
               width: SizeConfig().getWidth(190),
               height: SizeConfig().getHeight(85),
@@ -311,7 +351,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                     count: '15',
                     containerColor: Colors.white,
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4.h),
                   CustomBulletPoint(
                     // bulletColor: Color(0xFFBA1719),
                     text: translate('home.Delay'),
@@ -337,13 +377,13 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       childWidget: Directionality(
         textDirection: TextDirection.ltr,
         child: DefaultTextStyle(
-          style: const TextStyle(
-            fontSize: 10,
+          style: TextStyle(
+            fontSize: 10.sp,
             fontWeight: FontWeight.w500,
             color: Colors.black,
           ),
           child: Padding(
-            padding: const EdgeInsets.only(top: 80),
+            padding: EdgeInsets.only(top: 80.h),
             child: SizedBox(
               width: SizeConfig().getWidth(190),
               height: SizeConfig().getHeight(80),
@@ -382,13 +422,13 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       childWidget: Directionality(
         textDirection: TextDirection.ltr,
         child: DefaultTextStyle(
-          style: const TextStyle(
-            fontSize: 10,
+          style: TextStyle(
+            fontSize: 10.sp,
             fontWeight: FontWeight.w500,
             color: Colors.black,
           ),
           child: Padding(
-            padding: const EdgeInsets.only(top: 80),
+            padding: EdgeInsets.only(top: 80.h),
             child: SizedBox(
               width: SizeConfig().getWidth(190),
               height: SizeConfig().getHeight(80),
@@ -428,8 +468,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       childWidget: Directionality(
         textDirection: TextDirection.ltr,
         child: DefaultTextStyle(
-          style: const TextStyle(
-            fontSize: 10,
+          style: TextStyle(
+            fontSize: 10.sp,
             fontWeight: FontWeight.w500,
             color: Colors.black,
           ),
@@ -490,13 +530,13 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               childWidget: Directionality(
                 textDirection: TextDirection.ltr,
                 child: DefaultTextStyle(
-                  style: const TextStyle(
-                    fontSize: 10,
+                  style: TextStyle(
+                    fontSize: 10.sp,
                     fontWeight: FontWeight.w500,
                     color: Colors.black,
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.only(top: 80),
+                    padding: EdgeInsets.only(top: 80.h),
                     child: SizedBox(
                       // width: SizeConfig().getWidth(190),
                       height: SizeConfig().getHeight(85),
@@ -511,8 +551,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                             count: bloc.attendedDays.toString(),
                             containerColor: const Color(0xff1A1A53),
                           ),
-                          const SizedBox(
-                            height: 4,
+                          SizedBox(
+                            height: 4.h,
                           ),
                           CustomBulletPoint(
                             isAttendance: true,

@@ -42,10 +42,10 @@ class MainHomeContentWidget extends StatelessWidget {
                               height: 160.w,
                               width: double.infinity,
                               decoration: BoxDecoration(
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(23),
-                                  topRight: Radius.circular(23),
-                                  bottomRight: Radius.circular(23),
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(23.r),
+                                  topRight: Radius.circular(23.r),
+                                  bottomRight: Radius.circular(23.r),
                                   bottomLeft: Radius.circular(0),
                                 ),
                                 gradient: LinearGradient(
@@ -55,10 +55,10 @@ class MainHomeContentWidget extends StatelessWidget {
                                 ),
                               ),
                               child: ClipRRect(
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(23),
-                                  topRight: Radius.circular(23),
-                                  bottomRight: Radius.circular(23),
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(23.r),
+                                  topRight: Radius.circular(23.r),
+                                  bottomRight: Radius.circular(23.r),
                                   bottomLeft: Radius.circular(0),
                                 ),
                                 child: Stack(
@@ -66,11 +66,11 @@ class MainHomeContentWidget extends StatelessWidget {
                                     Image.asset(
                                       sliderProvider.sliderImages[itemIndex],
                                       fit: BoxFit.cover,
-                                      height: 190,
+                                      height: 190.h,
                                       width: double.infinity,
                                     ),
                                     Positioned(
-                                      bottom: 30,
+                                      bottom: 30.h,
                                       left: 0,
                                       right: 0,
                                       child: Container(
@@ -81,10 +81,10 @@ class MainHomeContentWidget extends StatelessWidget {
                                             fit: BoxFit.fitWidth,
                                           ),
                                           borderRadius:
-                                              BorderRadius.circular(2),
+                                              BorderRadius.circular(2.r),
                                         ),
-                                        padding: const EdgeInsets.symmetric(
-                                            vertical: 8, horizontal: 4),
+                                        padding: EdgeInsets.symmetric(
+                                            vertical: 8.h, horizontal: 4.w),
                                         child: Text(
                                           sliderProvider.titles[itemIndex %
                                                   sliderProvider.titles.length]
@@ -115,7 +115,7 @@ class MainHomeContentWidget extends StatelessWidget {
                         );
                       },
                       options: CarouselOptions(
-                        height: 190,
+                        height: 190.h,
                         autoPlay: true,
                         aspectRatio: 16 / 9,
                         viewportFraction: 1.0,
@@ -128,7 +128,7 @@ class MainHomeContentWidget extends StatelessWidget {
 
                     // Dots Indicator
                     Positioned(
-                        bottom: 10,
+                        bottom: 10.h,
                         left: 0,
                         right: 0,
                         child: Center(
@@ -143,10 +143,9 @@ class MainHomeContentWidget extends StatelessWidget {
                                 onTap: () =>
                                     sliderProvider.setCurrentIndex(index),
                                 child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  margin:
-                                      const EdgeInsets.symmetric(horizontal: 4),
+                                  width: 8.w,
+                                  height: 8.w,
+                                  margin: EdgeInsets.symmetric(horizontal: 4.w),
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: isActive

@@ -2,6 +2,9 @@ import 'package:el_race/ui/presentation/home_screen/data/widget_model.dart';
 import 'package:el_race/ui/presentation/home_screen/services/widget_service.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/card_tile.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/custom_bullet_point.dart';
+import 'package:el_race/ui/presentation/home_screen/widgets/tilting_card.dart';
+import 'package:el_race/ui/presentation/todo_list/screens/todo_list_screen.dart';
+import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:el_race/utils/string_utils.dart';
@@ -14,7 +17,6 @@ import '../bloc/home_bloc.dart';
 
 class AddWidgetDialog extends StatefulWidget {
   final Function() onWidgetAdded;
-
 
   const AddWidgetDialog({
     super.key,
@@ -45,11 +47,24 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
     });
   }
 
-  Future<void> _addWidget(String widgetId,HomeBloc bloc) async {
+  Future<void> _addWidget(String widgetId, HomeBloc bloc) async {
     await WidgetService.toggleWidget(widgetId);
-    bloc.isEdit=true;
+    bloc.isEdit = true;
     widget.onWidgetAdded();
     Navigator.of(context).pop();
+  }
+
+  void _openWidget(WidgetModel widgetModel) {
+    Navigator.of(context).pop();
+    // Navigate to the widget screen based on widget id
+    switch (widgetModel.id) {
+      case 'todo_list':
+        Util.pushPage(const TodoListScreen(), context);
+        break;
+      // Add other cases as needed
+      default:
+        break;
+    }
   }
 
   Widget _buildWidgetPreview(WidgetModel widget) {
@@ -64,6 +79,8 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
         return _buildDocumentsPreview();
       case 'my_notes':
         return _buildMyNotesPreview();
+      case 'todo_list':
+        return _buildTodoListPreview();
       case 'projects':
         return _buildProjectsPreview();
       case 'my_request':
@@ -204,6 +221,43 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
           child: Opacity(
             opacity: 0.20,
             child: Image.asset('assets/png/notes_icon.png'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTodoListPreview() {
+    return Stack(
+      children: [
+        GrayCardComponent(
+          cardTitle: translate('home.todo_list'),
+          backgroundImagePath: 'assets/png/blue_card.png',
+          onClick: null,
+          childWidget: const SizedBox.shrink(),
+        ),
+        Positioned(
+          right: 6.w,
+          top: 30.h,
+          child: Opacity(
+            opacity: 0.20,
+            child: Image.asset(
+              'assets/png/todo_icon.png',
+              errorBuilder: (_, __, ___) => Icon(
+                Icons.check_box_outlined,
+                size: 80.w,
+                color: Colors.white.withOpacity(0.2),
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          right: 10.w,
+          top: 10.w,
+          child: const CountWidget(
+            count: '5',
+            countColor: Colors.black,
+            containerColor: Colors.white,
           ),
         ),
       ],
@@ -449,33 +503,39 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
                       children: availableWidgets.map((widget) {
                         return Container(
                           margin: const EdgeInsets.only(bottom: 12),
-                          child: GestureDetector(
-                            onTap: () => _addWidget(widget.id,bloc),
+                          child: TiltingCard(
+                            key: ValueKey(widget.id),
                             child: Stack(
+                              clipBehavior: Clip.none,
                               children: [
-                                _buildWidgetPreview(widget),
+                                GestureDetector(
+                                  onTap: () => _openWidget(widget),
+                                  child: _buildWidgetPreview(widget),
+                                ),
                                 Positioned(
-                                  right: 1.w,
-                                  top: 1.w,
-                                  child: Container(
-                                    width: 36.w,
-                                    height: 36.w,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF1A1A53),
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: black
-                                              .withAlpha((0.2 * 255).toInt()),
-                                          spreadRadius: 1,
-                                          blurRadius: 4,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Icon(
-                                      Icons.add,
-                                      color: white,
-                                      size: 20.sp,
+                                  right: -6.w,
+                                  top: -6.w,
+                                  child: GestureDetector(
+                                    onTap: () => _addWidget(widget.id, bloc),
+                                    child: Container(
+                                      padding: EdgeInsets.all(6.w),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF1A1A53),
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: black
+                                                .withAlpha((0.3 * 255).toInt()),
+                                            spreadRadius: 2,
+                                            blurRadius: 6,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Icon(
+                                        Icons.add,
+                                        color: white,
+                                        size: 16.sp,
+                                      ),
                                     ),
                                   ),
                                 ),

@@ -30,9 +30,9 @@ class WidgetContainer extends StatelessWidget {
             offset: const Offset(0, -2), // move shadow upward (-Y means top)
           ),
         ],
-        borderRadius: const BorderRadius.only(
-          topRight: Radius.circular(20),
-          topLeft: Radius.circular(20),
+        borderRadius: BorderRadius.only(
+          topRight: Radius.circular(20.r),
+          topLeft: Radius.circular(20.r),
         ),
       ),
       child: Column(
@@ -42,7 +42,7 @@ class WidgetContainer extends StatelessWidget {
                 EdgeInsets.symmetric(horizontal: SizeConfig().getWidth(20)),
             child: Column(
               children: [
-                const SizedBox(height: 15),
+                SizedBox(height: 15.h),
 
                 Padding(
                   padding: EdgeInsets.symmetric(
@@ -64,7 +64,7 @@ class WidgetContainer extends StatelessWidget {
                         child: Text(
                           translate('home.edit'),
                           style: GoogleFonts.nunito(
-                            fontSize: 14,
+                            fontSize: 14.sp,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF858585),
                           ),
@@ -81,11 +81,11 @@ class WidgetContainer extends StatelessWidget {
                     height: 192.w,
                     child: Container(
                       width: double.infinity,
-                      margin: const EdgeInsets.only(top: 6),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 37, horizontal: 35),
+                      margin: EdgeInsets.only(top: 6.h),
+                      padding: EdgeInsets.symmetric(
+                          vertical: 37.h, horizontal: 35.w),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(23),
+                        borderRadius: BorderRadius.circular(23.r),
                         image: const DecorationImage(
                           image: AssetImage(
                               'assets/png/gray_card.png'), // ✅ Update to your image path

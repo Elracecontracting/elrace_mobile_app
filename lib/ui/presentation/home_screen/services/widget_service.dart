@@ -30,6 +30,7 @@ class WidgetService {
       'lpo',
       'documents',
       'my_notes',
+      'todo_list',
       'projects',
       'my_request',
       'media',
