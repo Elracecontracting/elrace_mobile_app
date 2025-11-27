@@ -140,21 +140,21 @@ class MediaItemWidget extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        if (media.client != null && media.client!.isNotEmpty)
-                          ...[
-                            SizedBox(height: 4.h),
-                            Text(
-                              media.client!,
-                              style: GoogleFonts.koulen(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: appFontColor,
-                                letterSpacing: 1.2,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                        if (media.client != null &&
+                            media.client!.isNotEmpty) ...[
+                          SizedBox(height: 4.h),
+                          Text(
+                            media.client!,
+                            style: GoogleFonts.koulen(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: appFontColor,
+                              letterSpacing: 1.2,
                             ),
-                          ],
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                         SizedBox(height: 6.h),
                         Row(
                           children: [
