@@ -130,7 +130,7 @@ class MediaItemWidget extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          media.name,
+                          media.displayName,
                           style: GoogleFonts.koulen(
                             fontSize: 17.sp,
                             fontWeight: FontWeight.w600,
@@ -140,20 +140,22 @@ class MediaItemWidget extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+                        if (media.client != null && media.client!.isNotEmpty)
+                          ...[
+                            SizedBox(height: 4.h),
+                            Text(
+                              media.client!,
+                              style: GoogleFonts.koulen(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w600,
+                                color: appFontColor,
+                                letterSpacing: 1.2,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         SizedBox(height: 6.h),
-                        /*Text(
-                          // media has no subtitle field; try xWebUrl as secondary info or empty
-                          media.xWebUrl ?? '',
-                          style: GoogleFonts.inter(
-                            fontSize: 17.sp,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFFBA1719),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: 6.h),
-                        */
                         Row(
                           children: [
                             Icon(

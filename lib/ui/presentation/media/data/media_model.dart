@@ -35,6 +35,9 @@ class MediaModel {
   final int? duration;
   final double? size;
   final String? thumbnail;
+  final String? client;
+  final String? description;
+  final dynamic view360;
 
   const MediaModel({
     required this.id,
@@ -46,6 +49,9 @@ class MediaModel {
     this.duration,
     this.size,
     this.thumbnail,
+    this.client,
+    this.description,
+    this.view360,
   });
 
   factory MediaModel.fromJson(Map<String, dynamic> json) {
@@ -56,16 +62,29 @@ class MediaModel {
     // Use S3 URL as preview if main URL is empty or use main URL
     String previewUrl = mainUrl.isNotEmpty ? mainUrl : s3Url;
 
+    // Parse date from API or use current date as fallback
+    DateTime parsedDate = DateTime.now();
+    if (json['date'] != null && json['date'].toString().isNotEmpty) {
+      try {
+        parsedDate = DateTime.parse(json['date'].toString());
+      } catch (e) {
+        parsedDate = DateTime.now();
+      }
+    }
+
     return MediaModel(
       id: json['id']?.toString() ?? '',
       name: fileName,
       url: previewUrl,
       xWebUrl: s3Url,
       type: getMediaTypeFromExtension(fileName.split('.').last),
-      dateCreated: DateTime.now(),
+      dateCreated: parsedDate,
       duration: json['duration'],
       size: json['size']?.toDouble(),
       thumbnail: json['thumbnail']?.toString(),
+      client: json['client']?.toString(),
+      description: json['description']?.toString(),
+      view360: json['360_view'],
     );
   }
 
@@ -76,6 +95,9 @@ class MediaModel {
       'url': url,
       'x_web_url': xWebUrl,
       'thumbnail': thumbnail,
+      'client': client,
+      'description': description,
+      '360_view': view360,
       'type': type.name,
       'dateCreated': dateCreated.toIso8601String(),
       'duration': duration,
@@ -93,6 +115,9 @@ class MediaModel {
     int? duration,
     double? size,
     String? thumbnail,
+    String? client,
+    String? description,
+    dynamic view360,
   }) {
     return MediaModel(
       id: id ?? this.id,
@@ -104,11 +129,22 @@ class MediaModel {
       duration: duration ?? this.duration,
       size: size ?? this.size,
       thumbnail: thumbnail ?? this.thumbnail,
+      client: client ?? this.client,
+      description: description ?? this.description,
+      view360: view360 ?? this.view360,
     );
   }
 
   bool get isImage => type == MediaType.image;
   bool get isVideo => type == MediaType.video;
+
+  // Remove file extension from name
+  String get displayName {
+    if (name.contains('.')) {
+      return name.substring(0, name.lastIndexOf('.'));
+    }
+    return name;
+  }
 
   // Use the URL for streaming/preview (prefer thumbnail if available)
   String get previewUrl {
