@@ -10,6 +10,8 @@ class ProjectEntity extends Equatable {
   final String projectStatus;
   final String date;
   final String dateStart;
+  final int? differenceDays;
+  final String? projectManagerPhoto;
 
   const ProjectEntity({
     required this.projectId,
@@ -21,6 +23,8 @@ class ProjectEntity extends Equatable {
     required this.projectStatus,
     required this.date,
     required this.dateStart,
+    this.differenceDays,
+    this.projectManagerPhoto,
   });
 
   @override
@@ -34,5 +38,7 @@ class ProjectEntity extends Equatable {
         projectStatus,
         date,
         dateStart,
+        differenceDays,
+        projectManagerPhoto,
       ];
 }

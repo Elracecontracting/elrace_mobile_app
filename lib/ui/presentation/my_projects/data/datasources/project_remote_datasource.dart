@@ -4,6 +4,7 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/attachment_model.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/partner_model.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/project_model.dart';
+import 'package:el_race/ui/presentation/my_projects/data/models/folder_model.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -13,6 +14,7 @@ abstract class ProjectRemoteDataSourceImpl {
   Future<List<PartnerModel>> fetchPartnerProjects(
       {int? partnerId, String? keyword});
   Future<List<ProjectModel>> fetchProjectsByPartnerId(int partnerId);
+  Future<List<FolderModel>> fetchProjectFolders();
 }
 
 class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
@@ -68,7 +70,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
     final body = jsonEncode({
       "jsonrpc": "2.0",
       "params": {
-        "project_id": 13326,
+        "project_id": int.tryParse(projectId) ?? 0,
       },
     });
 
@@ -78,8 +80,16 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
 
     if (response.statusCode == 200) {
       final decoded = json.decode(response.body);
-      final List data = decoded['result']['data'];
-      return data.map((e) => AttachmentModel.fromJson(e)).toList();
+
+      // Check for success status
+      if (decoded['result'] != null &&
+          decoded['result']['status'] == 'success' &&
+          decoded['result']['data'] != null) {
+        final List data = decoded['result']['data'];
+        return data.map((e) => AttachmentModel.fromJson(e)).toList();
+      } else {
+        throw Exception('Invalid response format');
+      }
     } else {
       throw Exception('Failed to load attachments: ${response.statusCode}');
     }
@@ -146,21 +156,70 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
 
     if (response.statusCode == 200) {
       final decoded = json.decode(response.body);
-      final List data = decoded['result']['data'];
 
-      // Extract projects from the partner data
-      List<ProjectModel> allProjects = [];
-      for (var partnerData in data) {
-        final projectsList = partnerData['projects'] as List<dynamic>? ?? [];
-        for (var projectJson in projectsList) {
-          allProjects.add(ProjectModel.fromJson(projectJson));
+      // Check if the response has the expected structure
+      if (decoded['result'] != null &&
+          decoded['result']['status'] == 'success' &&
+          decoded['result']['data'] != null) {
+        final List data = decoded['result']['data'];
+
+        // Extract projects from the partner data
+        List<ProjectModel> allProjects = [];
+        for (var partnerData in data) {
+          final projectsList = partnerData['projects'] as List<dynamic>? ?? [];
+          for (var projectJson in projectsList) {
+            allProjects.add(ProjectModel.fromJson(projectJson));
+          }
         }
-      }
 
-      return allProjects;
+        return allProjects;
+      } else {
+        throw Exception('Invalid response format');
+      }
     } else {
       throw Exception(
           'Failed to load projects by partner: ${response.statusCode}');
+    }
+  }
+
+  Future<List<FolderModel>> fetchProjectFolders() async {
+    final token = SharedPref.getLoginData().result?.token;
+
+    final headers = {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Authorization": "Bearer $token",
+    };
+
+    final url = Uri.parse("https://test.elrace.com/api/project_folders");
+
+    final body = jsonEncode({
+      "jsonrpc": "2.0",
+      "id": null,
+    });
+
+    final request = http.Request('GET', url)
+      ..headers.addAll(headers)
+      ..body = body;
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    debugPrint("fetchProjectFolders: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(response.body);
+
+      if (decoded['result'] != null &&
+          decoded['result']['status'] == 'success' &&
+          decoded['result']['data'] != null) {
+        final List data = decoded['result']['data'];
+        return data.map((e) => FolderModel.fromJson(e)).toList();
+      } else {
+        throw Exception('Invalid response format');
+      }
+    } else {
+      throw Exception('Failed to load folders: ${response.statusCode}');
     }
   }
 }

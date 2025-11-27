@@ -166,6 +166,7 @@ class _MyProjectState extends State<MyProject> {
                                     child: ProjectListScreen(
                                       bloc: bloc,
                                       partnerId: id,
+                                      partnerName: name,
                                     ),
                                   ),
                                 ),

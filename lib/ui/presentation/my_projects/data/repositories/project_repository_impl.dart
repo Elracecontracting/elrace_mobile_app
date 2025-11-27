@@ -79,6 +79,8 @@ class ProjectRepositoryImpl implements ProjectRepository {
               projectStatus: model.projectStatus,
               date: model.date,
               dateStart: model.dateStart,
+              differenceDays: model.differenceDays,
+              projectManagerPhoto: model.projectManagerPhoto,
             ))
         .toList();
   }
