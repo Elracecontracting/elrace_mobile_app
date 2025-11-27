@@ -245,32 +245,34 @@ class _LpoListScreenState extends State<LpoListScreen> {
                         itemBuilder: (context, index) {
                           final item = _items[index];
                           final name = (item['name'] ?? '').toString();
-                          final vendor = (item['partner_id'] ??
-                                  item['vendor_name'] ??
-                                  item['vendor'] ??
-                                  '')
-                              .toString();
-                          final dateStr = (item['date_order'] ??
-                                  item['date'] ??
-                                  item['order_date'] ??
-                                  '')
-                              .toString();
-                          final amount = (item['amount_total'] ??
-                                  item['total'] ??
-                                  item['amount'] ??
-                                  '')
-                              .toString();
-                          final lpoCount = (item['no_of_lpo'] ??
-                                  item['lpo_count'] ??
-                                  item['count'] ??
-                                  '')
-                              .toString();
+                          final vendor = (item['partner_id'] ?? '').toString();
+                          final project = (item['project'] ?? '').toString();
+                          final dateStr = (item['date_order'] ?? '').toString();
+                          final amount =
+                              (item['amount_total'] ?? '').toString();
+                          final clientPhoto = item['client_photo'];
+                          final requestedByPhoto =
+                              item['requested_by_user_photo'];
+                          final requestedBy =
+                              (item['requested_by'] ?? '').toString();
+                          final requesterManager =
+                              (item['requester_manager'] ?? '').toString();
+                          final state = (item['state'] ?? '').toString();
+                          final attachments =
+                              (item['attachments'] ?? []) as List;
+
                           return LpoCardWidget(
                             name: name,
                             vendorName: vendor,
+                            projectName: project,
                             date: dateStr,
                             amount: amount,
-                            lpoCount: lpoCount,
+                            clientPhoto: clientPhoto,
+                            requestedByUserPhoto: requestedByPhoto,
+                            requestedBy: requestedBy,
+                            requesterManager: requesterManager,
+                            state: state,
+                            attachments: attachments,
                           );
                         },
                       ),

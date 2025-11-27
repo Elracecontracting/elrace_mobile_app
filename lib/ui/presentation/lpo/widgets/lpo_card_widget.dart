@@ -16,6 +16,11 @@ class LpoCardWidget extends StatelessWidget {
     this.amount,
     this.attachments,
     this.lpoCount,
+    this.clientPhoto,
+    this.requestedByUserPhoto,
+    this.requestedBy,
+    this.requesterManager,
+    this.state,
   });
 
   final String? name;
@@ -24,7 +29,12 @@ class LpoCardWidget extends StatelessWidget {
   final String? date;
   final String? amount;
   final List<dynamic>? attachments;
-  final String? lpoCount; // kept for future use
+  final String? lpoCount;
+  final String? clientPhoto;
+  final String? requestedByUserPhoto;
+  final String? requestedBy;
+  final String? requesterManager;
+  final String? state;
 
   static final _amountFormat = NumberFormat('#,##0.00', 'en');
 
@@ -87,19 +97,16 @@ class LpoCardWidget extends StatelessWidget {
                     border: Border.all(color: Colors.grey.shade300, width: 2),
                   ),
                   alignment: Alignment.center,
-                  child: Text(
-                    (vendorName != null && vendorName!.isNotEmpty)
-                        ? vendorName!.characters
-                            .take(2)
-                            .toString()
-                            .toUpperCase()
-                        : 'V',
-                    style: GoogleFonts.koulen(
-                      fontSize: 22.sp,
-                      fontWeight: FontWeight.w700,
-                      color: appFontColor,
-                    ),
-                  ),
+                  child: clientPhoto != null && clientPhoto!.isNotEmpty
+                      ? ClipOval(
+                          child: Image.network(
+                            clientPhoto!,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) =>
+                                _buildInitialsAvatar(),
+                          ),
+                        )
+                      : _buildInitialsAvatar(),
                 ),
                 SizedBox(width: 16.w),
                 // CENTER: Title + Vendor + Project
@@ -180,15 +187,24 @@ class LpoCardWidget extends StatelessWidget {
                       ],
                     ),
                     child: ClipOval(
-                      child: Image.asset(
-                        'assets/png/profile_1.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.person,
-                          size: 34.w,
-                          color: appFontColor,
-                        ),
-                      ),
+                      child: requestedByUserPhoto != null &&
+                              requestedByUserPhoto!.isNotEmpty
+                          ? Image.network(
+                              requestedByUserPhoto!,
+                              fit: BoxFit.cover,
+                              width: 40.w,
+                              height: 40.w,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.person,
+                                size: 34.w,
+                                color: appFontColor,
+                              ),
+                            )
+                          : Icon(
+                              Icons.person,
+                              size: 34.w,
+                              color: appFontColor,
+                            ),
                     ),
                   ),
                   // RIGHT: Date with icon
@@ -221,6 +237,19 @@ class LpoCardWidget extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInitialsAvatar() {
+    return Text(
+      (vendorName != null && vendorName!.isNotEmpty)
+          ? vendorName!.characters.take(2).toString().toUpperCase()
+          : 'V',
+      style: GoogleFonts.koulen(
+        fontSize: 22.sp,
+        fontWeight: FontWeight.w700,
+        color: appFontColor,
       ),
     );
   }

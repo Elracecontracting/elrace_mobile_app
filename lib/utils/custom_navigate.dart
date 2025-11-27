@@ -5,40 +5,64 @@ class CustomPageRoute extends PageRouteBuilder {
 
   CustomPageRoute({required this.child})
       : super(
+          transitionDuration: const Duration(milliseconds: 650),
+          reverseTransitionDuration: const Duration(milliseconds: 500),
           pageBuilder: (context, animation, secondaryAnimation) => child,
-          transitionDuration: const Duration(milliseconds: 700),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            // Enhanced animation from bottom to top
-            final offsetAnimation = Tween<Offset>(
-              begin: const Offset(0.0, 1.0), // Slide from bottom
+            // ANIMATION IN (push)
+            final slideIn = Tween<Offset>(
+              begin: const Offset(0, 1),
               end: Offset.zero,
             ).animate(CurvedAnimation(
               parent: animation,
-              curve: Curves.easeInOutCubic,
+              curve: Curves.easeOutCubic,
             ));
 
-            final scaleAnimation = Tween<double>(
-              begin: 0.8,
+            final scaleIn = Tween<double>(
+              begin: 0.90,
               end: 1.0,
             ).animate(CurvedAnimation(
               parent: animation,
               curve: Curves.easeOutBack,
             ));
 
-            final fadeAnimation = Tween<double>(
+            final fadeIn = Tween<double>(
               begin: 0.0,
               end: 1.0,
             ).animate(CurvedAnimation(
               parent: animation,
-              curve: Curves.easeIn,
+              curve: Curves.easeOut,
+            ));
+
+            // ANIMATION OUT (pop)
+            final fadeOut = Tween<double>(
+              begin: 1.0,
+              end: 0.0,
+            ).animate(CurvedAnimation(
+              parent: secondaryAnimation,
+              curve: Curves.easeOut,
+            ));
+
+            final slideOut = Tween<Offset>(
+              begin: Offset.zero,
+              end: const Offset(0, 0.10), // نزول بسيط للأسفل
+            ).animate(CurvedAnimation(
+              parent: secondaryAnimation,
+              curve: Curves.easeOut,
             ));
 
             return SlideTransition(
-              position: offsetAnimation,
+              position: animation.status == AnimationStatus.reverse
+                  ? slideOut
+                  : slideIn,
               child: ScaleTransition(
-                scale: scaleAnimation,
+                scale: animation.status == AnimationStatus.reverse
+                    ? const AlwaysStoppedAnimation(1.0)
+                    : scaleIn,
                 child: FadeTransition(
-                  opacity: fadeAnimation,
+                  opacity: animation.status == AnimationStatus.reverse
+                      ? fadeOut
+                      : fadeIn,
                   child: child,
                 ),
               ),

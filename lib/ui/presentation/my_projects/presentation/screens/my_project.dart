@@ -1,11 +1,11 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/my_projects/data/datasources/project_remote_datasource.dart';
 import 'package:el_race/ui/presentation/my_projects/data/repositories/project_repository_impl.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_partner_projects_usecase.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_by_partner_usecase.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_usecase.dart';
-import 'package:el_race/ui/presentation/my_projects/presentation/bloc/partner_bloc.dart';
-import 'package:el_race/ui/presentation/my_projects/presentation/bloc/partner_event.dart';
-import 'package:el_race/ui/presentation/my_projects/presentation/bloc/partner_state.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_bloc.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/screens/project_list_screen.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
@@ -15,6 +15,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 class MyProject extends StatefulWidget {
   const MyProject({super.key});
@@ -24,358 +26,310 @@ class MyProject extends StatefulWidget {
 }
 
 class _MyProjectState extends State<MyProject> {
-  late PartnerBloc _partnerBloc;
-  final TextEditingController _searchController = TextEditingController();
+  bool _isLoading = false;
+  String? _error;
+  List<Map<String, dynamic>> _clients = [];
 
   @override
   void initState() {
     super.initState();
-    _partnerBloc = PartnerBloc(
-      getPartnerProjectsUseCase: GetPartnerProjectsUseCase(
-        repository: ProjectRepositoryImpl(
-          ProjectRemoteDataSource(),
-        ),
-      ),
-    );
-    // Load partners when the screen initializes
-    _partnerBloc.add(const LoadPartnersEvent());
+    _fetchClients();
   }
 
-  @override
-  void dispose() {
-    _partnerBloc.close();
-    _searchController.dispose();
-    super.dispose();
+  Future<void> _fetchClients() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final token = SharedPref.getLoginData().result?.token ?? '';
+      final url = Uri.parse('https://test.elrace.com/api/clients/list');
+
+      final request = http.Request("GET", url);
+      request.headers.addAll({
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      });
+
+      request.body = jsonEncode({"jsonrpc": "2.0", "params": {}});
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 && data['result'] != null) {
+        setState(() {
+          _clients = List<Map<String, dynamic>>.from(data['result']['data']);
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _error = data['error']?.toString() ?? 'Failed to load clients';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatAmount(double amount) {
+    final formatter = NumberFormat('#,##0', 'en');
+    return formatter.format(amount);
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => _partnerBloc,
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: const HeaderWidget(),
-        body: Column(
-          children: [
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset(
-                      "assets/newapp/my_projects.png",
-                      height: 30.w,
-                      width: 30.w,
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: const HeaderWidget(),
+      body: Column(
+        children: [
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => Navigator.pop(context),
+              ),
+              Row(
+                children: [
+                  Image.asset(
+                    "assets/newapp/my_projects.png",
+                    height: 30.w,
+                    width: 30.w,
+                  ),
+                  SizedBox(width: 4.w),
+                  Text(
+                    translate('home.projects'),
+                    style: GoogleFonts.koulen(
+                      fontSize: 26.sp,
+                      fontWeight: FontWeight.w500,
+                      color: appFontColor,
                     ),
-                    Text(
-                      translate('home.projects'),
-                      style: GoogleFonts.koulen(
-                        fontSize: 26.sp,
-                        fontWeight: FontWeight.w500,
-                        color: appFontColor,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(width: 48),
-                /*  Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        // Implement search functionality
-                        showSearch(
-                          context: context,
-                          delegate: PartnerSearchDelegate(_partnerBloc),
-                        );
-                      },
-                      child: Image.asset(
-                        'assets/png/search.png',
-                        width: 38.w,
-                        height: 38.h,
-                      ),
-                    ),
-                    SizedBox(width: 23.w),
-                  ],
-                ),
-                */
-              ],
-            ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(left: 20.w, right: 20.w, bottom: 10.h),
-                child: BlocBuilder<PartnerBloc, PartnerState>(
-                  builder: (context, state) {
-                    if (state is PartnerLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    } else if (state is PartnerError) {
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Error: ${state.message}',
-                              style: GoogleFonts.koulen(
-                                fontSize: 16.sp,
-                                color: Colors.red,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            SizedBox(height: 16.h),
-                            ElevatedButton(
-                              onPressed: () {
-                                _partnerBloc.add(
-                                    const LoadPartnersEvent(refresh: true));
-                              },
-                              child: const Text('Retry'),
-                            ),
-                          ],
-                        ),
-                      );
-                    } else if (state is PartnerLoaded ||
-                        state is PartnerSearchLoaded) {
-                      final partners = state is PartnerLoaded
-                          ? state.partners
-                          : (state as PartnerSearchLoaded).partners;
-
-                      if (partners.isEmpty) {
-                        return Center(
-                          child: Text(
-                            'No partners found',
-                            style: GoogleFonts.koulen(
-                              fontSize: 18.sp,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        );
-                      }
-
-                      return GridView.builder(
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 20.w,
-                          mainAxisSpacing: 10.h,
-                          childAspectRatio: 1,
-                        ),
-                        itemCount: partners.length,
+                  ),
+                ],
+              ),
+              SizedBox(width: 48.w),
+            ],
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? Center(
+                        child: Text(_error!,
+                            style: const TextStyle(color: Colors.red)),
+                      )
+                    : ListView.builder(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 12.w, vertical: 8.h),
+                        itemCount: _clients.length,
                         itemBuilder: (context, index) {
-                          final partner = partners[index];
+                          final c = _clients[index];
+
+                          final id = c['id'] ?? 0;
+                          final name = c['name'] ?? '';
+                          final totalProjects = c['total_projects'] ?? 0;
+                          final totalAmount =
+                              (c['total_projects_amount'] ?? 0).toDouble();
+                          final photo = c['photo_url'] ?? '';
+
                           return GestureDetector(
                             onTap: () {
-                              final repository = ProjectRepositoryImpl(
-                                ProjectRemoteDataSource(),
-                              );
-
-                              final projectListBloc = ProjectListBloc(
+                              final repo = ProjectRepositoryImpl(
+                                  ProjectRemoteDataSource());
+                              final bloc = ProjectListBloc(
                                 getProjectsUseCase: GetProjectsUseCase(
-                                  repository: repository,
+                                  repository: repo,
                                 ),
                                 getProjectAttachmentsUseCase:
                                     GetProjectAttachmentsUseCase(
-                                  repository: repository,
-                                ),
+                                        repository: repo),
                                 getProjectsByPartnerUseCase:
                                     GetProjectsByPartnerUseCase(
-                                  repository: repository,
-                                ),
+                                        repository: repo),
                               );
 
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => BlocProvider(
-                                    create: (context) => projectListBloc,
+                                  builder: (_) => BlocProvider.value(
+                                    value: bloc,
                                     child: ProjectListScreen(
-                                      bloc: projectListBloc,
-                                      partnerId: partner.id, // Pass partner ID
+                                      bloc: bloc,
+                                      partnerId: id,
                                     ),
                                   ),
                                 ),
                               );
                             },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    Color(0xffD6D6D6),
-                                    Color(0xffADB2BD),
-                                  ],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                ),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Padding(
-                                padding: EdgeInsets.all(8.w),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    partner.icon != null
-                                        ? Image.network(
-                                            partner.icon!,
-                                            width: 70,
-                                            height: 70,
-                                            fit: BoxFit.contain,
-                                            errorBuilder:
-                                                (context, error, stackTrace) =>
-                                                    Image.asset(
-                                              "assets/png/police.png",
-                                              width: 70,
-                                              height: 70,
-                                              fit: BoxFit.contain,
-                                            ),
-                                          )
-                                        : Image.asset(
-                                            "assets/png/police.png",
-                                            width: 70,
-                                            height: 70,
-                                            fit: BoxFit.contain,
-                                          ),
-                                    SizedBox(height: 5.h),
-                                    Text(
-                                      partner.name,
-                                      style: GoogleFonts.koulen(
-                                        fontSize: 20.sp,
-                                        fontWeight: FontWeight.w400,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 1,
-                                    ),
-                                    SizedBox(height: 5.h),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Icon(
-                                          Icons.tag,
-                                          size: 20,
-                                        ),
-                                        Text(
-                                          'work orders',
-                                          style: GoogleFonts.koulen(
-                                            fontSize: 15.sp,
-                                            fontWeight: FontWeight.w400,
-                                            color: Colors.black,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        SizedBox(width: 3.w),
-                                        Container(
-                                          width: 25.w,
-                                          height: 25.h,
-                                          decoration: const BoxDecoration(
-                                            color: Colors.white,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              partner.workOrdersCount
-                                                  .toString(),
-                                              style: GoogleFonts.montserrat(
-                                                fontWeight: FontWeight.w700,
-                                                fontSize: partner
-                                                            .workOrdersCount
-                                                            .toString()
-                                                            .length >=
-                                                        3
-                                                    ? 10.sp
-                                                    : 12.sp,
-                                              ),
-                                            ),
-                                          ),
-                                        )
-                                      ],
-                                    )
-                                  ],
-                                ),
-                              ),
+                            child: buildProjectCard(
+                              name: name,
+                              photoUrl: photo,
+                              wo: "#$totalProjects",
+                              amount: _formatAmount(totalAmount),
                             ),
                           );
                         },
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-              ),
-            )
-          ],
-        ),
+                      ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// Search delegate for partners
-class PartnerSearchDelegate extends SearchDelegate<String> {
-  final PartnerBloc partnerBloc;
+//
+// ------------- CARD — EXACT MATCH TO REFERENCE ----------------
+//
 
-  PartnerSearchDelegate(this.partnerBloc);
-
-  @override
-  List<Widget> buildActions(BuildContext context) {
-    return [
-      IconButton(
-        icon: const Icon(Icons.clear),
-        onPressed: () {
-          query = '';
-          partnerBloc.add(const LoadPartnersEvent());
-        },
+Widget buildProjectCard({
+  required String name,
+  required String photoUrl,
+  required String wo,
+  required String amount,
+}) {
+  return Container(
+    margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+    padding: const EdgeInsets.all(1),
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(22.r),
+      gradient: const LinearGradient(
+        colors: [Color(0xFF151544), Color(0xFF3535AA)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
       ),
-    ];
-  }
+    ),
+    child: Container(
+      height: 150.h,
+      padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 16.h),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(21.r),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Row(
+        children: [
+          // avatar
+          Container(
+            width: 85.w,
+            height: 85.w,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+            ),
+            child: ClipOval(
+              child: Image.network(
+                photoUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Center(
+                  child: Text(
+                    name.isNotEmpty ? name[0] : 'C',
+                    style: GoogleFonts.koulen(
+                      fontSize: 28.sp,
+                      color: appFontColor,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
 
-  @override
-  Widget buildLeading(BuildContext context) {
-    return IconButton(
-      icon: const Icon(Icons.arrow_back),
-      onPressed: () {
-        close(context, '');
-      },
-    );
-  }
+          SizedBox(width: 16.w),
 
-  @override
-  Widget buildResults(BuildContext context) {
-    if (query.isNotEmpty) {
-      partnerBloc.add(SearchPartnersEvent(query));
-    }
-    return BlocBuilder<PartnerBloc, PartnerState>(
-      bloc: partnerBloc,
-      builder: (context, state) {
-        if (state is PartnerLoading) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (state is PartnerSearchLoaded) {
-          final partners = state.partners;
-          return ListView.builder(
-            itemCount: partners.length,
-            itemBuilder: (context, index) {
-              final partner = partners[index];
-              return ListTile(
-                title: Text(partner.name),
-                subtitle: Text('${partner.workOrdersCount} work orders'),
-                onTap: () {
-                  close(context, partner.name);
-                },
-              );
-            },
-          );
-        }
-        return const Center(child: Text('Search for partners'));
-      },
-    );
-  }
+          // divider
+          Container(width: 2.5.w, height: 75.h, color: Colors.white),
 
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    return const Center(child: Text('Enter partner name to search'));
-  }
+          SizedBox(width: 16.w),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Color(0xFF151544), Color(0xFF3535AA)],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    stops: [0.7, 1.0],
+                  ).createShader(bounds),
+                  child: Text(
+                    name.toUpperCase(),
+                    style: GoogleFonts.koulen(
+                      fontSize: 22.sp,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                      letterSpacing: 1.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                Row(
+                  children: [
+                    _pillData("W.O", wo),
+                    SizedBox(width: 12.w),
+                    _pillData("AMOUNT", amount),
+                  ],
+                ),
+              ],
+            ),
+          )
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _pillData(String label, String value) {
+  return Expanded(
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.koulen(
+            fontSize: 14.sp,
+            color: Colors.black87,
+            letterSpacing: 1,
+          ),
+        ),
+        SizedBox(height: 4.h),
+        Container(
+          padding: EdgeInsets.symmetric(vertical: 10.h),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10.r),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            value,
+            style: GoogleFonts.koulen(
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w600,
+              color: Colors.black,
+              letterSpacing: 1,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        )
+      ],
+    ),
+  );
 }

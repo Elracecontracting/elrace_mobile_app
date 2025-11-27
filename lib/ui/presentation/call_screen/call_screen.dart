@@ -391,8 +391,6 @@ class _ContactTileState extends State<ContactTile> {
   @override
   Widget build(BuildContext context) {
     List<String> nameParts = widget.name.split(' ');
-    String image =
-        'https://t3.ftcdn.net/jpg/02/99/04/20/360_F_299042079_vGBD7wIlSeNl7vOevWHiL93G4koMM967.jpg';
 
     return Transform.scale(
       scale: _scale,
@@ -436,10 +434,12 @@ class _ContactTileState extends State<ContactTile> {
                     padding: EdgeInsets.all(9.w),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      image: DecorationImage(
-                        image: NetworkImage(image),
-                        fit: BoxFit.cover,
-                      ),
+                      image: widget.image.isNotEmpty
+                          ? DecorationImage(
+                              image: NetworkImage(widget.image),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
                       shape: BoxShape.circle,
                       border: widget.isExpanded
                           ? Border.all(
