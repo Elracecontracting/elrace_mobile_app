@@ -26,9 +26,14 @@ import 'firebase_service.dart';
 import 'report_module/data/provider/reports_provider.dart';
 import 'ui/presentation/Email Approval/bloc/approval_bloc.dart';
 import 'ui/presentation/home_screen/provider/slider_provider.dart';
+import 'package:screen_protector/screen_protector.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // منع Screenshot و Screen Recording
+  await ScreenProtector.protectDataLeakageOn();
+
   await Future.wait([
     SharedPref().instantiatePreferences(),
     initDI(),
