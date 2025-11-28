@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:el_race/ui/widgets/back_icon.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -84,60 +86,77 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
     try {
       final token = SharedPref.getLoginData().result?.token ?? '';
-      final url = Uri.parse('https://test.elrace.com/api/document_types');
+      final url =
+          Uri.parse('https://test.elrace.com/api/get_employee_documents');
       final headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': 'Bearer $token',
       };
-      final effectiveKeyword = (keyword ?? '').trim();
-      final Map<String, dynamic> params = {};
-      if (effectiveKeyword.isNotEmpty) {
-        params['keyword'] = effectiveKeyword;
-      }
+
+      // Determine family_only based on currentIndex (0 = personal, 1 = family)
+      final bool familyOnly = currentIndex == 1;
+
+      final Map<String, dynamic> params = {
+        'family_only': familyOnly,
+      };
+
       final body = jsonEncode({'jsonrpc': '2.0', 'params': params});
 
       final response = await http.post(url, headers: headers, body: body);
       final data = jsonDecode(response.body);
 
-      if (response.statusCode == 200 && data['result'] != null) {
+      if (response.statusCode == 200 &&
+          data['result'] != null &&
+          data['result']['status'] == 'success') {
         final List list = (data['result']['data'] ?? []) as List;
         final mapped = list.map<Map<String, dynamic>>((raw) {
           final map = raw as Map<String, dynamic>;
-          final title = (map['title'] ??
-                  map['type'] ??
-                  map['document_type'] ??
-                  'DOCUMENT')
-              .toString();
-          final name =
-              (map['name'] ?? map['employee_name'] ?? map['holder_name'] ?? '')
-                  .toString();
+          final type = (map['type'] ?? 'DOCUMENT').toString();
+          final name = (map['name'] ?? '').toString();
+
           String icon = 'assets/png/document_icon.png';
-          final t = title.toLowerCase();
-          if (t.contains('emirates'))
+          final t = type.toLowerCase();
+          if (t.contains('emirates') || t.contains('id'))
             icon = 'assets/png/emitates_id.png';
           else if (t.contains('passport'))
             icon = 'assets/png/passport.png';
-          else if (t.contains('license'))
+          else if (t.contains('license') || t.contains('labor'))
             icon = 'assets/png/driving_license.png';
-          else if (t.contains('profile') || t.contains('id'))
-            icon = 'assets/png/profile_image.png';
+          else if (t.contains('profile')) icon = 'assets/png/profile_image.png';
 
           return {
+            'id': map['id'],
             'icon': icon,
-            'title': title.toUpperCase(),
+            'title': type.toUpperCase(),
             'name': name,
-            '_isFamily': _isFamilyDoc(map),
+            'issue_date': map['issue_date'],
+            'expiry_date': map['expiry_date'],
+            'description': map['description'],
+            'attachment_ids': map['attachment_ids'] ?? [],
+            '_isFamily': familyOnly,
           };
         }).toList();
 
+        // Apply search filter if keyword is provided
+        final filteredMapped = keyword != null && keyword.trim().isNotEmpty
+            ? mapped.where((d) {
+                final title = (d['title'] ?? '').toString().toLowerCase();
+                final name = (d['name'] ?? '').toString().toLowerCase();
+                final searchTerm = keyword.toLowerCase();
+                return title.contains(searchTerm) || name.contains(searchTerm);
+              }).toList()
+            : mapped;
+
         setState(() {
-          documents = mapped;
+          documents = filteredMapped;
           _loading = false;
         });
       } else {
         setState(() {
-          _error = data['error']?.toString() ?? 'Failed to load documents';
+          _error = data['result']?['message']?.toString() ??
+              data['error']?.toString() ??
+              'Failed to load documents';
           _loading = false;
         });
       }
@@ -150,15 +169,9 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
   }
 
   List<Map<String, dynamic>> _filteredDocs() {
-    final base = documents.where((d) => currentIndex == 0
-        ? (d['_isFamily'] != true)
-        : (d['_isFamily'] == true));
-    if (_query.isEmpty) return base.toList();
-    return base.where((d) {
-      final title = (d['title'] ?? '').toString().toLowerCase();
-      final name = (d['name'] ?? '').toString().toLowerCase();
-      return title.contains(_query) || name.contains(_query);
-    }).toList();
+    // Documents are already filtered by family_only from API
+    // Just return them as is since filtering happens server-side
+    return documents;
   }
 
   Widget _buildInlineSearchField() {
@@ -279,7 +292,10 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                         String notificationTitle =
                             notificationType[index]['title'];
                         return InkWell(
-                          onTap: () => setState(() => currentIndex = index),
+                          onTap: () {
+                            setState(() => currentIndex = index);
+                            _fetchMyDocuments(); // Re-fetch with new family_only value
+                          },
                           child: Container(
                             alignment: Alignment.center,
                             margin: const EdgeInsets.only(top: 6),
@@ -288,11 +304,6 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                               color: index == currentIndex
                                   ? appFontColor
                                   : greyText2,
-                              // gradient: const LinearGradient(
-                              //   colors: [Color(0xFFE6E6E6), ],
-                              //   begin: Alignment.center,
-                              //   end: Alignment.centerRight,
-                              // ),
                               borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
@@ -303,15 +314,6 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                                 ),
                               ],
                             ),
-                            // child: Stack(
-                            //   children: [
-                            //     Column(
-                            //       crossAxisAlignment: CrossAxisAlignment.start,
-                            //       children: [
-                            //         // Row(
-                            //         //   mainAxisAlignment:
-                            //         //       MainAxisAlignment.spaceBetween,
-                            //         //   children: [
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.center,
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -336,37 +338,6 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                                 ),
                               ],
                             ),
-                            // Container(
-                            //   padding: const EdgeInsets.symmetric(
-                            //       horizontal: 8, vertical: 4),
-                            //   decoration: BoxDecoration(
-                            //     color: Colors.white,
-                            //     borderRadius:
-                            //         BorderRadius.circular(10),
-                            //   ),
-                            //   child: const Icon(
-                            //     Icons.arrow_forward,
-                            //     size: 16,
-                            //     color: Color(0xFF2D2F81),
-                            //   ),
-                            // ),
-                            //   ],
-                            // ),
-                            // const SizedBox(height: 6),
-                            // Text(
-                            //   translate(
-                            //       'notification_screen.stay_updated'),
-                            //   style: const TextStyle(
-                            //     color: Colors.black87,
-                            //     fontSize: 11,
-                            //     fontWeight: FontWeight.bold,
-                            //     height: 1.4,
-                            //   ),
-                            // ),
-                            //       ],
-                            //     ),
-                            //   ],
-                            // ),
                           ),
                         );
                       },
@@ -427,46 +398,6 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                     ),
                   ),
                   SizedBox(height: 15.h),
-                  GestureDetector(
-                    onTap: () {
-                      showDocumentDialog(context);
-                    },
-                    child: Container(
-                      width: 180.w,
-                      height: 165.h,
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(30.18),
-                          border: Border.all(
-                            color: const Color(0xffD9D9D9),
-                          )),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          SvgPicture.asset('assets/png/add_doc.svg'),
-                          // Text(
-
-                          //   style: GoogleFonts.koulen(
-                          //     fontSize: 11.35,
-                          //     fontWeight: FontWeight.w400,
-                          //     letterSpacing: .10,
-                          //     color: const Color(0xff949494),
-                          //   ),
-                          // ),
-                          SizedBox(height: 10.h),
-                          Text(
-                            'Add New Document',
-                            style: GoogleFonts.aBeeZee(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w400,
-                                fontStyle: FontStyle.italic,
-                                letterSpacing: .10,
-                                color: Colors.black),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
                   if (_loading)
                     const Padding(
                       padding: EdgeInsets.all(40),
@@ -486,19 +417,75 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _filteredDocs().length,
+                      itemCount: _filteredDocs().length +
+                          1, // +1 for Add New Document card
                       itemBuilder: (context, index) {
-                        final item = _filteredDocs()[index];
+                        // First item is "Add New Document"
+                        if (index == 0) {
+                          return GestureDetector(
+                            onTap: () {
+                              showDocumentDialog(context);
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(30.18),
+                                border: Border.all(
+                                  color: const Color(0xffD9D9D9),
+                                ),
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SvgPicture.asset('assets/png/add_doc.svg'),
+                                  SizedBox(height: 10.h),
+                                  Text(
+                                    'Add New Document',
+                                    style: GoogleFonts.aBeeZee(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w400,
+                                      fontStyle: FontStyle.italic,
+                                      letterSpacing: .10,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        // Regular document cards
+                        final item = _filteredDocs()[index - 1];
+
+                        // Check if document is expired
+                        bool isExpired = false;
+                        if (item['expiry_date'] != null &&
+                            item['expiry_date'] != false) {
+                          try {
+                            final expiryDate =
+                                DateTime.parse(item['expiry_date'].toString());
+                            isExpired = expiryDate.isBefore(DateTime.now());
+                          } catch (e) {
+                            // If parsing fails, not expired
+                            isExpired = false;
+                          }
+                        }
+
                         return Container(
                           decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(30.18),
-                              border: Border.all(
-                                color: const Color(0xffD9D9D9),
-                              )),
+                            borderRadius: BorderRadius.circular(30.18),
+                            border: Border.all(
+                              color: isExpired
+                                  ? const Color(0xFFBA1719)
+                                  : const Color(0xffD9D9D9),
+                              width: isExpired ? 2 : 1,
+                            ),
+                          ),
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Image.asset(item['icon']),
+                              SizedBox(height: 8.h),
                               Text(
                                 item['title'],
                                 style: GoogleFonts.koulen(
@@ -508,14 +495,16 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                                   color: const Color(0xff949494),
                                 ),
                               ),
+                              SizedBox(height: 4.h),
                               Text(
                                 item['name'],
                                 style: GoogleFonts.aBeeZee(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w400,
-                                    fontStyle: FontStyle.italic,
-                                    letterSpacing: .10,
-                                    color: Colors.black),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w400,
+                                  fontStyle: FontStyle.italic,
+                                  letterSpacing: .10,
+                                  color: Colors.black,
+                                ),
                               ),
                             ],
                           ),
@@ -537,8 +526,8 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     );
   }
 
-  void showDocumentDialog(BuildContext context) {
-    showDialog(
+  void showDocumentDialog(BuildContext context) async {
+    final result = await showDialog(
       context: context,
       builder: (BuildContext context) {
         return Dialog(
@@ -547,10 +536,16 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           ),
           elevation: 0,
           backgroundColor: Colors.transparent,
-          child: DocumentDialog(),
+          child: const DocumentDialog(),
         );
       },
     );
+
+    // If document was added successfully, refresh the list
+    if (result == true) {
+      print('🔄 Refreshing documents list...');
+      _fetchMyDocuments();
+    }
   }
 
   Widget _buildDialogContent(BuildContext context) {
@@ -664,7 +659,6 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                 ),
                 onPressed: () {
                   Navigator.pop(context);
-                  // TODO: Add your view attachment logic here
                 },
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -782,6 +776,8 @@ class _DocumentDialogState extends State<DocumentDialog> {
     'Certifications',
   ]; // adjust
   String? _attachedFileName;
+  String? _attachedFilePath;
+  bool _isUploading = false;
 
   @override
   void dispose() {
@@ -799,7 +795,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
       lastDate: DateTime(now.year + 50),
       builder: (context, child) => Theme(
         data: Theme.of(context).copyWith(
-          colorScheme: ColorScheme.light(
+          colorScheme: const ColorScheme.light(
             primary: Colors.blueGrey, // header background
             onPrimary: Colors.white, // header text
             onSurface: Colors.black, // body text
@@ -814,47 +810,181 @@ class _DocumentDialogState extends State<DocumentDialog> {
     }
   }
 
-  // Optional: real file picker (uncomment import and this method after adding file_picker)
-  /*
   Future<void> _pickFile() async {
-    final result = await FilePicker.platform.pickFiles();
-    if (result != null && result.files.isNotEmpty) {
-      setState(() {
-        _attachedFileName = result.files.single.name;
-      });
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          _attachedFileName = result.files.single.name;
+          _attachedFilePath = result.files.single.path;
+        });
+      }
+    } catch (e) {
+      print('Error picking file: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error selecting file: $e')),
+      );
     }
   }
-  */
 
-  void _attachFileFallback() async {
-    // If file_picker not used, just simulate selection
-    setState(() {
-      _attachedFileName = "document.pdf";
-    });
-  }
-
-  void _submit() {
-    // validate & submit
+  Future<void> _submit() async {
+    // Validate required fields (only document type and ID number)
     final id = _idController.text.trim();
-    if ((_selectedType ?? '').isEmpty || id.isEmpty || _expiryDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please complete all fields')),
-      );
+    if ((_selectedType ?? '').isEmpty || id.isEmpty) {
+      print('❌ Validation failed: Missing required fields');
+      _showErrorDialog('Please fill in document type and ID number.');
       return;
     }
 
-    // TODO: perform upload / save
-    Navigator.of(context).pop({
-      'type': _selectedType,
-      'id': id,
-      'expiry': _expiryDate,
-      'file': _attachedFileName,
+    setState(() {
+      _isUploading = true;
     });
+
+    try {
+      final token = SharedPref.getLoginData().result?.token ?? '';
+      final userName = SharedPref.getLoginData().result?.data?.name ?? '';
+      final url =
+          Uri.parse('https://test.elrace.com/api/upload_employee_document');
+
+      // Debug: Check values before sending
+      print('🔍 Debug - userName: "$userName"');
+      print('🔍 Debug - selectedType: "$_selectedType"');
+      print('🔍 Debug - id: "$id"');
+
+      if (userName.isEmpty) {
+        print('❌ Error: userName is empty!');
+        return;
+      }
+
+      if (_selectedType == null || _selectedType!.isEmpty) {
+        print('❌ Error: selectedType is null or empty!');
+        return;
+      }
+
+      // Map document type to document_type_id
+      final Map<String, int> documentTypeIds = {
+        'Passport': 1,
+        'Labor Card': 2,
+        'Medical Insurance': 3,
+        'Emirates ID': 4,
+        'photo': 5,
+        'CV': 6,
+        'Certifications': 7,
+      };
+
+      final documentTypeId = documentTypeIds[_selectedType] ?? 1;
+
+      // Read file and convert to base64
+      final file = File(_attachedFilePath!);
+      final bytes = await file.readAsBytes();
+      final base64File = base64Encode(bytes);
+
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final params = {
+        'name': id, // Using ID number as name field
+        'document_type_id': documentTypeId,
+        'issue_date': _expiryDate?.toIso8601String().split('T')[0],
+        'expiry_date': _expiryDate?.toIso8601String().split('T')[0],
+        'description': 'Document uploaded via mobile app',
+        'attachment': base64File,
+        'attachment_filename': _attachedFileName,
+      };
+      final body = jsonEncode({
+        'jsonrpc': '2.0',
+        'params': params,
+      });
+
+      print('📤 Uploading document...');
+      print(
+          '📦 Request params: ${jsonEncode(params..remove('file_data'))}'); // Don't print file_data (too long)
+      final response = await http.post(url, headers: headers, body: body);
+      final data = jsonDecode(response.body);
+
+      print('📥 Upload response: ${response.body}');
+
+      if (response.statusCode == 200 &&
+          data['result'] != null &&
+          data['result']['status'] == 'success') {
+        print('✅ Document uploaded successfully!');
+        if (mounted) {
+          _showSuccessDialog();
+        }
+      } else {
+        final errorMessage = data['result']?['message'] ??
+            data['error']?['message'] ??
+            'Upload failed';
+        if (mounted) {
+          _sliderKey.currentState?.resetSlider();
+          _showErrorDialog(errorMessage);
+        }
+      }
+    } catch (e) {
+      print('❌ Upload error: $e');
+      if (mounted) {
+        _sliderKey.currentState?.resetSlider();
+        _showErrorDialog('An error occurred while uploading the document.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
+  }
+
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Success'),
+        content: const Text('Document uploaded successfully!'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop(); // Close dialog
+              Navigator.of(context)
+                  .pop(true); // Close DocumentDialog and refresh
+            },
+            child: const Text('OK'),
+          )
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(String message) {
+    // Close the DocumentDialog first
+    Navigator.of(context).pop();
+
+    // Then show the error dialog
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Upload Failed'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('OK'),
+          )
+        ],
+      ),
+    );
   }
 
   final GlobalKey<CustomSliderButtonState> _sliderKey = GlobalKey();
   Future<void> _submitExpense() async {
-    Navigator.pop(context);
+    await _submit();
   }
 
   @override
@@ -867,10 +997,10 @@ class _DocumentDialogState extends State<DocumentDialog> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 360),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 20),
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 20),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(18),
-            image: DecorationImage(
+            image: const DecorationImage(
                 image: AssetImage("assets/png/documents_back.png"),
                 fit: BoxFit.fill),
             boxShadow: [
@@ -898,7 +1028,12 @@ class _DocumentDialogState extends State<DocumentDialog> {
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     isExpanded: true,
-                    hint: const Text('document type'),
+                    hint: const Center(
+                      child: const Text(
+                        'document type',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
                     value: _selectedType,
                     items: _types
                         .map((t) => DropdownMenuItem(
@@ -919,11 +1054,13 @@ class _DocumentDialogState extends State<DocumentDialog> {
               _buildFieldWrapper(
                 child: TextField(
                   controller: _idController,
+                  textAlign: TextAlign.center,
                   onTapOutside: (v) {
                     FocusScope.of(context).unfocus();
                   },
                   decoration: const InputDecoration(
                     hintText: 'ID Number',
+                    hintStyle: TextStyle(color: Colors.grey),
                     border: InputBorder.none,
                     isDense: true,
                     contentPadding:
@@ -940,12 +1077,14 @@ class _DocumentDialogState extends State<DocumentDialog> {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(
-                          expiryText,
-                          style: TextStyle(
-                            color: _expiryDate == null
-                                ? Colors.grey
-                                : Colors.black87,
+                        child: Center(
+                          child: Text(
+                            expiryText,
+                            style: TextStyle(
+                              color: _expiryDate == null
+                                  ? Colors.grey
+                                  : Colors.black87,
+                            ),
                           ),
                         ),
                       ),
@@ -959,46 +1098,45 @@ class _DocumentDialogState extends State<DocumentDialog> {
 
               // Attach files
               InkWell(
-                onTap: () {
-                  // use real picker or fallback
-                  // _pickFile();
-                  _attachFileFallback();
-                },
+                onTap: _pickFile,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.cloud_upload_outlined,
-                      size: 20,
-                      color: HexColor("#002E6B"),
-                    ),
+                    Image.asset('assets/png/Upload cloud.png',
+                        width: 20, height: 20),
                     const SizedBox(width: 8),
-                    Text(
-                      _attachedFileName == null
-                          ? 'Attach Files'
-                          : _attachedFileName!,
-                      style: GoogleFonts.koulen(
-                        decoration: _attachedFileName == null
-                            ? TextDecoration.underline
-                            : TextDecoration.none,
-                        color: HexColor("#002E6B"),
-                        fontWeight: FontWeight.w400,
-                        fontSize: 16,
-                        letterSpacing: 1,
-                      ),
+                    Column(
+                      children: [
+                        Text(
+                          _attachedFileName == null
+                              ? 'Attach Files'
+                              : _attachedFileName!,
+                          style: GoogleFonts.koulen(
+                            color: HexColor("#002E6B"),
+                            fontWeight: FontWeight.w400,
+                            fontSize: 16,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                        if (_attachedFileName == null)
+                          Container(
+                            height: 1.5,
+                            width: 80,
+                            color: HexColor("#002E6B"),
+                          ),
+                      ],
                     ),
                   ],
                 ),
               ),
 
               const SizedBox(height: 18), // Submit button
-              Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 0),
-                  child: CustomSliderButton(
-                    key: _sliderKey, // ✅ <-- this is critical
-                    onSlideComplete: _submitExpense,
-                    loginResponseModel: SharedPref.getLoginData(),
-                  )),
+
+              CustomSliderButton(
+                key: _sliderKey,
+                onSlideComplete: _submitExpense,
+                loginResponseModel: SharedPref.getLoginData(),
+              ),
             ],
           ),
         ),
