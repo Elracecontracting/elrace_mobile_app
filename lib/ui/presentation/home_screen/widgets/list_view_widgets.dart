@@ -89,60 +89,63 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   }
 
   Widget _buildTimeSheetWidget() {
+    final loginData = SharedPref.getLoginData();
+    final widgetData = loginData.result?.data?.defaultWidgets?.data;
+    final timesheetCount =
+        widgetData?['timesheet_widget']?['record_to_show']?.toString() ?? '0';
+
     return GrayCardComponent(
-      onClick: () => Util.pushPage(const TaskSheetPage(), context),
-      mainIcon: 'assets/png/time_sheet.png',
-      cardTitle: translate('home.time_sheet'),
-      backgroundImagePath: 'assets/png/gray_card.png', // ✅ Add this
-      topPadding: true,
-      topPaddingValue: 40,
-      childWidget: Directionality(
-        textDirection: TextDirection.ltr,
-        child: Stack(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(
-                left: 190.w,
-              ),
-              child: Image.asset(
-                'assets/png/time_sheet.png',
-                width: SizeConfig().getWidth(140),
-                height: SizeConfig().getHeight(130),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.only(top: 100.h),
-              child: SizedBox(
-                width: SizeConfig().getWidth(190),
-                height: SizeConfig().getHeight(85),
-                child: Column(
-                  children: [
-                    CustomBulletPoint(
-                      // bulletColor: Color(0xFF009859),
-                      text: translate('home.No_of_Labors'),
-                      textColor: Colors.black,
-                      countColor: Colors.black,
-                      count: '15',
-                      containerColor: Colors.white,
-                    ),
-                  ],
+        onClick: () => Util.pushPage(const TaskSheetPage(), context),
+        mainIcon: 'assets/png/time_sheet.png',
+        cardTitle: translate('home.time_sheet'),
+        backgroundImagePath: 'assets/png/gray_card.png',
+        topPadding: true,
+        topPaddingValue: 40,
+        childWidget: Directionality(
+          textDirection: TextDirection.ltr,
+          child: Stack(
+            children: [
+              Padding(
+                padding: EdgeInsets.only(
+                  left: 190.w,
+                ),
+                child: Image.asset(
+                  'assets/png/time_sheet.png',
+                  width: SizeConfig().getWidth(140),
+                  height: SizeConfig().getHeight(130),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-      // childWidget: Padding(
-      //   padding: EdgeInsets.only(
-      //     left: 210.w,
-      //   ),
-      //   child: Image.asset(
-      //     'assets/png/time_sheet.png',
-      //     width: SizeConfig().getWidth(140),
-      //     height: SizeConfig().getHeight(140),
-      //   ),
-      // ),
-    );
+              Padding(
+                padding: EdgeInsets.only(top: 100.h),
+                child: SizedBox(
+                  width: SizeConfig().getWidth(190),
+                  height: SizeConfig().getHeight(85),
+                  child: Column(
+                    children: [
+                      CustomBulletPoint(
+                        text: translate('home.No_of_Labors'),
+                        textColor: Colors.black,
+                        countColor: Colors.black,
+                        count: timesheetCount,
+                        containerColor: Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          // childWidget: Padding(
+          //   padding: EdgeInsets.only(
+          //     left: 210.w,
+          //   ),
+          //   child: Image.asset(
+          //     'assets/png/time_sheet.png',
+          //     width: SizeConfig().getWidth(140),
+          //     height: SizeConfig().getHeight(140),
+          //   ),
+          // ),
+        ));
   }
 
   Widget _buildPettyCashWidget() {
@@ -158,11 +161,17 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   }
 
   Widget _buildLPOWidget() {
+    final loginData = SharedPref.getLoginData();
+    final widgetData = loginData.result?.data?.defaultWidgets?.data;
+    final lpoTotal =
+        widgetData?['lpo_widget']?['record_to_show']?['total']?.toString() ??
+            '0';
+
     return GrayCardComponent(
       onClick: () => Util.pushPage(const LpoListScreen(), context),
       mainIcon: 'assets/png/time_sheet.png',
       cardTitle: translate('home.lpo'),
-      backgroundImagePath: 'assets/png/gray_card.png', // ✅ Add this
+      backgroundImagePath: 'assets/png/gray_card.png',
       topPadding: true,
       childWidget: Directionality(
         textDirection: TextDirection.ltr,
@@ -186,11 +195,10 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                 child: Column(
                   children: [
                     CustomBulletPoint(
-                      // bulletColor: Color(0xFF009859),
                       text: translate('home.No_of_LPO'),
                       textColor: Colors.black,
                       countColor: Colors.black,
-                      count: '15',
+                      count: lpoTotal,
                       containerColor: Colors.white,
                     ),
                   ],
@@ -215,13 +223,18 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   }
 
   Widget _buildDocumentsWidget() {
+    final loginData = SharedPref.getLoginData();
+    final widgetData = loginData.result?.data?.defaultWidgets?.data;
+    final docsCount =
+        widgetData?['my_documents_widget']?['record_to_show']?.toString() ??
+            '0';
+
     return Stack(
       children: [
         GrayCardComponent(
           onClick: () => Util.pushPage(const MyDocumentsScreen(), context),
           cardTitle: translate('home.documents'),
           backgroundImagePath: 'assets/png/gray_card.png',
-          // childWidget: const SizedBox.shrink(),
           childWidget: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -246,8 +259,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         Positioned(
           right: 10.w,
           top: 10.w,
-          child: const CountWidget(
-            count: '2',
+          child: CountWidget(
+            count: docsCount,
             countColor: Colors.black,
             containerColor: Colors.white,
           ),
@@ -257,6 +270,13 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   }
 
   Widget _buildMyNotesWidget() {
+    final loginData = SharedPref.getLoginData();
+    final widgetData = loginData.result?.data?.defaultWidgets?.data;
+    final notesData = widgetData?['my_notes_widget']?['record_to_show'];
+    final totalNotes =
+        ((notesData?['saved_count'] ?? 0) + (notesData?['draft_count'] ?? 0))
+            .toString();
+
     return Stack(
       children: [
         GrayCardComponent(
@@ -276,8 +296,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         Positioned(
           right: 10.w,
           top: 10.w,
-          child: const CountWidget(
-            count: '2',
+          child: CountWidget(
+            count: totalNotes,
             countColor: Colors.black,
             containerColor: Colors.white,
           ),
@@ -324,6 +344,13 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   }
 
   Widget _buildProjectsWidget() {
+    final loginData = SharedPref.getLoginData();
+    final widgetData = loginData.result?.data?.defaultWidgets?.data;
+    final projectsData = widgetData?['my_projects_widget']?['record_to_show'];
+    final totalProjects = projectsData?['total_projects']?.toString() ?? '0';
+    final delayedProjects =
+        projectsData?['delayed_projects']?.toString() ?? '0';
+
     return GrayCardComponent(
       cardTitle: translate('home.projects'),
       backgroundImagePath: 'assets/newapp/projects_background.png',
@@ -344,20 +371,18 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               child: Column(
                 children: [
                   CustomBulletPoint(
-                    // bulletColor: Color(0xFF009859),
                     text: translate('home.In_progress'),
                     textColor: Colors.black,
                     countColor: Colors.black,
-                    count: '15',
+                    count: totalProjects,
                     containerColor: Colors.white,
                   ),
                   SizedBox(height: 4.h),
                   CustomBulletPoint(
-                    // bulletColor: Color(0xFFBA1719),
                     text: translate('home.Delay'),
                     textColor: Colors.black,
                     countColor: Colors.black,
-                    count: '2',
+                    count: delayedProjects,
                     containerColor: Colors.white,
                   ),
                 ],
@@ -370,6 +395,14 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   }
 
   Widget _buildMyRequestWidget() {
+    final loginData = SharedPref.getLoginData();
+    final widgetData = loginData.result?.data?.defaultWidgets?.data;
+    final requestData = widgetData?['my_request_widget']?['record_to_show'];
+    final totalRequests =
+        requestData?['total_requests_count']?.toString() ?? '0';
+    final waitingApproval =
+        requestData?['waiting_for_approval_count']?.toString() ?? '0';
+
     return GrayCardComponent(
       cardTitle: translate('home.my_request'),
       backgroundImagePath: 'assets/newapp/requests_background.png',
@@ -390,20 +423,18 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               child: Column(
                 children: [
                   CustomBulletPoint(
-                    //bulletColor: const Color(0xFF009859),
-                    text: translate('home.Approved'),
+                    text: translate('home.total'),
                     textColor: Colors.black,
                     countColor: Colors.black,
                     containerColor: Colors.white,
-                    count: '5',
+                    count: totalRequests,
                   ),
                   CustomBulletPoint(
-                    // bulletColor: const Color(0xFFBA1719),
-                    text: translate('home.rejected'),
+                    text: translate('home.waiting'),
                     textColor: Colors.black,
                     countColor: Colors.black,
                     containerColor: Colors.white,
-                    count: '5',
+                    count: waitingApproval,
                   ),
                 ],
               ),
@@ -415,6 +446,12 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   }
 
   Widget _buildMediaWidget() {
+    final loginData = SharedPref.getLoginData();
+    final widgetData = loginData.result?.data?.defaultWidgets?.data;
+    final mediaData = widgetData?['media_widget']?['record_to_show'];
+    final mediaCount = mediaData?['media_count']?.toString() ?? '0';
+    final filesCount = mediaData?['files']?.toString() ?? '0';
+
     return GrayCardComponent(
       cardTitle: translate('home.media'),
       backgroundImagePath: 'assets/newapp/media_background.png',
@@ -435,18 +472,17 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               child: Column(
                 children: [
                   CustomBulletPoint(
-                    // bulletColor: const Color(0xFF009859),
                     text: translate('home.videos'),
                     textColor: Colors.black,
                     countColor: Colors.black,
-                    count: '7', containerColor: Colors.white,
+                    count: mediaCount,
+                    containerColor: Colors.white,
                   ),
                   CustomBulletPoint(
-                    // bulletColor: const Color(0xFFBA1719),
                     text: translate('home.photos'),
                     textColor: Colors.black,
                     countColor: Colors.black,
-                    count: '20',
+                    count: filesCount,
                     containerColor: Colors.white,
                   ),
                 ],
@@ -459,6 +495,11 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   }
 
   Widget _buildMyReportWidget() {
+    final loginData = SharedPref.getLoginData();
+    final widgetData = loginData.result?.data?.defaultWidgets?.data;
+    final reportsCount =
+        widgetData?['my_reports_widget']?['record_to_show']?.toString() ?? '0';
+
     return GrayCardComponent(
       mainIcon: 'assets/png/my_documents.png',
       cardTitle: translate('home.my_report'),
@@ -479,11 +520,11 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               child: Column(
                 children: [
                   CustomBulletPoint(
-                    // bulletColor: const Color(0xFF009859),
                     text: translate('home.No_Of_Reports'),
                     textColor: Colors.black,
                     countColor: Colors.white,
-                    count: '7', containerColor: const Color(0xff1A1A53),
+                    count: reportsCount,
+                    containerColor: const Color(0xff1A1A53),
                   ),
                 ],
               ),

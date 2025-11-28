@@ -93,6 +93,7 @@ class Data {
   final List<dynamic>? allowedBranchIds;
   final List<String>? roles;
   final bool? qr_status;
+  final DefaultWidgets? defaultWidgets;
 
   Data({
     this.uid,
@@ -124,6 +125,7 @@ class Data {
     this.allowedBranchIds,
     this.roles,
     this.qr_status,
+    this.defaultWidgets,
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
@@ -173,6 +175,9 @@ class Data {
             ? []
             : List<String>.from(json["roles"]!.map((x) => x)),
         qr_status: json["qr_status"],
+        defaultWidgets: json["default_widgets"] == null
+            ? null
+            : DefaultWidgets.fromJson(json["default_widgets"]),
       );
 
   Map<String, dynamic> toJson() => {
@@ -212,6 +217,7 @@ class Data {
             : List<dynamic>.from(allowedBranchIds!.map((x) => x)),
         "roles": roles == null ? [] : List<dynamic>.from(roles!.map((x) => x)),
         "qr_status": qr_status,
+        "default_widgets": defaultWidgets?.toJson(),
       };
 }
 
@@ -357,5 +363,21 @@ class UserContext {
         "lang": lang,
         "tz": tz,
         "uid": uid,
+      };
+}
+
+class DefaultWidgets {
+  final Map<String, dynamic>? data;
+
+  DefaultWidgets({
+    this.data,
+  });
+
+  factory DefaultWidgets.fromJson(Map<String, dynamic> json) => DefaultWidgets(
+        data: json["data"],
+      );
+
+  Map<String, dynamic> toJson() => {
+        "data": data,
       };
 }

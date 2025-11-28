@@ -9,15 +9,20 @@ class CustomPageRoute extends PageRouteBuilder {
           reverseTransitionDuration: const Duration(milliseconds: 500),
           pageBuilder: (context, animation, secondaryAnimation) => child,
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            // ANIMATION IN (push)
-            final slideIn = Tween<Offset>(
-              begin: const Offset(0, 1),
-              end: Offset.zero,
-            ).animate(CurvedAnimation(
+            // كيرف واحد نستخدمه للحركتين (forward & reverse)
+            final curved = CurvedAnimation(
               parent: animation,
               curve: Curves.easeOutCubic,
-            ));
+              reverseCurve: Curves.easeOut, // الخروج (pop)
+            );
 
+            // دخول: من تحت لفوق – خروج: من موضعه لأسفل شوي (ما رح تلاحظها كثير)
+            final slide = Tween<Offset>(
+              begin: const Offset(0, 1),
+              end: Offset.zero,
+            ).animate(curved);
+
+            // دخول: تكبير بسيط – خروج: يبقى 1 (ما بيتأثر لأننا نثبّته)
             final scaleIn = Tween<double>(
               begin: 0.90,
               end: 1.0,
@@ -26,43 +31,21 @@ class CustomPageRoute extends PageRouteBuilder {
               curve: Curves.easeOutBack,
             ));
 
-            final fadeIn = Tween<double>(
+            // fade: 0→1 في push, و 1→0 في pop بشكل طبيعي
+            final fade = Tween<double>(
               begin: 0.0,
               end: 1.0,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOut,
-            ));
+            ).animate(curved);
 
-            // ANIMATION OUT (pop)
-            final fadeOut = Tween<double>(
-              begin: 1.0,
-              end: 0.0,
-            ).animate(CurvedAnimation(
-              parent: secondaryAnimation,
-              curve: Curves.easeOut,
-            ));
-
-            final slideOut = Tween<Offset>(
-              begin: Offset.zero,
-              end: const Offset(0, 0.10), // نزول بسيط للأسفل
-            ).animate(CurvedAnimation(
-              parent: secondaryAnimation,
-              curve: Curves.easeOut,
-            ));
+            // لما نكون في حالة pop ما بدنا الـ scale يشتغل، نخليه ثابت على 1
+            final isPopping = animation.status == AnimationStatus.reverse;
 
             return SlideTransition(
-              position: animation.status == AnimationStatus.reverse
-                  ? slideOut
-                  : slideIn,
+              position: slide,
               child: ScaleTransition(
-                scale: animation.status == AnimationStatus.reverse
-                    ? const AlwaysStoppedAnimation(1.0)
-                    : scaleIn,
+                scale: isPopping ? const AlwaysStoppedAnimation(1.0) : scaleIn,
                 child: FadeTransition(
-                  opacity: animation.status == AnimationStatus.reverse
-                      ? fadeOut
-                      : fadeIn,
+                  opacity: fade,
                   child: child,
                 ),
               ),

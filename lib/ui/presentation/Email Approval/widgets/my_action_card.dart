@@ -22,159 +22,221 @@ class MyActionCard extends StatelessWidget {
         ),
       );
     }
-    
+
     return Expanded(
       child: BlocBuilder<ApprovalBloc, ApprovalState>(
         builder: (context, state) {
           final expandedItems = state.expandedItems;
-          
+
           return ListView.separated(
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 10) + EdgeInsets.only(bottom: 100.w),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4) +
+                EdgeInsets.only(bottom: 100.w),
             itemCount: approvalItems.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 10),
+            separatorBuilder: (context, index) => const SizedBox(height: 8),
             itemBuilder: (context, index) {
               final item = approvalItems[index];
+              final bool isExpanded = expandedItems.contains(index);
+
               String reqNo = item["request_no"] ?? item["req_no"] ?? "N/A";
               String title = item["name"] ?? item["title"] ?? "N/A";
-              String dateStr = (item["date"] ?? item["request_date"] ?? "").toString().replaceAll('false', '').replaceAll('true', '');
-              String status = item["status"] ?? "pending";
-              
+              String dateStr = (item["date"] ?? item["request_date"] ?? "")
+                  .toString()
+                  .replaceAll('false', '')
+                  .replaceAll('true', '');
+              String status =
+                  (item["status"] ?? "pending").toString().toLowerCase();
+              String statusLabel = status.toUpperCase();
+
               DateTime? parsedDate;
               try {
                 parsedDate = DateTime.tryParse(dateStr);
               } catch (e) {
                 parsedDate = DateTime.now();
               }
-              
+
+              // 🎨 Status-based styling
+              String backgroundImage = 'assets/png/item_bg_green.png';
+              Color textColor = Colors.white;
+
+              switch (status) {
+                case 'approve':
+                case 'approved':
+                case 'accept':
+                  backgroundImage = 'assets/png/item_bg_green.png';
+                  textColor = Colors.green;
+                  break;
+                case 'pending':
+                  backgroundImage = 'assets/png/item_bg_yellow.png';
+                  textColor = Colors.amber;
+                  break;
+                case 'cancel':
+                case 'cancelled':
+                case 'rejected':
+                case 'reject':
+                  backgroundImage = 'assets/png/item_bg_red.png';
+                  textColor = Colors.red;
+                  break;
+                default:
+                  backgroundImage = 'assets/png/item_bg_green.png';
+                  textColor = Colors.white;
+              }
+
+              Color bgStart = const Color(0xFF0F0C29);
+              Color bgEnd = const Color(0xFF302B63);
+
               return GestureDetector(
                 onTap: () {
                   context.read<ApprovalBloc>().add(ToggleItemExpansion(index));
                 },
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    expandedItems.contains(index)
-                        ? Container(
-                            key: ValueKey("expanded_$index"),
-                            height: 70.w,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1A1A53),
-                              borderRadius: BorderRadius.circular(30),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 4.0, horizontal: 8.0),
+                  child: SizedBox(
+                    height: 60.w,
+                    child: Stack(
+                      children: [
+                        // 🔹 الطبقة الأساسية (Collapsed)
+                        Container(
+                          height: 60.w,
+                          alignment: Alignment.center,
+                          padding: EdgeInsets.symmetric(horizontal: 20.w) +
+                              EdgeInsets.only(bottom: 10.w),
+                          decoration: BoxDecoration(
+                            image: DecorationImage(
+                              image: AssetImage(backgroundImage),
+                              fit: BoxFit.cover,
                             ),
-                            child: Row(
-                              children: [
-                                const SizedBox(width: 11),
-                                const Spacer(),
-                                Text(
-                                  status.toUpperCase(),
-                                  style: GoogleFonts.inter(
-                                    color: status.toLowerCase() == 'approved' || status.toLowerCase() == 'accept'
-                                        ? Colors.green
-                                        : status.toLowerCase() == 'rejected' || status.toLowerCase() == 'reject'
-                                            ? Colors.redAccent
-                                            : Colors.orange,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 23.sp,
-                                    letterSpacing: 1,
-                                  ),
-                                ),
-                                const Spacer(),
-                              ],
-                            ),
-                          )
-                        : Container(
-                            height: 60.w,
-                            alignment: Alignment.center,
-                            key: ValueKey("collapsed_$index"),
-                            padding: EdgeInsets.symmetric(horizontal: 10.w),
-                            margin: EdgeInsets.only(left: 4.w, top: 3),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(28),
-                              border: Border(
-                                left: BorderSide(
-                                  color: status.toLowerCase() == 'approved' || status.toLowerCase() == 'accept'
-                                      ? const Color(0xff009859)
-                                      : status.toLowerCase() == 'rejected' || status.toLowerCase() == 'reject'
-                                          ? Colors.red
-                                          : Colors.orange,
-                                  width: 6,
-                                ),
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black
+                                    .withAlpha((0.08 * 255).toInt()),
+                                blurRadius: 4,
+                                spreadRadius: 2,
+                                offset: const Offset(0, 0),
                               ),
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xffD6D6D6),
-                                  Color(0xffADB2BD),
-                                ],
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                              ),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const SizedBox(width: 1),
-                                Text(
-                                  parsedDate != null 
-                                      ? DateFormat('dd MMM yy').format(parsedDate).toUpperCase()
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              SizedBox(
+                                width: 80.w,
+                                child: Text(
+                                  parsedDate != null
+                                      ? DateFormat('dd MMM yy')
+                                          .format(parsedDate)
+                                          .toUpperCase()
                                       : 'N/A',
                                   textAlign: TextAlign.center,
                                   style: GoogleFonts.inter(
-                                    fontSize: 16.sp,
+                                    fontSize: 13.sp,
                                     fontWeight: FontWeight.bold,
                                     color: appFontColor,
                                   ),
                                 ),
-                                const SizedBox(
-                                  height: 39.5,
-                                  child: VerticalDivider(
-                                      color: Colors.grey, thickness: 1),
+                              ),
+                              const SizedBox(
+                                height: 30,
+                                child: VerticalDivider(
+                                  color: Colors.grey,
+                                  thickness: 2,
                                 ),
-                                Column(
+                              ),
+                              SizedBox(
+                                width: 150.w,
+                                child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
                                     Text(
                                       translate('home.REQ_NO'),
                                       style: GoogleFonts.inter(
-                                        fontSize: 12.sp,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.bold,
                                         color: appFontColor,
                                       ),
                                     ),
                                     Text(
                                       reqNo,
+                                      textAlign: TextAlign.center,
                                       style: GoogleFonts.inter(
-                                        fontSize: 15.sp,
+                                        fontSize: 12.sp,
                                         fontWeight: FontWeight.w500,
                                         color: Colors.black,
                                       ),
+                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
                                 ),
-                                const SizedBox(
-                                  height: 39.5,
-                                  child: VerticalDivider(
-                                      color: Colors.grey, thickness: 1),
+                              ),
+                              const SizedBox(
+                                height: 30,
+                                child: VerticalDivider(
+                                  color: Colors.grey,
+                                  thickness: 2,
                                 ),
-                                SizedBox(
-                                  width: 90.w,
-                                  child: Text(
-                                    title,
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.black,
-                                    ),
-                                    maxLines: 2,
+                              ),
+                              Expanded(
+                                child: Text(
+                                  title,
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: appFontColor,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // 🔥 الطبقة العلوية (Expanded)
+                        AnimatedOpacity(
+                          duration: const Duration(milliseconds: 200),
+                          opacity: isExpanded ? 1.0 : 0.0,
+                          child: IgnorePointer(
+                            ignoring: !isExpanded,
+                            child: Container(
+                              height: 55.w,
+                              alignment: Alignment.center,
+                              padding: EdgeInsets.symmetric(horizontal: 20.w),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [bgStart, bgEnd],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  statusLabel,
+                                  style: TextStyle(
+                                    color: textColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                    letterSpacing: 1,
                                   ),
                                 ),
-                              ],
+                              ),
                             ),
                           ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
                     // AnimatedAlign(
                     //   alignment: isExpanded ? Alignment.centerLeft : Alignment.centerRight,
                     //   duration: const Duration(milliseconds: 900),
@@ -208,13 +270,4 @@ class MyActionCard extends StatelessWidget {
                     //     ),
                     //   ),
                     // ),
-                  ],
-                ),
-              );
-            },
-          );
-        },
-      ),
-    );
-  }
-}
+           

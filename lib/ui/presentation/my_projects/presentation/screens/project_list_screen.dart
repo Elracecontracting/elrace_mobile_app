@@ -1,4 +1,5 @@
 import 'dart:ui';
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_bloc.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_event.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_state.dart';
@@ -80,25 +81,71 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      widget.partnerPhoto != null
-                          ? ClipOval(
+                      Builder(
+                        builder: (context) {
+                          print(
+                              '🖼️ Partner Photo URL: ${widget.partnerPhoto}');
+                          print('📝 Partner Name: ${widget.partnerName}');
+
+                          if (widget.partnerPhoto != null &&
+                              widget.partnerPhoto!.isNotEmpty) {
+                            return ClipOval(
                               child: Image.network(
                                 widget.partnerPhoto!,
-                                height: 30.w,
-                                width: 30.w,
+                                height: 60.w,
+                                width: 60.w,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Image.asset(
-                                  "assets/png/police.png",
-                                  height: 30.w,
-                                  width: 30.w,
-                                ),
+                                headers: {
+                                  'Accept': 'image/*',
+                                  'Authorization':
+                                      'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
+                                },
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                  if (loadingProgress == null) {
+                                    print(
+                                        '✅ Partner photo loaded successfully');
+                                    return child;
+                                  }
+                                  print('⏳ Loading partner photo...');
+                                  return SizedBox(
+                                    width: 30.w,
+                                    height: 30.w,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      value:
+                                          loadingProgress.expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                      .cumulativeBytesLoaded /
+                                                  loadingProgress
+                                                      .expectedTotalBytes!
+                                              : null,
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  print(
+                                      '❌ Error loading partner photo: $error');
+                                  print('❌ Stack trace: $stackTrace');
+                                  return Icon(
+                                    Icons.business,
+                                    size: 30.w,
+                                    color: appFontColor,
+                                  );
+                                },
                               ),
-                            )
-                          : Image.asset(
-                              "assets/png/police.png",
-                              height: 30.w,
-                              width: 30.w,
-                            ),
+                            );
+                          } else {
+                            print('⚠️ No partner photo provided');
+                            return Icon(
+                              Icons.business,
+                              size: 30.w,
+                              color: appFontColor,
+                            );
+                          }
+                        },
+                      ),
                       SizedBox(width: 8.w),
                       Flexible(
                         child: Text(

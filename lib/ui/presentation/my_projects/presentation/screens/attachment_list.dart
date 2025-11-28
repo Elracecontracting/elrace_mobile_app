@@ -311,7 +311,8 @@ class _AddDocumentDialog extends StatefulWidget {
   State<_AddDocumentDialog> createState() => _AddDocumentDialogState();
 }
 
-class _AddDocumentDialogState extends State<_AddDocumentDialog> {
+class _AddDocumentDialogState extends State<_AddDocumentDialog>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _woNameController = TextEditingController();
   List<PlatformFile> _selectedFiles = [];
   bool _isUploading = false;
@@ -319,11 +320,29 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog> {
   FolderModel? _selectedFolder;
   bool _isLoadingFolders = true;
   bool _isPickingFiles = false;
+  late AnimationController _arrowAnimationController;
+  late Animation<double> _arrowScaleAnimation;
 
   @override
   void initState() {
     super.initState();
     _loadFolders();
+
+    // Setup animation controller
+    _arrowAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _arrowScaleAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
+      CurvedAnimation(
+        parent: _arrowAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    // Loop animation
+    _arrowAnimationController.repeat(reverse: true);
   }
 
   Future<void> _loadFolders() async {
@@ -362,6 +381,7 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog> {
   @override
   void dispose() {
     _woNameController.dispose();
+    _arrowAnimationController.dispose();
     super.dispose();
   }
 
@@ -718,46 +738,70 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog> {
               ),
               SizedBox(height: 20.h),
 
-              // Attach your file - Slide to act
+              // Attach your file - Row with animated arrow and slide
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 30.w),
-                child: Container(
-                  height: 50.h,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(30.r),
-                    border: Border.all(
-                      color: const Color(0xFF000000),
-                      width: 1,
+                child: Row(
+                  children: [
+                    // Animated arrow
+                    AnimatedBuilder(
+                      animation: _arrowScaleAnimation,
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: _arrowScaleAnimation.value,
+                          child: Icon(
+                            Icons.arrow_forward_ios,
+                            color: Colors.grey,
+                            size: 28.w,
+                          ),
+                        );
+                      },
                     ),
-                  ),
-                  child: SlideAction(
-                    onSubmit: _pickFiles,
-                    sliderButtonIcon: Icon(
-                      Icons.attach_file,
-                      color: Colors.white,
-                      size: 20.w,
+
+                    // Slide action
+                    Expanded(
+                      child: Container(
+                        height: 50.h,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(30.r),
+                          border: Border.all(
+                            color: const Color(0xFF000000),
+                            width: 1,
+                          ),
+                        ),
+                        child: SlideAction(
+                          onSubmit: _pickFiles,
+                          sliderButtonIcon: Icon(
+                            Icons.attach_file,
+                            color: Colors.white,
+                            size: 25.w,
+                          ),
+                          sliderButtonIconPadding: 10,
+                          text: _isPickingFiles
+                              ? 'Loading...'
+                              : '      Attach your file',
+                          textStyle: GoogleFonts.inter(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0xFF9E9E9E),
+                          ),
+                          innerColor: const Color(0xFF151544),
+                          outerColor: Colors.white,
+                          sliderRotate: false,
+                          borderRadius: 30.r,
+                          elevation: 0,
+                          animationDuration: const Duration(milliseconds: 100),
+                          reversed: false,
+                          submittedIcon: Icon(
+                            Icons.attach_file,
+                            color: Colors.white,
+                            size: 20.w,
+                          ),
+                        ),
+                      ),
                     ),
-                    sliderButtonIconPadding: 16,
-                    text: _isPickingFiles ? 'Loading...' : 'Attach your file',
-                    textStyle: GoogleFonts.inter(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w400,
-                      color: const Color(0xFF9E9E9E),
-                    ),
-                    innerColor: const Color(0xFF151544),
-                    outerColor: Colors.white,
-                    sliderRotate: false,
-                    borderRadius: 30.r,
-                    elevation: 0,
-                    animationDuration: const Duration(milliseconds: 100),
-                    reversed: false,
-                    submittedIcon: Icon(
-                      Icons.attach_file,
-                      color: Colors.white,
-                      size: 20.w,
-                    ),
-                  ),
+                  ],
                 ),
               ),
               SizedBox(height: 8.h),

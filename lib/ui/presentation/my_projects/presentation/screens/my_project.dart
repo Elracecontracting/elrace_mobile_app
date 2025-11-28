@@ -167,6 +167,7 @@ class _MyProjectState extends State<MyProject> {
                                       bloc: bloc,
                                       partnerId: id,
                                       partnerName: name,
+                                      partnerPhoto: photo,
                                     ),
                                   ),
                                 ),
