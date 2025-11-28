@@ -1,26 +1,13 @@
+import 'package:el_race/ui/presentation/News%20Banner/news_detail_screen.dart';
 import 'package:el_race/utils/color_utils.dart'; // Import global colors
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../widgets/header_widget.dart';
-import 'package:carousel_slider/carousel_slider.dart';
-import 'package:el_race/ui/presentation/News%20Banner/banner.dart';
-import 'package:el_race/ui/presentation/home_screen/widgets/widget_container.dart';
-import 'package:el_race/utils/Util.dart';
-import 'package:el_race/utils/color_utils.dart';
-import 'package:el_race/utils/orientation_helper.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_translate/flutter_translate.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 
-import '../home_screen/provider/slider_provider.dart';
 import '../home_screen/screens/main_screens.dart';
 import '../home_screen/widgets/visibilty_icon.dart';
 
@@ -262,12 +249,13 @@ We extend our gratitude to our skilled team, trusted partners, and the community
                               child: _buildExpandableDescription(
                                 context: context,
                                 fullText: "${item['des2']}",
+                                newsItem: item,
                                 onSeeAllTap: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
                                       builder: (_) =>
-                                          ProjectAnnouncementPage(news: item),
+                                          NewsDetailScreen(newsItem: item),
                                     ),
                                   );
                                 },
@@ -292,6 +280,7 @@ We extend our gratitude to our skilled team, trusted partners, and the community
 Widget _buildExpandableDescription({
   required BuildContext context,
   required String fullText,
+  required Map<String, dynamic> newsItem,
   required VoidCallback onSeeAllTap,
 }) {
   // --- إعداد TextPainter لقص النص إلى سطرين ---

@@ -291,6 +291,21 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                             notificationType[index]['icon'];
                         String notificationTitle =
                             notificationType[index]['title'];
+
+                        // Select icon based on selection state
+                        String displayIcon;
+                        if (index == 0) {
+                          // My Documents tab
+                          displayIcon = index == currentIndex
+                              ? notificationIcon
+                              : 'assets/png/folder_unfocus.png';
+                        } else {
+                          // Family Documents tab
+                          displayIcon = index == currentIndex
+                              ? 'assets/png/family_focus.png'
+                              : notificationIcon;
+                        }
+
                         return InkWell(
                           onTap: () {
                             setState(() => currentIndex = index);
@@ -319,7 +334,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Image.asset(
-                                  notificationIcon,
+                                  displayIcon,
                                   height: 25.w,
                                 ),
                                 const SizedBox(
