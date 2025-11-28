@@ -29,11 +29,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
   dynamic selectedUser;
   String amount = '';
   String selectedExpenseType = 'EXPENSE TYPE'; // Default display text
-  final List<String> expenseTypes = [
-    'Petrol ',
-    'Hospitality ',
-    'Others'
-  ];
+  final List<String> expenseTypes = ['Petrol ', 'Hospitality ', 'Others'];
   String empID = '';
   String companyId = '';
   final String baseUrl = 'https://test.elrace.com/api/';
@@ -161,12 +157,12 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                                   ? () {
                                       setState(() {
                                         print(selectedUser);
-                                        user.text="${selectedUser['name']}";
+                                        user.text = "${selectedUser['name']}";
                                         // Use selectedUser['name'] or ['id'] as needed
                                       });
                                       Navigator.pop(context);
                                       FocusScope.of(context).unfocus();
-                              }
+                                    }
                                   : null,
                               child: Text(translate('pettycash.ok')),
                             ),
@@ -221,12 +217,14 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
     if (picked != null && picked != selectedDate) {
       setState(() {
         selectedDate = picked;
-        date.text="${selectedDate.year}-${selectedDate.month}-${selectedDate.day}";
+        date.text =
+            "${selectedDate.year}-${selectedDate.month}-${selectedDate.day}";
       });
     }
   }
 
-  Widget _buildInfoRow(String imagePath, String title, String value, {VoidCallback? onTap}) {
+  Widget _buildInfoRow(String imagePath, String title, String value,
+      {VoidCallback? onTap}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: GestureDetector(
@@ -338,9 +336,9 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
     }
   }
 
-  TextEditingController user=TextEditingController();
-  TextEditingController date=TextEditingController();
-  TextEditingController amout=TextEditingController();
+  TextEditingController user = TextEditingController();
+  TextEditingController date = TextEditingController();
+  TextEditingController amout = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
@@ -390,21 +388,21 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                     position: PopupMenuPosition.under,
                     itemBuilder: (BuildContext context) =>
                         expenseTypes.map((String type) {
-                          return PopupMenuItem<String>(
-                            value: type,
-                            child: SizedBox(
-                              width: 200, // 👈 نفس عرض الزرّ
-                              child: Text(
-                                type,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black,
-                                ),
-                              ),
+                      return PopupMenuItem<String>(
+                        value: type,
+                        child: SizedBox(
+                          width: 200, // 👈 نفس عرض الزرّ
+                          child: Text(
+                            type,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black,
                             ),
-                          );
-                        }).toList(),
+                          ),
+                        ),
+                      );
+                    }).toList(),
                     color: Colors.white,
                     elevation: 6,
                     shape: RoundedRectangleBorder(
@@ -413,8 +411,8 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                     child: SizedBox(
                       width: 240, // 👈 الزرّ الأساسي
                       child: Container(
-                        padding:
-                        const EdgeInsets.symmetric(vertical: 8, horizontal: 36),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 8, horizontal: 36),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFF1A237E), Color(0xFF3F51B5)],
@@ -437,7 +435,8 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                                 ),
                               ),
                             ),
-                            const Icon(Icons.arrow_drop_down, color: Colors.white),
+                            const Icon(Icons.arrow_drop_down,
+                                color: Colors.white),
                           ],
                         ),
                       ),
@@ -528,24 +527,25 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                                Text(
-                                  "Select ${translate('pettycash.date')}",
+                              Text(
+                                "Select ${translate('pettycash.date')}",
                                 style: TextStyle(
                                     fontSize: 15, fontWeight: FontWeight.bold),
                               ),
                               TextField(
                                 keyboardType: TextInputType.none,
                                 controller: date,
-                                onTap:  _pickDate,
+                                onTap: _pickDate,
                                 enabled: true,
                                 onTapOutside: (b) {
-                                  FocusScope.of(context).unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
+                                  FocusScope.of(context)
+                                      .unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
                                 },
                                 decoration: InputDecoration(
                                   hintText: translate('pettycash.date'),
                                   isDense: true,
                                   contentPadding:
-                                  const EdgeInsets.symmetric(vertical: 4),
+                                      const EdgeInsets.symmetric(vertical: 4),
                                 ),
                               ),
                             ],
@@ -570,7 +570,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                                Text(
+                              Text(
                                 translate('pettycash.holder'),
                                 style: TextStyle(
                                     fontSize: 15, fontWeight: FontWeight.bold),
@@ -578,16 +578,17 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                               TextField(
                                 keyboardType: TextInputType.none,
                                 controller: user,
-                                onTap:  _showPettyCashUserDialog,
+                                onTap: _showPettyCashUserDialog,
                                 enabled: true,
                                 onTapOutside: (b) {
-                                  FocusScope.of(context).unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
+                                  FocusScope.of(context)
+                                      .unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
                                 },
                                 decoration: InputDecoration(
-                                  hintText:translate('pettycash.select_user'),
+                                  hintText: translate('pettycash.select_user'),
                                   isDense: true,
                                   contentPadding:
-                                  const EdgeInsets.symmetric(vertical: 4),
+                                      const EdgeInsets.symmetric(vertical: 4),
                                 ),
                               ),
                             ],
@@ -627,7 +628,8 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                                   });
                                 },
                                 onTapOutside: (b) {
-                                  FocusScope.of(context).unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
+                                  FocusScope.of(context)
+                                      .unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
                                 },
                                 decoration: InputDecoration(
                                   hintText: translate('pettycash.enter_amount'),

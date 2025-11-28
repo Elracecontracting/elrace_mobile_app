@@ -12,12 +12,14 @@ import 'package:el_race/data/services/pdf_service.dart';
 import 'package:el_race/ui/presentation/My_task/screens/report_detail/camera_screen.dart';
 import 'package:el_race/ui/presentation/My_task/screens/report_detail/pdf_preview_screen.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashAddExpense.dart'; // Import the login model
+import 'package:el_race/ui/presentation/Attendace_list/repository/attendance_repository.dart';
 import 'package:el_race/utils/color_utils.dart'; // Import global colors
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../widgets/custom_slider_button.dart';
@@ -114,7 +116,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       final url = Uri.parse("https://test.elrace.com/api/draft_summary");
       final body = jsonEncode({
         "jsonrpc": "2.0",
-        "params": {},
+        "params": {"last_limit": 6400, "last_limit_date": "2025-04-28"},
       });
 
       final request = http.Request('GET', url)
@@ -427,6 +429,772 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
     );
   }
 
+  void _showAddExpenseDialog() {
+    // Dialog state variables
+    String description = '';
+    DateTime selectedDate = DateTime.now();
+    List<dynamic> pettyCashUsers = [];
+    List<dynamic> filteredUsers = [];
+    String searchQuery = '';
+    bool isLoading = false;
+    dynamic selectedUser;
+    String amount = '';
+    String selectedExpenseType = 'EXPENSE TYPE';
+    bool dropdownOpen = false;
+    final List<String> expenseTypes = ['Petrol ', 'Hospitality ', 'Others'];
+    String empID = '';
+    final String baseUrl = 'https://test.elrace.com/api/';
+    bool isSubmitting = false;
+
+    TextEditingController userController = TextEditingController();
+    TextEditingController dateController = TextEditingController();
+    TextEditingController amountController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            Future<void> showPettyCashUserDialog() async {
+              setDialogState(() {
+                isLoading = true;
+              });
+
+              try {
+                final token = SharedPref.getLoginData().result?.token;
+                final headers = {
+                  "Content-Type": "application/json",
+                  "Accept": "application/json",
+                  "Authorization": "Bearer $token",
+                };
+
+                final url = Uri.parse(
+                    "https://test.elrace.com/api/get_petty_cash_records");
+                final body = jsonEncode({"jsonrpc": "2.0", "params": {}});
+
+                final request = http.Request('POST', url)
+                  ..headers.addAll(headers)
+                  ..body = body;
+
+                final streamedResponse = await request.send();
+                final response =
+                    await http.Response.fromStream(streamedResponse);
+
+                if (response.statusCode == 200) {
+                  final data = jsonDecode(response.body);
+                  final users = data["result"]["data"];
+
+                  setDialogState(() {
+                    pettyCashUsers = users;
+                    filteredUsers = users.take(4).toList();
+                    isLoading = false;
+                  });
+
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext ctx) {
+                      return StatefulBuilder(
+                        builder: (context, setUserDialogState) {
+                          return Dialog(
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20)),
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                      translate(
+                                          'pettycash.select_petty_cash_holder'),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold)),
+                                  const SizedBox(height: 16),
+                                  TextField(
+                                    onChanged: (value) {
+                                      setUserDialogState(() {
+                                        searchQuery = value;
+                                        filteredUsers = pettyCashUsers
+                                            .where((user) => user['name']
+                                                .toLowerCase()
+                                                .contains(
+                                                    searchQuery.toLowerCase()))
+                                            .take(4)
+                                            .toList();
+                                      });
+                                    },
+                                    decoration: InputDecoration(
+                                      prefixIcon:
+                                          const Icon(Icons.search, size: 18),
+                                      hintText:
+                                          translate('pettycash.search_user'),
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              horizontal: 16, vertical: 10),
+                                      border: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12)),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  SizedBox(
+                                    height: 200,
+                                    child: ListView.separated(
+                                      itemCount: filteredUsers.length,
+                                      itemBuilder: (_, index) {
+                                        final user = filteredUsers[index];
+                                        return ListTile(
+                                          title: Text(user['name'],
+                                              style: const TextStyle(
+                                                  fontSize: 13)),
+                                          tileColor:
+                                              selectedUser?['id'] == user['id']
+                                                  ? Colors.blue.shade100
+                                                  : Colors.transparent,
+                                          onTap: () => setUserDialogState(() {
+                                            selectedUser = user;
+                                          }),
+                                        );
+                                      },
+                                      separatorBuilder: (_, __) =>
+                                          Divider(color: Colors.grey.shade400),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(ctx),
+                                        child:
+                                            Text(translate('pettycash.cancel')),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      ElevatedButton(
+                                        onPressed: selectedUser != null
+                                            ? () {
+                                                setDialogState(() {
+                                                  userController.text =
+                                                      selectedUser['name'];
+                                                });
+                                                Navigator.pop(ctx);
+                                              }
+                                            : null,
+                                        child: Text(translate('pettycash.ok')),
+                                      ),
+                                    ],
+                                  )
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
+                }
+              } catch (e) {
+                setDialogState(() {
+                  isLoading = false;
+                });
+              }
+            }
+
+            Future<void> pickDate() async {
+              DateTime? picked = await showDatePicker(
+                context: context,
+                initialDate: selectedDate,
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2100),
+              );
+              if (picked != null) {
+                setDialogState(() {
+                  selectedDate = picked;
+                  dateController.text = DateFormat('dd/MM/yyyy').format(picked);
+                });
+              }
+            }
+
+            Future<void> submitExpense() async {
+              if (empID.isEmpty) {
+                empID = (await userRepo.getLoginResponse())!
+                    .result!
+                    .data!
+                    .emp_id
+                    .toString();
+              }
+
+              if (selectedExpenseType == 'EXPENSE TYPE') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content:
+                          Text(translate('home.Select_Petty_Cash_Holder'))),
+                );
+                return;
+              }
+
+              if (selectedUser == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content:
+                          Text(translate('home.Select_Petty_Cash_Holder'))),
+                );
+                return;
+              }
+
+              if (amountController.text.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text(translate('home.Enter_amount_in_AED'))),
+                );
+                return;
+              }
+
+              if (description.trim().isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(translate('home.DESCRIPTION'))),
+                );
+                return;
+              }
+
+              setDialogState(() => isSubmitting = true);
+
+              try {
+                final token = SharedPref.getLoginData().result?.token;
+                final headers = {
+                  "Content-Type": "application/json",
+                  "Accept": "application/json",
+                  "Authorization": "Bearer $token",
+                };
+
+                String getExpenseTypeApiValue(String label) {
+                  switch (label.toLowerCase()) {
+                    case 'fuel':
+                      return 'fuel';
+                    case 'hospitality':
+                      return 'hospitality';
+                    case 'site material':
+                      return 'site';
+                    case 'others':
+                      return 'other';
+                    default:
+                      return 'other';
+                  }
+                }
+
+                final body = jsonEncode({
+                  "jsonrpc": "2.0",
+                  "params": {
+                    "project_id": null,
+                    "employee_id": int.parse(empID),
+                    "petty_cash_id": selectedUser['id'],
+                    "unit_amount":
+                        double.tryParse(amountController.text) ?? 0.0,
+                    "name": description,
+                    "x_expense_type":
+                        getExpenseTypeApiValue(selectedExpenseType),
+                    "state": "draft",
+                  }
+                });
+
+                final response = await http.post(
+                  Uri.parse('${baseUrl}create_hr_expense'),
+                  headers: headers,
+                  body: body,
+                );
+
+                final decoded = jsonDecode(response.body);
+
+                if (decoded['result']['status'] == 'success') {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(decoded['result']['message'] ??
+                            translate('pettycash.request_submitted'))),
+                  );
+                  Navigator.pop(dialogContext);
+                  _fetchDraftSummary(); // Refresh the list
+                } else {
+                  throw Exception(decoded['result']['message'] ??
+                      translate('pettycash.failed_to_submit'));
+                }
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                      content: Text(
+                          "${translate('pettycash.error')}: ${e.toString()}")),
+                );
+              } finally {
+                setDialogState(() => isSubmitting = false);
+              }
+            }
+
+            return Dialog(
+              backgroundColor: Colors.white,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 15),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Title Image
+                      Image.asset(
+                        'assets/png/add_expense_title.png',
+                        width: 240,
+                        height: 80,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Expense Type Dropdown (uses OverlayEntry for proper z-order)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Builder(builder: (ctx) {
+                          // Overlay state variables inside dialog
+                          OverlayEntry? expenseOverlay;
+                          final headerKey = GlobalKey();
+                          bool overlayVisible = false;
+
+                          OverlayEntry _createOverlay() {
+                            final renderBox = headerKey.currentContext!
+                                .findRenderObject() as RenderBox;
+                            final size = renderBox.size;
+                            final offset = renderBox.localToGlobal(Offset.zero);
+
+                            final left = offset.dx +
+                                (size.width / 2) -
+                                130; // center - half overlay width (260/2)
+                            final top = offset.dy + size.height + 8;
+
+                            return OverlayEntry(builder: (context) {
+                              return StatefulBuilder(
+                                  builder: (context, overlaySetState) {
+                                return Positioned(
+                                  left: left,
+                                  top: top,
+                                  width: 260,
+                                  child: Material(
+                                    color: Colors.white,
+                                    elevation: 4,
+                                    borderRadius: BorderRadius.circular(22),
+                                    child: AnimatedOpacity(
+                                      duration:
+                                          const Duration(milliseconds: 450),
+                                      curve: Curves.easeInOut,
+                                      opacity: overlayVisible ? 1.0 : 0.0,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(22),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black
+                                                  .withOpacity(0.08),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: List.generate(
+                                              expenseTypes.length, (i) {
+                                            return Column(
+                                              children: [
+                                                GestureDetector(
+                                                  onTap: () async {
+                                                    // fade out animation
+                                                    overlayVisible = false;
+                                                    expenseOverlay
+                                                        ?.markNeedsBuild();
+                                                    await Future.delayed(
+                                                        const Duration(
+                                                            milliseconds: 450));
+                                                    // update dialog state and remove overlay
+                                                    setDialogState(() {
+                                                      selectedExpenseType =
+                                                          expenseTypes[i];
+                                                    });
+                                                    expenseOverlay?.remove();
+                                                    expenseOverlay = null;
+                                                  },
+                                                  child: Container(
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        vertical: 14,
+                                                        horizontal: 20),
+                                                    alignment:
+                                                        Alignment.centerLeft,
+                                                    child: Text(
+                                                      expenseTypes[i],
+                                                      style: const TextStyle(
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        color: Colors.black,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (i !=
+                                                    expenseTypes.length - 1)
+                                                  Divider(
+                                                      height: 1,
+                                                      color:
+                                                          Colors.grey.shade300)
+                                              ],
+                                            );
+                                          }),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              });
+                            });
+                          }
+
+                          return Column(
+                            children: [
+                              GestureDetector(
+                                key: headerKey,
+                                onTap: () async {
+                                  if (expenseOverlay == null) {
+                                    // Create and insert overlay with opacity 0
+                                    overlayVisible = false;
+                                    expenseOverlay = _createOverlay();
+                                    Overlay.of(ctx)!.insert(expenseOverlay!);
+                                    // Trigger fade in animation
+                                    await Future.delayed(
+                                        const Duration(milliseconds: 50));
+                                    overlayVisible = true;
+                                    expenseOverlay?.markNeedsBuild();
+                                  } else {
+                                    // Fade out animation before removing
+                                    overlayVisible = false;
+                                    expenseOverlay?.markNeedsBuild();
+                                    await Future.delayed(
+                                        const Duration(milliseconds: 450));
+                                    expenseOverlay?.remove();
+                                    expenseOverlay = null;
+                                  }
+                                },
+                                child: Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 14, horizontal: 16),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF1B1464),
+                                    borderRadius: BorderRadius.circular(25),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          selectedExpenseType,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 1.5,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Icon(Icons.arrow_drop_down,
+                                          color: Colors.white, size: 24),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                            ],
+                          );
+                        }),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Date Field
+                      InkWell(
+                        onTap: pickDate,
+                        child: Row(
+                          children: [
+                            Image.asset('assets/png/calendar_icon.png',
+                                width: 40, height: 40),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Date',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    dateController.text.isEmpty
+                                        ? DateFormat('dd/MM/yyyy')
+                                            .format(selectedDate)
+                                        : dateController.text,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Supplier Field
+                      InkWell(
+                        onTap: showPettyCashUserDialog,
+                        child: Row(
+                          children: [
+                            Image.asset('assets/png/supplier_icon.png',
+                                width: 40, height: 40),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Supplier',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    userController.text.isEmpty
+                                        ? 'Select Supplier'
+                                        : userController.text,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Amount Field
+                      Row(
+                        children: [
+                          Image.asset('assets/png/money_icon.png',
+                              width: 40, height: 40),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Amount',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                TextField(
+                                  controller: amountController,
+                                  keyboardType: TextInputType.number,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                  ),
+                                  decoration: const InputDecoration(
+                                    hintText: '0 AED',
+                                    border: InputBorder.none,
+                                    isDense: true,
+                                    contentPadding: EdgeInsets.zero,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Description
+                      const Center(
+                        child: Text(
+                          'DESCRIPTIONS',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6.0),
+                        child: Stack(
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(18),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey
+                                        .withAlpha((0.3 * 255).toInt()),
+                                    spreadRadius: 1,
+                                    blurRadius: 5,
+                                    offset: const Offset(2, 3),
+                                  ),
+                                ],
+                                image: const DecorationImage(
+                                  image: AssetImage('assets/png/desc_box.png'),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              child: TextField(
+                                maxLines: 2,
+                                onChanged: (value) =>
+                                    setDialogState(() => description = value),
+                                decoration: InputDecoration(
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(22),
+                                    borderSide: const BorderSide(
+                                        color: Colors.grey, width: 0.5),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(22),
+                                    borderSide: const BorderSide(
+                                        color: Colors.grey, width: 0.5),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(22),
+                                    borderSide: const BorderSide(
+                                        color: Colors.blue, width: 2),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.transparent,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      vertical: 18, horizontal: 12),
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 6,
+                              right: 10,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    '${description.trim().isEmpty ? 1 : description.trim().split(RegExp(r'\s+')).length}/50',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  const Text(
+                                    'Max words',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Buttons
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF1B1464),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: isSubmitting ? null : submitExpense,
+                              child: isSubmitting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                          color: Colors.white, strokeWidth: 2))
+                                  : const Text(
+                                      'Save',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFBA1719),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                              onPressed: () => Navigator.pop(dialogContext),
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return RefreshIndicator(
@@ -446,20 +1214,26 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
 
                 const SizedBox(height: 10),
 
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      BackButton(),
-                      Text(
-                        'ADD EXPENSE',
+                      IconButton(
+                        iconSize: 34,
+                        icon: const Icon(
+                          Icons.arrow_back,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const Text(
+                        'DRAFT',
                         style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: appFontColor),
                       ),
-                      SizedBox(width: 40), // Spacer for alignment
+                      const SizedBox(width: 40), // Spacer for alignment
                     ],
                   ),
                 ),
@@ -514,7 +1288,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                               clipBehavior: Clip.none,
                               children: [
                                 Image.asset('assets/png/document_icon.png',
-                                    width: 30, height: 30),
+                                    width: 40, height: 40),
                                 Positioned(
                                   top: -10,
                                   left: -3,
@@ -547,15 +1321,6 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      GestureDetector(
-                        onTap:
-                            _generateAttachmentPdf, // when clicking on pdf icon
-                        child: const Icon(
-                          Icons.picture_as_pdf,
-                          color: Colors.red,
-                          size: 28,
-                        ),
-                      ),
                     ],
                   ),
                 ),
@@ -621,7 +1386,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                 // // Add Expense Button (unchanged)
                 Padding(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 26.0, vertical: 10.0),
+                      horizontal: 26.0, vertical: 20.0),
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
@@ -632,11 +1397,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                       elevation: 0,
                     ),
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const PettyCashAddExpense()),
-                      );
+                      _showAddExpenseDialog();
                     },
                     child: Ink(
                       decoration: BoxDecoration(
@@ -684,12 +1445,16 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                         final total = expense['amount'];
                         final id = expense['id'];
 
-                        return _buildTransactionItem_2(
-                          state is String
-                              ? capitalize(state)
-                              : state.toString(),
-                          date is String ? date : 'Date not available',
-                          total != null ? total.toString() : '0',
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 8.0, horizontal: 12.0),
+                          child: _buildTransactionItem_2(
+                            state is String
+                                ? capitalize(state)
+                                : state.toString(),
+                            date is String ? date : 'Date not available',
+                            total != null ? total.toString() : '0',
+                          ),
                         );
                       },
                     ),
@@ -753,7 +1518,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
           fit: BoxFit.cover,
         ),
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(0),
+        borderRadius: BorderRadius.circular(25),
         boxShadow: [
           BoxShadow(
             color: Colors.grey.withAlpha((0.1 * 255).toInt()),
@@ -763,7 +1528,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 10, 8, 14),
+        padding: const EdgeInsets.fromLTRB(30, 10, 15, 14),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -804,7 +1569,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                   Text(
                     date,
                     style: const TextStyle(
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: Colors.black,
                     ),
@@ -835,7 +1600,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                   Text(
                     amount,
                     style: const TextStyle(
-                      fontSize: 10,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: Colors.black,
                     ),
