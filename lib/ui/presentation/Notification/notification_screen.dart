@@ -354,9 +354,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   )
                 ],
               ),
-              const ArraowVisibalityBottomNav(
-                bottomMargin: 125,
-              ),
+              // const ArraowVisibalityBottomNav(
+              //   bottomMargin: 125,
+              // ),
             ],
           )),
     );

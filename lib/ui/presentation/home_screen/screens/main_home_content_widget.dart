@@ -187,7 +187,7 @@ class MainHomeContentWidget extends StatelessWidget {
             ),
             SizedBox(height: 25.w),
             const WidgetContainer(),
-            SizedBox(height: 120.h),
+            SizedBox(height: 70.h),
           ],
         ),
       ),

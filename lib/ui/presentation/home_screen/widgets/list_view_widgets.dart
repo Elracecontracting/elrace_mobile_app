@@ -14,6 +14,7 @@ import 'package:el_race/ui/presentation/my_notes/screens/my_notes_screen.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/screens/my_project.dart';
 import 'package:el_race/ui/presentation/my_request/MyRequestsPage.dart';
 import 'package:el_race/ui/presentation/task_sheet/task_sheet_screen.dart';
+import 'package:el_race/utils/custom_navigate.dart';
 import 'package:el_race/ui/presentation/todo_list/screens/todo_list_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/orientation_helper.dart';
@@ -282,7 +283,10 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         GrayCardComponent(
           cardTitle: translate('home.my_notes'),
           backgroundImagePath: 'assets/png/blue_card.png',
-          onClick: () => Util.pushPage(const MyNotesScreen(), context),
+          onClick: () => Navigator.push(
+            context,
+            SlideRightPageRoute(child: const MyNotesScreen()),
+          ),
           childWidget: const SizedBox.shrink(),
         ),
         Positioned(

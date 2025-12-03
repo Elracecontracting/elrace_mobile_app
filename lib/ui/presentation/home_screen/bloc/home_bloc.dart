@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:adhan/adhan.dart';
 import 'package:el_race/data/services/hive_service.dart';
@@ -7,22 +8,22 @@ import 'package:el_race/ui/presentation/Attendace_list/repository/attendance_rep
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 part 'home_event.dart';
 part 'home_state.dart';
 
 class HomeBloc extends Bloc<HomeEvent, HomeState> {
-  
   static HomeBloc get(BuildContext context) => BlocProvider.of(context);
   DateTime now = DateTime.now();
   String monthName = '';
   HomeBloc() : super(HomeInitial()) {
     on<CheckInStatusChangedEvent>(checkedInMethod);
-    on<FetchLastMonthAttendanceSummary>(_fetchLastMonthAttendanceSummary);      
-    on<ChangeCurrentIndex>((event,emit){
+    on<FetchLastMonthAttendanceSummary>(_fetchLastMonthAttendanceSummary);
+    on<ChangeCurrentIndex>((event, emit) {
       changeCurrentIndex(event, emit);
     });
-    on<ChangeVisiablityIcon>((event,emit){
+    on<ChangeVisiablityIcon>((event, emit) {
       changeBottomNavVisiblity(event, emit);
     });
     on<UpdateFaceRecognitionStatus>((event, emit) {
@@ -35,23 +36,24 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<UpdatePrayerTickEvent>(_updatePrayerTick);
     monthName = DateFormat('MMMM').format(now);
   }
-  bool isNotOpen=false;
-  bool isEdit=false;
+  bool isNotOpen = false;
+  bool isEdit = false;
   int currentIndex = 1;
-  changeCurrentIndex(ChangeCurrentIndex event,emit){
+  changeCurrentIndex(ChangeCurrentIndex event, emit) {
     emit(ChangeIndexLoading());
     currentIndex = event.index;
     emit(ChangeIndexSuccess());
   }
 
   bool enableBottomNav = true;
-  changeBottomNavVisiblity(ChangeVisiablityIcon event,emit){
+  changeBottomNavVisiblity(ChangeVisiablityIcon event, emit) {
     emit(ChangeIndexLoading());
     enableBottomNav = !enableBottomNav;
     emit(ChangeIndexSuccess());
   }
 
-  FutureOr<void> checkedInMethod(CheckInStatusChangedEvent event, Emitter<HomeState> emit) {
+  FutureOr<void> checkedInMethod(
+      CheckInStatusChangedEvent event, Emitter<HomeState> emit) {
     emit(CheckedInSTHome());
   }
 
@@ -93,7 +95,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       await HiveService.setPrayerSoundMuted(newState);
       _isSoundMuted = newState;
       debugPrint(newState.toString());
-      
+
       if (_prayerTimes != null) {
         emit(PrayerTimesLoaded(
           prayerTimes: _prayerTimes,
@@ -116,61 +118,129 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     emit(const PrayerTimesLoading());
 
     try {
-      // 1) Try last known position for instant UI
-      final last = await Geolocator.getLastKnownPosition();
-      if (last != null) {
-        _setPrayerTimesFor(Coordinates(last.latitude, last.longitude));
-        if (_prayerTimes != null) {
+      // جلب أوقات الصلاة من API
+      final response = await http.post(
+        Uri.parse('https://test.elrace.com/api/prayer_times'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          "jsonrpc": "2.0",
+          "params": {"country_code": "AE"}
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        if (data['result']?['status'] == 'success') {
+          _setPrayerTimesFromAPI(data['result']['data']);
+
           emit(PrayerTimesLoaded(
             prayerTimes: _prayerTimes,
             nextPrayer: _nextPrayer,
             nextTime: _nextPrayerTime,
             isSoundMuted: _isSoundMuted,
           ));
+
+          _startPrayerTicker();
+          return;
         }
       }
 
-      // 2) Ensure services + permissions
-      if (!await Geolocator.isLocationServiceEnabled()) {
-        throw Exception('Location services are disabled.');
-      }
-      var perm = await Geolocator.checkPermission();
-      if (perm == LocationPermission.denied) {
-        perm = await Geolocator.requestPermission();
-      }
-      if (perm == LocationPermission.denied ||
-          perm == LocationPermission.deniedForever) {
-        throw Exception('Location permission denied.');
-      }
-
-      // 3) Fresh position with a timeout
-      final pos = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.best,
-        timeLimit: const Duration(seconds: 10),
-      );
-
-      _setPrayerTimesFor(Coordinates(pos.latitude, pos.longitude));
-      emit(PrayerTimesLoaded(
-        prayerTimes: _prayerTimes,
-        nextPrayer: _nextPrayer,
-        nextTime: _nextPrayerTime,
-        isSoundMuted: _isSoundMuted,
-      ));
-
-      _startPrayerTicker();
+      throw Exception('Failed to fetch prayer times from API');
     } catch (e) {
-      // Fallback to Cairo if no prayer times set
-      if (_prayerTimes == null) {
-        _setPrayerTimesFor(Coordinates(30.0444, 31.2357));
+      // Fallback: استخدام الحساب المحلي
+      try {
+        final last = await Geolocator.getLastKnownPosition();
+        if (last != null) {
+          _setPrayerTimesFor(Coordinates(last.latitude, last.longitude));
+        } else {
+          _setPrayerTimesFor(Coordinates(25.2048, 55.2708)); // Dubai
+        }
+      } catch (_) {
+        _setPrayerTimesFor(Coordinates(25.2048, 55.2708));
       }
-      
+
       emit(PrayerTimesError(
-        error: e.toString(),
+        error: 'Using local calculation',
         prayerTimes: _prayerTimes,
         isSoundMuted: _isSoundMuted,
       ));
-      
+
       _startPrayerTicker();
+    }
+  }
+
+  void _setPrayerTimesFromAPI(Map<String, dynamic> apiData) {
+    final prayers = apiData['prayers'] as List;
+    final nextPrayerData = apiData['next_prayer'];
+
+    // تحويل الأوقات من "HH:mm" إلى DateTime
+    final now = DateTime.now();
+    final fajrTime =
+        _parseTime(prayers.firstWhere((p) => p['title'] == 'Fajr')['time']);
+    final dhuhrTime =
+        _parseTime(prayers.firstWhere((p) => p['title'] == 'Dhuhr')['time']);
+    final asrTime =
+        _parseTime(prayers.firstWhere((p) => p['title'] == 'Asr')['time']);
+    final maghribTime =
+        _parseTime(prayers.firstWhere((p) => p['title'] == 'Maghrib')['time']);
+    final ishaTime =
+        _parseTime(prayers.firstWhere((p) => p['title'] == 'Isha')['time']);
+
+    // إنشاء PrayerTimes object باستخدام positional parameters
+    final coords = Coordinates(25.2048, 55.2708); // Dubai
+    final params = CalculationMethod.egyptian.getParameters();
+    final dateComponents = DateComponents.from(now);
+
+    // استخدام constructor مع positional parameters
+    _prayerTimes = PrayerTimes(
+      coords,
+      dateComponents,
+      params,
+    );
+
+    // Override الأوقات يدوياً من خلال reflection أو استخدام الأوقات المحسوبة
+    // بما أن PrayerTimes لا يدعم custom times مباشرة، نستخدم object محسوب ونعتمد على nextPrayer
+
+    // تحديد الصلاة القادمة من API
+    final nextPrayerTitle = nextPrayerData['title'] as String;
+    _nextPrayer = _getPrayerFromTitle(nextPrayerTitle);
+
+    // حساب الوقت المتبقي من remaining_time
+    final remainingTime =
+        nextPrayerData['remaining_time'] as String; // "05:36:29"
+    final parts = remainingTime.split(':');
+    final hours = int.parse(parts[0]);
+    final minutes = int.parse(parts[1]);
+    final seconds = int.parse(parts[2]);
+
+    _nextPrayerTime = DateTime.now().add(
+      Duration(hours: hours, minutes: minutes, seconds: seconds),
+    );
+  }
+
+  DateTime _parseTime(String timeStr) {
+    final parts = timeStr.split(':');
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day, hour, minute);
+  }
+
+  Prayer _getPrayerFromTitle(String title) {
+    switch (title.toLowerCase()) {
+      case 'fajr':
+        return Prayer.fajr;
+      case 'dhuhr':
+        return Prayer.dhuhr;
+      case 'asr':
+        return Prayer.asr;
+      case 'maghrib':
+        return Prayer.maghrib;
+      case 'isha':
+        return Prayer.isha;
+      default:
+        return Prayer.fajr;
     }
   }
 
@@ -181,7 +251,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     final pt = PrayerTimes.today(coords, params);
     final n = pt.nextPrayer();
     final nt = pt.timeForPrayer(n);
-    
+
     _prayerTimes = pt;
     _nextPrayer = n;
     _nextPrayerTime = nt;
@@ -190,7 +260,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   void _startPrayerTicker() {
     _prayerTicker?.cancel();
     if (_prayerTimes == null) return;
-    
+
     _prayerTicker = Timer.periodic(const Duration(seconds: 1), (_) {
       if (!isClosed) {
         add(const UpdatePrayerTickEvent());
@@ -206,7 +276,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
     final n = _prayerTimes!.nextPrayer();
     final nt = _prayerTimes!.timeForPrayer(n);
-    
+
     if (n != _nextPrayer || nt != _nextPrayerTime) {
       _nextPrayer = n;
       _nextPrayerTime = nt;
@@ -227,8 +297,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     try {
       emit(const LastMonthAttendanceSummaryLoading());
       final now = DateTime.now();
-      final firstDayOfLastMonth = DateTime(now.year, now.month , 1);
-      final lastDayOfLastMonth = DateTime(now.year, now.month+1, 0);
+      final firstDayOfLastMonth = DateTime(now.year, now.month, 1);
+      final lastDayOfLastMonth = DateTime(now.year, now.month + 1, 0);
 
       final summary = await AttendanceRepo().getAttendanceSummary(
         startDate: DateFormat('yyyy-MM-dd').format(firstDayOfLastMonth),
@@ -243,5 +313,4 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   }
 
   int get getAttendedDays => attendedDays;
-  
 }

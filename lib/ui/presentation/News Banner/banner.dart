@@ -269,9 +269,9 @@ We extend our gratitude to our skilled team, trusted partners, and the community
                 ),
               ],
             ),
-            const ArraowVisibalityBottomNav(
-              bottomMargin: 105,
-            ),
+            // const ArraowVisibalityBottomNav(
+            //   bottomMargin: 105,
+            // ),
           ],
         ));
   }

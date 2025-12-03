@@ -285,7 +285,7 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
                             ),
                         ],
                       )),
-                  const ArraowVisibalityBottomNav(),
+                  // const ArraowVisibalityBottomNav(),
                 ],
               ),
       ),

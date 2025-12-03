@@ -7,6 +7,7 @@ import 'package:el_race/ui/presentation/Notification/notification_screen.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
+import 'package:el_race/utils/custom_navigate.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -116,8 +117,8 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                             if (SharedPref.isUserAuthenticated()) {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (_) => const ApprovalsScreen(),
+                                SlideRightPageRoute(
+                                  child: const ApprovalsScreen(),
                                 ),
                               );
                             }
@@ -162,8 +163,8 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                               if (!bloc.isNotOpen) {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const NotificationScreen(),
+                                  SlideRightPageRoute(
+                                    child: const NotificationScreen(),
                                   ),
                                 );
                                 bloc.isNotOpen = true;

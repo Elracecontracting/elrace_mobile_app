@@ -24,10 +24,10 @@ class WidgetContainer extends StatelessWidget {
         color: white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2), // shadow color
-            spreadRadius: 6, // how wide the shadow is
-            blurRadius: 10, // how soft the shadow looks
-            offset: const Offset(0, -2), // move shadow upward (-Y means top)
+            color: Colors.black.withOpacity(0.15),
+            spreadRadius: 2,
+            blurRadius: 8,
+            offset: const Offset(0, -8), // shadow بس من فوق
           ),
         ],
         borderRadius: BorderRadius.only(

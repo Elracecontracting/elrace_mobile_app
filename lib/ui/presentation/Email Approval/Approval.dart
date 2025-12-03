@@ -42,38 +42,39 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   @override
   void initState() {
     super.initState();
-    selectedCategory=categories.first;
+    selectedCategory = categories.first;
     searchController.addListener(_onSearchChanged);
-    _fetchApprovalData(); 
+    _fetchApprovalData();
   }
-  
+
   @override
   void dispose() {
     searchController.dispose();
     super.dispose();
   }
-  
+
   void _onSearchChanged() {
     setState(() {
       approvalItems = _getFilteredItems();
     });
   }
-  
+
   List<dynamic> _getFilteredItems() {
     final allFiltered = _getApprovalListForSelectedCategory();
     if (searchController.text.isEmpty) {
       return allFiltered;
     }
-    
+
     final searchLower = searchController.text.toLowerCase();
     return allFiltered.where((item) {
       final name = item["name"]?.toString().toLowerCase() ?? "";
       final requestNo = item["request_no"]?.toString().toLowerCase() ?? "";
       final reqNo = item["req_no"]?.toString().toLowerCase() ?? "";
       final title = item["title"]?.toString().toLowerCase() ?? "";
-      final employeeName = item["employee_name"]?.toString().toLowerCase() ?? "";
+      final employeeName =
+          item["employee_name"]?.toString().toLowerCase() ?? "";
       final vendor = item["vendor"]?.toString().toLowerCase() ?? "";
-      
+
       return name.contains(searchLower) ||
           requestNo.contains(searchLower) ||
           reqNo.contains(searchLower) ||
@@ -196,12 +197,12 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   }
 
   Map<String, String> get categoryIcons => {
-    translate('home.my_action'): "assets/png/all-icon.png",
-    translate('home.hr'): "assets/png/hr-icon.png",
-    translate('home.rfq'): "assets/png/rfq-icon.png",
-    translate('home.invoice'): "assets/png/invoice-icon.png",
-    translate('home.petty_cash'): "assets/png/petty-cash-icon.png",
-  };
+        translate('home.my_action'): "assets/png/all-icon.png",
+        translate('home.hr'): "assets/png/hr-icon.png",
+        translate('home.rfq'): "assets/png/rfq-icon.png",
+        translate('home.invoice'): "assets/png/invoice-icon.png",
+        translate('home.petty_cash'): "assets/png/petty-cash-icon.png",
+      };
 
   final List<String> categories = [
     translate('home.my_action'),
@@ -217,7 +218,9 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
-      bottomNavigationBar: const CustomBottomNavBar(isMain: false,),
+      bottomNavigationBar: const CustomBottomNavBar(
+        isMain: false,
+      ),
       body: RefreshIndicator(
         onRefresh: _fetchApprovalData,
         child: Stack(
@@ -225,22 +228,24 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
             Column(
               children: [
                 const SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 10.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const BackButton(),
-                      AnimatedContainer(
+                      BackButton(),
+                      /*AnimatedContainer(
                         duration: const Duration(milliseconds: 400),
                         curve: Curves.easeInOut,
                         height: 40,
                         width: isSearch ? 310.w : 43.w,
                         decoration: BoxDecoration(
                           color: isSearch ? Colors.white : HexColor("#ADB2BD"),
-                          border: isSearch ? Border.all(color: Colors.grey) : null,
+                          border:
+                              isSearch ? Border.all(color: Colors.grey) : null,
                           borderRadius: BorderRadius.circular(20),
-                          gradient: isSearch ? const LinearGradient(
+                          gradient: isSearch
+                              ? const LinearGradient(
                                   colors: [
                                     Color(0xffD6D6D6),
                                     Color(0xffADB2BD),
@@ -248,7 +253,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                 )
-                           : null,
+                              : null,
                         ),
                         child: Row(
                           children: [
@@ -265,7 +270,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                                   ),
                                   decoration: const InputDecoration(
                                     border: InputBorder.none,
-                                    contentPadding: EdgeInsets.only(bottom: 10,left: 10),
+                                    contentPadding:
+                                        EdgeInsets.only(bottom: 10, left: 10),
                                     hintText: 'Search...',
                                     hintStyle: TextStyle(
                                       color: Colors.grey,
@@ -274,16 +280,15 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                                   ),
                                 ),
                               ),
-
                             GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          isSearch = !isSearch;
-                          if (!isSearch) {
-                            searchController.clear();
-                          }
-                        });
-                      },
+                              onTap: () {
+                                setState(() {
+                                  isSearch = !isSearch;
+                                  if (!isSearch) {
+                                    searchController.clear();
+                                  }
+                                });
+                              },
                               child: Container(
                                 width: 40.w,
                                 height: 40.w,
@@ -297,10 +302,10 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                                   alignment: Alignment.center,
                                 ),
                               ),
-                            ), 
+                            ),
                           ],
                         ),
-                      )
+                      )*/
                     ],
                   ),
                 ),
@@ -328,32 +333,36 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                             margin: const EdgeInsets.only(right: 4),
                             padding: const EdgeInsets.symmetric(vertical: 7),
                             decoration: BoxDecoration(
-                              color: isSelected ? appFontColor : Colors.grey[300],
+                              color:
+                                  isSelected ? appFontColor : Colors.grey[300],
                               borderRadius: BorderRadius.circular(10),
-                               gradient:isSelected ? const LinearGradient(
-                                  colors: [
-                                    Color.fromARGB(255, 27, 27, 27),
-                                    appFontColor,
-                                  ],
-                                  stops: [
-                                    0.02, 
-                                    0.9, 
-                                  ],
-                                  begin: Alignment.centerLeft,
-                                  end: Alignment.centerRight,
-                                ) :  const LinearGradient(
-                                  colors: [
-                                    Color(0xffD6D6D6),
-                                    Color(0xffADB2BD),
-                                  ],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                ),
+                              gradient: isSelected
+                                  ? const LinearGradient(
+                                      colors: [
+                                        Color.fromARGB(255, 27, 27, 27),
+                                        appFontColor,
+                                      ],
+                                      stops: [
+                                        0.02,
+                                        0.9,
+                                      ],
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                    )
+                                  : const LinearGradient(
+                                      colors: [
+                                        Color(0xffD6D6D6),
+                                        Color(0xffADB2BD),
+                                      ],
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                    ),
                             ),
                             child: Column(
                               children: [
                                 Image.asset(
-                                  categoryIcons[cat] ?? "assets/icons/default.png",
+                                  categoryIcons[cat] ??
+                                      "assets/icons/default.png",
                                   height: 30.w,
                                   width: 30.w,
                                   // color: isSelected ? Colors.white : Colors.black87,
@@ -364,8 +373,9 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                                   style: GoogleFonts.koulen(
                                     fontSize: 13.sp,
                                     fontWeight: FontWeight.bold,
-                                    color:
-                                        isSelected ? Colors.white : Colors.black87,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.black87,
                                     letterSpacing: 1.0,
                                   ),
                                 ),
@@ -379,39 +389,35 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                 ),
                 const SizedBox(height: 20),
                 body()
-              
               ],
             ),
-
-            const ArraowVisibalityBottomNav(bottomMargin: 120,),
+            // const ArraowVisibalityBottomNav(
+            //   bottomMargin: 120,
+            // ),
           ],
         ),
       ),
     );
   }
 
-
-  body(){
-    if(isLoading){
-      return const Center(child: CircularProgressIndicator(),);
+  body() {
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
     }
     //MY ACTION
-    if(selectedCategory.toLowerCase()=="MY ACTION".toLowerCase()){
+    if (selectedCategory.toLowerCase() == "MY ACTION".toLowerCase()) {
       return MyActionCard(approvalItems: approvalItems);
-    }
-    else if(selectedCategory.toLowerCase()=="HR".toLowerCase()){
+    } else if (selectedCategory.toLowerCase() == "HR".toLowerCase()) {
       return HrAndPettycashCard(approvalItems: approvalItems);
-    }
-    else if(selectedCategory.toLowerCase()=="Petty Cash".toLowerCase()){
+    } else if (selectedCategory.toLowerCase() == "Petty Cash".toLowerCase()) {
       return HrAndPettycashCard(approvalItems: approvalItems);
-    }
-    else if(selectedCategory.toLowerCase()=="RFQ".toLowerCase()){
+    } else if (selectedCategory.toLowerCase() == "RFQ".toLowerCase()) {
       return InvoiceAndRfqCard(approvalItems: approvalItems);
-    }
-    else if(selectedCategory.toLowerCase()=="INVOICE".toLowerCase()){
+    } else if (selectedCategory.toLowerCase() == "INVOICE".toLowerCase()) {
       return InvoiceAndRfqCard(approvalItems: approvalItems);
-    }
-    else{
+    } else {
       return const SizedBox.shrink();
     }
   }

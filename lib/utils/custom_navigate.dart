@@ -53,3 +53,68 @@ class CustomPageRoute extends PageRouteBuilder {
           },
         );
 }
+
+// Animation خاصة للصفحات الجانبية (Notifications, My Notes)
+class SlideRightPageRoute extends PageRouteBuilder {
+  final Widget child;
+
+  SlideRightPageRoute({required this.child})
+      : super(
+          transitionDuration: const Duration(milliseconds: 400),
+          reverseTransitionDuration: const Duration(milliseconds: 500),
+          pageBuilder: (context, animation, secondaryAnimation) => child,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            final isPopping = animation.status == AnimationStatus.reverse;
+
+            if (isPopping) {
+              // خروج: نفس animation الـ CustomPageRoute
+              final curved = CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOut,
+              );
+
+              final slide = Tween<Offset>(
+                begin: const Offset(0, 1),
+                end: Offset.zero,
+              ).animate(curved);
+
+              final fade = Tween<double>(
+                begin: 0.0,
+                end: 1.0,
+              ).animate(curved);
+
+              return SlideTransition(
+                position: slide,
+                child: FadeTransition(
+                  opacity: fade,
+                  child: child,
+                ),
+              );
+            } else {
+              // دخول: من اليمين
+              final curved = CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              );
+
+              final slideIn = Tween<Offset>(
+                begin: const Offset(1.0, 0.0),
+                end: Offset.zero,
+              ).animate(curved);
+
+              final fade = Tween<double>(
+                begin: 0.85,
+                end: 1.0,
+              ).animate(curved);
+
+              return SlideTransition(
+                position: slideIn,
+                child: FadeTransition(
+                  opacity: fade,
+                  child: child,
+                ),
+              );
+            }
+          },
+        );
+}
