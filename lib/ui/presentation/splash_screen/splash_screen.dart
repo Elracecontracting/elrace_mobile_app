@@ -3,6 +3,7 @@ import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/utils/Util.dart';
+import 'package:el_race/ui/presentation/instruction/views/instruction_view.dart';
 import 'package:el_race/ui/presentation/authenticate_face/views/authenticate_face_view.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -21,21 +22,32 @@ class _SplashScreenState extends State<SplashScreen> {
         // Check if there's a pending face verification
         final isPendingFaceVerification =
             SharedPref().getPreferenceBoolean('pendingFaceVerification');
+        final isFaceRegistered =
+            SharedPref().getPreferenceBoolean('isFaceRegistered');
 
         if (isPendingFaceVerification) {
-          // Must complete face verification first
-          Util.pushPageAndRemoveRoutes(
-            AuthenticateFaceView(
-              loginResponseModel: SharedPref.getLoginData(),
-              isLeftToRight: true,
-              onCheckInStatusChanged: (bool checkedIn) {
-                // Face verification completed successfully
-                SharedPref()
-                    .setPreferencesBoolean('pendingFaceVerification', false);
-              },
-            ),
-            context,
-          );
+          // Check if face is already registered
+          if (isFaceRegistered) {
+            // Face already registered, go to authenticate screen
+            Util.pushPageAndRemoveRoutes(
+              AuthenticateFaceView(
+                loginResponseModel: SharedPref.getLoginData(),
+                isLeftToRight: true,
+                onCheckInStatusChanged: (bool checkedIn) {
+                  // Face verification completed successfully
+                  SharedPref()
+                      .setPreferencesBoolean('pendingFaceVerification', false);
+                },
+              ),
+              context,
+            );
+          } else {
+            // Face not registered yet, go to instruction screen to register
+            Util.pushPageAndRemoveRoutes(
+              InstructionView(loginResponseModel: SharedPref.getLoginData()),
+              context,
+            );
+          }
         } else {
           Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
         }

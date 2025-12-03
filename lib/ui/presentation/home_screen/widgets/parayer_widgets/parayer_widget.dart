@@ -59,7 +59,11 @@ class _ParayerWidgetState extends State<ParayerWidget>
     }
   }
 
-  String _fmt(DateTime dt) => DateFormat('hh:mm a').format(dt);
+  String _fmt(DateTime dt) {
+    final locale = Localizations.localeOf(context).languageCode;
+    return DateFormat('hh:mm a', locale).format(dt);
+  }
+
   String _hhmmssUntil(DateTime? t) {
     if (t == null) return '--:--:--';
     final diff = t.difference(DateTime.now());

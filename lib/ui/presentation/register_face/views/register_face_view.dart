@@ -340,7 +340,9 @@ class _RegisterFaceViewState extends State<RegisterFaceView>
                                             ?.emp_id ??
                                         "");
 
-                                // Clear the pending face verification flag after successful registration
+                                // Mark face as registered and clear the pending flag
+                                SharedPref().setPreferencesBoolean(
+                                    'isFaceRegistered', true);
                                 SharedPref().setPreferencesBoolean(
                                     'pendingFaceVerification', false);
 
