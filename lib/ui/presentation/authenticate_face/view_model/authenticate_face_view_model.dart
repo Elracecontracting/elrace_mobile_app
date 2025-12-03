@@ -659,6 +659,9 @@ class AuthenticateFaceViewController extends GetxController {
     updateFaceRecognitionStatus(
         context, home_bloc.FaceRecognitionStatus.matched);
 
+    // Clear pending face verification flag - face verification completed successfully
+    SharedPref().setPreferencesBoolean('pendingFaceVerification', false);
+
     // Show loading
     showDialog(
       context: context,
@@ -707,23 +710,24 @@ class AuthenticateFaceViewController extends GetxController {
         context, home_bloc.FaceRecognitionStatus.failed);
     showDialog(
       context: context,
+      barrierDismissible: false, // Prevent closing by tapping outside
       builder: (_) => AlertDialog(
         title: const Text("Authentication Failed"),
         content: const Text("Face doesn't match. Please try again."),
         actions: [
           TextButton(
             onPressed: () {
-              updateFaceRecognitionStatus(
-                  context, home_bloc.FaceRecognitionStatus.idle);
               Navigator.of(context).pop();
+              // Keep pendingFaceVerification true - user must retry
+              // Return to matching state to retry
+              updateFaceRecognitionStatus(
+                  context, home_bloc.FaceRecognitionStatus.matching);
             },
-            child: const Text("OK"),
+            child: const Text("Try Again"),
           )
         ],
       ),
     );
-    await Future.delayed(const Duration(milliseconds: 200));
-    updateFaceRecognitionStatus(context, home_bloc.FaceRecognitionStatus.idle);
   }
 
   void updateFaceRecognitionStatus(
@@ -802,6 +806,7 @@ class AuthenticateFaceViewController extends GetxController {
     }
     return "Not Checked In";
   }
+
   Future<void> processImage(InputImage inputImage, BuildContext context) async {
     if (!canProcess || isBusy) return;
     isBusy = true;
@@ -809,7 +814,8 @@ class AuthenticateFaceViewController extends GetxController {
     // بدء مؤقت فشل التعرف إذا لم يُكتشف وجه
     if (faceDetectionTimer == null) {
       print("⏰ بدء مؤقت فشل التعرف (${faceDetectionTimeoutSeconds} ثانية)");
-      faceDetectionTimer = Timer(Duration(seconds: faceDetectionTimeoutSeconds), () {
+      faceDetectionTimer =
+          Timer(Duration(seconds: faceDetectionTimeoutSeconds), () {
         if (hasFace.value == false) {
           print("❌ انتهت المهلة بدون اكتشاف وجه");
           faceDetectionTimer = null;
@@ -843,7 +849,8 @@ class AuthenticateFaceViewController extends GetxController {
           final double scaleX = viewWidth / imageSize.height;
           final double scaleY = viewHeight / imageSize.width;
 
-          final bool isFrontCamera = camera.lensDirection == CameraLensDirection.front;
+          final bool isFrontCamera =
+              camera.lensDirection == CameraLensDirection.front;
 
           Rect scaledRect = Rect.fromLTRB(
             faceRect.left * scaleX,
@@ -877,10 +884,12 @@ class AuthenticateFaceViewController extends GetxController {
 
             FaceSizeZone newZone;
 
-            if (faceWidth < (minFaceSize - buffer) || faceHeight < (minFaceSize - buffer)) {
+            if (faceWidth < (minFaceSize - buffer) ||
+                faceHeight < (minFaceSize - buffer)) {
               newZone = FaceSizeZone.tooSmall;
               runtimeInstruction.value = "اقترب من الكاميرا";
-            } else if (faceWidth > (maxFaceSize + buffer) || faceHeight > (maxFaceSize + buffer)) {
+            } else if (faceWidth > (maxFaceSize + buffer) ||
+                faceHeight > (maxFaceSize + buffer)) {
               newZone = FaceSizeZone.tooBig;
               runtimeInstruction.value = "ابتعد قليلاً عن الكاميرا";
             } else {
@@ -917,7 +926,8 @@ class AuthenticateFaceViewController extends GetxController {
     }
   }
 
-  Future<void> processImage2(InputImage inputImage, BuildContext context) async {
+  Future<void> processImage2(
+      InputImage inputImage, BuildContext context) async {
     if (!canProcess || isBusy) return;
     isBusy = true;
 

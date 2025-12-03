@@ -178,6 +178,8 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           loginResponseModel: SharedPref.getLoginData(),
           isCheckedIn: isCheckedIn,
           onConfirmed: () async {
+            // Set pending face verification flag - must complete face verification
+            SharedPref().setPreferencesBoolean('pendingFaceVerification', true);
             context.read<HomeBloc>().add(const UpdateFaceRecognitionStatus(
                 FaceRecognitionStatus.matching));
             _resetPosition();
