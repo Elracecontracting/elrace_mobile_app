@@ -12,8 +12,7 @@ void showLeftToRightPopupClean({
   required bool isCheckedIn,
   required VoidCallback onConfirmed,
   required VoidCallback onCancelled,
-})
-{
+}) {
   Project? selectedProject;
   List<Project> projects = [];
   bool isLoading = true;
@@ -47,16 +46,16 @@ void showLeftToRightPopupClean({
                   proj.name.toLowerCase().contains(searchQuery.toLowerCase()))
               .toList();
 
-          final List<dynamic> branchIds = SharedPref.getLoginData()
-                  .result
-                  ?.data
-                  ?.userBranches
-                  ?.allowedBranch ??
-              <dynamic>[];
+          final loginData = SharedPref.getLoginDataOrNull();
+          final List<dynamic> branchIds =
+              loginData?.result?.data?.userBranches?.allowedBranch ??
+                  <dynamic>[];
 
           return Dialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            insetPadding: const EdgeInsets.symmetric(horizontal: 30, vertical: 24),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            insetPadding:
+                const EdgeInsets.symmetric(horizontal: 30, vertical: 24),
             child: SingleChildScrollView(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(24, 26, 24, 20),
@@ -66,7 +65,8 @@ void showLeftToRightPopupClean({
                   children: [
                     const SizedBox(height: 18),
 
-                    if (!isLoading && (projects.isNotEmpty || branchIds.isNotEmpty))
+                    if (!isLoading &&
+                        (projects.isNotEmpty || branchIds.isNotEmpty))
                       Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
@@ -249,11 +249,13 @@ void showLeftToRightPopupClean({
                         ),
                         const SizedBox(width: 12),
                         ElevatedButton(
-                          onPressed: (selectedProject != null || selectedBranch != null)
-                              && !isSubmitting ? () async {
-                            print("object");
-                            print("object");
-                            print("object");
+                          onPressed: (selectedProject != null ||
+                                      selectedBranch != null) &&
+                                  !isSubmitting
+                              ? () async {
+                                  print("object");
+                                  print("object");
+                                  print("object");
                                   setState(() {
                                     isSubmitting = true;
                                     errorMessage = null;

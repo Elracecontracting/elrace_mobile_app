@@ -61,7 +61,9 @@
       "Enter_amount_in_AED":"Enter amount in AED",
       "DESCRIPTION":"DESCRIPTION",
       "Save":"Save",
-      "Find_LPO":"FIND LPO"
+      "Find_LPO":"FIND LPO",
+      "total" : "Total",
+      "waiting" : "Waiting"
   },
   "profile": {
     "english": "English",

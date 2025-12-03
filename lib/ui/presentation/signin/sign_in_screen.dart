@@ -86,6 +86,9 @@ class _SignInScreenState extends State<SignInScreen> {
               'loginResponse', jsonEncode(state.loginResponse.toJson()));
           SharedPref().setPreferencesBoolean('isRegistered', true);
 
+          // Set flag that face verification is pending after login
+          SharedPref().setPreferencesBoolean('pendingFaceVerification', true);
+
           // final name = state.loginResponse.result?.data?.username?.toLowerCase() ?? "";
 
           // if (name == "jawad@elrace.com" || name == "aziz@elrace.com") {
@@ -123,7 +126,7 @@ class _SignInScreenState extends State<SignInScreen> {
                   alignment: Alignment.bottomRight,
                   child: Image.asset(
                     'assets/png/bottom_curve.png',
-                    width: ScreenUtil().screenWidth* 0.65,
+                    width: ScreenUtil().screenWidth * 0.65,
                     fit: BoxFit.fill,
                     alignment: Alignment.bottomRight,
                   ),
@@ -186,10 +189,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                 child: Text(
                                   'Remember Password',
                                   style: GoogleFonts.tajawal(
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xff30309B),
-                                    fontSize: 15
-                                  ),
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xff30309B),
+                                      fontSize: 15),
                                 ),
                               ),
                             ],
@@ -228,15 +230,17 @@ class _SignInScreenState extends State<SignInScreen> {
                                   fontSize: 12.0,
                                 ),
                               ),
-                              const SizedBox(height: 4), // ← المسافة بين النص والخط (زيدها إذا بدك)
+                              const SizedBox(
+                                  height:
+                                      4), // ← المسافة بين النص والخط (زيدها إذا بدك)
                               Container(
-                                width: 120, // ← عرض الخط (عدل حسب الطول اللي بدك ياه)
+                                width:
+                                    120, // ← عرض الخط (عدل حسب الطول اللي بدك ياه)
                                 height: 0.8, // ← سماكة الخط
                                 color: HexColor("#999999"), // ← نفس لون النص
                               ),
                             ],
                           ),
-
                         ),
                         SizedBox(height: SizeConfig().getHeight(70)),
                         Text(

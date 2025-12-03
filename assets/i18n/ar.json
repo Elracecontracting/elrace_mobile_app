@@ -61,7 +61,9 @@
       "Enter_amount_in_AED":"أدخل المبلغ بالدرهم",
       "DESCRIPTION":"الوصف",
       "Save":"حفظ",
-      "Find_LPO":"ابحث عن LPO"
+      "Find_LPO":"ابحث عن LPO",
+      "total" : "المجموع",
+      "waiting" : "بالانتظار"
       
     },
     "profile": {

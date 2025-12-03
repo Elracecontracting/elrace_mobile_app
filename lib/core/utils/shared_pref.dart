@@ -98,7 +98,7 @@ class SharedPref {
   }
 
   ////[helper_functions]
-  static bool isUserAuthenticated(){
+  static bool isUserAuthenticated() {
     final data = checkLoginAndRegistration();
     final isRegistered = data['isRegistered'] as bool;
     final loginData = data['loginResponse'] as LoginResponseModel?;
@@ -106,10 +106,16 @@ class SharedPref {
     return isRegistered && loginData != null;
   }
 
-  static LoginResponseModel getLoginData(){
+  static LoginResponseModel getLoginData() {
     final data = checkLoginAndRegistration();
-    final loginData = data['loginResponse'] as LoginResponseModel;
-    return loginData;
+    final loginData = data['loginResponse'] as LoginResponseModel?;
+    // Return empty model if not authenticated (for guest mode)
+    return loginData ?? LoginResponseModel();
+  }
+
+  static LoginResponseModel? getLoginDataOrNull() {
+    final data = checkLoginAndRegistration();
+    return data['loginResponse'] as LoginResponseModel?;
   }
 
   static Map<String, dynamic> checkLoginAndRegistration() {
@@ -135,7 +141,7 @@ class SharedPref {
     return sharedPreferences.setInt("selectedCompany", id);
   }
 
-  getUserBase64Image()  {
+  getUserBase64Image() {
     final userJson = sharedPreferences.getString('loginResponse');
     if (userJson != null) {
       final parsed = json.decode(userJson);
@@ -144,7 +150,4 @@ class SharedPref {
     }
     return '';
   }
-
-  
-
 }

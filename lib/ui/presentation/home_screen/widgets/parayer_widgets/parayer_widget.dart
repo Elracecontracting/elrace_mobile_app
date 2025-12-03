@@ -70,6 +70,25 @@ class _ParayerWidgetState extends State<ParayerWidget>
     return '$hh:$mm:$ss';
   }
 
+  // Get prayer time based on Prayer enum
+  DateTime? _getPrayerTime(PrayerTimes? pt, Prayer? prayer) {
+    if (pt == null || prayer == null) return null;
+    switch (prayer) {
+      case Prayer.fajr:
+        return pt.fajr;
+      case Prayer.dhuhr:
+        return pt.dhuhr;
+      case Prayer.asr:
+        return pt.asr;
+      case Prayer.maghrib:
+        return pt.maghrib;
+      case Prayer.isha:
+        return pt.isha;
+      default:
+        return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<HomeBloc, HomeState>(
@@ -141,24 +160,25 @@ class _ParayerWidgetState extends State<ParayerWidget>
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.center,
                           mainAxisAlignment: MainAxisAlignment.center,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Row(
                               children: [
                                 Text(translate('home.prayer_times'),
                                     style: GoogleFonts.koulen(
-                                      fontSize: 23.sp,
+                                      fontSize: 20.sp,
                                       fontWeight: FontWeight.w400,
                                       color: Colors.white,
                                     )),
                                 const Spacer(),
                                 if (error != null)
                                   Padding(
-                                    padding: EdgeInsets.only(right: 8.w),
+                                    padding: EdgeInsets.only(right: 6.w),
                                     child: Icon(Icons.error_outline,
                                         color: Colors.yellow.shade200,
-                                        size: 18.sp),
+                                        size: 16.sp),
                                   ),
-                                SizedBox(width: 12.w),
+                                SizedBox(width: 8.w),
                                 InkWell(
                                   onTap: () {
                                     context
@@ -178,193 +198,206 @@ class _ParayerWidgetState extends State<ParayerWidget>
                               ],
                             ),
                             if (error != null) ...[
-                              SizedBox(height: 8.h),
+                              SizedBox(height: 4.h),
                               Text(
                                 error,
                                 style: GoogleFonts.kanit(
-                                    fontSize: 12.sp, color: Colors.white70),
-                                maxLines: 2,
+                                    fontSize: 10.sp, color: Colors.white70),
+                                maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  TextButton(
-                                    onPressed: Geolocator.openLocationSettings,
-                                    child: Text('Open Location Settings'),
-                                  ),
-                                  TextButton(
-                                    onPressed: Geolocator.openAppSettings,
-                                    child: Text('Open App Settings'),
-                                  ),
-                                ],
+                              SizedBox(height: 2.h),
+                              TextButton(
+                                onPressed: Geolocator.openLocationSettings,
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 8.w, vertical: 2.h),
+                                  minimumSize: Size.zero,
+                                  tapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                child: Text(
+                                  'Open Location Settings',
+                                  style: TextStyle(fontSize: 10.sp),
+                                ),
                               ),
                             ],
-                            Stack(children: [
-                              Column(
-                                children: [
-                                  SizedBox(height: 70.h),
-                                  SvgPicture.asset(
+                            SizedBox(
+                              height: 150.h,
+                              child: Stack(children: [
+                                Positioned(
+                                  bottom: 0,
+                                  left: 0,
+                                  right: 0,
+                                  child: SvgPicture.asset(
                                     'assets/png/prayer_curve.svg',
                                     height: 80.h,
                                     fit: BoxFit.fill,
                                   ),
-                                ],
-                              ),
-                              Positioned(
-                                  bottom: 40.h,
-                                  left: -1.w,
-                                  child: LabelWidget(
-                                      name: translate('home.Fajr'),
-                                      time: _fmt(pt?.fajr ?? DateTime.now()))),
-                              Positioned(
-                                  top: 75.h,
-                                  left: 50.w,
-                                  child: SvgPicture.asset(
-                                      'assets/png/fajr_icon.svg')),
-                              Positioned(
-                                  bottom: 85.w,
-                                  left: 60.w,
-                                  child: LabelWidget(
-                                      name: translate('home.Dhuhr'),
-                                      time: _fmt(pt?.dhuhr ?? DateTime.now()))),
-                              Positioned(
-                                bottom: 70.w,
-                                right: 0.w,
-                                left: 0.w,
-                                child: Center(
-                                  child: Container(
-                                    width: 70.w,
-                                    height: 35.w,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: const Color(0xFFFFE082)
-                                              .withOpacity(0.95),
-                                          blurRadius: 1,
-                                          spreadRadius: 1,
+                                ),
+                                Positioned(
+                                    bottom: 40.h,
+                                    left: -1.w,
+                                    child: LabelWidget(
+                                        name: translate('home.Fajr'),
+                                        time:
+                                            _fmt(pt?.fajr ?? DateTime.now()))),
+                                Positioned(
+                                    top: 75.h,
+                                    left: 50.w,
+                                    child: SvgPicture.asset(
+                                        'assets/png/fajr_icon.svg')),
+                                Positioned(
+                                    bottom: 85.w,
+                                    left: 60.w,
+                                    child: LabelWidget(
+                                        name: translate('home.Dhuhr'),
+                                        time:
+                                            _fmt(pt?.dhuhr ?? DateTime.now()))),
+                                Positioned(
+                                  bottom: 70.w,
+                                  right: 0.w,
+                                  left: 0.w,
+                                  child: Center(
+                                    child: Container(
+                                      width: 70.w,
+                                      height: 35.w,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFFFFE082)
+                                                .withOpacity(0.95),
+                                            blurRadius: 1,
+                                            spreadRadius: 1,
+                                          ),
+                                          BoxShadow(
+                                            color: const Color(0xFFFFC107)
+                                                .withOpacity(0.55),
+                                            blurRadius: 5,
+                                            spreadRadius: 5,
+                                          ),
+                                        ],
+                                      ),
+                                      child: Center(
+                                        child: SvgPicture.asset(
+                                          'assets/png/dhuhr_icon.svg',
+                                          width: 36.w,
+                                          height: 36.w,
                                         ),
-                                        BoxShadow(
-                                          color: const Color(0xFFFFC107)
-                                              .withOpacity(0.55),
-                                          blurRadius: 5,
-                                          spreadRadius: 5,
-                                        ),
-                                      ],
-                                    ),
-                                    child: Center(
-                                      child: SvgPicture.asset(
-                                        'assets/png/dhuhr_icon.svg',
-                                        width: 36.w,
-                                        height: 36.w,
                                       ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              Positioned(
-                                  bottom: 85.w,
-                                  right: 50.w,
-                                  child: LabelWidget(
-                                      name: translate('home.Maghrib'),
-                                      time:
-                                          _fmt(pt?.maghrib ?? DateTime.now()))),
-                              Positioned(
-                                  bottom: 35.h,
-                                  right: 0.w,
-                                  child: LabelWidget(
-                                      name: translate('home.Isha'),
-                                      time: _fmt(pt?.isha ?? DateTime.now()))),
-                              Positioned(
-                                  top: 85.h,
-                                  right: 50.w,
-                                  child: SvgPicture.asset(
-                                      'assets/png/ishaa_icon.svg')),
-                              Positioned(
-                                top: 1.h,
-                                left: 0,
-                                right: 0,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        borderRadius:
-                                            BorderRadius.circular(6.3),
-                                        border: Border.all(color: Colors.white),
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 6.3),
-                                        child: ShaderMask(
-                                          shaderCallback: (b) =>
-                                              const LinearGradient(
-                                            colors: [
-                                              Color(0xffFFFFFF),
-                                              Color(0xff999999)
-                                            ],
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                          ).createShader(b),
-                                          child: Text(
-                                            translate('home.Asr'),
-                                            style: GoogleFonts.kanit(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w400,
-                                              color: Colors.white,
+                                Positioned(
+                                    bottom: 85.w,
+                                    right: 50.w,
+                                    child: LabelWidget(
+                                        name: translate('home.Maghrib'),
+                                        time: _fmt(
+                                            pt?.maghrib ?? DateTime.now()))),
+                                Positioned(
+                                    bottom: 35.h,
+                                    right: 0.w,
+                                    child: LabelWidget(
+                                        name: translate('home.Isha'),
+                                        time:
+                                            _fmt(pt?.isha ?? DateTime.now()))),
+                                Positioned(
+                                    top: 85.h,
+                                    right: 50.w,
+                                    child: SvgPicture.asset(
+                                        'assets/png/ishaa_icon.svg')),
+                                Positioned(
+                                  top: 1.h,
+                                  left: 0,
+                                  right: 0,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(6.3),
+                                          border:
+                                              Border.all(color: Colors.white),
+                                        ),
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6.3),
+                                          child: ShaderMask(
+                                            shaderCallback: (b) =>
+                                                const LinearGradient(
+                                              colors: [
+                                                Color(0xffFFFFFF),
+                                                Color(0xff999999)
+                                              ],
+                                              begin: Alignment.topLeft,
+                                              end: Alignment.bottomRight,
+                                            ).createShader(b),
+                                            child: Text(
+                                              translate(_prayerKey(
+                                                  nextPrayer ?? Prayer.fajr)),
+                                              style: GoogleFonts.kanit(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w400,
+                                                color: Colors.white,
+                                              ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      _fmt(pt?.asr ?? DateTime.now()),
-                                      style: GoogleFonts.kanit(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w400,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Positioned(
-                                bottom: 18.h,
-                                right: 0,
-                                left: 0,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Builder(builder: (context) {
-                                      final Prayer prayerToUse =
-                                          nextPrayer ?? Prayer.fajr;
-                                      final nextPrayerName =
-                                          translate(_prayerKey(prayerToUse));
-
-                                      return Text(
-                                        translate('home.till_prayer',
-                                            args: {'prayer': nextPrayerName}),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _fmt(_getPrayerTime(pt, nextPrayer) ??
+                                            DateTime.now()),
                                         style: GoogleFonts.kanit(
-                                          fontSize: 14,
+                                          fontSize: 10,
                                           fontWeight: FontWeight.w400,
                                           color: Colors.white,
                                         ),
-                                      );
-                                    }),
-                                    Text(
-                                      _hhmmssUntil(nextTime),
-                                      style: GoogleFonts.kanit(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w400,
-                                        color: Colors.white,
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ]),
+                                Positioned(
+                                  bottom: 18.h,
+                                  right: 0,
+                                  left: 0,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Builder(builder: (context) {
+                                        final Prayer prayerToUse =
+                                            nextPrayer ?? Prayer.fajr;
+                                        final nextPrayerName =
+                                            translate(_prayerKey(prayerToUse));
+
+                                        return Text(
+                                          translate('home.till_prayer',
+                                              args: {'prayer': nextPrayerName}),
+                                          style: GoogleFonts.kanit(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w400,
+                                            color: Colors.white,
+                                          ),
+                                        );
+                                      }),
+                                      Text(
+                                        _hhmmssUntil(nextTime),
+                                        style: GoogleFonts.kanit(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w400,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ]),
+                            ),
                           ],
                         ),
                       ),

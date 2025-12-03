@@ -14,7 +14,6 @@ import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
 // For generating user ID
 
-
 class RegisterFaceView extends StatefulWidget {
   const RegisterFaceView({super.key});
 
@@ -22,7 +21,8 @@ class RegisterFaceView extends StatefulWidget {
   State<RegisterFaceView> createState() => _RegisterFaceViewState();
 }
 
-class _RegisterFaceViewState extends State<RegisterFaceView> with TickerProviderStateMixin{
+class _RegisterFaceViewState extends State<RegisterFaceView>
+    with TickerProviderStateMixin {
   //  late AnimationController _arrowController;
   // late Animation<double> _arrowScaleAnimation;
 
@@ -157,8 +157,6 @@ class _RegisterFaceViewState extends State<RegisterFaceView> with TickerProvider
             ),
             body: Column(
               children: [
-
-                
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
@@ -170,48 +168,53 @@ class _RegisterFaceViewState extends State<RegisterFaceView> with TickerProvider
                             visible: controller.capturedImage == null,
                             child: Center(
                               child: SizedBox(
-                                width: 200, // Set the width for the Lottie animation
-                                height: 120, // Set the height for the Lottie animation
+                                width:
+                                    200, // Set the width for the Lottie animation
+                                height:
+                                    120, // Set the height for the Lottie animation
                                 child: getLottieAnimation(controller),
                               ),
                             ),
                           ),
-                  
-                  
+
                           const SizedBox(height: 20),
                           controller.capturedImage != null
                               ? CircleAvatar(
-                            radius: 0.15.sh,
-                            backgroundImage: FileImage(controller.capturedImage!),
-                          )
+                                  radius: 0.15.sh,
+                                  backgroundImage:
+                                      FileImage(controller.capturedImage!),
+                                )
                               : Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              // TweenAnimationBuilder<double>(
-                              //   tween: Tween(begin: 0, end: controller.gestureProgress.value),
-                              //   duration: const Duration(milliseconds: 300),
-                              //   builder: (_, value, __) {
-                              //     return SizedBox(
-                              //       height: 0.31.sh,
-                              //       width: 0.31.sh,
-                              //       child: CircularProgressIndicator(
-                              //         value: value,
-                              //         strokeWidth: 15,
-                              //         backgroundColor: controller.hasFace.value?AppColors.loaderColors.withAlpha(50):AppColors.red.withAlpha(100),
-                              //         valueColor: const AlwaysStoppedAnimation(AppColors.loaderColors),
-                              //       ),
-                              //     );
-                              //   },
-                              // ),
-                              DetectorView(
-                                cameraSize: Size(0.40.sh, 0.40.sh),
-                                title: 'Face Detector',
-                                onController: controller.setCameraController,
-                                onImage: (inputImage) => controller.processImage(inputImage, context),
-                                initialCameraLensDirection: CameraLensDirection.front,
-                              ),
-                            ],
-                          ),
+                                  alignment: Alignment.center,
+                                  children: [
+                                    // TweenAnimationBuilder<double>(
+                                    //   tween: Tween(begin: 0, end: controller.gestureProgress.value),
+                                    //   duration: const Duration(milliseconds: 300),
+                                    //   builder: (_, value, __) {
+                                    //     return SizedBox(
+                                    //       height: 0.31.sh,
+                                    //       width: 0.31.sh,
+                                    //       child: CircularProgressIndicator(
+                                    //         value: value,
+                                    //         strokeWidth: 15,
+                                    //         backgroundColor: controller.hasFace.value?AppColors.loaderColors.withAlpha(50):AppColors.red.withAlpha(100),
+                                    //         valueColor: const AlwaysStoppedAnimation(AppColors.loaderColors),
+                                    //       ),
+                                    //     );
+                                    //   },
+                                    // ),
+                                    DetectorView(
+                                      cameraSize: Size(0.40.sh, 0.40.sh),
+                                      title: 'Face Detector',
+                                      onController:
+                                          controller.setCameraController,
+                                      onImage: (inputImage) => controller
+                                          .processImage(inputImage, context),
+                                      initialCameraLensDirection:
+                                          CameraLensDirection.front,
+                                    ),
+                                  ],
+                                ),
                           const SizedBox(height: 20),
                           // AnimatedSwitcher(
                           //   duration: const Duration(milliseconds: 400),
@@ -223,7 +226,7 @@ class _RegisterFaceViewState extends State<RegisterFaceView> with TickerProvider
                           //       parent: animation,
                           //       curve: Curves.easeOut,
                           //     ));
-                  
+
                           //     return SlideTransition(
                           //       position: slideAnimation,
                           //       child: FadeTransition(
@@ -247,22 +250,29 @@ class _RegisterFaceViewState extends State<RegisterFaceView> with TickerProvider
                           //     textAlign: TextAlign.center,
                           //   ),
                           // ),
-                          const SizedBox(height: 20,),
+                          const SizedBox(
+                            height: 20,
+                          ),
                           ListView.builder(
                             itemCount: controller.gestureDescriptions.length,
                             physics: const NeverScrollableScrollPhysics(),
                             shrinkWrap: true,
-                            padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 0, horizontal: 0),
                             itemBuilder: (context, index) {
-                              final item = controller.gestureDescriptions[index];
-                              final color = controller.getStatusColor(item.statusKey!.value);
-                  
+                              final item =
+                                  controller.gestureDescriptions[index];
+                              final color = controller
+                                  .getStatusColor(item.statusKey!.value);
+
                               return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 10.0),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 10.0),
                                 child: Row(
                                   children: [
                                     AnimatedSwitcher(
-                                        duration: const Duration(milliseconds: 300),
+                                        duration:
+                                            const Duration(milliseconds: 300),
                                         transitionBuilder: (child, animation) {
                                           return SlideTransition(
                                             position: Tween<Offset>(
@@ -272,13 +282,21 @@ class _RegisterFaceViewState extends State<RegisterFaceView> with TickerProvider
                                               parent: animation,
                                               curve: Curves.easeOut,
                                             )),
-                                            child: FadeTransition(opacity: animation, child: child),
+                                            child: FadeTransition(
+                                                opacity: animation,
+                                                child: child),
                                           );
                                         },
-                                        child: Icon(item.statusKey!.value == "Approved"?Icons.check_circle_rounded:item.statusKey!.value == "In progress"?Icons.radio_button_checked:Icons.radio_button_unchecked,
+                                        child: Icon(
+                                            item.statusKey!.value == "Approved"
+                                                ? Icons.check_circle_rounded
+                                                : item.statusKey!.value ==
+                                                        "In progress"
+                                                    ? Icons.radio_button_checked
+                                                    : Icons
+                                                        .radio_button_unchecked,
                                             color: color,
-                                            size: 24)
-                                    ),
+                                            size: 24)),
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
@@ -300,20 +318,35 @@ class _RegisterFaceViewState extends State<RegisterFaceView> with TickerProvider
                             CustomButton(
                               text: "Home Screen",
                               onTap: () async {
-                                  SharedPref().setPreferencesBoolean('isRegistered', true); // Save registration status
-                                final name =SharedPref.getLoginData().result?.data?.name;
+                                SharedPref().setPreferencesBoolean(
+                                    'isRegistered',
+                                    true); // Save registration status
+                                final name = SharedPref.getLoginData()
+                                    .result
+                                    ?.data
+                                    ?.name;
 
                                 if (name == null || name.isEmpty) {
-                                  CustomToast().showToast("User name is missing");
+                                  CustomToast()
+                                      .showToast("User name is missing");
                                   return;
                                 }
 
-                                  await controller.registerUser(name, SharedPref.getLoginData().result?.data?.emp_id ?? "");
+                                await controller.registerUser(
+                                    name,
+                                    SharedPref.getLoginData()
+                                            .result
+                                            ?.data
+                                            ?.emp_id ??
+                                        "");
+
+                                // Clear the pending face verification flag after successful registration
+                                SharedPref().setPreferencesBoolean(
+                                    'pendingFaceVerification', false);
 
                                 Util.pushPage(const HomeScreen(), context);
                               },
                             )
-
                         ],
                       ),
                     ),
@@ -328,9 +361,11 @@ class _RegisterFaceViewState extends State<RegisterFaceView> with TickerProvider
                   child: controller.hasInternet.value
                       ? const SizedBox.shrink()
                       : const Text(
-                    "No Internet Connection",
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.normal),
-                  ),
+                          "No Internet Connection",
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.normal),
+                        ),
                 ),
               ],
             ),
@@ -338,14 +373,16 @@ class _RegisterFaceViewState extends State<RegisterFaceView> with TickerProvider
         );
       },
     );
-
   }
 
   Widget getLottieAnimation(controller) {
     if (controller.currentStep < controller.gestureDescriptions.length) {
-      final gestureKey = controller.gestureDescriptions[controller.currentStep].step;
-      final animationPath = controller.gestureAnimations[gestureKey] ?? AppString.inside;
-      return Lottie.asset(controller.hasFace.value ? animationPath : AppString.inside);
+      final gestureKey =
+          controller.gestureDescriptions[controller.currentStep].step;
+      final animationPath =
+          controller.gestureAnimations[gestureKey] ?? AppString.inside;
+      return Lottie.asset(
+          controller.hasFace.value ? animationPath : AppString.inside);
     } else {
       return const SizedBox();
     }
