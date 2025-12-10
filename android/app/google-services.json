@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "822197568314",
-    "project_id": "elrace-578e7",
-    "storage_bucket": "elrace-578e7.firebasestorage.app"
+    "project_number": "392748487890",
+    "project_id": "elrace-new",
+    "storage_bucket": "elrace-new.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:822197568314:android:8319823f2c8a2012464603",
+        "mobilesdk_app_id": "1:392748487890:android:c475c90ac7c1dcf00f490b",
         "android_client_info": {
           "package_name": "com.el_race.app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyA1tiFBhPGNE78axJ9VGj29Ec8NlZsHJ2g"
+          "current_key": "AIzaSyCYyh1LsubgOP-iUdR6aPtZkWrMjMZjqVc"
         }
       ],
       "services": {

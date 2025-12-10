@@ -428,108 +428,113 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                       ),
                     )
                   else
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _filteredDocs().length +
-                          1, // +1 for Add New Document card
-                      itemBuilder: (context, index) {
-                        // First item is "Add New Document"
-                        if (index == 0) {
-                          return GestureDetector(
-                            onTap: () {
-                              showDocumentDialog(context);
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(30.18),
-                                border: Border.all(
-                                  color: const Color(0xffD9D9D9),
+                    Center(
+                      child: GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: _filteredDocs().length +
+                            1, // +1 for Add New Document card
+                        itemBuilder: (context, index) {
+                          // First item is "Add New Document"
+                          if (index == 0) {
+                            return GestureDetector(
+                              onTap: () {
+                                showDocumentDialog(context);
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(30.18),
+                                  border: Border.all(
+                                    color: const Color(0xffD9D9D9),
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SvgPicture.asset('assets/png/add_doc.svg'),
+                                    SizedBox(height: 10.h),
+                                    Text(
+                                      'Add New Document',
+                                      style: GoogleFonts.aBeeZee(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w400,
+                                        fontStyle: FontStyle.italic,
+                                        letterSpacing: .10,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SvgPicture.asset('assets/png/add_doc.svg'),
-                                  SizedBox(height: 10.h),
-                                  Text(
-                                    'Add New Document',
-                                    style: GoogleFonts.aBeeZee(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w400,
-                                      fontStyle: FontStyle.italic,
-                                      letterSpacing: .10,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
+                            );
+                          }
+
+                          // Regular document cards
+                          final item = _filteredDocs()[index - 1];
+
+                          // Check if document is expired
+                          bool isExpired = false;
+                          if (item['expiry_date'] != null &&
+                              item['expiry_date'] != false) {
+                            try {
+                              final expiryDate = DateTime.parse(
+                                  item['expiry_date'].toString());
+                              isExpired = expiryDate.isBefore(DateTime.now());
+                            } catch (e) {
+                              // If parsing fails, not expired
+                              isExpired = false;
+                            }
+                          }
+
+                          return Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(30.18),
+                              border: Border.all(
+                                color: isExpired
+                                    ? const Color(0xFFBA1719)
+                                    : const Color(0xffD9D9D9),
+                                width: isExpired ? 2 : 1,
                               ),
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Image.asset(item['icon']),
+                                SizedBox(height: 8.h),
+                                Text(
+                                  item['title'],
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.koulen(
+                                    fontSize: 11.35,
+                                    fontWeight: FontWeight.w400,
+                                    letterSpacing: .10,
+                                    color: const Color(0xff949494),
+                                  ),
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  item['name'],
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.aBeeZee(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w400,
+                                    fontStyle: FontStyle.italic,
+                                    letterSpacing: .10,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
                             ),
                           );
-                        }
-
-                        // Regular document cards
-                        final item = _filteredDocs()[index - 1];
-
-                        // Check if document is expired
-                        bool isExpired = false;
-                        if (item['expiry_date'] != null &&
-                            item['expiry_date'] != false) {
-                          try {
-                            final expiryDate =
-                                DateTime.parse(item['expiry_date'].toString());
-                            isExpired = expiryDate.isBefore(DateTime.now());
-                          } catch (e) {
-                            // If parsing fails, not expired
-                            isExpired = false;
-                          }
-                        }
-
-                        return Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(30.18),
-                            border: Border.all(
-                              color: isExpired
-                                  ? const Color(0xFFBA1719)
-                                  : const Color(0xffD9D9D9),
-                              width: isExpired ? 2 : 1,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Image.asset(item['icon']),
-                              SizedBox(height: 8.h),
-                              Text(
-                                item['title'],
-                                style: GoogleFonts.koulen(
-                                  fontSize: 11.35,
-                                  fontWeight: FontWeight.w400,
-                                  letterSpacing: .10,
-                                  color: const Color(0xff949494),
-                                ),
-                              ),
-                              SizedBox(height: 4.h),
-                              Text(
-                                item['name'],
-                                style: GoogleFonts.aBeeZee(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w400,
-                                  fontStyle: FontStyle.italic,
-                                  letterSpacing: .10,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 18,
-                        mainAxisSpacing: 30,
+                        },
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 18,
+                          mainAxisSpacing: 30,
+                        ),
                       ),
                     ),
                 ],

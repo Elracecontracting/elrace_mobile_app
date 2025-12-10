@@ -1,5 +1,6 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
+import 'package:el_race/data/services/prayer_background_service.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:el_race/ui/presentation/call_screen/bloc/contact_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
@@ -41,6 +42,10 @@ void main() async {
     Firebase.initializeApp(),
   ]);
   await FirebaseService.initialize();
+  
+  // تهيئة خدمة الأذان في الخلفية
+  await PrayerBackgroundService.initialize();
+  
   // debugPrint = (String? message, {int? wrapWidth}) {};
   // Get saved language from SharedPref
   final delegate = await LocalizationDelegate.create(

@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:adhan/adhan.dart';
 import 'package:el_race/data/services/hive_service.dart';
+import 'package:el_race/data/services/prayer_audio_service.dart';
+import 'package:el_race/data/services/prayer_background_service.dart';
 import 'package:equatable/equatable.dart';
 import 'package:el_race/ui/presentation/Attendace_list/repository/attendance_repository.dart';
 import 'package:flutter/material.dart';
@@ -66,10 +68,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   DateTime? _nextPrayerTime;
   bool _isSoundMuted = false;
   Timer? _prayerTicker;
+  final PrayerAudioService _audioService = PrayerAudioService();
 
   @override
   Future<void> close() {
     _prayerTicker?.cancel();
+    _audioService.dispose();
     return super.close();
   }
 
@@ -142,6 +146,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           ));
 
           _startPrayerTicker();
+          
+          // تهيئة خدمة الصوت
+          if (_prayerTimes != null) {
+            await _audioService.initialize(_prayerTimes!);
+            // إعادة جدولة المهام الخلفية مع أوقات الصلاة الجديدة
+            await PrayerBackgroundService.reschedule();
+          }
+          
           return;
         }
       }
@@ -167,30 +179,24 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       ));
 
       _startPrayerTicker();
+      
+      // تهيئة خدمة الصوت
+      if (_prayerTimes != null) {
+        await _audioService.initialize(_prayerTimes!);
+        // إعادة جدولة المهام الخلفية
+        await PrayerBackgroundService.reschedule();
+      }
     }
   }
 
   void _setPrayerTimesFromAPI(Map<String, dynamic> apiData) {
-    final prayers = apiData['prayers'] as List;
+    // final prayers = apiData['prayers'] as List;
     final nextPrayerData = apiData['next_prayer'];
-
-    // تحويل الأوقات من "HH:mm" إلى DateTime
-    final now = DateTime.now();
-    final fajrTime =
-        _parseTime(prayers.firstWhere((p) => p['title'] == 'Fajr')['time']);
-    final dhuhrTime =
-        _parseTime(prayers.firstWhere((p) => p['title'] == 'Dhuhr')['time']);
-    final asrTime =
-        _parseTime(prayers.firstWhere((p) => p['title'] == 'Asr')['time']);
-    final maghribTime =
-        _parseTime(prayers.firstWhere((p) => p['title'] == 'Maghrib')['time']);
-    final ishaTime =
-        _parseTime(prayers.firstWhere((p) => p['title'] == 'Isha')['time']);
 
     // إنشاء PrayerTimes object باستخدام positional parameters
     final coords = Coordinates(25.2048, 55.2708); // Dubai
     final params = CalculationMethod.egyptian.getParameters();
-    final dateComponents = DateComponents.from(now);
+    final dateComponents = DateComponents.from(DateTime.now());
 
     // استخدام constructor مع positional parameters
     _prayerTimes = PrayerTimes(
@@ -198,9 +204,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       dateComponents,
       params,
     );
-
-    // Override الأوقات يدوياً من خلال reflection أو استخدام الأوقات المحسوبة
-    // بما أن PrayerTimes لا يدعم custom times مباشرة، نستخدم object محسوب ونعتمد على nextPrayer
 
     // تحديد الصلاة القادمة من API
     final nextPrayerTitle = nextPrayerData['title'] as String;
@@ -219,13 +222,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     );
   }
 
-  DateTime _parseTime(String timeStr) {
-    final parts = timeStr.split(':');
-    final hour = int.parse(parts[0]);
-    final minute = int.parse(parts[1]);
-    final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day, hour, minute);
-  }
+  // DateTime _parseTime(String timeStr) {
+  //   final parts = timeStr.split(':');
+  //   final hour = int.parse(parts[0]);
+  //   final minute = int.parse(parts[1]);
+  //   final now = DateTime.now();
+  //   return DateTime(now.year, now.month, now.day, hour, minute);
+  // }
 
   Prayer _getPrayerFromTitle(String title) {
     switch (title.toLowerCase()) {
@@ -280,6 +283,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     if (n != _nextPrayer || nt != _nextPrayerTime) {
       _nextPrayer = n;
       _nextPrayerTime = nt;
+      
+      // تحديث خدمة الصوت بأوقات الصلاة الجديدة
+      _audioService.updatePrayerTimes(_prayerTimes!);
     }
 
     emit(PrayerTimesLoaded(

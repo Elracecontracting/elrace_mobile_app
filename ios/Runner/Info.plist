@@ -71,6 +71,18 @@
   <key>NSCameraUsageDescription</key>
   <string>The camera is used to take profile pictures and for face recognition during attendance check-in.</string>
 
+  <key>UIBackgroundModes</key>
+  <array>
+    <string>audio</string>
+    <string>fetch</string>
+    <string>processing</string>
+  </array>
+
+  <key>BGTaskSchedulerPermittedIdentifiers</key>
+  <array>
+    <string>com.el_race.app.prayerCheck</string>
+  </array>
+
   <key>CADisableMinimumFrameDurationOnPhone</key>
   <true/>
   <key>UIApplicationSupportsIndirectInputEvents</key>

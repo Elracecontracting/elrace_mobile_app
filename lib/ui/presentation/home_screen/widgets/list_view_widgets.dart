@@ -239,11 +239,12 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           childWidget: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
+ 
+               Padding(
                 padding: EdgeInsets.only(top: 90.w),
                 child: SizedBox(
                   width: SizeConfig()
-                      .getWidth(MediaQuery.of(context).size.width - 50),
+                      .getWidth(MediaQuery.of(context).size.width - 100),
                   height: SizeConfig().getHeight(50),
                   child: Center(
                       child: Image.asset('assets/newapp/simple_cards.png')),
