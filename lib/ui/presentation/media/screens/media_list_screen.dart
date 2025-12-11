@@ -70,78 +70,97 @@ class _MediaListScreenState extends State<MediaListScreen> {
           }
         },
         builder: (context, state) {
-          return SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: EdgeInsets.symmetric(horizontal: 14.w),
-            child: Column(
-              children: [
-                const SizedBox(height: 10),
-                _buildHeader(),
-                SizedBox(height: 16.h),
-                if (state is MediaLoading)
-                  const Padding(
-                    padding: EdgeInsets.all(50.0),
-                    child: Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  )
-                else if (state is MediaLoaded)
-                  (() {
-                    final q = _searchController.text.trim().toLowerCase();
-                    final list = q.isEmpty
-                        ? state.mediaList
-                        : state.mediaList.where((m) {
-                            final name = m.name.toLowerCase();
-                            final typeLabel = m.isImage ? 'image' : 'video';
-                            final id = m.id.toLowerCase();
-                            final url = (m.url).toLowerCase();
-                            final s3 = (m.xWebUrl ?? '').toLowerCase();
-                            final ext = m.fileExtension.toLowerCase();
-                            return name.contains(q) ||
-                                typeLabel.contains(q) ||
-                                id.contains(q) ||
-                                url.contains(q) ||
-                                s3.contains(q) ||
-                                ext.contains(q);
-                          }).toList();
+          return Column(
+            children: [
+              SingleChildScrollView(
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: 40.w),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    _buildHeader(),
+                    SizedBox(height: 16.h),
+                  ],
+                ),
+              ),
+              if (state is MediaLoading)
+                const Expanded(
+                  child: Center(
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: EdgeInsets.symmetric(horizontal: 40.w),
+                    child: Column(
+                      children: [
+                        if (state is MediaLoaded)
+                          (() {
+                            final q =
+                                _searchController.text.trim().toLowerCase();
+                            final list = q.isEmpty
+                                ? state.mediaList
+                                : state.mediaList.where((m) {
+                                    final name = m.name.toLowerCase();
+                                    final typeLabel =
+                                        m.isImage ? 'image' : 'video';
+                                    final id = m.id.toLowerCase();
+                                    final url = (m.url).toLowerCase();
+                                    final s3 = (m.xWebUrl ?? '').toLowerCase();
+                                    final ext = m.fileExtension.toLowerCase();
+                                    return name.contains(q) ||
+                                        typeLabel.contains(q) ||
+                                        id.contains(q) ||
+                                        url.contains(q) ||
+                                        s3.contains(q) ||
+                                        ext.contains(q);
+                                  }).toList();
 
-                    return list.isEmpty
-                        ? _buildEmptyState()
-                        : ListView.separated(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: list.length,
-                            itemBuilder: (context, index) {
-                              final media = list[index];
-                              return MediaItemWidget(
-                                media: media,
-                                onTap: () {
-                                  if (media.isVideo) {
-                                    print(media.previewUrl);
-                                    Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            YoYoVideoPlayerScreen(media: media),
-                                      ),
-                                    );
-                                  } else {
-                                    _showMediaDetails(context, media);
-                                  }
-                                },
-                                onLongPress: () {
-                                  _showDeleteConfirmation(context, media.id);
-                                },
-                              );
-                            },
-                            separatorBuilder:
-                                (BuildContext context, int index) =>
-                                    SizedBox(height: 20.w),
-                          );
-                  })()
-                else if (state is MediaError)
-                  _buildErrorState(state.message),
-              ],
-            ),
+                            return list.isEmpty
+                                ? _buildEmptyState()
+                                : ListView.separated(
+                                    shrinkWrap: true,
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
+                                    itemCount: list.length,
+                                    itemBuilder: (context, index) {
+                                      final media = list[index];
+                                      return MediaItemWidget(
+                                        media: media,
+                                        onTap: () {
+                                          if (media.isVideo) {
+                                            print(media.previewUrl);
+                                            Navigator.of(context).push(
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    YoYoVideoPlayerScreen(
+                                                        media: media),
+                                              ),
+                                            );
+                                          } else {
+                                            _showMediaDetails(context, media);
+                                          }
+                                        },
+                                        onLongPress: () {
+                                          _showDeleteConfirmation(
+                                              context, media.id);
+                                        },
+                                      );
+                                    },
+                                    separatorBuilder:
+                                        (BuildContext context, int index) =>
+                                            SizedBox(height: 12.w),
+                                  );
+                          })()
+                        else if (state is MediaError)
+                          _buildErrorState(state.message),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           );
         },
       ),
@@ -150,50 +169,23 @@ class _MediaListScreenState extends State<MediaListScreen> {
 
   Widget _buildHeader() {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const BackButton(),
-        Expanded(
-          child: Align(
-            alignment: Alignment.center,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset('assets/png/camera.png', width: 44.w, height: 44.w),
-                const SizedBox(width: 7),
-                if (!_showSearch)
-                  Text(
-                    translate('home.media'),
-                    style: GoogleFonts.koulen(
-                      fontSize: 28.sp,
-                      fontWeight: FontWeight.w400,
-                      color: appFontColor,
-                      letterSpacing: 2.0,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  )
-                else
-                  Expanded(child: _buildInlineSearchField()),
-              ],
+        Image.asset('assets/png/camera.png', width: 32.w, height: 32.w),
+        const SizedBox(width: 8),
+        if (!_showSearch)
+          Text(
+            translate('home.media'),
+            style: GoogleFonts.koulen(
+              fontSize: 24.sp,
+              fontWeight: FontWeight.w400,
+              color: appFontColor,
+              letterSpacing: 1.5,
             ),
-          ),
-        ),
-        Visibility(
-          visible: false, // hidden but kept in code
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                _showSearch = !_showSearch;
-                if (!_showSearch) {
-                  _searchController.clear();
-                  context.read<MediaBloc>().add(const FetchMediaList());
-                }
-              });
-            },
-            child:
-                Image.asset('assets/png/search.png', width: 35.w, height: 35.w),
-          ),
-        ),
+            overflow: TextOverflow.ellipsis,
+          )
+        else
+          Expanded(child: _buildInlineSearchField()),
       ],
     );
   }
