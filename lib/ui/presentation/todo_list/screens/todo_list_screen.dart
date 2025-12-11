@@ -36,7 +36,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Image.asset(
-                        'assets/png/todo_icon.png',
+                        'assets/png/notes_icon.png',
                         height: 30.w,
                         width: 30.w,
                         errorBuilder: (_, __, ___) => Icon(

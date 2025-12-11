@@ -85,7 +85,7 @@ List<WidgetModel> getAvailableWidgets() {
     const WidgetModel(
       id: 'todo_list',
       title: 'TO DO List',
-      iconPath: 'assets/png/todo_icon.png',
+      iconPath: 'assets/png/notes_icon.png',
       backgroundPath: 'assets/png/blue_card.png',
     ),
     const WidgetModel(

@@ -242,7 +242,7 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
           child: Opacity(
             opacity: 0.20,
             child: Image.asset(
-              'assets/png/todo_icon.png',
+              'assets/png/notes_icon.png',
               errorBuilder: (_, __, ___) => Icon(
                 Icons.check_box_outlined,
                 size: 80.w,

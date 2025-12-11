@@ -23,8 +23,8 @@ class NotificationScreen extends StatefulWidget {
 
 class _NotificationScreenState extends State<NotificationScreen> {
   int currentIndex = 0;
-  final PageController _pageController =
-      PageController(viewportFraction: 0.85); // 👈 show next card hint
+  final ScrollController _scrollController = ScrollController();
+  final List<GlobalKey> _tabKeys = List.generate(3, (index) => GlobalKey());
   final List<Map<String, dynamic>> notifications = [
     {
       'icon': 'assets/png/notification_icon.png',
@@ -64,6 +64,25 @@ class _NotificationScreenState extends State<NotificationScreen> {
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) showBabyGirlPopup(context);
     });
+  }
+
+  void _scrollToTab(int index) {
+    final context = _tabKeys[index].currentContext;
+    if (context != null) {
+      final box = context.findRenderObject() as RenderBox;
+      final position = box.localToGlobal(Offset.zero);
+      final screenWidth = MediaQuery.of(this.context).size.width;
+      final tabWidth = box.size.width;
+      
+      // Calculate offset to center the tab
+      final targetOffset = _scrollController.offset + position.dx - (screenWidth / 2) + (tabWidth / 2);
+      
+      _scrollController.animateTo(
+        targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
+      );
+    }
   }
 
   final List<Map<String, dynamic>> notificationType = [
@@ -128,7 +147,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             child: ListView.separated(
                               padding:
                                   const EdgeInsets.only(left: 10, right: 10),
-                              controller: _pageController,
+                              controller: _scrollController,
                               itemCount: notificationType.length,
                               physics: const BouncingScrollPhysics(),
                               scrollDirection: Axis.horizontal,
@@ -138,8 +157,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                 String notificationTitle =
                                     notificationType[index]['title'];
                                 return InkWell(
-                                  onTap: () =>
-                                      setState(() => currentIndex = index),
+                                  key: _tabKeys[index],
+                                  onTap: () {
+                                    setState(() => currentIndex = index);
+                                    // Scroll to center the selected tab
+                                    _scrollToTab(index);
+                                  },
                                   child: Container(
                                     alignment: Alignment.center,
                                     margin: const EdgeInsets.only(top: 6),
