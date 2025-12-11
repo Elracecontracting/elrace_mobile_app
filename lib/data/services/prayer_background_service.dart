@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:el_race/core/constants/hive_constants.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -16,7 +17,7 @@ const String rescheduleTaskName = 'reschedulePrayerTasks';
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     debugPrint('Background task started: $task');
-    
+
     // إذا كانت المهمة هي إعادة الجدولة
     if (task == rescheduleTaskName) {
       try {
@@ -27,19 +28,29 @@ void callbackDispatcher() {
         return Future.value(false);
       }
     }
-    
+
     try {
       // تهيئة Hive إذا لم يكن مهيأ
       if (!Hive.isBoxOpen(HiveConstants.preferencesBox)) {
         await Hive.initFlutter();
       }
-      
+
+      // التحقق من تسجيل الدخول
+      final isLoggedIn = await HiveService.isUserLoggedIn();
+      if (!isLoggedIn) {
+        debugPrint('🚫 User not logged in, skipping adhan (background)');
+        return Future.value(true);
+      }
+
       // التحقق من حالة كتم الصوت
       final isMuted = await HiveService.isPrayerSoundMuted();
       if (isMuted) {
         debugPrint('Prayer sound is muted, skipping adhan');
         return Future.value(true);
       }
+
+      // إظهار notification
+      await _showAdhanNotificationInBackground();
 
       // تشغيل صوت الأذان
       debugPrint('Playing adhan at prayer time!');
@@ -53,15 +64,56 @@ void callbackDispatcher() {
   });
 }
 
+Future<void> _showAdhanNotificationInBackground() async {
+  try {
+    final notificationsPlugin = FlutterLocalNotificationsPlugin();
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+      'prayer_adhan_channel',
+      'Prayer Adhan',
+      channelDescription: 'Notifications for prayer adhan times',
+      importance: Importance.high,
+      priority: Priority.high,
+      icon: '@mipmap/ic_launcher',
+      playSound: false,
+      enableVibration: true,
+      visibility: NotificationVisibility.public,
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: false,
+    );
+
+    const NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await notificationsPlugin.show(
+      0,
+      '🕌 حان وقت الصلاة',
+      '🔔 حان الآن وقت الصلاة',
+      details,
+    );
+
+    debugPrint('🔔 Background notification shown');
+  } catch (e) {
+    debugPrint('Error showing notification: $e');
+  }
+}
+
 Future<void> _playAdhanInBackground() async {
   try {
     final player = AudioPlayer();
     await player.setReleaseMode(ReleaseMode.stop);
     await player.setVolume(1.0);
     await player.play(AssetSource('mp3/pray-call.mp3'));
-    
+
     debugPrint('Background adhan started playing');
-    
+
     // الانتظار حتى ينتهي الصوت (أو وقت محدد)
     await Future.delayed(const Duration(minutes: 3));
     await player.stop();
@@ -87,8 +139,10 @@ class PrayerBackgroundService {
 
   static Future<void> _schedulePrayerTasks() async {
     try {
+      debugPrint('🔄 Scheduling prayer tasks...');
       // إلغاء كل المهام القديمة
       await Workmanager().cancelAll();
+      debugPrint('🗑️ Cancelled all old tasks');
 
       // حساب أوقات الصلاة
       final coords = Coordinates(25.2048, 55.2708); // Dubai
@@ -97,6 +151,8 @@ class PrayerBackgroundService {
       final prayerTimes = PrayerTimes.today(coords, params);
 
       final now = DateTime.now();
+      debugPrint('🕐 Current time: ${now.hour}:${now.minute}:${now.second}');
+
       final prayers = [
         {'name': 'fajr', 'time': prayerTimes.fajr},
         {'name': 'dhuhr', 'time': prayerTimes.dhuhr},
@@ -113,7 +169,7 @@ class PrayerBackgroundService {
         // جدول المهمة فقط إذا كان الوقت لم يمر بعد
         if (prayerTime.isAfter(now)) {
           final delay = prayerTime.difference(now);
-          
+
           await Workmanager().registerOneOffTask(
             'prayer-$prayerName-${prayerTime.day}',
             prayerCheckTaskName,
@@ -126,16 +182,19 @@ class PrayerBackgroundService {
               requiresStorageNotLow: false,
             ),
           );
-          
-          debugPrint('Scheduled $prayerName prayer task in ${delay.inMinutes} minutes');
+
+          debugPrint(
+              '✅ Scheduled $prayerName at ${prayerTime.hour}:${prayerTime.minute} (in ${delay.inMinutes}m ${delay.inSeconds % 60}s)');
           taskId++;
+        } else {
+          debugPrint('⏭️ Skipped $prayerName (already passed)');
         }
       }
 
       // جدول مهمة لإعادة الجدولة في منتصف الليل (للصلوات القادمة)
       final tomorrow = DateTime(now.year, now.month, now.day + 1, 0, 5);
       final delayUntilTomorrow = tomorrow.difference(now);
-      
+
       await Workmanager().registerOneOffTask(
         'reschedule-prayers-${now.day}',
         'reschedulePrayerTasks',

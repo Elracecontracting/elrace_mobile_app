@@ -1,4 +1,5 @@
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -262,6 +263,8 @@ class AppSettingsWidget extends StatelessWidget {
                     // Clear user preferences
                     print('🧹 Clearing preferences...');
                     await SharedPref().clearPreferences();
+                    // Update login state in Hive for background service
+                    await HiveService.setUserLoggedIn(false);
                     print('✅ Preferences cleared');
 
                     // Use global navigation key for navigation

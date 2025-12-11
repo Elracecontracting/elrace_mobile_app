@@ -146,14 +146,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
           ));
 
           _startPrayerTicker();
-          
+
           // تهيئة خدمة الصوت
           if (_prayerTimes != null) {
             await _audioService.initialize(_prayerTimes!);
             // إعادة جدولة المهام الخلفية مع أوقات الصلاة الجديدة
             await PrayerBackgroundService.reschedule();
           }
-          
+
           return;
         }
       }
@@ -179,7 +179,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       ));
 
       _startPrayerTicker();
-      
+
       // تهيئة خدمة الصوت
       if (_prayerTimes != null) {
         await _audioService.initialize(_prayerTimes!);
@@ -283,7 +283,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     if (n != _nextPrayer || nt != _nextPrayerTime) {
       _nextPrayer = n;
       _nextPrayerTime = nt;
-      
+
       // تحديث خدمة الصوت بأوقات الصلاة الجديدة
       _audioService.updatePrayerTimes(_prayerTimes!);
     }

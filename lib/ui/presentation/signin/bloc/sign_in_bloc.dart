@@ -5,6 +5,7 @@ import 'dart:io' show Platform;
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
+import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:el_race/ui/presentation/signin/data/repository.dart';
 import 'package:equatable/equatable.dart';
@@ -77,6 +78,8 @@ class SignInBloc extends Bloc<SignInEvent, SignInState> {
           emit(const LoadingST(isLoading: false));
           await userRepo.setLoginResponse(loginResponseModel);
           await userRepo.setISLoggedIn(true);
+          // Update login state in Hive for background service
+          await HiveService.setUserLoggedIn(true);
         } else {
           emit(ErrMsg(
               msg: (loginResponseModel.result?.message ??

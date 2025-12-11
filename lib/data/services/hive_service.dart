@@ -71,4 +71,15 @@ class HiveService {
     final box = await getPreferencesBox();
     await box.put(HiveConstants.prayerSoundMutedKey, isMuted);
   }
+
+  // User authentication state for background service
+  static Future<bool> isUserLoggedIn() async {
+    final box = await getPreferencesBox();
+    return box.get('user_logged_in', defaultValue: false);
+  }
+
+  static Future<void> setUserLoggedIn(bool isLoggedIn) async {
+    final box = await getPreferencesBox();
+    await box.put('user_logged_in', isLoggedIn);
+  }
 }

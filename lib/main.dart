@@ -16,6 +16,7 @@ import 'package:el_race/utils/generated_routes.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:el_race/utils/screen_size_util.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -29,6 +30,15 @@ import 'ui/presentation/Email Approval/bloc/approval_bloc.dart';
 import 'ui/presentation/home_screen/provider/slider_provider.dart';
 import 'package:screen_protector/screen_protector.dart';
 
+// Background message handler - يجب أن يكون خارج main()
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Initialize Firebase if not already initialized
+  await Firebase.initializeApp();
+  print('📩 Background message received: ${message.notification?.title}');
+  print('📩 Message data: ${message.data}');
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -41,11 +51,37 @@ void main() async {
     HiveService.setupHive(),
     Firebase.initializeApp(),
   ]);
+
+  // Register background message handler قبل FirebaseService.initialize()
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   await FirebaseService.initialize();
-  
+
+  // طباعة FCM Token عند بدء التطبيق
+  try {
+    String? fcmToken = await FirebaseMessaging.instance.getToken();
+    if (fcmToken != null) {
+      print('');
+      print('═══════════════════════════════════════════════════════════');
+      print('🔥 FCM TOKEN للتجربة:');
+      print('═══════════════════════════════════════════════════════════');
+      print(fcmToken);
+      print('═══════════════════════════════════════════════════════════');
+      print('');
+      print('📋 انسخ الـ token أعلاه واستخدمه في Firebase Console');
+      print(
+          '🔔 اذهب إلى: Firebase Console > Cloud Messaging > Send test message');
+      print('');
+    } else {
+      print('❌ FCM Token is null');
+    }
+  } catch (e) {
+    print('❌ Error getting FCM token: $e');
+  }
+
   // تهيئة خدمة الأذان في الخلفية
   await PrayerBackgroundService.initialize();
-  
+
   // debugPrint = (String? message, {int? wrapWidth}) {};
   // Get saved language from SharedPref
   final delegate = await LocalizationDelegate.create(
