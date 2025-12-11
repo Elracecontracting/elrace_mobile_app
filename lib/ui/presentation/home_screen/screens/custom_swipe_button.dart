@@ -194,14 +194,6 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
 
   @override
   Widget build(BuildContext context) {
-    final iconColor =
-        _isVisualCheckedIn ? Colors.white : const Color(0xFF666666);
-    final iconData =
-        _isVisualCheckedIn ? Icons.chevron_left : Icons.chevron_right;
-    final isRTL = Directionality.of(context) == TextDirection.rtl;
-    final currentLocale = LocalizedApp.of(context).delegate.currentLocale;
-    // مقدار التداخل بين السهمين
-    const overlap = 12.0;
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -473,9 +465,9 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           ),
 
           // Timeline component below the button
-          SizedBox(height: 16.h),
+          SizedBox(height: 24.h),
           Container(
-            width: buttonWidth * 0.7, // Decreased width to 70% of button width
+            width: buttonWidth * 0.9, // Decreased width to 70% of button width
             child: Column(
               children: [
                 // Time labels above the timeline
