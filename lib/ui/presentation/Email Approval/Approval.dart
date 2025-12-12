@@ -27,6 +27,7 @@ class ApprovalsScreen extends StatefulWidget {
 class _ApprovalsScreenState extends State<ApprovalsScreen> {
   String selectedCategory = "My Actions";
   TextEditingController searchController = TextEditingController();
+  final ScrollController _tabScrollController = ScrollController();
   List<dynamic> hrItems = [];
   List<dynamic> rfqItems = [];
   List<dynamic> invoiceItems = [];
@@ -50,7 +51,26 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   @override
   void dispose() {
     searchController.dispose();
+    _tabScrollController.dispose();
     super.dispose();
+  }
+
+  void _scrollToSelectedTab(int index) {
+    if (_tabScrollController.hasClients) {
+      // Calculate the position based on tab width + padding
+      final double tabWidth =
+          90 + 9; // 90w for width + 5 right padding + 4 margin
+      final double screenWidth = MediaQuery.of(context).size.width;
+      final double targetPosition =
+          (index * tabWidth) - (screenWidth / 2) + (tabWidth / 2);
+
+      _tabScrollController.animateTo(
+        targetPosition.clamp(
+            0.0, _tabScrollController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   void _onSearchChanged() {
@@ -313,50 +333,88 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
                 // Top Category Tabs (Only HR for now)
                 SingleChildScrollView(
+                  controller: _tabScrollController,
                   scrollDirection: Axis.horizontal,
                   physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  clipBehavior: Clip.none,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
                   child: Row(
-                    children: categories.map((cat) {
+                    children: categories.asMap().entries.map((entry) {
+                      int index = entry.key;
+                      String cat = entry.value;
                       bool isSelected = selectedCategory == cat;
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 5.0),
+                      return Container(
+                        margin: const EdgeInsets.only(right: 20.0, left: 5.0),
                         child: GestureDetector(
                           onTap: () {
                             setState(() {
                               selectedCategory = cat;
                               approvalItems = _getFilteredItems();
                             });
+                            _scrollToSelectedTab(index);
                           },
                           child: Container(
                             width: 90.w,
-                            margin: const EdgeInsets.only(right: 4),
                             padding: const EdgeInsets.symmetric(vertical: 7),
                             decoration: BoxDecoration(
                               color:
                                   isSelected ? appFontColor : Colors.grey[300],
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.25),
+                                width: 1.5,
+                              ),
                               gradient: isSelected
-                                  ? const LinearGradient(
+                                  ? LinearGradient(
                                       colors: [
-                                        Color.fromARGB(255, 27, 27, 27),
-                                        appFontColor,
+                                        const Color.fromARGB(255, 27, 27, 27)
+                                            .withOpacity(0.85),
+                                        appFontColor.withOpacity(0.9),
                                       ],
-                                      stops: [
+                                      stops: const [
                                         0.02,
                                         0.9,
                                       ],
-                                      begin: Alignment.centerLeft,
-                                      end: Alignment.centerRight,
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     )
-                                  : const LinearGradient(
+                                  : LinearGradient(
                                       colors: [
-                                        Color(0xffD6D6D6),
-                                        Color(0xffADB2BD),
+                                        Colors.white.withOpacity(0.6),
+                                        const Color(0xffADB2BD)
+                                            .withOpacity(0.5),
                                       ],
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
                                     ),
+                              boxShadow: [
+                                // iPhone style - main shadow
+                                BoxShadow(
+                                  color: isSelected
+                                      ? Colors.black.withOpacity(0.3)
+                                      : Colors.black.withOpacity(0.15),
+                                  blurRadius: isSelected ? 20 : 15,
+                                  spreadRadius: 0,
+                                  offset: const Offset(0, 8),
+                                ),
+                                // iPhone style - soft inner glow (top)
+                                BoxShadow(
+                                  color: Colors.white.withOpacity(0.5),
+                                  blurRadius: 10,
+                                  spreadRadius: -5,
+                                  offset: const Offset(0, -2),
+                                ),
+                                // iPhone style - soft outer glow
+                                BoxShadow(
+                                  color: isSelected
+                                      ? appFontColor.withOpacity(0.2)
+                                      : Colors.grey.withOpacity(0.1),
+                                  blurRadius: isSelected ? 30 : 25,
+                                  spreadRadius: 0,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
                             ),
                             child: Column(
                               children: [

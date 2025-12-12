@@ -540,21 +540,30 @@ class AuthenticateFaceViewController extends GetxController {
   // More accurate face matching with multiple factors
   Future<void> fetchUsersAndMatchFace(BuildContext context,
       {void Function(bool)? onCheckInStatusChanged}) async {
+    print("🎯 fetchUsersAndMatchFace called");
+    print(
+        "📋 onCheckInStatusChanged: ${onCheckInStatusChanged != null ? 'SET' : 'NULL'}");
+
     final uuid = SharedPref.getLoginData().result?.data?.emp_id;
+    print("🆔 User UUID: $uuid");
+
     if (uuid != null) {
-      final doc =
-          await FirebaseFirestore.instance.collection('users').doc(uuid).get();
-      if (doc.exists) {
-        UserModel user = UserModel.fromJson(doc.data()!);
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uuid)
+            .get();
 
-        // Check if user has face embedding
-        if (user.faceEmbedding == null || user.faceEmbedding!.isEmpty) {
-          print('❌ No face embedding found for user');
-          failedToMatch(context);
-          return;
-        }
+        if (doc.exists) {
+          UserModel user = UserModel.fromJson(doc.data()!);
 
-        try {
+          // Check if user has face embedding
+          if (user.faceEmbedding == null || user.faceEmbedding!.isEmpty) {
+            print('❌ No face embedding found for user');
+            failedToMatch(context);
+            return;
+          }
+
           // Multi-factor verification
           bool matchResult = await performMultiFactorVerification(user);
 
@@ -566,11 +575,18 @@ class AuthenticateFaceViewController extends GetxController {
             print('❌ Multi-factor face match failed');
             failedToMatch(context);
           }
-        } catch (e) {
-          print('❌ Multi-factor verification failed: $e');
-          failedToMatch(context);
+        } else {
+          print('❌ User document does not exist in Firestore');
+          showFaceNotRegisteredDialog(context);
         }
+      } catch (e) {
+        print('❌ Firestore error: $e');
+        print('❌ This might be a permissions issue or network problem');
+        failedToMatch(context);
       }
+    } else {
+      print('❌ User UUID is null');
+      failedToMatch(context);
     }
   }
 
@@ -703,6 +719,33 @@ class AuthenticateFaceViewController extends GetxController {
     // }
 
     // }
+  }
+
+  showFaceNotRegisteredDialog(BuildContext context) async {
+    updateFaceRecognitionStatus(
+        context, home_bloc.FaceRecognitionStatus.failed);
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Text("الوجه غير مسجل"),
+        content: const Text(
+            "لم يتم العثور على بيانات وجهك في النظام.\nيرجى تسجيل وجهك أولاً من صفحة التسجيل."),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Clear the pending verification flag
+              SharedPref()
+                  .setPreferencesBoolean('pendingFaceVerification', false);
+              // Go back to home or registration screen
+              Navigator.of(context).pop();
+            },
+            child: const Text("حسناً"),
+          )
+        ],
+      ),
+    );
   }
 
   failedToMatch(BuildContext context) async {
@@ -1198,12 +1241,20 @@ class AuthenticateFaceViewController extends GetxController {
       isMatching.value = true;
       update();
 
-      fetchUsersAndMatchFace(
+      print("🚀 Starting face matching process...");
+      print(
+          "🔑 onCheckInStatusChanged callback: ${onCheckInStatusChanged != null ? 'Available' : 'NULL'}");
+
+      await fetchUsersAndMatchFace(
         context,
         onCheckInStatusChanged: onCheckInStatusChanged,
       );
+
+      print("✅ Face matching process completed");
     } catch (e) {
-      print("Capture failed: $e");
+      print("❌ Capture failed: $e");
+      isMatching.value = false;
+      isCaptured.value = false;
       // Restart timeout if capture fails
       startFaceDetectionTimeout();
     }

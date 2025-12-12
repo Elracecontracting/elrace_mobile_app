@@ -239,8 +239,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           childWidget: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
- 
-               Padding(
+              Padding(
                 padding: EdgeInsets.only(top: 90.w),
                 child: SizedBox(
                   width: SizeConfig()

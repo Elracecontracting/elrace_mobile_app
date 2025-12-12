@@ -73,10 +73,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
       final position = box.localToGlobal(Offset.zero);
       final screenWidth = MediaQuery.of(this.context).size.width;
       final tabWidth = box.size.width;
-      
+
       // Calculate offset to center the tab
-      final targetOffset = _scrollController.offset + position.dx - (screenWidth / 2) + (tabWidth / 2);
-      
+      final targetOffset = _scrollController.offset +
+          position.dx -
+          (screenWidth / 2) +
+          (tabWidth / 2);
+
       _scrollController.animateTo(
         targetOffset.clamp(0.0, _scrollController.position.maxScrollExtent),
         duration: const Duration(milliseconds: 250),
