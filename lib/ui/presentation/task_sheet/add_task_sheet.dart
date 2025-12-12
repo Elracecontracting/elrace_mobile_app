@@ -13,17 +13,12 @@ import '../../widgets/header_widget.dart';
 import 'EmployeeShiftRequestPage.dart';
 import 'EmptyShiftPage.dart';
 
-
-
-
-
 class AddTaskSheet extends StatefulWidget {
-
-
   @override
   State<AddTaskSheet> createState() => _AddTaskSheetState();
 }
-class _AddTaskSheetState extends State<AddTaskSheet>{
+
+class _AddTaskSheetState extends State<AddTaskSheet> {
   String? selectedEmployee;
   final TextEditingController noteController = TextEditingController();
   List<Map<String, dynamic>> employees = [];
@@ -31,7 +26,8 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
   bool isLoading = true;
 // State variables
 // In your State:
-  final TextEditingController _employeeSearchController = TextEditingController();
+  final TextEditingController _employeeSearchController =
+      TextEditingController();
   String _employeeSearchQuery = '';
   Map<String, dynamic>? _selectedEmployee;
   bool isLeaveSelected = false;
@@ -39,7 +35,6 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
   DateTime? startDateTime;
   DateTime? endDateTime;
   Duration breakDuration = const Duration(hours: 1);
-
 
   String getWorkingHours() {
     if (startDateTime == null || endDateTime == null) return '0:0';
@@ -50,7 +45,6 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
     return "$hours:$minutes";
   }
 
-
   final List<String> leaveTypes = [
     'Pilgrimage/Umrah Leave',
     'Bereavement Leave',
@@ -59,9 +53,6 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
   ];
 
   String? selectedLeaveType;
-
-
-
 
   int _getLeaveTypeId(String leaveType) {
     switch (leaveType) {
@@ -78,7 +69,6 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
     }
   }
 
-
 // Sample employees
   @override
   void initState() {
@@ -86,7 +76,7 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
     _fetchEmployees();
 
     final selected = DateTime.now();
-  //  final selected = widget.selectedDate;
+    //  final selected = widget.selectedDate;
     final now = DateTime.now();
 
     // Take selectedDate's year, month, day but apply time
@@ -108,7 +98,6 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
   }
 
   Future<bool> _submitTimesheetWithFeedback() async {
-
     if (_selectedEmployee == null) {
       _showDialogMessage("Please select an employee.");
       return false;
@@ -117,17 +106,22 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
     final body = {
       "jsonrpc": "2.0",
       "params": {
-        "project_id":" widget.project_id",
-       // "project_id": widget.project_id,
+        "project_id": " widget.project_id",
+        // "project_id": widget.project_id,
         "task_id": "widget.taskId",
         //"task_id": widget.taskId,
         "name": _selectedEmployee!['name'],
-        "break_time": breakDuration.inHours, // Sending break in hours (example: 1)
-        "leave_type_id": selectedLeaveType != null ? _getLeaveTypeId(selectedLeaveType!) : false,
+        "break_time":
+            breakDuration.inHours, // Sending break in hours (example: 1)
+        "leave_type_id": selectedLeaveType != null
+            ? _getLeaveTypeId(selectedLeaveType!)
+            : false,
         "employee_ids": [_selectedEmployee!['id']],
         "date": DateFormat('yyyy-MM-dd').format(startDateTime!), // Picked date
-        "date_time": DateFormat('yyyy-MM-dd HH:mm:ss').format(startDateTime!), // Start datetime
-        "date_time_end": DateFormat('yyyy-MM-dd HH:mm:ss').format(endDateTime!), // End datetime
+        "date_time": DateFormat('yyyy-MM-dd HH:mm:ss')
+            .format(startDateTime!), // Start datetime
+        "date_time_end": DateFormat('yyyy-MM-dd HH:mm:ss')
+            .format(endDateTime!), // End datetime
       }
     };
 
@@ -160,7 +154,8 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
       context: context,
       builder: (context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           title: const Text("Error"),
           content: Text(message),
           actions: [
@@ -174,7 +169,6 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
     );
   }
 
-
   Future<void> _fetchEmployees() async {
     if (!mounted) return;
 
@@ -184,7 +178,7 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
 
     try {
       final token = "token";
-    //  final token = widget.loginResponseModel.result?.token;
+      //  final token = widget.loginResponseModel.result?.token;
 
       final headers = {
         "Content-Type": "application/json",
@@ -210,7 +204,8 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
         final data = jsonDecode(response.body);
         if (!mounted) return;
         setState(() {
-          employees = List<Map<String, dynamic>>.from(data['result']['employees']);
+          employees =
+              List<Map<String, dynamic>>.from(data['result']['employees']);
           isLoading = false;
         });
       } else {
@@ -225,7 +220,6 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -236,34 +230,25 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           child: Padding(
-            padding: const EdgeInsets.only(bottom: 20), // Extra space at the bottom
+            padding:
+                const EdgeInsets.only(bottom: 20), // Extra space at the bottom
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-
-
-
                 const SizedBox(height: 10),
 
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children:  [
-                      const BackButton(),
-                      Text(
-                        'TIME SHEET',
-                        style: GoogleFonts.koulen(
-                          fontSize: 19,
-                          fontWeight: FontWeight.w300,
-                          letterSpacing: 1.0, // Adjust as needed
-                          color: appFontColor,
-                        ),
+                  child: Center(
+                    child: Text(
+                      'TIME SHEET',
+                      style: GoogleFonts.koulen(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w300,
+                        letterSpacing: 1.0,
+                        color: appFontColor,
                       ),
-
-
-                      const SizedBox(width: 40), // Spacer for alignment
-                    ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -297,13 +282,13 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                             borderRadius: BorderRadius.circular(25),
                             borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
                         ),
                       ),
                     ],
                   ),
                 ),
-
 
                 const SizedBox(height: 8),
 
@@ -321,11 +306,12 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: employees
                             .where((emp) => emp['name']
-                            .toString()
-                            .toLowerCase()
-                            .contains(_employeeSearchQuery.toLowerCase()))
+                                .toString()
+                                .toLowerCase()
+                                .contains(_employeeSearchQuery.toLowerCase()))
                             .length,
-                        separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade300),
+                        separatorBuilder: (_, __) =>
+                            Divider(height: 1, color: Colors.grey.shade300),
                         itemBuilder: (context, index) {
                           final filteredEmployees = employees.where((emp) {
                             return emp['name']
@@ -340,14 +326,16 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                             dense: true,
                             title: Text(employee['name']),
                             tileColor: _selectedEmployee == employee
-                                ? Colors.deepPurple.withAlpha((0.1 * 255).toInt())
+                                ? Colors.deepPurple
+                                    .withAlpha((0.1 * 255).toInt())
                                 : Colors.transparent,
                             onTap: () {
                               setState(() {
                                 _selectedEmployee = employee;
                                 selectedEmployeeId = employee['id'].toString();
                                 _employeeSearchQuery = '';
-                                _employeeSearchController.text = employee['name'];
+                                _employeeSearchController.text =
+                                    employee['name'];
                               });
                             },
                           );
@@ -360,7 +348,8 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
 
                 // ✅ Action Buttons
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0), // 👈 padding added here
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0), // 👈 padding added here
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -368,16 +357,20 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                         onTap: () => setState(() => isLeaveSelected = false),
                         child: _buildActionButton(
                           "Add shift",
-                          backgroundColor: isLeaveSelected ? Colors.white : appFontColor,
-                          textColor: isLeaveSelected ? Colors.black : Colors.white,
+                          backgroundColor:
+                              isLeaveSelected ? Colors.white : appFontColor,
+                          textColor:
+                              isLeaveSelected ? Colors.black : Colors.white,
                         ),
                       ),
                       GestureDetector(
                         onTap: () => setState(() => isLeaveSelected = true),
                         child: _buildActionButton(
                           "Add leave",
-                          backgroundColor: isLeaveSelected ? appFontColor : Colors.white,
-                          textColor: isLeaveSelected ? Colors.white : Colors.black,
+                          backgroundColor:
+                              isLeaveSelected ? appFontColor : Colors.white,
+                          textColor:
+                              isLeaveSelected ? Colors.white : Colors.black,
                         ),
                       ),
                     ],
@@ -386,10 +379,13 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                 const SizedBox(height: 20),
 
                 if (!isLeaveSelected) ...[
-                  _buildTimeRow("Starts", startDateTime, (picked) => setState(() => startDateTime = picked)),
-                  _buildTimeRow("Ends", endDateTime, (picked) => setState(() => endDateTime = picked)),
+                  _buildTimeRow("Starts", startDateTime,
+                      (picked) => setState(() => startDateTime = picked)),
+                  _buildTimeRow("Ends", endDateTime,
+                      (picked) => setState(() => endDateTime = picked)),
                   _buildBreakRow("Break Time", breakDuration),
-                  _buildInfoRow("Working Hours", "", getWorkingHours(), highlight: true),
+                  _buildInfoRow("Working Hours", "", getWorkingHours(),
+                      highlight: true),
                 ],
 
                 const SizedBox(height: 20),
@@ -397,17 +393,20 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                 // ✅ Leave Type Dropdown
                 if (isLeaveSelected)
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0, vertical: 10.0),
                     child: DropdownButtonFormField<String>(
                       value: selectedLeaveType,
                       decoration: InputDecoration(
                         labelText: 'Choose leave type',
-                        labelStyle: const TextStyle(fontSize: 13, color: Colors.black),
+                        labelStyle:
+                            const TextStyle(fontSize: 13, color: Colors.black),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                           borderSide: const BorderSide(color: Colors.grey),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
                       ),
                       icon: const Icon(Icons.arrow_drop_down),
                       dropdownColor: Colors.white,
@@ -415,7 +414,8 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                       items: leaveTypes.map((type) {
                         return DropdownMenuItem<String>(
                           value: type,
-                          child: Text(type, style: const TextStyle(fontSize: 13)),
+                          child:
+                              Text(type, style: const TextStyle(fontSize: 13)),
                         );
                       }).toList(),
                       onChanged: (value) {
@@ -425,7 +425,6 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                       },
                     ),
                   ),
-
 
                 const SizedBox(height: 20),
 
@@ -440,12 +439,14 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                     style: const TextStyle(fontSize: 12, color: Colors.black87),
                     decoration: InputDecoration(
                       hintText: "Attach a note to your request",
-                      hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
+                      hintStyle:
+                          const TextStyle(fontSize: 12, color: Colors.grey),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide: const BorderSide(color: Colors.grey),
                       ),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 19),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 19),
                     ),
                   ),
                 ),
@@ -455,7 +456,10 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                 const Center(
                   child: Text(
                     "All requests will be sent for a manager’s approval",
-                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: appFontColor),
+                    style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: appFontColor),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -471,7 +475,8 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                       _buildBottomButton("Cancel", greyText3, Colors.black, () {
                         Navigator.pop(context);
                       }),
-                      _buildBottomButton("Send for approval", appFontColor, Colors.white, () {
+                      _buildBottomButton(
+                          "Send for approval", appFontColor, Colors.white, () {
                         _showApprovalPopup(context);
                       }),
                     ],
@@ -485,11 +490,11 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
     );
   }
 
-  Widget _buildTimeRow(String label, DateTime? dateTime, Function(DateTime) onDateTimePicked) {
+  Widget _buildTimeRow(
+      String label, DateTime? dateTime, Function(DateTime) onDateTimePicked) {
     return Column(
       children: [
         const Divider(color: Colors.grey, height: 2, thickness: 1),
-
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15),
           child: InkWell(
@@ -522,18 +527,25 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1A1A53))),
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A1A53))),
                 Row(
                   children: [
                     Text(
-                      dateTime != null ? _formatDateTime(dateTime) : "-- | --:--",
+                      dateTime != null
+                          ? _formatDateTime(dateTime)
+                          : "-- | --:--",
                       style: const TextStyle(
                         color: appFontColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
                     ),
-                    const Icon(Icons.keyboard_arrow_down, size: 18, color: Colors.grey),
+                    const Icon(Icons.keyboard_arrow_down,
+                        size: 18, color: Colors.grey),
                   ],
                 ),
               ],
@@ -547,15 +559,26 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
   String _formatDateTime(DateTime dateTime) {
     String month = _getMonthShortName(dateTime.month);
     String daySuffix = _getDaySuffix(dateTime.day);
-    String formattedDate = "$month ${dateTime.day}$daySuffix ${dateTime.year % 100}";
+    String formattedDate =
+        "$month ${dateTime.day}$daySuffix ${dateTime.year % 100}";
     String formattedTime = TimeOfDay.fromDateTime(dateTime).format(context);
     return "$formattedDate | $formattedTime";
   }
 
   String _getMonthShortName(int month) {
     const monthNames = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec"
     ];
     return monthNames[month - 1];
   }
@@ -563,28 +586,37 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
   String _getDaySuffix(int day) {
     if (day >= 11 && day <= 13) return "th";
     switch (day % 10) {
-      case 1: return "st";
-      case 2: return "nd";
-      case 3: return "rd";
-      default: return "th";
+      case 1:
+        return "st";
+      case 2:
+        return "nd";
+      case 3:
+        return "rd";
+      default:
+        return "th";
     }
   }
-
 
   Widget _buildBreakRow(String label, Duration breakDuration) {
     return Column(
       children: [
         const Divider(color: Colors.grey, height: 2, thickness: 1),
-
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: appFontColor)),
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: appFontColor)),
               Text(
                 "${breakDuration.inHours.toString().padLeft(2, '0')}:00",
-                style: const TextStyle(fontWeight: FontWeight.bold, color: appFontColor, fontSize: 12),
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: appFontColor,
+                    fontSize: 12),
               ),
             ],
           ),
@@ -594,9 +626,9 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
     );
   }
 
-
   // ✅ Build Action Buttons (Add Shift / Add Leave)
-  Widget _buildActionButton(String text, {
+  Widget _buildActionButton(
+    String text, {
     required Color backgroundColor,
     required Color textColor,
   }) {
@@ -625,22 +657,22 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
     );
   }
 
-
   // ✅ Build Time Detail Rows
-  Widget _buildInfoRow(String label, String time, String hours, {bool highlight = false}) {
+  Widget _buildInfoRow(String label, String time, String hours,
+      {bool highlight = false}) {
     return Container(
       decoration: highlight
           ? BoxDecoration(
-        color: const Color(0xFFD9D9D9),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha((0.4 * 255).toInt()),
-            offset: const Offset(0, 3),
-            blurRadius: 6,
-            spreadRadius: 1,
-          ),
-        ],
-      )
+              color: const Color(0xFFD9D9D9),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha((0.4 * 255).toInt()),
+                  offset: const Offset(0, 3),
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                ),
+              ],
+            )
           : null,
       padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12),
       child: Row(
@@ -667,10 +699,9 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
     );
   }
 
-
-
   // ✅ Build Bottom Buttons (Cancel / Send for Approval)
-  Widget _buildBottomButton(String text, Color bgColor, Color textColor, VoidCallback onPressed) {
+  Widget _buildBottomButton(
+      String text, Color bgColor, Color textColor, VoidCallback onPressed) {
     return Expanded(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -685,7 +716,8 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
           onPressed: onPressed, // Calls the function when clicked
           child: Text(
             text,
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
+            style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.bold, color: textColor),
           ),
         ),
       ),
@@ -716,10 +748,13 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 6),
                       ),
-                      icon: const Icon(Icons.send, color: Colors.white, size: 16),
-                      label: const Text("Send", style: TextStyle(color: Colors.white)),
+                      icon:
+                          const Icon(Icons.send, color: Colors.white, size: 16),
+                      label: const Text("Send",
+                          style: TextStyle(color: Colors.white)),
                       onPressed: () async {
                         final success = await _submitTimesheetWithFeedback();
                         if (success) {
@@ -729,11 +764,10 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                             MaterialPageRoute(
                               builder: (context) => const TaskSheetPage(),
                             ),
-                                (route) => route.isFirst,
+                            (route) => route.isFirst,
                           );
                         }
                       },
-
                     ),
                     const SizedBox(width: 10),
 
@@ -744,10 +778,13 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 6),
                       ),
-                      icon: const Icon(Icons.close, color: Colors.white, size: 16),
-                      label: const Text("Cancel", style: TextStyle(color: Colors.white)),
+                      icon: const Icon(Icons.close,
+                          color: Colors.white, size: 16),
+                      label: const Text("Cancel",
+                          style: TextStyle(color: Colors.white)),
                       onPressed: () {
                         Navigator.pop(context); // Close the popup
                       },
@@ -762,7 +799,6 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 10),
-
               ],
             ),
           ),
@@ -770,5 +806,4 @@ class _AddTaskSheetState extends State<AddTaskSheet>{
       },
     );
   }
-
 }

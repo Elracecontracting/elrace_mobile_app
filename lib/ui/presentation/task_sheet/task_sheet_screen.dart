@@ -92,54 +92,56 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: const HeaderWidget(),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const BackButton(),
-                  Text(
-                    translate('home.time_sheet'),
-                    style: GoogleFonts.koulen(
-                      fontSize: 19,
-                      fontWeight: FontWeight.w300,
-                      letterSpacing: 1.0, // Adjust as needed
-                      color: appFontColor,
+        body: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0, vertical: 10.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const SizedBox(width: 22),
+                    Text(
+                      translate('home.time_sheet'),
+                      style: GoogleFonts.koulen(
+                        fontSize: 19,
+                        fontWeight: FontWeight.w300,
+                        letterSpacing: 1.0,
+                        color: appFontColor,
+                      ),
                     ),
-                  ),
-                  Container(
-                    width: 25,
-                    height: 25,
-                    decoration: const BoxDecoration(
-                        color: appFontColor, shape: BoxShape.circle),
-                    child: IconButton(
-                      icon:
-                          const Icon(Icons.add, size: 20, color: Colors.white),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => AddTaskSheet(),
-                          ),
-                        );
-                      },
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                    Container(
+                      width: 22,
+                      height: 22,
+                      decoration: const BoxDecoration(
+                          color: appFontColor, shape: BoxShape.circle),
+                      child: IconButton(
+                        icon: const Icon(Icons.add,
+                            size: 16, color: Colors.white),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddTaskSheet(),
+                            ),
+                          );
+                        },
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             if (isLoading)
-              const Expanded(
+              const SliverFillRemaining(
                 child: Center(child: CircularProgressIndicator()),
               )
             else if (errorMessage != null)
-              Expanded(
+              SliverFillRemaining(
                 child: Center(
                   child: Text(
                     errorMessage!,
@@ -148,10 +150,9 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                 ),
               )
             else
-              Expanded(
-                child: ListView.builder(
-                  itemCount: tasks.length,
-                  itemBuilder: (context, index) {
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
                     final task = tasks[index];
                     return Padding(
                       padding: const EdgeInsets.symmetric(
@@ -273,6 +274,7 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                       ),
                     );
                   },
+                  childCount: tasks.length,
                 ),
               ),
           ],

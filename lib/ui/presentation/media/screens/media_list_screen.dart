@@ -70,30 +70,25 @@ class _MediaListScreenState extends State<MediaListScreen> {
           }
         },
         builder: (context, state) {
-          return Column(
-            children: [
-              SingleChildScrollView(
-                physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.symmetric(horizontal: 40.w),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 10),
-                    _buildHeader(),
-                    SizedBox(height: 16.h),
-                  ],
+          return CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(top: 10.h, bottom: 16.h),
+                  child: _buildHeader(),
                 ),
               ),
               if (state is MediaLoading)
-                const Expanded(
+                const SliverFillRemaining(
                   child: Center(
                     child: CircularProgressIndicator(),
                   ),
                 )
               else
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.symmetric(horizontal: 40.w),
+                SliverPadding(
+                  padding: EdgeInsets.symmetric(horizontal: 40.w),
+                  sliver: SliverToBoxAdapter(
                     child: Column(
                       children: [
                         if (state is MediaLoaded)
@@ -171,13 +166,13 @@ class _MediaListScreenState extends State<MediaListScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Image.asset('assets/png/camera.png', width: 32.w, height: 32.w),
+        Image.asset('assets/png/camera.png', width: 24.w, height: 24.w),
         const SizedBox(width: 8),
         if (!_showSearch)
           Text(
             translate('home.media'),
             style: GoogleFonts.koulen(
-              fontSize: 24.sp,
+              fontSize: 22.sp,
               fontWeight: FontWeight.w400,
               color: appFontColor,
               letterSpacing: 1.5,

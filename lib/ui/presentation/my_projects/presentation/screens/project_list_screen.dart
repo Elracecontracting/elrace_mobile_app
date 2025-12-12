@@ -66,17 +66,17 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
-      body: Column(
-        children: [
-          // 🔹 Always-visible header
-          const SizedBox(height: 10),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              // Center: Title
-              Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 60.w),
+      body: CustomScrollView(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // 🔹 Partner Header Section (Scrollable)
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     mainAxisSize: MainAxisSize.min,
@@ -92,9 +92,9 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                             return ClipOval(
                               child: Image.network(
                                 widget.partnerPhoto!,
-                                height: 60.w,
-                                width: 60.w,
-                                fit: BoxFit.cover,
+                                height: 50.w,
+                                width: 50.w,
+                                fit: BoxFit.contain,
                                 headers: {
                                   'Accept': 'image/*',
                                   'Authorization':
@@ -109,8 +109,8 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                                   }
                                   print('⏳ Loading partner photo...');
                                   return SizedBox(
-                                    width: 30.w,
-                                    height: 30.w,
+                                    width: 24.w,
+                                    height: 24.w,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
                                       value:
@@ -130,7 +130,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                                   print('❌ Stack trace: $stackTrace');
                                   return Icon(
                                     Icons.business,
-                                    size: 30.w,
+                                    size: 24.w,
                                     color: appFontColor,
                                   );
                                 },
@@ -140,20 +140,20 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                             print('⚠️ No partner photo provided');
                             return Icon(
                               Icons.business,
-                              size: 30.w,
+                              size: 24.w,
                               color: appFontColor,
                             );
                           }
                         },
                       ),
-                      SizedBox(width: 8.w),
+                      SizedBox(width: 4.w),
                       Flexible(
                         child: Text(
                           widget.partnerName != null
                               ? widget.partnerName!.toUpperCase()
                               : 'ABU DHABI POLICE',
                           style: GoogleFonts.koulen(
-                            fontSize: 26.sp,
+                            fontSize: 22.sp,
                             fontWeight: FontWeight.w500,
                             color: appFontColor,
                           ),
@@ -165,64 +165,47 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                     ],
                   ),
                 ),
-              ),
-              // Left: Back button
-              Positioned(
-                left: 0,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ),
-            ],
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
 
-          // 🔹 Expanded so list or loading takes remaining space
-          Expanded(
-            child: BlocBuilder<ProjectListBloc, ProjectListState>(
-              builder: (ctx, state) {
-                if (state is ProjectListLoading &&
-                    bloc.visibleProjects.isEmpty) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (!(state is ProjectListLoading) &&
-                    bloc.visibleProjects.isEmpty) {
-                  return const Center(child: Text('No data available'));
-                } else if (state is ProjectListLoaded ||
-                    bloc.visibleProjects.isNotEmpty) {
-                  var list = bloc.visibleProjects;
-                  return RefreshIndicator(
-                    onRefresh: () async {
-                      if (widget.partnerId != null) {
-                        bloc.add(LoadProjectsByPartnerEvent(
-                            partnerId: widget.partnerId!, refresh: true));
+          // 🔹 Projects List
+          BlocBuilder<ProjectListBloc, ProjectListState>(
+            builder: (ctx, state) {
+              if (state is ProjectListLoading && bloc.visibleProjects.isEmpty) {
+                return SliverFillRemaining(
+                  child: const Center(child: CircularProgressIndicator()),
+                );
+              } else if (!(state is ProjectListLoading) &&
+                  bloc.visibleProjects.isEmpty) {
+                return SliverFillRemaining(
+                  child: const Center(child: Text('No data available')),
+                );
+              } else if (state is ProjectListLoaded ||
+                  bloc.visibleProjects.isNotEmpty) {
+                var list = bloc.visibleProjects;
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      if (index < list.length) {
+                        final item = list[index];
+                        return _buildProjectCard(item);
                       } else {
-                        bloc.add(LoadProjectsEvent(refresh: true));
+                        return const SizedBox();
                       }
                     },
-                    child: ListView.separated(
-                      padding: const EdgeInsets.only(top: 10),
-                      controller: _scrollController,
-                      itemCount: list
-                          .length, // ✅ Fixed: removed +1 to prevent index issues
-                      itemBuilder: (context, index) {
-                        if (index < list.length) {
-                          final item = list[index];
-                          return _buildProjectCard(item);
-                        } else {
-                          return const SizedBox(); // ✅ Fallback widget
-                        }
-                      },
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 10),
-                    ),
-                  );
-                } else if (state is ProjectListError) {
-                  return Center(child: Text(state.message));
-                } else {
-                  return const SizedBox();
-                }
-              },
-            ),
+                    childCount: list.length,
+                  ),
+                );
+              } else if (state is ProjectListError) {
+                return SliverFillRemaining(
+                  child: Center(child: Text(state.message)),
+                );
+              } else {
+                return const SliverToBoxAdapter(child: SizedBox());
+              }
+            },
           ),
         ],
       ),
@@ -254,7 +237,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
         );
       },
       child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+        margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
         padding: const EdgeInsets.all(1),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(22.r),
@@ -333,17 +316,17 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                     ),
                   ],
                 ),
-                SizedBox(height: 12.h),
+                SizedBox(height: 10.h),
                 // Bottom: Amount + Avatar + Date (with glassmorphism effect)
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(12.r),
+                  borderRadius: BorderRadius.circular(13.r),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                     child: Container(
                       padding:
-                          EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                          EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12.r),
+                        borderRadius: BorderRadius.circular(8.r),
                         color: Colors.white.withOpacity(0.25),
                         border: Border.all(
                           color: Colors.white.withOpacity(0.5),
@@ -376,8 +359,8 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                               children: [
                                 Image.asset(
                                   'assets/png/icons/Coin.png',
-                                  width: 20.w,
-                                  height: 20.w,
+                                  width: 22.w,
+                                  height: 22.w,
                                   color: const Color(0xFF151544),
                                   errorBuilder: (_, __, ___) => Icon(
                                     Icons.attach_money,
@@ -385,7 +368,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                                     color: const Color(0xFF151544),
                                   ),
                                 ),
-                                SizedBox(width: 4.w),
+                                SizedBox(width: 3.w),
                                 Flexible(
                                   child: Text(
                                     formattedAmount,
@@ -456,8 +439,8 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                               children: [
                                 Image.asset(
                                   'assets/png/calender.png',
-                                  width: 20.w,
-                                  height: 20.w,
+                                  width: 25.w,
+                                  height: 25.w,
                                   color: const Color(0xFF151544),
                                   errorBuilder: (_, __, ___) => Icon(
                                     Icons.calendar_month,
@@ -465,12 +448,12 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                                     color: const Color(0xFF151544),
                                   ),
                                 ),
-                                SizedBox(width: 4.w),
+                                SizedBox(width: 6.w),
                                 Flexible(
                                   child: Text(
                                     formattedDate,
                                     style: GoogleFonts.inter(
-                                      fontSize: 11.sp,
+                                      fontSize: 12.sp,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.black87,
                                     ),

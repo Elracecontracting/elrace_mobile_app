@@ -18,6 +18,107 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
+class MarqueeText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+  final TextAlign? textAlign;
+  final ShaderCallback? shaderCallback;
+
+  const MarqueeText({
+    super.key,
+    required this.text,
+    this.style,
+    this.textAlign,
+    this.shaderCallback,
+  });
+
+  @override
+  State<MarqueeText> createState() => _MarqueeTextState();
+}
+
+class _MarqueeTextState extends State<MarqueeText>
+    with SingleTickerProviderStateMixin {
+  late ScrollController _scrollController;
+  bool _needsScrolling = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkIfScrollNeeded();
+    });
+  }
+
+  void _checkIfScrollNeeded() {
+    if (!mounted) return;
+    if (_scrollController.hasClients &&
+        _scrollController.position.maxScrollExtent > 0) {
+      setState(() {
+        _needsScrolling = true;
+      });
+      _startScrolling();
+    }
+  }
+
+  void _startScrolling() async {
+    if (!mounted || !_needsScrolling) return;
+
+    await Future.delayed(const Duration(milliseconds: 1000));
+    if (!mounted) return;
+
+    while (mounted && _needsScrolling) {
+      // Scroll to end slowly
+      await _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: Duration(
+            milliseconds: (widget.text.length * 120).clamp(4000, 15000)),
+        curve: Curves.linear,
+      );
+
+      if (!mounted) break;
+      await Future.delayed(const Duration(milliseconds: 1500));
+      if (!mounted) break;
+
+      // Jump back to start instantly (no animation)
+      _scrollController.jumpTo(0);
+
+      await Future.delayed(const Duration(milliseconds: 1500));
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textWidget = Text(
+      widget.text,
+      style: widget.style,
+      textAlign: widget.textAlign,
+    );
+
+    final scrollableText = SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      child: textWidget,
+    );
+
+    if (widget.shaderCallback != null) {
+      return ShaderMask(
+        shaderCallback: widget.shaderCallback!,
+        child: scrollableText,
+      );
+    }
+
+    return scrollableText;
+  }
+}
+
 class MyProject extends StatefulWidget {
   const MyProject({super.key});
 
@@ -89,50 +190,56 @@ class _MyProjectState extends State<MyProject> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
-      body: Column(
-        children: [
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.pop(context),
-              ),
-              Row(
-                children: [
-                  Image.asset(
-                    "assets/newapp/my_projects.png",
-                    height: 30.w,
-                    width: 30.w,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // 🔹 Projects Title Section (Scrollable)
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        "assets/newapp/my_projects.png",
+                        height: 24.w,
+                        width: 24.w,
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        translate('home.projects'),
+                        style: GoogleFonts.koulen(
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.w500,
+                          color: appFontColor,
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(width: 4.w),
-                  Text(
-                    translate('home.projects'),
-                    style: GoogleFonts.koulen(
-                      fontSize: 26.sp,
-                      fontWeight: FontWeight.w500,
-                      color: appFontColor,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(width: 48.w),
-            ],
+                ),
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                    ? Center(
+
+          // 🔹 Loading or Error or List
+          _isLoading
+              ? SliverFillRemaining(
+                  child: const Center(child: CircularProgressIndicator()),
+                )
+              : _error != null
+                  ? SliverFillRemaining(
+                      child: Center(
                         child: Text(_error!,
                             style: const TextStyle(color: Colors.red)),
-                      )
-                    : ListView.builder(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 12.w, vertical: 8.h),
-                        itemCount: _clients.length,
-                        itemBuilder: (context, index) {
+                      ),
+                    )
+                  : SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
                           final c = _clients[index];
 
                           final id = c['id'] ?? 0;
@@ -181,8 +288,9 @@ class _MyProjectState extends State<MyProject> {
                             ),
                           );
                         },
+                        childCount: _clients.length,
                       ),
-          ),
+                    ),
         ],
       ),
     );
@@ -211,8 +319,8 @@ Widget buildProjectCard({
       ),
     ),
     child: Container(
-      height: 150.h,
-      padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 16.h),
+      height: 120.h,
+      padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(21.r),
         gradient: const LinearGradient(
@@ -225,8 +333,8 @@ Widget buildProjectCard({
         children: [
           // avatar
           Container(
-            width: 85.w,
-            height: 85.w,
+            width: 75.w,
+            height: 75.w,
             decoration: BoxDecoration(
               color: Colors.white,
               shape: BoxShape.circle,
@@ -252,7 +360,7 @@ Widget buildProjectCard({
           SizedBox(width: 16.w),
 
           // divider
-          Container(width: 2.5.w, height: 75.h, color: Colors.white),
+          Container(width: 2.5.w, height: 60.h, color: Colors.white),
 
           SizedBox(width: 16.w),
 
@@ -261,25 +369,21 @@ Widget buildProjectCard({
               crossAxisAlignment: CrossAxisAlignment.center,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                ShaderMask(
+                MarqueeText(
+                  text: name.toUpperCase(),
+                  style: GoogleFonts.koulen(
+                    fontSize: 22.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                    letterSpacing: 1.5,
+                  ),
+                  textAlign: TextAlign.center,
                   shaderCallback: (bounds) => const LinearGradient(
                     colors: [Color(0xFF151544), Color(0xFF3535AA)],
                     begin: Alignment.centerLeft,
                     end: Alignment.centerRight,
                     stops: [0.7, 1.0],
                   ).createShader(bounds),
-                  child: Text(
-                    name.toUpperCase(),
-                    style: GoogleFonts.koulen(
-                      fontSize: 22.sp,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                      letterSpacing: 1.5,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                  ),
                 ),
                 SizedBox(height: 12.h),
                 Row(
@@ -306,26 +410,26 @@ Widget _pillData(String label, String value) {
         Text(
           label,
           style: GoogleFonts.koulen(
-            fontSize: 14.sp,
+            fontSize: 12.sp,
             color: Colors.black87,
-            letterSpacing: 1,
+            letterSpacing: 0.8,
           ),
         ),
-        SizedBox(height: 4.h),
+        SizedBox(height: 3.h),
         Container(
-          padding: EdgeInsets.symmetric(vertical: 10.h),
+          padding: EdgeInsets.symmetric(vertical: 6.h),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(10.r),
+            borderRadius: BorderRadius.circular(8.r),
           ),
           alignment: Alignment.center,
           child: Text(
             value,
             style: GoogleFonts.koulen(
-              fontSize: 11.sp,
+              fontSize: 10.sp,
               fontWeight: FontWeight.w600,
               color: Colors.black,
-              letterSpacing: 1,
+              letterSpacing: 0.8,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

@@ -6,6 +6,100 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
+class MarqueeText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+  final TextAlign? textAlign;
+
+  const MarqueeText({
+    super.key,
+    required this.text,
+    this.style,
+    this.textAlign,
+  });
+
+  @override
+  State<MarqueeText> createState() => _MarqueeTextState();
+}
+
+class _MarqueeTextState extends State<MarqueeText>
+    with SingleTickerProviderStateMixin {
+  late ScrollController _scrollController;
+  late AnimationController _animationController;
+  bool _needsScrolling = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = ScrollController();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 3000),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkIfScrollNeeded();
+    });
+  }
+
+  void _checkIfScrollNeeded() {
+    if (!mounted) return;
+    if (_scrollController.hasClients &&
+        _scrollController.position.maxScrollExtent > 0) {
+      setState(() {
+        _needsScrolling = true;
+      });
+      _startScrolling();
+    }
+  }
+
+  void _startScrolling() async {
+    if (!mounted || !_needsScrolling) return;
+
+    await Future.delayed(const Duration(milliseconds: 1000));
+    if (!mounted) return;
+
+    while (mounted && _needsScrolling) {
+      // Scroll to end slowly
+      await _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: Duration(
+            milliseconds: (widget.text.length * 120).clamp(4000, 15000)),
+        curve: Curves.linear,
+      );
+
+      if (!mounted) break;
+      await Future.delayed(const Duration(milliseconds: 1500));
+      if (!mounted) break;
+
+      // Jump back to start instantly (no animation)
+      _scrollController.jumpTo(0);
+
+      await Future.delayed(const Duration(milliseconds: 1500));
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      child: Text(
+        widget.text,
+        style: widget.style,
+        textAlign: widget.textAlign,
+      ),
+    );
+  }
+}
+
 class LpoCardWidget extends StatelessWidget {
   const LpoCardWidget({
     super.key,
@@ -114,15 +208,14 @@ class LpoCardWidget extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        name ?? 'RCC-PO-XXXX',
+                      MarqueeText(
+                        text: name ?? 'RCC-PO-XXXX',
                         style: GoogleFonts.koulen(
                           fontSize: 22.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.black,
                           letterSpacing: 1.5,
                         ),
-                        overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
                       ),
                       SizedBox(height: 8.h),
@@ -283,15 +376,14 @@ class LpoCardWidget extends StatelessWidget {
               ),
             ],
           ),
-          child: Text(
-            text,
+          child: MarqueeText(
+            text: text,
             style: GoogleFonts.koulen(
               fontSize: 12.sp,
               fontWeight: FontWeight.w400,
               color: Colors.black87,
               letterSpacing: 1,
             ),
-            overflow: TextOverflow.ellipsis,
           ),
         ),
       ),
