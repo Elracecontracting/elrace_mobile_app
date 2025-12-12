@@ -88,13 +88,13 @@ class _ProfileBoxWithSlideAnimationState
   }
 
   // Custom painter for QR code background with animated numbers
-  Widget _buildQRBackground() {
+  Widget _buildQRBackground(String empId) {
     return AnimatedBuilder(
       animation: _numbersAnimation,
       builder: (context, child) {
         return CustomPaint(
           size: Size(220.w, 220.w),
-          painter: AnimatedQRBackgroundPainter(_numbersAnimation.value),
+          painter: AnimatedQRBackgroundPainter(_numbersAnimation.value, empId),
         );
       },
     );
@@ -104,13 +104,28 @@ class _ProfileBoxWithSlideAnimationState
     final overlayState = appOverlayKey.currentState;
     if (overlayState == null) return;
 
+    final loginData = SharedPref.getLoginData();
+    final certificateData = loginData.result?.data?.certificate;
+
+    // Debug: print certificate data
+    print('DEBUG: certificateData = $certificateData');
+    print('DEBUG: certificateData type = ${certificateData.runtimeType}');
+    if (certificateData != null) {
+      print('DEBUG: certificateData["error"] = ${certificateData['error']}');
+    }
+
+    // Check if certificate has error
+    final hasError =
+        certificateData != null && certificateData['error'] != null;
+
+    print('DEBUG: hasError = $hasError');
+
     late OverlayEntry entry;
     entry = OverlayEntry(
       builder: (ctx) {
-        final size =
-            MediaQuery.of(ctx).size; // ناخد أبعاد الشاشة من نفس الـ Overlay
+        final size = MediaQuery.of(ctx).size;
         return Material(
-          type: MaterialType.transparency, // علشان Directionality/Theme
+          type: MaterialType.transparency,
           child: Stack(
             children: [
               // خلفية (barrier) قابلة للإغلاق باللمس
@@ -129,17 +144,41 @@ class _ProfileBoxWithSlideAnimationState
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: SizedBox(
-                      width: size.width * 0.85,
-                      height: size.height * 0.30,
-                      child: Image.asset(
-                        'assets/png/certificate.png',
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
+                  child: hasError
+                      ? Container(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                color: Colors.red,
+                                size: 48,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                certificateData['error'] ??
+                                    'No certificate found',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        )
+                      : ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: SizedBox(
+                            width: size.width * 0.85,
+                            height: size.height * 0.30,
+                            child: Image.asset(
+                              'assets/png/certificate.png',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -233,7 +272,7 @@ class _ProfileBoxWithSlideAnimationState
                             Column(
                               children: [
                                 SizedBox(
-                                  height: 40.h,
+                                  height: 60.h,
                                 ),
                                 Container(
                                   padding: const EdgeInsets.all(2),
@@ -340,8 +379,11 @@ class _ProfileBoxWithSlideAnimationState
                                             ),
                                           ],
                                         ),
-                                        child:
-                                            Center(child: _buildQRBackground()),
+                                        child: Center(
+                                            child: _buildQRBackground(loginData
+                                                    .result?.data?.emp_id
+                                                    ?.toString() ??
+                                                '000')),
                                       ),
                                       // QR Code (rotated 45 degrees)
                                       Transform.rotate(
