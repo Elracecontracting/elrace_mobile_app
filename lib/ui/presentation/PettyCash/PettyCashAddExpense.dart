@@ -513,135 +513,164 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                 children: [
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          'assets/png/calendar_icon.png',
-                          width: 34,
-                          height: 34,
-                          fit: BoxFit.contain,
-                        ),
-                        const SizedBox(width: 22),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                "Select ${translate('pettycash.date')}",
-                                style: TextStyle(
-                                    fontSize: 15, fontWeight: FontWeight.bold),
-                              ),
-                              TextField(
-                                keyboardType: TextInputType.none,
-                                controller: date,
-                                onTap: _pickDate,
-                                enabled: true,
-                                onTapOutside: (b) {
-                                  FocusScope.of(context)
-                                      .unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
-                                },
-                                decoration: InputDecoration(
-                                  hintText: translate('pettycash.date'),
-                                  isDense: true,
-                                  contentPadding:
-                                      const EdgeInsets.symmetric(vertical: 4),
-                                ),
-                              ),
-                            ],
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.blue, width: 2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/png/calendar_icon.png',
+                            width: 34,
+                            height: 34,
+                            fit: BoxFit.contain,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 22),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Select ${translate('pettycash.date')}",
+                                  style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                TextField(
+                                  keyboardType: TextInputType.none,
+                                  controller: date,
+                                  onTap: _pickDate,
+                                  enabled: true,
+                                  onTapOutside: (b) {
+                                    FocusScope.of(context)
+                                        .unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
+                                  },
+                                  decoration: InputDecoration(
+                                    hintText: translate('pettycash.date'),
+                                    isDense: true,
+                                    border: InputBorder.none,
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(vertical: 4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          'assets/png/supplier_icon.png',
-                          width: 34,
-                          height: 34,
-                          fit: BoxFit.contain,
-                        ),
-                        const SizedBox(width: 22),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                translate('pettycash.holder'),
-                                style: TextStyle(
-                                    fontSize: 15, fontWeight: FontWeight.bold),
-                              ),
-                              TextField(
-                                keyboardType: TextInputType.none,
-                                controller: user,
-                                onTap: _showPettyCashUserDialog,
-                                enabled: true,
-                                onTapOutside: (b) {
-                                  FocusScope.of(context)
-                                      .unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
-                                },
-                                decoration: InputDecoration(
-                                  hintText: translate('pettycash.select_user'),
-                                  isDense: true,
-                                  contentPadding:
-                                      const EdgeInsets.symmetric(vertical: 4),
-                                ),
-                              ),
-                            ],
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.blue, width: 2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/png/supplier_icon.png',
+                            width: 34,
+                            height: 34,
+                            fit: BoxFit.contain,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 22),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  translate('pettycash.holder'),
+                                  style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                TextField(
+                                  keyboardType: TextInputType.none,
+                                  controller: user,
+                                  onTap: _showPettyCashUserDialog,
+                                  enabled: true,
+                                  onTapOutside: (b) {
+                                    FocusScope.of(context)
+                                        .unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
+                                  },
+                                  decoration: InputDecoration(
+                                    hintText:
+                                        translate('pettycash.select_user'),
+                                    isDense: true,
+                                    border: InputBorder.none,
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(vertical: 4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          'assets/png/money_icon.png',
-                          width: 34,
-                          height: 34,
-                          fit: BoxFit.contain,
-                        ),
-                        const SizedBox(width: 22),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Amount',
-                                style: TextStyle(
-                                    fontSize: 15, fontWeight: FontWeight.bold),
-                              ),
-                              TextField(
-                                keyboardType: TextInputType.number,
-                                controller: amout,
-                                onChanged: (value) {
-                                  // You can parse or validate here
-                                  setState(() {
-                                    amount = value;
-                                  });
-                                },
-                                onTapOutside: (b) {
-                                  FocusScope.of(context)
-                                      .unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
-                                },
-                                decoration: InputDecoration(
-                                  hintText: translate('pettycash.enter_amount'),
-                                  isDense: true,
-                                  contentPadding:
-                                      const EdgeInsets.symmetric(vertical: 4),
-                                ),
-                              ),
-                            ],
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.blue, width: 2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/png/money_icon.png',
+                            width: 34,
+                            height: 34,
+                            fit: BoxFit.contain,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 22),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Amount',
+                                  style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                                TextField(
+                                  keyboardType: TextInputType.number,
+                                  controller: amout,
+                                  onChanged: (value) {
+                                    // You can parse or validate here
+                                    setState(() {
+                                      amount = value;
+                                    });
+                                  },
+                                  onTapOutside: (b) {
+                                    FocusScope.of(context)
+                                        .unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
+                                  },
+                                  decoration: InputDecoration(
+                                    hintText:
+                                        translate('pettycash.enter_amount'),
+                                    isDense: true,
+                                    border: InputBorder.none,
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(vertical: 4),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],

@@ -624,34 +624,52 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
               }
 
               if (selectedExpenseType == 'EXPENSE TYPE') {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content:
-                          Text(translate('home.Select_Petty_Cash_Holder'))),
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(translate('pettycash.error')),
+                    content: Text(translate('home.Select_Petty_Cash_Holder')),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(translate('pettycash.ok')),
+                      ),
+                    ],
+                  ),
                 );
                 return;
               }
 
               if (selectedUser == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content:
-                          Text(translate('home.Select_Petty_Cash_Holder'))),
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(translate('pettycash.error')),
+                    content: Text(translate('home.Select_Petty_Cash_Holder')),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(translate('pettycash.ok')),
+                      ),
+                    ],
+                  ),
                 );
                 return;
               }
 
               if (amountController.text.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text(translate('home.Enter_amount_in_AED'))),
-                );
-                return;
-              }
-
-              if (description.trim().isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(translate('home.DESCRIPTION'))),
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(translate('pettycash.error')),
+                    content: Text(translate('home.Enter_amount_in_AED')),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(translate('pettycash.ok')),
+                      ),
+                    ],
+                  ),
                 );
                 return;
               }
@@ -689,7 +707,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                     "petty_cash_id": selectedUser['id'],
                     "unit_amount":
                         double.tryParse(amountController.text) ?? 0.0,
-                    "name": description,
+                    "name": description.trim().isEmpty ? "-" : description,
                     "x_expense_type":
                         getExpenseTypeApiValue(selectedExpenseType),
                     "state": "draft",
@@ -702,11 +720,17 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                   body: body,
                 );
 
+                print("===== Add Expense Response =====");
+                print("Status Code: ${response.statusCode}");
+                print("Response Body: ${response.body}");
+                print("================================");
+
                 final decoded = jsonDecode(response.body);
 
                 if (decoded['result']['status'] == 'success') {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
+                        behavior: SnackBarBehavior.floating,
                         content: Text(decoded['result']['message'] ??
                             translate('pettycash.request_submitted'))),
                   );
@@ -717,10 +741,19 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                       translate('pettycash.failed_to_submit'));
                 }
               } catch (e) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                      content: Text(
-                          "${translate('pettycash.error')}: ${e.toString()}")),
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: Text(translate('pettycash.error')),
+                    content: Text(
+                        "${translate('pettycash.error')}: ${e.toString()}"),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(ctx),
+                        child: Text(translate('pettycash.ok')),
+                      ),
+                    ],
+                  ),
                 );
               } finally {
                 setDialogState(() => isSubmitting = false);
@@ -921,18 +954,18 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                       const SizedBox(height: 24),
 
                       // Date Field
-                      InkWell(
-                        onTap: pickDate,
-                        child: Row(
-                          children: [
-                            Image.asset('assets/png/calendar_icon.png',
-                                width: 40, height: 40),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
+                      Row(
+                        children: [
+                          Image.asset('assets/png/calendar_icon.png',
+                              width: 40, height: 40),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 12),
+                                  child: Text(
                                     'Date',
                                     style: TextStyle(
                                       fontSize: 16,
@@ -940,39 +973,62 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                       color: Colors.black,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    dateController.text.isEmpty
-                                        ? DateFormat('dd/MM/yyyy')
-                                            .format(selectedDate)
-                                        : dateController.text,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.black87,
+                                ),
+                                const SizedBox(height: 4),
+                                InkWell(
+                                  onTap: pickDate,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12, horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(18),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.grey
+                                              .withAlpha((0.3 * 255).toInt()),
+                                          spreadRadius: 1,
+                                          blurRadius: 5,
+                                          offset: const Offset(2, 3),
+                                        ),
+                                      ],
+                                      image: const DecorationImage(
+                                        image: AssetImage(
+                                            'assets/png/desc_box.png'),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      dateController.text.isEmpty
+                                          ? 'Select Date'
+                                          : dateController.text,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.black87,
+                                      ),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 20),
 
                       // Supplier Field
-                      InkWell(
-                        onTap: showPettyCashUserDialog,
-                        child: Row(
-                          children: [
-                            Image.asset('assets/png/supplier_icon.png',
-                                width: 40, height: 40),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
+                      Row(
+                        children: [
+                          Image.asset('assets/png/supplier_icon.png',
+                              width: 40, height: 40),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 12),
+                                  child: Text(
                                     'Supplier',
                                     style: TextStyle(
                                       fontSize: 16,
@@ -980,21 +1036,45 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                       color: Colors.black,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    userController.text.isEmpty
-                                        ? 'Select Supplier'
-                                        : userController.text,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.black87,
+                                ),
+                                const SizedBox(height: 4),
+                                InkWell(
+                                  onTap: showPettyCashUserDialog,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12, horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(18),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.grey
+                                              .withAlpha((0.3 * 255).toInt()),
+                                          spreadRadius: 1,
+                                          blurRadius: 5,
+                                          offset: const Offset(2, 3),
+                                        ),
+                                      ],
+                                      image: const DecorationImage(
+                                        image: AssetImage(
+                                            'assets/png/desc_box.png'),
+                                        fit: BoxFit.cover,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      userController.text.isEmpty
+                                          ? 'Select Supplier'
+                                          : userController.text,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.black87,
+                                      ),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 20),
@@ -1009,27 +1089,66 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text(
-                                  'Amount',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black,
+                                const Padding(
+                                  padding: EdgeInsets.only(left: 12),
+                                  child: Text(
+                                    'Amount',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 4),
-                                TextField(
-                                  controller: amountController,
-                                  keyboardType: TextInputType.number,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.black87,
+                                Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(18),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.grey
+                                            .withAlpha((0.3 * 255).toInt()),
+                                        spreadRadius: 1,
+                                        blurRadius: 5,
+                                        offset: const Offset(2, 3),
+                                      ),
+                                    ],
+                                    image: const DecorationImage(
+                                      image:
+                                          AssetImage('assets/png/desc_box.png'),
+                                      fit: BoxFit.fill,
+                                    ),
                                   ),
-                                  decoration: const InputDecoration(
-                                    hintText: '0 AED',
-                                    border: InputBorder.none,
-                                    isDense: true,
-                                    contentPadding: EdgeInsets.zero,
+                                  child: TextField(
+                                    controller: amountController,
+                                    keyboardType: TextInputType.number,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.black87,
+                                    ),
+                                    decoration: InputDecoration(
+                                      hintText: 'Type an Amount',
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(18),
+                                        borderSide: const BorderSide(
+                                            color: Colors.grey, width: 0.5),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(18),
+                                        borderSide: const BorderSide(
+                                            color: Colors.grey, width: 0.5),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(18),
+                                        borderSide: const BorderSide(
+                                            color: Colors.blue, width: 2),
+                                      ),
+                                      filled: true,
+                                      fillColor: Colors.transparent,
+                                      contentPadding:
+                                          const EdgeInsets.symmetric(
+                                              vertical: 12, horizontal: 12),
+                                    ),
                                   ),
                                 ),
                               ],
@@ -1214,27 +1333,16 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
 
                 const SizedBox(height: 10),
 
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        iconSize: 34,
-                        icon: const Icon(
-                          Icons.arrow_back,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      const Text(
-                        'DRAFT',
-                        style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: appFontColor),
-                      ),
-                      const SizedBox(width: 40), // Spacer for alignment
-                    ],
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.0),
+                  child: Center(
+                    child: Text(
+                      'DRAFT',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: appFontColor),
+                    ),
                   ),
                 ),
 
@@ -1431,35 +1539,42 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                 ),
 
                 // Transaction List with Dynamic Data
-                Column(
-                  children: [
-                    ListView.builder(
-                      shrinkWrap: true,
-                      controller: _scrollController,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: expenseSheets.length,
-                      itemBuilder: (context, index) {
-                        var expense = expenseSheets[index];
-                        const state = "DRAFT";
-                        final date = expense['date'];
-                        final total = expense['amount'];
-                        final id = expense['id'];
+                isDraftLoading
+                    ? const Padding(
+                        padding: EdgeInsets.all(40.0),
+                        child: Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      )
+                    : Column(
+                        children: [
+                          ListView.builder(
+                            shrinkWrap: true,
+                            controller: _scrollController,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: expenseSheets.length,
+                            itemBuilder: (context, index) {
+                              var expense = expenseSheets[index];
+                              const state = "DRAFT";
+                              final date = expense['date'];
+                              final total = expense['amount'];
+                              final id = expense['id'];
 
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 8.0, horizontal: 12.0),
-                          child: _buildTransactionItem_2(
-                            state is String
-                                ? capitalize(state)
-                                : state.toString(),
-                            date is String ? date : 'Date not available',
-                            total != null ? total.toString() : '0',
+                              return Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    vertical: 4.0, horizontal: 12.0),
+                                child: _buildTransactionItem_2(
+                                  state is String
+                                      ? capitalize(state)
+                                      : state.toString(),
+                                  date is String ? date : 'Date not available',
+                                  total != null ? total.toString() : '0',
+                                ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
-                  ],
-                ),
+                        ],
+                      ),
 
                 const SizedBox(height: 10),
 
