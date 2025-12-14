@@ -94,20 +94,26 @@ class MyApp extends StatelessWidget {
                     children: [
                       GestureDetector(
                         onTap: () {
-                          final profileBoxProvider = Provider.of<ProfileBoxProvider>(context, listen: false);
+                          final profileBoxProvider =
+                              Provider.of<ProfileBoxProvider>(context,
+                                  listen: false);
                           if (profileBoxProvider.isProfileVisible) {
-                            profileBoxProvider.hideProfileBox(); // Close the profile box
+                            profileBoxProvider
+                                .hideProfileBox(); // Close the profile box
                           }
                         },
                         child: child!,
                       ),
                       Theme(
                         data: ThemeData(
-                          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+                          colorScheme: ColorScheme.fromSeed(
+                              seedColor: Colors.deepPurple),
                           useMaterial3: true,
                           textTheme: TextTheme(
-                            displayLarge: GoogleFonts.koulen(fontSize: 28, fontWeight: FontWeight.w400),
-                            titleMedium: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+                            displayLarge: GoogleFonts.koulen(
+                                fontSize: 28, fontWeight: FontWeight.w400),
+                            titleMedium: GoogleFonts.inter(
+                                fontSize: 16, fontWeight: FontWeight.w600),
                             bodyMedium: GoogleFonts.inter(fontSize: 14),
                           ),
                         ),
@@ -119,11 +125,14 @@ class MyApp extends StatelessWidget {
                 navigatorKey: navKey,
                 title: 'El Race',
                 theme: ThemeData(
-                  colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+                  colorScheme:
+                      ColorScheme.fromSeed(seedColor: Colors.deepPurple),
                   useMaterial3: true,
                   textTheme: TextTheme(
-                    displayLarge: GoogleFonts.koulen(fontSize: 28, fontWeight: FontWeight.w400),
-                    titleMedium: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
+                    displayLarge: GoogleFonts.koulen(
+                        fontSize: 28, fontWeight: FontWeight.w400),
+                    titleMedium: GoogleFonts.inter(
+                        fontSize: 16, fontWeight: FontWeight.w600),
                     bodyMedium: GoogleFonts.inter(fontSize: 14),
                   ),
                 ),
@@ -134,7 +143,9 @@ class MyApp extends StatelessWidget {
                   GlobalCupertinoLocalizations.delegate,
                 ],
                 supportedLocales: localizationDelegate.supportedLocales,
-                locale: SharedPref().isArabic() ? localizationDelegate.supportedLocales.last : localizationDelegate.supportedLocales.first,
+                locale: SharedPref().isArabic()
+                    ? localizationDelegate.supportedLocales.last
+                    : localizationDelegate.supportedLocales.first,
                 onGenerateRoute: onGeneratedRoutes.generatedRoutes,
                 home: const SplashScreen()),
           ),

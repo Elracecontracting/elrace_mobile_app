@@ -4,6 +4,12 @@ import 'package:el_race/data/models/pdf_model.dart';
 import 'package:el_race/data/models/report_detail_item.dart';
 import 'package:el_race/data/models/report_detail_model.dart';
 import 'package:el_race/report_module/data/models/company_model.dart';
+import 'package:el_race/report_module/data/models/cover_page_model.dart';
+import 'package:el_race/report_module/data/models/report_detail_model.dart'
+    as report_module;
+import 'package:el_race/report_module/data/models/report_item_model.dart';
+import 'package:el_race/report_module/data/models/report_model.dart'
+    as report_module;
 import 'package:hive_flutter/adapters.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/report_model.dart';
@@ -19,11 +25,17 @@ class HiveService {
   static Future<void> setupHive() async {
     Directory appDocDir = await getApplicationDocumentsDirectory();
     await Hive.initFlutter(appDocDir.path);
+    // Main app adapters
     Hive.registerAdapter(ReportModelAdapter());
     Hive.registerAdapter(ReportDetailModelAdapter());
     Hive.registerAdapter(ReportDetailItemAdapter());
     Hive.registerAdapter(CompanyModelAdapter());
     Hive.registerAdapter(PdfModelAdapter());
+    // Report module adapters
+    Hive.registerAdapter(CoverPageModelAdapter());
+    Hive.registerAdapter(ReportItemModelAdapter());
+    Hive.registerAdapter(report_module.ReportModelAdapter());
+    Hive.registerAdapter(report_module.ReportDetailModelAdapter());
   }
 
   static Future<Box<PdfModel>> getPdfBox() async {

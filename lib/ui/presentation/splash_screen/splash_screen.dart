@@ -14,12 +14,11 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   @override
   void didChangeDependencies() {
-  
     Future.delayed(const Duration(seconds: 6), () {
       Util.fetchHomeScreenData(context);
-      if(SharedPref.isUserAuthenticated()){
+      if (SharedPref.isUserAuthenticated()) {
         Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
-      }else{
+      } else {
         Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
       }
     });

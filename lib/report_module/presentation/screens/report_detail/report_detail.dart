@@ -305,10 +305,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     var result = await Navigator.push(
         context,
         MaterialPageRoute(
-            builder: (context) => const CustomCameraScreen(
-                  onePicture: false,
-                )));
-
+            builder: (context) => const CustomCameraScreen(onePicture: false)));
+    print(result);
     if (result.isNotEmpty) {
       loadingText = "";
 
