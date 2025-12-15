@@ -376,33 +376,29 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
           width: 90.w,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            // Simple shadow for depth
-            boxShadow: isSelected
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 4,
-                      offset: const Offset(0, 4),
-                      spreadRadius: 0,
-                    ),
-                  ]
-                : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                      spreadRadius: 0,
-                    ),
-                  ],
+            // Shadow for depth
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha((0.08 * 255).toInt()),
+                blurRadius: 4,
+                spreadRadius: 2,
+                offset: const Offset(0, 0),
+              ),
+            ],
           ),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              // Solid color based on selection
-              color: isSelected
-                  ? const Color(0xFF1A2540) // Darker blue/navy for active
-                  : const Color(0xFFE8E8E8), // Light gray for inactive
+              // Solid/gradient based on selection
+              color: isSelected ? const Color(0xFF1A2540) : null,
+              gradient: isSelected
+                  ? null
+                  : const LinearGradient(
+                      colors: [Color(0xffD6D6D6), Color(0xffADB2BD)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
               // Glass border
               border: Border.all(
                 color: isSelected
@@ -427,8 +423,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                     fontWeight: FontWeight.bold,
                     color: isSelected
                         ? Colors.white
-                        : const Color(
-                            0xFF666666), // White for active, dark gray for inactive
+                        : appFontColor, // White for active, blue for inactive
                     letterSpacing: 1.0,
                     shadows: isSelected
                         ? [

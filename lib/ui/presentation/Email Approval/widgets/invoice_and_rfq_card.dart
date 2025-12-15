@@ -22,9 +22,9 @@ class InvoiceAndRfqCard extends StatelessWidget {
     return Expanded(
       child: ListView.separated(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 5) + EdgeInsets.only(bottom: 100.w),
+        padding: const EdgeInsets.symmetric(horizontal: 5) + EdgeInsets.only(bottom: 100.w, top: 100.w),
         itemCount: approvalItems.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 10),
+        separatorBuilder: (context, index) => const SizedBox(height: 4),
         itemBuilder: (context, index) {
           final item = approvalItems[index];
           String type = item["type"] ?? "";
