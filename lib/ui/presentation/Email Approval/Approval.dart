@@ -218,6 +218,25 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     }
   }
 
+  int _getCategoryCount(String category) {
+    switch (category.toLowerCase()) {
+      case 'my action':
+      case 'my actions':
+      case 'all':
+        return allItems.length;
+      case 'hr':
+        return hrItems.length;
+      case 'rfq':
+        return rfqItems.length;
+      case 'invoice':
+        return invoiceItems.length;
+      case 'petty cash':
+        return pettyCashItems.length;
+      default:
+        return 0;
+    }
+  }
+
   Map<String, String> get categoryIcons => {
         translate('home.my_action'): "assets/png/all-icon.png",
         translate('home.hr'): "assets/png/hr-icon.png",
@@ -249,7 +268,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
           children: [
             Column(
               children: [
-                const SizedBox(height: 10),
+                const SizedBox(height: 5),
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 10.0),
                   child: Row(
@@ -361,13 +380,14 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                                 "assets/icons/default.png",
                             title: cat,
                             isSelected: isSelected,
+                            count: _getCategoryCount(cat),
                           ),
                         ),
                       );
                     }).toList(),
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 8),
                 body()
               ],
             ),
@@ -406,70 +426,48 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     required String icon,
     required String title,
     required bool isSelected,
+    int count = 0,
   }) {
-    return Container(
-      width: 90.w,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        // Professional layered shadows - extended outside the tab
-        boxShadow: [
-          // Main shadow - larger spread
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 6),
-            spreadRadius: 2,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          width: 90.w,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            // Simple shadow for depth
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.15),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                      spreadRadius: 0,
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                      spreadRadius: 0,
+                    ),
+                  ],
           ),
-          // Secondary shadow for depth
-          BoxShadow(
-            color: Colors.black.withOpacity(0.12),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-            spreadRadius: 1,
-          ),
-          // Top highlight shadow
-          BoxShadow(
-            color: Colors.white.withOpacity(0.4),
-            blurRadius: 10,
-            offset: const Offset(-3, -3),
-            spreadRadius: 0,
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
-              // Advanced glass effect with gradient overlay
-              gradient: isSelected
-                  ? LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withOpacity(0.25),
-                        appFontColor.withOpacity(0.35),
-                        appFontColor.withOpacity(0.25),
-                      ],
-                      stops: const [0.0, 0.5, 1.0],
-                    )
-                  : LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        Colors.white.withOpacity(0.5),
-                        Colors.white.withOpacity(0.3),
-                        Colors.grey.shade300.withOpacity(0.2),
-                      ],
-                      stops: const [0.0, 0.5, 1.0],
-                    ),
+              // Solid color based on selection
+              color: isSelected
+                  ? const Color(0xFF1A2540) // Darker blue/navy for active
+                  : const Color(0xFFE8E8E8), // Light gray for inactive
               // Glass border
               border: Border.all(
-                color: Colors.white.withOpacity(isSelected ? 0.5 : 0.7),
-                width: 1.5,
+                color: isSelected
+                    ? Colors.white.withOpacity(0.3)
+                    : Colors.grey.withOpacity(0.3),
+                width: 1,
               ),
             ),
             child: Column(
@@ -486,35 +484,59 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                   style: GoogleFonts.koulen(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.bold,
-                    color: isSelected ? Colors.white : Colors.black87,
+                    color: isSelected
+                        ? Colors.white
+                        : const Color(
+                            0xFF666666), // White for active, dark gray for inactive
                     letterSpacing: 1.0,
                     shadows: isSelected
                         ? [
                             Shadow(
-                              color: Colors.black.withOpacity(0.4),
-                              offset: const Offset(0, 2),
-                              blurRadius: 4,
-                            ),
-                            Shadow(
-                              color: Colors.black.withOpacity(0.2),
+                              color: Colors.black.withOpacity(0.3),
                               offset: const Offset(0, 1),
                               blurRadius: 2,
                             ),
                           ]
-                        : [
-                            Shadow(
-                              color: Colors.white.withOpacity(0.8),
-                              offset: const Offset(0, 1),
-                              blurRadius: 2,
-                            ),
-                          ],
+                        : null,
                   ),
                 ),
               ],
             ),
           ),
         ),
-      ),
+        // Badge for count
+        if (count > 0)
+          Positioned(
+            right: -5,
+            top: -5,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: red,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: Colors.white,
+                  width: 2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Text(
+                count > 99 ? '99+' : count.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

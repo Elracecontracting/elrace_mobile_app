@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:el_race/core/services/approval_count_service.dart';
 import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
@@ -31,12 +32,14 @@ class HeaderWidget extends StatefulWidget implements PreferredSizeWidget {
 class _HeaderWidgetState extends State<HeaderWidget> {
   String _imageBase64 = '';
   int _notificationCount = 0;
+  int _approvalCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _loadNotificationCount();
+    _loadApprovalCount();
   }
 
   Future<void> _loadUserData() async {
@@ -50,6 +53,15 @@ class _HeaderWidgetState extends State<HeaderWidget> {
     if (mounted) {
       setState(() {
         _notificationCount = count;
+      });
+    }
+  }
+
+  Future<void> _loadApprovalCount() async {
+    final count = await ApprovalCountService.getTotalApprovalCount();
+    if (mounted) {
+      setState(() {
+        _approvalCount = count;
       });
     }
   }
@@ -125,14 +137,16 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                     Row(
                       children: [
                         GestureDetector(
-                          onTap: () {
+                          onTap: () async {
                             if (SharedPref.isUserAuthenticated()) {
-                              Navigator.push(
+                              await Navigator.push(
                                 context,
                                 SlideRightPageRoute(
                                   child: const ApprovalsScreen(),
                                 ),
                               );
+                              // Refresh approval count after returning
+                              _loadApprovalCount();
                             }
                           },
                           child: Stack(
@@ -146,25 +160,28 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                                   fit: BoxFit.contain,
                                 ),
                               ),
-                              Positioned(
-                                right: 0,
-                                top: -5,
-                                child: Container(
-                                  padding: const EdgeInsets.all(3),
-                                  decoration: const BoxDecoration(
-                                    color: red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Text(
-                                    '7',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
+                              if (_approvalCount > 0)
+                                Positioned(
+                                  right: 0,
+                                  top: -5,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(3),
+                                    decoration: const BoxDecoration(
+                                      color: red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      _approvalCount > 99
+                                          ? '99+'
+                                          : _approvalCount.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
                             ],
                           ),
                         ),
@@ -172,25 +189,30 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                         GestureDetector(
                           onTap: () async {
                             print('🔔 [HEADER] Notification bell tapped');
-                            print('   - User authenticated: ${SharedPref.isUserAuthenticated()}');
+                            print(
+                                '   - User authenticated: ${SharedPref.isUserAuthenticated()}');
                             print('   - isNotOpen: ${bloc.isNotOpen}');
-                            
+
                             if (SharedPref.isUserAuthenticated()) {
                               if (!bloc.isNotOpen) {
                                 print('   - ✅ Opening notification screen...');
-                                bloc.isNotOpen = true; // Mark as open before navigation
+                                bloc.isNotOpen =
+                                    true; // Mark as open before navigation
                                 await Navigator.push(
                                   context,
                                   SlideRightPageRoute(
                                     child: const NotificationScreen(),
                                   ),
                                 );
-                                print('   - ✅ Returned from notification screen');
-                                bloc.isNotOpen = false; // Reset to allow reopening
+                                print(
+                                    '   - ✅ Returned from notification screen');
+                                bloc.isNotOpen =
+                                    false; // Reset to allow reopening
                                 // Refresh notification count after returning
                                 _loadNotificationCount();
                               } else {
-                                print('   - ⚠️ Screen already open, ignoring tap');
+                                print(
+                                    '   - ⚠️ Screen already open, ignoring tap');
                               }
                             } else {
                               print('   - ❌ User not authenticated');

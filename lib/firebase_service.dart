@@ -13,7 +13,7 @@ class FirebaseService {
       FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin
       _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-  
+
   // Track processed notification message IDs to avoid duplicate handling
   static final Set<String> _processedMessageIds = {};
 
@@ -87,16 +87,17 @@ class FirebaseService {
       print('   - Message ID: $messageId');
       print('   - Title: ${message.notification?.title}');
       print('   - Data: ${message.data}');
-      
+
       // Check if already processed
       if (_processedMessageIds.contains(messageId)) {
         print('   - ⚠️ Message already processed, ignoring');
         return;
       }
-      
+
       _processedMessageIds.add(messageId);
-      print('   - ✅ Processing message (${_processedMessageIds.length} total processed)');
-      
+      print(
+          '   - ✅ Processing message (${_processedMessageIds.length} total processed)');
+
       // Save notification to storage if not already saved
       _saveNotificationToStorage(message);
       _handleNotificationTap(message.data.toString());
@@ -112,16 +113,17 @@ class FirebaseService {
         print('   - Message ID: $messageId');
         print('   - Title: ${message.notification?.title}');
         print('   - Data: ${message.data}');
-        
+
         // Check if already processed
         if (_processedMessageIds.contains(messageId)) {
           print('   - ⚠️ Message already processed, ignoring');
           return;
         }
-        
+
         _processedMessageIds.add(messageId);
-        print('   - ✅ Processing message (${_processedMessageIds.length} total processed)');
-        
+        print(
+            '   - ✅ Processing message (${_processedMessageIds.length} total processed)');
+
         _saveNotificationToStorage(message);
         _handleNotificationTap(message.data.toString());
       } else {
@@ -326,17 +328,18 @@ class FirebaseService {
     if (navKey.currentContext != null) {
       final currentRoute = ModalRoute.of(navKey.currentContext!);
       print('   - Current route name: ${currentRoute?.settings.name}');
-      
-      final isOnNotificationScreen = currentRoute?.settings.name == '/notification' ||
-          currentRoute?.settings.arguments is NotificationScreen;
-      
+
+      final isOnNotificationScreen =
+          currentRoute?.settings.name == '/notification' ||
+              currentRoute?.settings.arguments is NotificationScreen;
+
       print('   - Is on notification screen: $isOnNotificationScreen');
-      
+
       if (!isOnNotificationScreen) {
         print('   - ✅ Navigating to notification screen...');
         // Check if we can navigate
         final navigator = Navigator.of(navKey.currentContext!);
-        
+
         // Remove any existing notification screens from stack and push new one
         navigator.pushAndRemoveUntil(
           MaterialPageRoute(
