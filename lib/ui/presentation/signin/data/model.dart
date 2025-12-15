@@ -93,6 +93,7 @@ class Data {
   final List<dynamic>? allowedBranchIds;
   final List<String>? roles;
   final bool? qr_status;
+  final Map<String, dynamic>? certificate;
   final DefaultWidgets? defaultWidgets;
 
   Data({
@@ -125,6 +126,7 @@ class Data {
     this.allowedBranchIds,
     this.roles,
     this.qr_status,
+    this.certificate,
     this.defaultWidgets,
   });
 
@@ -175,6 +177,9 @@ class Data {
             ? []
             : List<String>.from(json["roles"]!.map((x) => x)),
         qr_status: json["qr_status"],
+        certificate: json["certificate"] != null
+            ? Map<String, dynamic>.from(json["certificate"])
+            : null,
         defaultWidgets: json["default_widgets"] == null
             ? null
             : DefaultWidgets.fromJson(json["default_widgets"]),
@@ -217,6 +222,7 @@ class Data {
             : List<dynamic>.from(allowedBranchIds!.map((x) => x)),
         "roles": roles == null ? [] : List<dynamic>.from(roles!.map((x) => x)),
         "qr_status": qr_status,
+        "certificate": certificate,
         "default_widgets": defaultWidgets?.toJson(),
       };
 }

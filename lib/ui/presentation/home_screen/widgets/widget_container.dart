@@ -58,7 +58,7 @@ class WidgetContainer extends StatelessWidget {
                           color: const Color(0xFF000F42),
                         ),
                       ),
-                      GestureDetector(
+                      /* GestureDetector(
                         onTap: () =>
                             Util.pushPage(const EditWidgetsScreen(), context),
                         child: Text(
@@ -70,6 +70,7 @@ class WidgetContainer extends StatelessWidget {
                           ),
                         ),
                       ),
+                      */
                     ],
                   ),
                 ),
@@ -78,7 +79,7 @@ class WidgetContainer extends StatelessWidget {
                   opacity: !SharedPref.isUserAuthenticated() ? 0.5 : 1,
                   child: SizedBox(
                     width: double.infinity,
-                    height: 192.w,
+                    height: 190.h,
                     child: Container(
                       width: double.infinity,
                       margin: EdgeInsets.only(top: 6.h),
@@ -89,7 +90,7 @@ class WidgetContainer extends StatelessWidget {
                         image: const DecorationImage(
                           image: AssetImage(
                               'assets/png/gray_card.png'), // ✅ Update to your image path
-                          fit: BoxFit.cover,
+                          fit: BoxFit.fill,
                         ),
                       ),
                       child: Column(

@@ -33,77 +33,78 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
-      body: Column(
-        children: [
-          // Header
-          const SizedBox(height: 10),
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              // Center: Title
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/newapp/attachment.png',
-                    height: 30.w,
-                    width: 30.w,
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // Header Section (Scrollable)
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/newapp/attachment.png',
+                        height: 24.w,
+                        width: 24.w,
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        'ATTACHMENTS',
+                        style: GoogleFonts.koulen(
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.w500,
+                          color: appFontColor,
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(width: 8.w),
-                  Text(
-                    'ATTACHMENTS',
-                    style: GoogleFonts.koulen(
-                      fontSize: 26.sp,
-                      fontWeight: FontWeight.w500,
-                      color: appFontColor,
-                    ),
-                  ),
-                ],
-              ),
-              // Left: Back button
-              Positioned(
-                left: 0,
-                child: IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.pop(context),
                 ),
-              ),
-            ],
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
 
           // Content
-          Expanded(
-            child: BlocProvider.value(
-              value: widget.bloc,
-              child: BlocBuilder<ProjectListBloc, ProjectListState>(
-                builder: (ctx, state) {
-                  if (state is ProjectAttachmentsLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  } else if (state is ProjectAttachmentsLoaded) {
-                    var list = widget.bloc.projectAttacmentList;
-                    return GridView.builder(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 40.w, vertical: 40.h),
-                      itemCount:
-                          list.length + 1, // +1 for Add New Document card
+          BlocProvider.value(
+            value: widget.bloc,
+            child: BlocBuilder<ProjectListBloc, ProjectListState>(
+              builder: (ctx, state) {
+                if (state is ProjectAttachmentsLoading) {
+                  return SliverFillRemaining(
+                    child: const Center(child: CircularProgressIndicator()),
+                  );
+                } else if (state is ProjectAttachmentsLoaded) {
+                  var list = widget.bloc.projectAttacmentList;
+                  return SliverPadding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 40.w, vertical: 40.h),
+                    sliver: SliverGrid(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          if (index == 0) {
+                            return _buildAddNewDocumentCard();
+                          } else {
+                            final attachment = list[index - 1];
+                            return _buildAttachmentCard(attachment);
+                          }
+                        },
+                        childCount: list.length + 1,
+                      ),
                       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                         crossAxisCount: 2,
                         mainAxisSpacing: 16.h,
                         crossAxisSpacing: 16.w,
                         childAspectRatio: 0.85,
                       ),
-                      itemBuilder: (context, index) {
-                        // Add New Document card at the beginning (left in RTL)
-                        if (index == 0) {
-                          return _buildAddNewDocumentCard();
-                        } else {
-                          final attachment = list[index - 1];
-                          return _buildAttachmentCard(attachment);
-                        }
-                      },
-                    );
-                  } else if (state is ProjectAttachmentsError) {
-                    return Center(
+                    ),
+                  );
+                } else if (state is ProjectAttachmentsError) {
+                  return SliverFillRemaining(
+                    child: Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -124,12 +125,14 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
                           ),
                         ],
                       ),
-                    );
-                  } else {
-                    return const Center(child: Text('No data available'));
-                  }
-                },
-              ),
+                    ),
+                  );
+                } else {
+                  return SliverFillRemaining(
+                    child: const Center(child: Text('No data available')),
+                  );
+                }
+              },
             ),
           ),
         ],

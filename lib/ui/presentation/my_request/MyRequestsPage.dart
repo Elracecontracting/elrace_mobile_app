@@ -630,124 +630,114 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: const HeaderWidget(),
-        body: Column(
-          children: [
-            const SizedBox(height: 10),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                children: [
-                  // Header Row (match reference)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Back icon (left)
-                      SizedBox(
-                        width: 48.w,
-                        height: 48.w,
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          icon: Icon(Icons.arrow_back,
-                              size: 34.sp, color: appFontColor),
-                          onPressed: () => Navigator.pop(context, true),
-                        ),
-                      ),
-
-                      // Centered title
-                      Expanded(
-                        child: Align(
-                          alignment: Alignment.center,
-                          child: Text(
-                            translate('home.my_request')
-                                .toString()
-                                .toUpperCase(),
-                            style: GoogleFonts.koulen(
-                              fontSize: 28.sp,
-                              fontWeight: FontWeight.w400,
-                              color: appFontColor,
-                              letterSpacing: 2.5,
+        body: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Column(
+                  children: [
+                    const SizedBox(height: 10),
+                    // Header Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const SizedBox(width: 40),
+                        // Centered title
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              translate('home.my_request')
+                                  .toString()
+                                  .toUpperCase(),
+                              style: GoogleFonts.koulen(
+                                fontSize: 22.sp,
+                                fontWeight: FontWeight.w400,
+                                color: appFontColor,
+                                letterSpacing: 2.0,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center,
                           ),
                         ),
-                      ),
-
-                      // Plus icon (right)
-                      SizedBox(
-                        width: 48.w,
-                        height: 48.w,
-                        child: IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          icon:
-                              Icon(Icons.add, size: 34.sp, color: appFontColor),
-                          onPressed: _showRequestTypeDialog,
+                        // Plus icon (right)
+                        SizedBox(
+                          width: 40.w,
+                          height: 40.w,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            icon:
+                                Icon(Icons.add, size: 28.sp, color: appFontColor),
+                            onPressed: _showRequestTypeDialog,
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Centered rounded search field (match reference)
-                  Align(
-                    alignment: Alignment.center,
-                    child: Container(
-                      width: MediaQuery.of(context).size.width * 0.66,
-                      height: 56.h,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(30.r),
-                        border: Border.all(
-                            color: const Color(0xFFD9D9D9), width: 1),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.grey.withAlpha((0.06 * 255).toInt()),
-                            blurRadius: 6,
-                            spreadRadius: 0,
-                          ),
-                        ],
-                      ),
-                      child: TextField(
-                        controller: searchController,
-                        decoration: InputDecoration(
-                          hintText: translate('home.Find_your_request'),
-                          hintStyle:
-                              TextStyle(fontSize: 14.sp, color: appFontColor),
-                          prefixIcon: Padding(
-                            padding: EdgeInsets.all(12.w),
-                            child: Icon(Icons.menu,
-                                size: 20.sp, color: appFontColor),
-                          ),
-                          suffixIcon: Padding(
-                            padding: EdgeInsets.only(right: 12.w),
-                            child: Icon(Icons.search,
-                                size: 20.sp, color: appFontColor),
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 14.h),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    // Centered rounded search field
+                    Align(
+                      alignment: Alignment.center,
+                      child: Container(
+                        width: MediaQuery.of(context).size.width * 0.66,
+                        height: 50.h,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(30.r),
+                          border: Border.all(
+                              color: const Color(0xFFD9D9D9), width: 1),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.grey.withAlpha((0.06 * 255).toInt()),
+                              blurRadius: 6,
+                              spreadRadius: 0,
+                            ),
+                          ],
                         ),
-                        onChanged: (query) {},
+                        child: TextField(
+                          controller: searchController,
+                          decoration: InputDecoration(
+                            hintText: translate('home.Find_your_request'),
+                            hintStyle:
+                                TextStyle(fontSize: 14.sp, color: appFontColor),
+                            prefixIcon: Padding(
+                              padding: EdgeInsets.all(12.w),
+                              child: Icon(Icons.menu,
+                                  size: 20.sp, color: appFontColor),
+                            ),
+                            suffixIcon: Padding(
+                              padding: EdgeInsets.only(right: 12.w),
+                              child: Icon(Icons.search,
+                                  size: 20.sp, color: appFontColor),
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(vertical: 14.h),
+                          ),
+                          onChanged: (query) {},
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                  ],
+                ),
               ),
             ),
-            Expanded(
-              child: isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : error.isNotEmpty
-                      ? Center(child: Text(error))
-                      : ListView.builder(
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          itemCount: requests.length,
-                          itemBuilder: (context, index) =>
-                              _buildRequestItem(requests[index], index),
-                        ),
-            ),
+            if (isLoading)
+              const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()))
+            else if (error.isNotEmpty)
+              SliverFillRemaining(child: Center(child: Text(error)))
+            else
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildRequestItem(requests[index], index),
+                    childCount: requests.length,
+                  ),
+                ),
+              ),
           ],
         ),
       ),

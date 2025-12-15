@@ -86,6 +86,7 @@ class DecorativeStripPainter extends CustomPainter {
 // Custom painter for QR background with animated moving numbers
 class AnimatedQRBackgroundPainter extends CustomPainter {
   final double animationValue;
+  final String empId;
 
   static var textStyle = TextStyle(
     color: HexColor("#009859"),
@@ -94,25 +95,17 @@ class AnimatedQRBackgroundPainter extends CustomPainter {
   );
 
   static const spacing = 40;
-  static const text = '920';
 
-  // Pre-compute text painter once to avoid recreation
-  static final _textPainter = TextPainter(
-    text: TextSpan(text: text, style: textStyle),
-    textDirection: ui.TextDirection.ltr,
-  );
-
-  static bool _isInitialized = false;
-
-  AnimatedQRBackgroundPainter(this.animationValue);
+  AnimatedQRBackgroundPainter(this.animationValue, this.empId);
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Initialize text painter only once
-    if (!_isInitialized) {
-      _textPainter.layout();
-      _isInitialized = true;
-    }
+    // Create text painter with dynamic emp_id
+    final textPainter = TextPainter(
+      text: TextSpan(text: empId, style: textStyle),
+      textDirection: ui.TextDirection.ltr,
+    );
+    textPainter.layout();
 
     // Clip to container bounds to keep numbers only inside the white square
     canvas.clipRect(Rect.fromLTWH(0, 0, size.width, size.height));
@@ -135,7 +128,7 @@ class AnimatedQRBackgroundPainter extends CustomPainter {
         final animatedY = baseY - moveY;
 
         // Paint numbers - clipping will automatically constrain to square bounds
-        _textPainter.paint(canvas, Offset(animatedX, animatedY));
+        textPainter.paint(canvas, Offset(animatedX, animatedY));
       }
     }
   }
@@ -143,6 +136,7 @@ class AnimatedQRBackgroundPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     return oldDelegate is AnimatedQRBackgroundPainter &&
-        oldDelegate.animationValue != animationValue;
+        (oldDelegate.animationValue != animationValue ||
+            oldDelegate.empId != empId);
   }
 }

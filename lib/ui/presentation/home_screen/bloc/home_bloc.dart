@@ -36,10 +36,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<LoadPrayerMuteStateEvent>(_loadPrayerMuteState);
     on<TogglePrayerMuteStateEvent>(_togglePrayerMuteState);
     on<UpdatePrayerTickEvent>(_updatePrayerTick);
+    on<ToggleReorderModeEvent>(_toggleReorderMode);
     monthName = DateFormat('MMMM').format(now);
   }
   bool isNotOpen = false;
   bool isEdit = false;
+  bool isReorderMode = false;
   int currentIndex = 1;
   changeCurrentIndex(ChangeCurrentIndex event, emit) {
     emit(ChangeIndexLoading());
@@ -52,6 +54,12 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     emit(ChangeIndexLoading());
     enableBottomNav = !enableBottomNav;
     emit(ChangeIndexSuccess());
+  }
+
+  void _toggleReorderMode(
+      ToggleReorderModeEvent event, Emitter<HomeState> emit) {
+    isReorderMode = !isReorderMode;
+    emit(ReorderModeChanged(isReorderMode));
   }
 
   FutureOr<void> checkedInMethod(

@@ -157,36 +157,31 @@ class _LpoListScreenState extends State<LpoListScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
-      body: Column(
-        children: [
-          // 🔹 Always-visible header
-          const SizedBox(height: 10),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () => Navigator.pop(context),
-              ),
-              Expanded(
-                child: Align(
-                  alignment: Alignment.center,
+      body: CustomScrollView(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          // 🔹 LPO Title Section (Scrollable)
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                const SizedBox(height: 10),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       SvgPicture.asset(
                         "assets/png/lpo_blue.svg",
-                        height: 30.w,
-                        width: 30.w,
+                        height: 24.w,
+                        width: 24.w,
                       ),
-                      SizedBox(
-                        width: 4.w,
-                      ),
+                      SizedBox(width: 4.w),
                       if (!_showSearch)
                         Text(
                           translate('home.lpo'),
                           style: GoogleFonts.koulen(
-                            fontSize: 26.sp,
+                            fontSize: 22.sp,
                             fontWeight: FontWeight.w500,
                             color: appFontColor,
                           ),
@@ -197,37 +192,19 @@ class _LpoListScreenState extends State<LpoListScreen> {
                     ],
                   ),
                 ),
-              ),
-              // Padding(
-              //   padding: const EdgeInsets.only(right: 16),
-              //   child: GestureDetector(
-              //     onTap: () {
-              //       setState(() {
-              //         _showSearch = !_showSearch;
-              //         if (!_showSearch) {
-              //           _searchController.clear();
-              //           _keyword = '';
-              //           _fetchLpos(keyword: '');
-              //         }
-              //       });
-              //     },
-              //     child: Image.asset(
-              //       'assets/png/search.png',
-              //       width: 35.w,
-              //       height: 35.w,
-              //     ),
-              //   ),
-              // ),
-              SizedBox(width: 51.w), // Balance spacing
-            ],
+                const SizedBox(height: 10),
+              ],
+            ),
           ),
 
-          // 🔹 Expanded so list or loading takes remaining space
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                    ? Center(
+          // 🔹 Loading or Error or List
+          _isLoading
+              ? SliverFillRemaining(
+                  child: const Center(child: CircularProgressIndicator()),
+                )
+              : _error != null
+                  ? SliverFillRemaining(
+                      child: Center(
                         child: Padding(
                           padding: const EdgeInsets.all(16.0),
                           child: Text(
@@ -236,13 +213,11 @@ class _LpoListScreenState extends State<LpoListScreen> {
                             style: const TextStyle(color: Colors.red),
                           ),
                         ),
-                      )
-                    : ListView.builder(
-                        physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.only(top: 10),
-                        controller: _scrollController,
-                        itemCount: _items.length,
-                        itemBuilder: (context, index) {
+                      ),
+                    )
+                  : SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
                           final item = _items[index];
                           final name = (item['name'] ?? '').toString();
                           final vendor = (item['partner_id'] ?? '').toString();
@@ -275,8 +250,9 @@ class _LpoListScreenState extends State<LpoListScreen> {
                             attachments: attachments,
                           );
                         },
+                        childCount: _items.length,
                       ),
-          ),
+                    ),
         ],
       ),
     );

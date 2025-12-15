@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashAddExpense.dart';
-import 'package:el_race/ui/presentation/PettyCash/PettyCashList.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashPopUpScreen.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
@@ -163,197 +162,148 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
       appBar: const HeaderWidget(),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Page Title (Fixed)
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 10.0, vertical: 10),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        iconSize: 34,
-                        icon: const Icon(
-                          Icons.arrow_back,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      Text(
-                        translate('home.petty_cash'),
-                        style: GoogleFonts.koulen(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w400,
-                          color: appFontColor,
-                          letterSpacing: 2.2,
-                        ),
-                      ),
-                      IconButton(
-                        iconSize: 40,
-                        icon: const Icon(Icons.add, color: appFontColor),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const PettyCashPopUpScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Everything else scrollable after Title
-                Expanded(
-                  child: SingleChildScrollView(
-                    physics: const BouncingScrollPhysics(),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+          : SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Page Title (Scrollable with content)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10.0, vertical: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const SizedBox(height: 10),
-
-                        // Circles Summary
-                        SizedBox(
-                          height: 190,
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              final double screenWidth = constraints.maxWidth;
-                              const double circleSize = 121;
-                              final double sideOffset =
-                                  screenWidth / 3.8 - circleSize / 2;
-
-                              return Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  Positioned(
-                                    top: 60,
-                                    right: sideOffset,
-                                    child: _buildCircleWithBackground(
-                                      "SPENT",
-                                      spent.toString(),
-                                      "assets/png/spent.png",
-                                      "assets/png/spent_bg.png",
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 0,
-                                    child: GestureDetector(
-                                      onTap: () => _showIncomingPopup(context),
-                                      child: _buildCircleWithBackground(
-                                        "INCOMING",
-                                        incoming.toString(),
-                                        "assets/png/Profit.png",
-                                        "assets/png/incoming_bg.png",
-                                      ),
-                                    ),
-                                  ),
-                                  Positioned(
-                                    top: 60,
-                                    left: sideOffset,
-                                    child: _buildCircleWithBackground(
-                                      "BALANCE",
-                                      balance.toString(),
-                                      "assets/png/Wallet.png",
-                                      "assets/png/balance_bg.png",
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
+                        const SizedBox(width: 40), // Spacer to center title
+                        Text(
+                          translate('home.petty_cash'),
+                          style: GoogleFonts.koulen(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w400,
+                            color: appFontColor,
+                            letterSpacing: 1.5,
                           ),
                         ),
-
-                        const SizedBox(height: 20),
-                        _buildDraftSection(),
-                        const SizedBox(height: 20),
-
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 66),
-                          child:
-                              const Divider(color: Colors.grey, thickness: 1.5),
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        expenseSheets.isEmpty
-                            ? const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(20),
-                                  child: Text(
-                                    "No record found.",
-                                    style: TextStyle(
-                                        color: Colors.grey, fontSize: 14),
-                                  ),
-                                ),
-                              )
-                            : ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: expenseSheets.length,
-                                itemBuilder: (context, index) {
-                                  final sheet = expenseSheets[index];
-                                  final status = (sheet['state'] ?? 'Submitted')
-                                      .toString()
-                                      .toUpperCase();
-                                  final date = sheet['date'] == false
-                                      ? 'N/A'
-                                      : sheet['date'].toString();
-                                  final amount = sheet['total_amount']
-                                          ?.toStringAsFixed(2) ??
-                                      '0.00';
-
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 8.0, horizontal: 5.0),
-                                    child: _buildTransactionItem_2(
-                                        status, date, amount),
-                                  );
-                                },
+                        IconButton(
+                          iconSize: 32,
+                          icon: const Icon(Icons.add, color: appFontColor),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const PettyCashPopUpScreen(),
                               ),
-
-                        const SizedBox(height: 20),
-
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Padding(
-                            padding: const EdgeInsets.only(
-                                right: 16.0, bottom: 16.0),
-                            child: TextButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => const PettyCashList(),
-                                  ),
-                                );
-                              },
-                              child: const Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Text(
-                                    "View All",
-                                    style: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  SizedBox(width: 4),
-                                  const Icon(Icons.arrow_forward,
-                                      color: Colors.grey, size: 16),
-                                ],
-                              ),
-                            ),
-                          ),
+                            );
+                          },
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 10),
+
+                  // Circles Summary
+                  SizedBox(
+                    height: 190,
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final double screenWidth = constraints.maxWidth;
+                        const double circleSize = 121;
+                        final double sideOffset =
+                            screenWidth / 3.8 - circleSize / 2;
+
+                        return Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Positioned(
+                              top: 60,
+                              right: sideOffset,
+                              child: _buildCircleWithBackground(
+                                "SPENT",
+                                spent.toString(),
+                                "assets/png/spent.png",
+                                "assets/png/spent_bg.png",
+                              ),
+                            ),
+                            Positioned(
+                              top: 0,
+                              child: GestureDetector(
+                                onTap: () => _showIncomingPopup(context),
+                                child: _buildCircleWithBackground(
+                                  "INCOMING",
+                                  incoming.toString(),
+                                  "assets/png/Profit.png",
+                                  "assets/png/incoming_bg.png",
+                                ),
+                              ),
+                            ),
+                            Positioned(
+                              top: 60,
+                              left: sideOffset,
+                              child: _buildCircleWithBackground(
+                                "BALANCE",
+                                balance.toString(),
+                                "assets/png/Wallet.png",
+                                "assets/png/balance_bg.png",
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+                  _buildDraftSection(),
+                  const SizedBox(height: 20),
+
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 66),
+                    child: const Divider(color: Colors.grey, thickness: 1.5),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  expenseSheets.isEmpty
+                      ? const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Text(
+                              "No record found.",
+                              style:
+                                  TextStyle(color: Colors.grey, fontSize: 14),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: expenseSheets.length,
+                          itemBuilder: (context, index) {
+                            final sheet = expenseSheets[index];
+                            final status = (sheet['state'] ?? 'Submitted')
+                                .toString()
+                                .toUpperCase();
+                            final date = sheet['date'] == false
+                                ? 'N/A'
+                                : sheet['date'].toString();
+                            final amount =
+                                sheet['total_amount']?.toStringAsFixed(2) ??
+                                    '0.00';
+
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 8.0, horizontal: 5.0),
+                              child:
+                                  _buildTransactionItem_2(status, date, amount),
+                            );
+                          },
+                        ),
+
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
     );
   }
@@ -369,14 +319,14 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
         );
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+        margin: const EdgeInsets.symmetric(horizontal: 5),
+        padding: const EdgeInsets.fromLTRB(30, 8, 15, 12),
         decoration: BoxDecoration(
           image: const DecorationImage(
-            image: AssetImage("assets/png/draft_bg.png"),
+            image: AssetImage("assets/png/item_bg_yellow.png"),
             fit: BoxFit.cover,
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(0),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -393,8 +343,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
 
             // Divider
             const SizedBox(
-              height: 40,
-              child: VerticalDivider(color: Colors.grey),
+              height: 30,
+              child: VerticalDivider(color: Colors.grey, thickness: 2),
             ),
 
             // No of Bills (dynamic)
@@ -424,8 +374,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
 
             // Divider
             const SizedBox(
-              height: 40,
-              child: VerticalDivider(color: Colors.grey),
+              height: 30,
+              child: VerticalDivider(color: Colors.grey, thickness: 2),
             ),
 
             // Amount (dynamic)
@@ -455,6 +405,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
       ),
     );
   }
+
+  /*
 
   Widget _buildTransactionItem(String status, String date, String amount) {
     return Container(
@@ -494,6 +446,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
       ),
     );
   }
+
+  */
 
   Widget _buildCircleWithBackground(
       String title, String amount, String iconPath, String backgroundPath) {

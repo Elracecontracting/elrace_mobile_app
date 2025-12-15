@@ -18,6 +18,7 @@ class AppSettingsWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        /*
         Container(
           margin: const EdgeInsets.only(top: 0),
           padding: const EdgeInsets.only(top: 4, bottom: 4),
@@ -219,7 +220,8 @@ class AppSettingsWidget extends StatelessWidget {
             ],
           ),
         ),
-        SizedBox(height: 10.h),
+        */
+        SizedBox(height: 40.h),
         Container(
           padding: EdgeInsets.symmetric(
             horizontal: 12.w,

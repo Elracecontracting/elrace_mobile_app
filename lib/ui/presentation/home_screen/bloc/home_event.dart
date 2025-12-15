@@ -7,19 +7,16 @@ sealed class HomeEvent extends Equatable {
   List<Object> get props => [];
 }
 
-
 final class FetchLastMonthAttendanceSummary extends HomeEvent {
   const FetchLastMonthAttendanceSummary();
 }
 
-
-class ChangeCurrentIndex extends HomeEvent{
+class ChangeCurrentIndex extends HomeEvent {
   final int index;
   const ChangeCurrentIndex({required this.index});
 }
 
-
-class ChangeVisiablityIcon extends HomeEvent{
+class ChangeVisiablityIcon extends HomeEvent {
   const ChangeVisiablityIcon();
 }
 
@@ -54,4 +51,9 @@ class TogglePrayerMuteStateEvent extends HomeEvent {
 
 class UpdatePrayerTickEvent extends HomeEvent {
   const UpdatePrayerTickEvent();
+}
+
+// Reorder Mode Events
+class ToggleReorderModeEvent extends HomeEvent {
+  const ToggleReorderModeEvent();
 }

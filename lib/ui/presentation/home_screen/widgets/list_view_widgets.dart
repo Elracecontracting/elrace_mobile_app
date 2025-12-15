@@ -7,6 +7,7 @@ import 'package:el_race/ui/presentation/home_screen/data/widget_model.dart';
 import 'package:el_race/ui/presentation/home_screen/services/widget_service.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/card_tile.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/custom_bullet_point.dart';
+import 'package:el_race/ui/presentation/home_screen/widgets/tilting_card.dart';
 import 'package:el_race/ui/presentation/lpo/screens/lpo_screen.dart';
 import 'package:el_race/ui/presentation/media/screens/media_list_screen.dart';
 import 'package:el_race/ui/presentation/my_documents/screens/my_documents_screen.dart';
@@ -14,8 +15,8 @@ import 'package:el_race/ui/presentation/my_notes/screens/my_notes_screen.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/screens/my_project.dart';
 import 'package:el_race/ui/presentation/my_request/MyRequestsPage.dart';
 import 'package:el_race/ui/presentation/task_sheet/task_sheet_screen.dart';
-import 'package:el_race/utils/custom_navigate.dart';
 import 'package:el_race/ui/presentation/todo_list/screens/todo_list_screen.dart';
+import 'package:el_race/utils/custom_navigate.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:flutter/material.dart';
@@ -59,6 +60,18 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         isLoading = false;
       });
     }
+  }
+
+  void _reorderWidgets(int oldIndex, int newIndex) {
+    setState(() {
+      if (newIndex > oldIndex) {
+        newIndex -= 1;
+      }
+      final widget = activeWidgets.removeAt(oldIndex);
+      activeWidgets.insert(newIndex, widget);
+      // حفظ الترتيب الجديد
+      WidgetService.saveActiveWidgets(activeWidgets);
+    });
   }
 
   Widget _buildCustomWidget(WidgetModel widget) {
@@ -240,7 +253,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: EdgeInsets.only(top: 90.w),
+                padding: EdgeInsets.only(top: 50.h),
                 child: SizedBox(
                   width: SizeConfig()
                       .getWidth(MediaQuery.of(context).size.width - 100),
@@ -648,32 +661,96 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
 
   @override
   Widget build(BuildContext context) {
-    return Opacity(
-      opacity: !SharedPref.isUserAuthenticated() ? .5 : 1,
-      child: IgnorePointer(
-        ignoring: !SharedPref.isUserAuthenticated(),
-        child: Column(
-          children: [
-            // Always show attendance widget
-            _buildAttendanceWidget(),
+    final bloc = HomeBloc.get(context);
 
-            const SizedBox(height: 10),
+    return BlocBuilder<HomeBloc, HomeState>(
+      buildWhen: (previous, current) => current is ReorderModeChanged,
+      builder: (context, state) {
+        return Opacity(
+          opacity: !SharedPref.isUserAuthenticated() ? .5 : 1,
+          child: IgnorePointer(
+            ignoring: !SharedPref.isUserAuthenticated(),
+            child: Column(
+              children: [
+                // Always show attendance widget
+                _buildAttendanceWidget(),
 
-            // Show active widgets from edit widgets
-            if (isLoading)
-              const Center(child: CircularProgressIndicator())
-            else
-              ...activeWidgets.map((widget) {
-                return Column(
-                  children: [
-                    _buildCustomWidget(widget),
-                    const SizedBox(height: 10),
-                  ],
-                );
-              }).toList(),
-          ],
-        ),
-      ),
+                const SizedBox(height: 10),
+
+                // Show active widgets from edit widgets
+                if (isLoading)
+                  const Center(child: CircularProgressIndicator())
+                else if (bloc.isReorderMode)
+                  // عرض ReorderableListView عند تفعيل وضع إعادة الترتيب
+                  ReorderableListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: activeWidgets.length,
+                    onReorder: _reorderWidgets,
+                    itemBuilder: (context, index) {
+                      final widget = activeWidgets[index];
+                      return TiltingCard(
+                        key: ValueKey(widget.id),
+                        child: Column(
+                          children: [
+                            _buildCustomWidget(widget),
+                            const SizedBox(height: 10),
+                          ],
+                        ),
+                      );
+                    },
+                  )
+                else
+                  // عرض ListView العادي مع إمكانية Long Press
+                  ...activeWidgets.map((widget) {
+                    return InkWell(
+                      onLongPress: () {
+                        // تفعيل وضع إعادة الترتيب عند الضغط الطويل
+                        bloc.add(const ToggleReorderModeEvent());
+                      },
+                      splashColor: Colors.transparent,
+                      highlightColor: Colors.transparent,
+                      hoverColor: Colors.transparent,
+                      focusColor: Colors.transparent,
+                      child: Column(
+                        children: [
+                          _buildCustomWidget(widget),
+                          const SizedBox(height: 10),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+
+                // زر إغلاق وضع إعادة الترتيب
+                if (bloc.isReorderMode)
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10.h),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        bloc.add(const ToggleReorderModeEvent());
+                      },
+                      icon: const Icon(Icons.check, color: Colors.white),
+                      label: Text(
+                        translate('common.close'),
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4CAF50),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 24.w,
+                          vertical: 12.h,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

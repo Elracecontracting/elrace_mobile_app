@@ -17,7 +17,6 @@ class LastMonthAttendanceSummaryLoading extends HomeState {
   const LastMonthAttendanceSummaryLoading();
 }
 
-
 class LastMonthAttendanceSummaryLoaded extends HomeState {
   const LastMonthAttendanceSummaryLoaded();
 
@@ -33,10 +32,9 @@ class LastMonthAttendanceSummaryError extends HomeState {
   List<Object> get props => [message];
 }
 
-
 class ChangeIndexLoading extends HomeState {}
-class ChangeIndexSuccess extends HomeState {}
 
+class ChangeIndexSuccess extends HomeState {}
 
 class FaceRecognitionStatusChanged extends HomeState {
   final FaceRecognitionStatus status;
@@ -100,4 +98,13 @@ class PrayerMuteStateChanged extends HomeState {
 
   @override
   List<Object> get props => [isMuted];
+}
+
+// Reorder Mode States
+class ReorderModeChanged extends HomeState {
+  final bool isReorderMode;
+  const ReorderModeChanged(this.isReorderMode);
+
+  @override
+  List<Object> get props => [isReorderMode];
 }
