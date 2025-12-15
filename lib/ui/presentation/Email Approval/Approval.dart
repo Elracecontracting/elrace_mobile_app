@@ -294,8 +294,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
             child: ClipRRect(
               child: BackdropFilter(
                 filter: ImageFilter.blur(
-                  sigmaX: _isScrolled ? 8.0 : 0.0,
-                  sigmaY: _isScrolled ? 8.0 : 0.0,
+                  sigmaX: _isScrolled ? 5.0 : 0.0,
+                  sigmaY: _isScrolled ? 5.0 : 0.0,
                 ),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
@@ -304,10 +304,16 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: _isScrolled
-                        ? Colors.white.withOpacity(0.05)
+                        ? Colors.white.withOpacity(0.1)
                         : Colors.white,
-                    border: Border.all(
-                        color: Colors.white.withOpacity(0.05), width: 1.0),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: _isScrolled
+                            ? Colors.grey.withOpacity(0.3)
+                            : Colors.transparent,
+                        width: 1.0,
+                      ),
+                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.03),
