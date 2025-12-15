@@ -1,7 +1,11 @@
+import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/main.dart';
+import 'package:el_race/ui/presentation/Notification/notification_screen.dart';
 import 'package:el_race/utils/string_utils.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class FirebaseService {
@@ -9,6 +13,9 @@ class FirebaseService {
       FirebaseMessaging.instance;
   static final FlutterLocalNotificationsPlugin
       _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  
+  // Track processed notification message IDs to avoid duplicate handling
+  static final Set<String> _processedMessageIds = {};
 
   static Future<void> initialize() async {
     // Request notification permission with more detailed settings
@@ -53,19 +60,73 @@ class FirebaseService {
       initSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
         final payload = response.payload;
-        print("🔔 Notification tapped with payload: $payload");
+        print("🔔 [LOCAL NOTIFICATION TAP] Notification tapped!");
+        print("   - Payload: $payload");
+        print("   - Action ID: ${response.actionId}");
+        print("   - Notification ID: ${response.id}");
+        // Handle notification tap - navigate to notification screen if needed
+        _handleNotificationTap(payload);
       },
     );
 
     // Handle foreground messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('📬 Foreground message: ${message.notification?.title}');
+      print('📬 [FOREGROUND] Received message!');
+      print('   - Title: ${message.notification?.title}');
+      print('   - Body: ${message.notification?.body}');
+      print('   - Data: ${message.data}');
       _showNotification(message);
+      // Save notification to storage
+      _saveNotificationToStorage(message);
     });
 
     // Handle background-tap messages (when app is resumed from notification)
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-      print('📲 App opened from notification');
+      final messageId = message.messageId ?? message.data.toString();
+      print('📲 [BACKGROUND TAP] App opened from notification!');
+      print('   - Message ID: $messageId');
+      print('   - Title: ${message.notification?.title}');
+      print('   - Data: ${message.data}');
+      
+      // Check if already processed
+      if (_processedMessageIds.contains(messageId)) {
+        print('   - ⚠️ Message already processed, ignoring');
+        return;
+      }
+      
+      _processedMessageIds.add(messageId);
+      print('   - ✅ Processing message (${_processedMessageIds.length} total processed)');
+      
+      // Save notification to storage if not already saved
+      _saveNotificationToStorage(message);
+      _handleNotificationTap(message.data.toString());
+    });
+
+    // Check for initial message (when app is opened from terminated state)
+    FirebaseMessaging.instance
+        .getInitialMessage()
+        .then((RemoteMessage? message) {
+      if (message != null) {
+        final messageId = message.messageId ?? message.data.toString();
+        print('📲 [TERMINATED TAP] App opened from notification!');
+        print('   - Message ID: $messageId');
+        print('   - Title: ${message.notification?.title}');
+        print('   - Data: ${message.data}');
+        
+        // Check if already processed
+        if (_processedMessageIds.contains(messageId)) {
+          print('   - ⚠️ Message already processed, ignoring');
+          return;
+        }
+        
+        _processedMessageIds.add(messageId);
+        print('   - ✅ Processing message (${_processedMessageIds.length} total processed)');
+        
+        _saveNotificationToStorage(message);
+        _handleNotificationTap(message.data.toString());
+      } else {
+        print('ℹ️ [TERMINATED] No initial message found');
+      }
     });
 
     // Get and print the FCM token (you can send this to your server)
@@ -204,6 +265,9 @@ class FirebaseService {
         'High Importance Notifications',
         importance: Importance.high,
         priority: Priority.high,
+        channelShowBadge: true,
+        enableVibration: true,
+        playSound: true,
       );
 
       const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -222,7 +286,84 @@ class FirebaseService {
         notification.title ?? 'No Title',
         notification.body ?? 'No Body',
         platformDetails,
+        payload: message.data.toString(), // Add payload for tap handling
       );
+    }
+  }
+
+  static Future<void> _saveNotificationToStorage(RemoteMessage message) async {
+    try {
+      final notification = message.notification;
+      if (notification != null) {
+        // Determine category from message data
+        String category = 'notification'; // default
+        if (message.data.containsKey('category')) {
+          category = message.data['category'].toString();
+        } else if (message.data.containsKey('type')) {
+          category = message.data['type'].toString();
+        }
+
+        await NotificationStorageService.saveNotification(
+          title: notification.title ?? 'Notification',
+          body: notification.body ?? '',
+          imageUrl:
+              notification.android?.imageUrl ?? notification.apple?.imageUrl,
+          data: message.data,
+          category: category,
+        );
+      }
+    } catch (e) {
+      print('❌ Error saving notification to storage: $e');
+    }
+  }
+
+  static void _handleNotificationTap(String? payload) {
+    print('\n🔔 [HANDLE TAP] Starting to handle notification tap');
+    print('   - Payload: $payload');
+    print('   - Context available: ${navKey.currentContext != null}');
+
+    // Navigate to notification screen only if not already there
+    if (navKey.currentContext != null) {
+      final currentRoute = ModalRoute.of(navKey.currentContext!);
+      print('   - Current route name: ${currentRoute?.settings.name}');
+      
+      final isOnNotificationScreen = currentRoute?.settings.name == '/notification' ||
+          currentRoute?.settings.arguments is NotificationScreen;
+      
+      print('   - Is on notification screen: $isOnNotificationScreen');
+      
+      if (!isOnNotificationScreen) {
+        print('   - ✅ Navigating to notification screen...');
+        // Check if we can navigate
+        final navigator = Navigator.of(navKey.currentContext!);
+        
+        // Remove any existing notification screens from stack and push new one
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const NotificationScreen(),
+            settings: const RouteSettings(name: '/notification'),
+          ),
+          (route) => route.isFirst, // Keep only the first route (home)
+        );
+        print('   - ✅ Navigation completed!');
+      } else {
+        print('   - ⏭️ Already on notification screen, ignoring tap');
+      }
+    } else {
+      print('⚠️ Navigation context is null, waiting for app to initialize...');
+      // Retry after a delay if context is not available yet
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (navKey.currentContext != null) {
+          final navigator = Navigator.of(navKey.currentContext!);
+          navigator.pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (context) => const NotificationScreen(),
+              settings: const RouteSettings(name: '/notification'),
+            ),
+            (route) => route.isFirst,
+          );
+        }
+      });
     }
   }
 }

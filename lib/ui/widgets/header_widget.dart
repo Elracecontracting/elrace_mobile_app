@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:el_race/ui/presentation/Email Approval/Approval.dart';
@@ -29,17 +30,28 @@ class HeaderWidget extends StatefulWidget implements PreferredSizeWidget {
 
 class _HeaderWidgetState extends State<HeaderWidget> {
   String _imageBase64 = '';
+  int _notificationCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadNotificationCount();
   }
 
   Future<void> _loadUserData() async {
     if (!SharedPref.isUserAuthenticated()) return;
     final data = SharedPref.getLoginData();
     _imageBase64 = data.result?.data?.image_url ?? '';
+  }
+
+  Future<void> _loadNotificationCount() async {
+    final count = await NotificationStorageService.getUnreadCount();
+    if (mounted) {
+      setState(() {
+        _notificationCount = count;
+      });
+    }
   }
 
   bool _isValidBase64(String str) {
@@ -158,17 +170,30 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                         ),
                         SizedBox(width: SizeConfig().getWidth(10)),
                         GestureDetector(
-                          onTap: () {
+                          onTap: () async {
+                            print('🔔 [HEADER] Notification bell tapped');
+                            print('   - User authenticated: ${SharedPref.isUserAuthenticated()}');
+                            print('   - isNotOpen: ${bloc.isNotOpen}');
+                            
                             if (SharedPref.isUserAuthenticated()) {
                               if (!bloc.isNotOpen) {
-                                Navigator.push(
+                                print('   - ✅ Opening notification screen...');
+                                bloc.isNotOpen = true; // Mark as open before navigation
+                                await Navigator.push(
                                   context,
                                   SlideRightPageRoute(
                                     child: const NotificationScreen(),
                                   ),
                                 );
-                                bloc.isNotOpen = true;
+                                print('   - ✅ Returned from notification screen');
+                                bloc.isNotOpen = false; // Reset to allow reopening
+                                // Refresh notification count after returning
+                                _loadNotificationCount();
+                              } else {
+                                print('   - ⚠️ Screen already open, ignoring tap');
                               }
+                            } else {
+                              print('   - ❌ User not authenticated');
                             }
                           },
                           child: Stack(
@@ -185,21 +210,30 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                               Positioned(
                                 right: 0,
                                 top: -2,
-                                child: Container(
-                                  padding: const EdgeInsets.all(3),
-                                  decoration: const BoxDecoration(
-                                    color: red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Text(
-                                    '5',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
+                                child: _notificationCount > 0
+                                    ? Container(
+                                        padding: const EdgeInsets.all(3),
+                                        constraints: const BoxConstraints(
+                                          minWidth: 16,
+                                          minHeight: 16,
+                                        ),
+                                        decoration: const BoxDecoration(
+                                          color: red,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Text(
+                                          _notificationCount > 99
+                                              ? '99+'
+                                              : _notificationCount.toString(),
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      )
+                                    : const SizedBox.shrink(),
                               ),
                             ],
                           ),

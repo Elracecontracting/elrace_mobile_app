@@ -84,7 +84,7 @@ class WidgetContainer extends StatelessWidget {
                       width: double.infinity,
                       margin: EdgeInsets.only(top: 6.h),
                       padding: EdgeInsets.symmetric(
-                          vertical: 37.h, horizontal: 35.w),
+                          vertical: 32.h, horizontal: 35.w),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(23.r),
                         image: const DecorationImage(
@@ -94,6 +94,7 @@ class WidgetContainer extends StatelessWidget {
                         ),
                       ),
                       child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           // Swipe button
                           IgnorePointer(

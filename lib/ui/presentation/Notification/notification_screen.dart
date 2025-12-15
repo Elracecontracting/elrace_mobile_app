@@ -1,3 +1,4 @@
+import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/ui/presentation/Attendace_list/attendance_page.dart';
 import 'package:el_race/ui/widgets/back_icon.dart';
 import 'package:el_race/utils/Util.dart';
@@ -6,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import '../../widgets/header_widget.dart';
 import '../home_screen/bloc/home_bloc.dart';
@@ -25,45 +27,62 @@ class _NotificationScreenState extends State<NotificationScreen> {
   int currentIndex = 0;
   final ScrollController _scrollController = ScrollController();
   final List<GlobalKey> _tabKeys = List.generate(3, (index) => GlobalKey());
-  final List<Map<String, dynamic>> notifications = [
-    {
-      'icon': 'assets/png/notification_icon.png',
-      'message': 'Your request from Jan 15 to Jan 20 has been approved.',
-      'time': '5 minutes ago',
-    },
-    {
-      'icon': 'assets/png/notification_icon.png',
-      'message': 'Your request from Jan 15 to Jan 20 has been approved.',
-      'time': '10 minutes ago',
-    },
-    {
-      'icon': 'assets/png/notification_icon.png',
-      'message': 'Your request from Jan 15 to Jan 20 has been approved.',
-      'time': '20 minutes ago',
-    },
-    {
-      'icon': 'assets/png/notification_icon.png',
-      'message': 'Your request from Jan 15 to Jan 20 has been approved.',
-      'time': '1 day ago',
-    },
-    {
-      'icon': 'assets/png/notification_icon.png',
-      'message': 'Your request from Jan 22 to Jan 27 has been approved.',
-      'time': '2 days ago',
-    },
-    {
-      'icon': 'assets/png/notification_icon.png',
-      'message': 'Your request from Feb 1 to Feb 5 has been approved.',
-      'time': '3 days ago',
-    },
-  ];
+  List<Map<String, dynamic>> notifications = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 5), () {
-      if (mounted) showBabyGirlPopup(context);
-    });
+    _loadNotifications();
+    // Mark all as read when screen opens
+    _markAllAsRead();
+  }
+
+  Future<void> _loadNotifications() async {
+    setState(() => _isLoading = true);
+    try {
+      final loadedNotifications =
+          await NotificationStorageService.getNotifications();
+      if (mounted) {
+        setState(() {
+          notifications = loadedNotifications;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading notifications: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _markAllAsRead() async {
+    // Wait a bit before marking as read
+    await Future.delayed(const Duration(seconds: 2));
+    await NotificationStorageService.markAllAsRead();
+  }
+
+  String _formatTime(String isoString) {
+    try {
+      final dateTime = DateTime.parse(isoString);
+      final now = DateTime.now();
+      final difference = now.difference(dateTime);
+
+      if (difference.inMinutes < 1) {
+        return 'Just now';
+      } else if (difference.inMinutes < 60) {
+        return '${difference.inMinutes} minutes ago';
+      } else if (difference.inHours < 24) {
+        return '${difference.inHours} hours ago';
+      } else if (difference.inDays < 7) {
+        return '${difference.inDays} days ago';
+      } else {
+        return DateFormat('MMM dd, yyyy').format(dateTime);
+      }
+    } catch (e) {
+      return '';
+    }
   }
 
   void _scrollToTab(int index) {
@@ -92,16 +111,32 @@ class _NotificationScreenState extends State<NotificationScreen> {
     {
       'icon': 'assets/png/notification_icon.png',
       'title': translate('notification_screen.center'),
+      'category': 'notification',
     },
     {
       'icon': 'assets/png/announcement.png',
       'title': translate('news_banner.announcements'),
+      'category': 'announcement',
     },
     {
       'icon': 'assets/png/urgent_icon.png',
       'title': translate('notification_screen.circulars'),
+      'category': 'circular',
     },
   ];
+
+  List<Map<String, dynamic>> _getFilteredNotifications() {
+    if (notifications.isEmpty) return [];
+
+    final selectedCategory = notificationType[currentIndex]['category'];
+
+    // Filter notifications by category
+    return notifications.where((notification) {
+      final notificationCategory =
+          (notification['category'] ?? 'notification').toString().toLowerCase();
+      return notificationCategory == selectedCategory.toLowerCase();
+    }).toList();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -289,91 +324,174 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
                           const SizedBox(height: 20),
 
-                          ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            itemCount: notifications.length,
-                            itemBuilder: (context, index) {
-                              final item = notifications[index];
-                              // Get the icon from the currently selected notification type
-                              String currentNotificationIcon =
-                                  notificationType[currentIndex]['icon'];
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () => _showAnnouncementDialog(
-                                      context,
-                                      'Main Title',
-                                      item['message'] ?? '',
-                                    ),
-                                    child: Container(
-                                      margin: const EdgeInsets.only(bottom: 6),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 5),
-                                      decoration: BoxDecoration(
-                                        image: const DecorationImage(
-                                          image: AssetImage(
-                                              'assets/png/bg_petty.png'),
-                                          fit: BoxFit.cover,
-                                        ),
-                                        borderRadius: BorderRadius.circular(16),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black.withAlpha(
-                                                (0.08 * 255).toInt()),
-                                            blurRadius: 4,
-                                            offset: const Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: IntrinsicHeight(
-                                        child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.center,
+                          _isLoading
+                              ? const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(32.0),
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                )
+                              : _getFilteredNotifications().isEmpty
+                                  ? Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(32.0),
+                                        child: Column(
                                           children: [
-                                            Image.asset(
-                                              currentNotificationIcon,
-                                              width: 25.w,
-                                              height: 25.w,
-                                              color: appFontColor,
+                                            Icon(
+                                              Icons.notifications_none,
+                                              size: 64,
+                                              color: Colors.grey[400],
                                             ),
-                                            const SizedBox(width: 7),
-                                            Expanded(
-                                              child: Align(
-                                                alignment: Alignment.centerLeft,
-                                                child: Text(
-                                                  item['message'] ?? '',
-                                                  style: TextStyle(
-                                                    fontSize: 15.sp,
-                                                    fontWeight: FontWeight.w400,
-                                                    color: Colors.black,
-                                                  ),
-                                                ),
+                                            const SizedBox(height: 16),
+                                            Text(
+                                              'No notifications yet',
+                                              style: GoogleFonts.koulen(
+                                                fontSize: 18.sp,
+                                                color: Colors.grey[600],
                                               ),
                                             ),
                                           ],
                                         ),
                                       ),
+                                    )
+                                  : ListView.builder(
+                                      shrinkWrap: true,
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16),
+                                      itemCount:
+                                          _getFilteredNotifications().length,
+                                      itemBuilder: (context, index) {
+                                        final filteredNotifications =
+                                            _getFilteredNotifications();
+                                        final item =
+                                            filteredNotifications[index];
+                                        // Get the icon from the currently selected notification type
+                                        String currentNotificationIcon =
+                                            notificationType[currentIndex]
+                                                ['icon'];
+                                        return Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            GestureDetector(
+                                              onTap: () =>
+                                                  _showAnnouncementDialog(
+                                                context,
+                                                item['title'] ?? 'Notification',
+                                                item['body'] ?? '',
+                                              ),
+                                              child: Container(
+                                                margin: const EdgeInsets.only(
+                                                    bottom: 6),
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 5),
+                                                decoration: BoxDecoration(
+                                                  image: const DecorationImage(
+                                                    image: AssetImage(
+                                                        'assets/png/bg_petty.png'),
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: Colors.black
+                                                          .withAlpha(
+                                                              (0.08 * 255)
+                                                                  .toInt()),
+                                                      blurRadius: 4,
+                                                      offset:
+                                                          const Offset(0, 2),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: IntrinsicHeight(
+                                                  child: Row(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .center,
+                                                    children: [
+                                                      Image.asset(
+                                                        currentNotificationIcon,
+                                                        width: 25.w,
+                                                        height: 25.w,
+                                                      ),
+                                                      const SizedBox(width: 7),
+                                                      Expanded(
+                                                        child: Align(
+                                                          alignment: Alignment
+                                                              .centerLeft,
+                                                          child: Column(
+                                                            crossAxisAlignment:
+                                                                CrossAxisAlignment
+                                                                    .start,
+                                                            children: [
+                                                              if (item[
+                                                                      'title'] !=
+                                                                  null)
+                                                                Text(
+                                                                  item['title'],
+                                                                  style:
+                                                                      TextStyle(
+                                                                    fontSize:
+                                                                        16.sp,
+                                                                    fontWeight:
+                                                                        FontWeight
+                                                                            .bold,
+                                                                    color:
+                                                                        appFontColor,
+                                                                  ),
+                                                                ),
+                                                              const SizedBox(
+                                                                  height: 2),
+                                                              Text(
+                                                                item['body'] ??
+                                                                    '',
+                                                                style:
+                                                                    TextStyle(
+                                                                  fontSize:
+                                                                      14.sp,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w400,
+                                                                  color: Colors
+                                                                      .black87,
+                                                                ),
+                                                                maxLines: 2,
+                                                                overflow:
+                                                                    TextOverflow
+                                                                        .ellipsis,
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  left: 6, bottom: 10),
+                                              child: Text(
+                                                _formatTime(
+                                                    item['timestamp'] ?? ''),
+                                                style: const TextStyle(
+                                                  fontSize: 9,
+                                                  color: Colors.black54,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
                                     ),
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(
-                                        left: 6, bottom: 10),
-                                    child: Text(
-                                      item['time'] ?? '',
-                                      style: const TextStyle(
-                                        fontSize: 9,
-                                        color: Colors.black54,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
                         ],
                       ),
                     ),

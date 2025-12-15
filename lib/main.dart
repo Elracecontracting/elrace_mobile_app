@@ -1,3 +1,4 @@
+import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/data/services/prayer_background_service.dart';
@@ -37,6 +38,32 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
   print('📩 Background message received: ${message.notification?.title}');
   print('📩 Message data: ${message.data}');
+
+  // Save notification to storage
+  try {
+    final notification = message.notification;
+    if (notification != null) {
+      // Determine category from message data
+      String category = 'notification'; // default
+      if (message.data.containsKey('category')) {
+        category = message.data['category'].toString();
+      } else if (message.data.containsKey('type')) {
+        category = message.data['type'].toString();
+      }
+
+      await NotificationStorageService.saveNotification(
+        title: notification.title ?? 'Notification',
+        body: notification.body ?? '',
+        imageUrl:
+            notification.android?.imageUrl ?? notification.apple?.imageUrl,
+        data: message.data,
+        category: category,
+      );
+      print('✅ Background notification saved to storage');
+    }
+  } catch (e) {
+    print('❌ Error saving background notification: $e');
+  }
 }
 
 void main() async {

@@ -2,6 +2,7 @@ package com.el_race.app
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -27,5 +28,11 @@ class MainActivity : FlutterFragmentActivity() {
                 getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             notificationManager.createNotificationChannel(channel)
         }
+    }
+    
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent) // Important: update the activity's intent
+        // Flutter will handle the notification through its listeners
     }
 }
