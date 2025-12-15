@@ -257,145 +257,83 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.grey[50],
       appBar: const HeaderWidget(),
       bottomNavigationBar: const CustomBottomNavBar(
         isMain: false,
       ),
-      body: RefreshIndicator(
-        onRefresh: _fetchApprovalData,
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                const SizedBox(height: 5),
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 10.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      BackButton(),
-                      /*AnimatedContainer(
-                        duration: const Duration(milliseconds: 400),
-                        curve: Curves.easeInOut,
-                        height: 40,
-                        width: isSearch ? 310.w : 43.w,
-                        decoration: BoxDecoration(
-                          color: isSearch ? Colors.white : HexColor("#ADB2BD"),
-                          border:
-                              isSearch ? Border.all(color: Colors.grey) : null,
-                          borderRadius: BorderRadius.circular(20),
-                          gradient: isSearch
-                              ? const LinearGradient(
-                                  colors: [
-                                    Color(0xffD6D6D6),
-                                    Color(0xffADB2BD),
-                                  ],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                )
-                              : null,
-                        ),
-                        child: Row(
-                          children: [
-                            if (isSearch)
-                              Expanded(
-                                child: TextFormField(
-                                  controller: searchController,
-                                  autofocus: true,
-                                  style: const TextStyle(
-                                    color: Color(0xFF1A1A53),
-                                    fontSize: 14,
-                                    fontFamily: 'Koulen',
-                                    fontWeight: FontWeight.w400,
-                                  ),
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    contentPadding:
-                                        EdgeInsets.only(bottom: 10, left: 10),
-                                    hintText: 'Search...',
-                                    hintStyle: TextStyle(
-                                      color: Colors.grey,
-                                      fontSize: 13,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  isSearch = !isSearch;
-                                  if (!isSearch) {
-                                    searchController.clear();
-                                  }
-                                });
-                              },
-                              child: Container(
-                                width: 40.w,
-                                height: 40.w,
-                                alignment: Alignment.center,
-                                child: Image.asset(
-                                  "assets/png/search_icon.png",
-                                  width: 20.w,
-                                  height: 20.w,
-                                  color: Colors.black,
-                                  fit: BoxFit.cover,
-                                  alignment: Alignment.center,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )*/
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
+      body: Stack(
+        children: [
+          // Main content - starts from top and scrolls behind tabs
+          Column(
+            children: [
+              const SizedBox(height: 5),
 
-                // Top Category Tabs (Only HR for now)
-                SingleChildScrollView(
-                  controller: _tabScrollController,
-                  scrollDirection: Axis.horizontal,
-                  physics: const BouncingScrollPhysics(),
-                  clipBehavior: Clip.none,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 15),
-                  child: Row(
-                    children: categories.asMap().entries.map((entry) {
-                      int index = entry.key;
-                      String cat = entry.value;
-                      bool isSelected = selectedCategory == cat;
-                      return Container(
-                        margin: const EdgeInsets.only(right: 20.0, left: 5.0),
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              selectedCategory = cat;
-                              approvalItems = _getFilteredItems();
-                            });
-                            _scrollToSelectedTab(index);
-                          },
-                          child: _buildGlassTab(
-                            icon: categoryIcons[cat] ??
-                                "assets/icons/default.png",
-                            title: cat,
-                            isSelected: isSelected,
-                            count: _getCategoryCount(cat),
+              // Content body - this will scroll behind the tabs
+              body(),
+            ],
+          ),
+          // iOS-style translucent tabs bar - fixed position, content scrolls behind it
+          Positioned(
+            top: 50, // Below back button
+            left: 0,
+            right: 0,
+            child: ClipRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: 20.0,
+                  sigmaY: 20.0,
+                  tileMode: TileMode.clamp,
+                ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.02),
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Colors.black.withOpacity(0.2),
+                        width: 0.5,
+                      ),
+                    ),
+                  ),
+                  child: SingleChildScrollView(
+                    controller: _tabScrollController,
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    clipBehavior: Clip.none,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 12),
+                    child: Row(
+                      children: categories.asMap().entries.map((entry) {
+                        int index = entry.key;
+                        String cat = entry.value;
+                        bool isSelected = selectedCategory == cat;
+                        return Container(
+                          margin: const EdgeInsets.only(right: 20.0, left: 5.0),
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                selectedCategory = cat;
+                                approvalItems = _getFilteredItems();
+                              });
+                              _scrollToSelectedTab(index);
+                            },
+                            child: _buildGlassTab(
+                              icon: categoryIcons[cat] ??
+                                  "assets/icons/default.png",
+                              title: cat,
+                              isSelected: isSelected,
+                              count: _getCategoryCount(cat),
+                            ),
                           ),
-                        ),
-                      );
-                    }).toList(),
+                        );
+                      }).toList(),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                body()
-              ],
+              ),
             ),
-            // const ArraowVisibalityBottomNav(
-            //   bottomMargin: 120,
-            // ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
