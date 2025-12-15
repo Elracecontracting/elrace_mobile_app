@@ -19,23 +19,31 @@ class HrAndPettycashCard extends StatelessWidget {
         ),
       );
     }
-    
+
     return Expanded(
       child: ListView.separated(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 5) + EdgeInsets.only(bottom: 100.w, top: 100.w),
+        padding: const EdgeInsets.symmetric(horizontal: 5) +
+            EdgeInsets.only(bottom: 100.w, top: 100.w),
         itemCount: approvalItems.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 4),
+        separatorBuilder: (context, index) => const SizedBox(height: 1),
         itemBuilder: (context, index) {
           final item = approvalItems[index];
           String type = item["type"] ?? "";
           String id = item["id"]?.toString() ?? "";
-          String employeeName = item["employee_name"] ?? item["requester_name"] ?? item["name"] ?? "N/A";
-          String empCode = item["emp_code"]?.toString() ?? item["employee_code"]?.toString() ?? "";
+          String employeeName = item["employee_name"] ??
+              item["requester_name"] ??
+              item["name"] ??
+              "N/A";
+          String empCode = item["emp_code"]?.toString() ??
+              item["employee_code"]?.toString() ??
+              "";
           String reqNo = item["request_no"] ?? item["ref_no"] ?? "N/A";
-          String amount = item["amount_total"]?.toString() ?? item["amount"]?.toString() ?? "0";
+          String amount = item["amount_total"]?.toString() ??
+              item["amount"]?.toString() ??
+              "0";
           String date = item["date"] ?? item["request_date"] ?? "";
-          
+
           return GestureDetector(
             onTap: () {
               showDialog(
@@ -71,9 +79,10 @@ class HrAndPettycashCard extends StatelessWidget {
                   children: [
                     ClipOval(
                       child: (item["image_emp"] != null &&
-                          item["image_emp"] is String &&
-                          (item["image_emp"] as String).isNotEmpty &&
-                          (item["image_emp"] as String).toLowerCase() != "false")
+                              item["image_emp"] is String &&
+                              (item["image_emp"] as String).isNotEmpty &&
+                              (item["image_emp"] as String).toLowerCase() !=
+                                  "false")
                           ? Image.memory(
                               base64Decode(item["image_emp"] as String),
                               fit: BoxFit.cover,
@@ -130,7 +139,8 @@ class HrAndPettycashCard extends StatelessWidget {
                         SizedBox(height: 6.w),
                         InfoContainer(
                           text: date.isNotEmpty ? date : 'N/A',
-                          icon: Icon(Icons.date_range, size: 14.w, color: const Color(0xFF1A1A53)),
+                          icon: Icon(Icons.date_range,
+                              size: 14.w, color: const Color(0xFF1A1A53)),
                         ),
                       ],
                     ),

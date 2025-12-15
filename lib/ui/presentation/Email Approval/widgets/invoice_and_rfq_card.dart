@@ -18,25 +18,33 @@ class InvoiceAndRfqCard extends StatelessWidget {
         ),
       );
     }
-    
+
     return Expanded(
       child: ListView.separated(
         physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 5) + EdgeInsets.only(bottom: 100.w, top: 100.w),
+        padding: const EdgeInsets.symmetric(horizontal: 5) +
+            EdgeInsets.only(bottom: 100.w, top: 100.w),
         itemCount: approvalItems.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 4),
+        separatorBuilder: (context, index) => const SizedBox(height: 1),
         itemBuilder: (context, index) {
           final item = approvalItems[index];
           String type = item["type"] ?? "";
           String id = item["id"]?.toString() ?? "";
           String vendor = item["vendor"] ?? item["client"] ?? "N/A";
-          String refNo = item["ref_no"] ?? item["title"] ?? item["request_no"] ?? "N/A";
+          String refNo =
+              item["ref_no"] ?? item["title"] ?? item["request_no"] ?? "N/A";
           String materialType = item["material_type"] ?? "";
-          String project = (item["project"] ?? item["work_order"] ?? "").toString().replaceAll('false', '').replaceAll('true', '');
+          String project = (item["project"] ?? item["work_order"] ?? "")
+              .toString()
+              .replaceAll('false', '')
+              .replaceAll('true', '');
           String work = item["work"] ?? "";
           String amount = item["amount_total"]?.toString() ?? "0";
-          String date = (item["date"] ?? item["request_date"] ?? "").toString().replaceAll('false', '').replaceAll('true', '');
-          
+          String date = (item["date"] ?? item["request_date"] ?? "")
+              .toString()
+              .replaceAll('false', '')
+              .replaceAll('true', '');
+
           return GestureDetector(
             onTap: () {
               showDialog(
@@ -72,9 +80,10 @@ class InvoiceAndRfqCard extends StatelessWidget {
                   children: [
                     ClipOval(
                       child: (item["image_emp"] != null &&
-                          item["image_emp"] is String &&
-                          (item["image_emp"] as String).isNotEmpty &&
-                          (item["image_emp"] as String).toLowerCase() != "false")
+                              item["image_emp"] is String &&
+                              (item["image_emp"] as String).isNotEmpty &&
+                              (item["image_emp"] as String).toLowerCase() !=
+                                  "false")
                           ? Image.memory(
                               base64Decode(item["image_emp"] as String),
                               fit: BoxFit.cover,
@@ -125,7 +134,7 @@ class InvoiceAndRfqCard extends StatelessWidget {
                             child: Row(
                               children: [
                                 SizedBox(
-                                  width: 100.w, 
+                                  width: 100.w,
                                   child: Text(
                                     project.isNotEmpty ? '$project ' : '',
                                     style: GoogleFonts.nunito(
@@ -155,13 +164,16 @@ class InvoiceAndRfqCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        InfoContainer(text: materialType.isNotEmpty ? materialType : refNo),
+                        InfoContainer(
+                            text:
+                                materialType.isNotEmpty ? materialType : refNo),
                         SizedBox(height: 6.w),
                         InfoContainer(text: '$amount AED'),
                         SizedBox(height: 6.w),
                         InfoContainer(
                           text: date.isNotEmpty ? date : 'N/A',
-                          icon: Icon(Icons.date_range, size: 14.w, color: const Color(0xFF1A1A53)),
+                          icon: Icon(Icons.date_range,
+                              size: 14.w, color: const Color(0xFF1A1A53)),
                         ),
                       ],
                     ),

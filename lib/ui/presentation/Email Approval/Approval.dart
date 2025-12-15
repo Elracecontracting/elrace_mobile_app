@@ -38,6 +38,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   List<dynamic> approvalItems = [];
   bool isLoading = false;
   String error = '';
+  bool _isScrolled = false;
 
   // Add a field to store errors per category
   Map<String, String> categoryErrors = {};
@@ -266,11 +267,24 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       body: Stack(
         children: [
           // Main content - starts from top and scrolls behind tabs
-          Column(
-            children: [
-              // Content body - this will scroll behind the tabs
-              body(),
-            ],
+          NotificationListener<ScrollNotification>(
+            onNotification: (scrollNotification) {
+              if (scrollNotification is ScrollUpdateNotification) {
+                final isScrolled = scrollNotification.metrics.pixels > 10;
+                if (isScrolled != _isScrolled) {
+                  setState(() {
+                    _isScrolled = isScrolled;
+                  });
+                }
+              }
+              return false;
+            },
+            child: Column(
+              children: [
+                // Content body - this will scroll behind the tabs
+                body(),
+              ],
+            ),
           ),
           // iOS-style translucent tabs bar - fixed position, content scrolls behind it
           Positioned(
@@ -280,15 +294,18 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
             child: ClipRRect(
               child: BackdropFilter(
                 filter: ImageFilter.blur(
-                  sigmaX: 8.0,
-                  sigmaY: 8.0,
+                  sigmaX: _isScrolled ? 8.0 : 0.0,
+                  sigmaY: _isScrolled ? 8.0 : 0.0,
                 ),
-                child: Container(
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
                   padding:
                       EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.05),
+                    color: _isScrolled
+                        ? Colors.white.withOpacity(0.05)
+                        : Colors.white,
                     border: Border.all(
                         color: Colors.white.withOpacity(0.05), width: 1.0),
                     boxShadow: [
@@ -316,6 +333,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                               setState(() {
                                 selectedCategory = cat;
                                 approvalItems = _getFilteredItems();
+                                _isScrolled = false;
                               });
                               _scrollToSelectedTab(index);
                             },
@@ -343,8 +361,10 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
   body() {
     if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
+      return const Expanded(
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
       );
     }
     //MY ACTION

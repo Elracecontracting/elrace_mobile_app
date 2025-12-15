@@ -33,7 +33,7 @@ class MyActionCard extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4) +
                 EdgeInsets.only(bottom: 100.w, top: 100.w),
             itemCount: approvalItems.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 4),
+            separatorBuilder: (context, index) => const SizedBox(height: 1),
             itemBuilder: (context, index) {
               final item = approvalItems[index];
               final bool isExpanded = expandedItems.contains(index);
