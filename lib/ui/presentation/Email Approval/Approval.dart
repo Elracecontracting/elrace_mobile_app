@@ -257,8 +257,9 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
+      extendBody: true,
       bottomNavigationBar: const CustomBottomNavBar(
         isMain: false,
       ),
@@ -267,41 +268,42 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
           // Main content - starts from top and scrolls behind tabs
           Column(
             children: [
-              const SizedBox(height: 5),
-
               // Content body - this will scroll behind the tabs
               body(),
             ],
           ),
           // iOS-style translucent tabs bar - fixed position, content scrolls behind it
           Positioned(
-            top: 50, // Below back button
+            top: 0,
             left: 0,
             right: 0,
-            child: ClipRect(
+            child: ClipRRect(
               child: BackdropFilter(
                 filter: ImageFilter.blur(
-                  sigmaX: 20.0,
-                  sigmaY: 20.0,
-                  tileMode: TileMode.clamp,
+                  sigmaX: 8.0,
+                  sigmaY: 8.0,
                 ),
                 child: Container(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.02),
-                    border: Border(
-                      bottom: BorderSide(
-                        color: Colors.black.withOpacity(0.2),
-                        width: 0.5,
+                    color: Colors.white.withOpacity(0.05),
+                    border: Border.all(
+                        color: Colors.white.withOpacity(0.05), width: 1.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 4,
+                        offset: const Offset(0, 6),
                       ),
-                    ),
+                    ],
                   ),
                   child: SingleChildScrollView(
                     controller: _tabScrollController,
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
                     clipBehavior: Clip.none,
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 12),
                     child: Row(
                       children: categories.asMap().entries.map((entry) {
                         int index = entry.key;
@@ -333,6 +335,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
               ),
             ),
           ),
+          // Floating bottom navigation bar
         ],
       ),
     );
@@ -377,15 +380,15 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.15),
-                      blurRadius: 8,
+                      color: Colors.black.withOpacity(0.03),
+                      blurRadius: 4,
                       offset: const Offset(0, 4),
                       spreadRadius: 0,
                     ),
                   ]
                 : [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withOpacity(0.03),
                       blurRadius: 4,
                       offset: const Offset(0, 2),
                       spreadRadius: 0,
@@ -403,8 +406,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
               // Glass border
               border: Border.all(
                 color: isSelected
-                    ? Colors.white.withOpacity(0.3)
-                    : Colors.grey.withOpacity(0.3),
+                    ? Colors.white.withOpacity(0.03)
+                    : Colors.grey.withOpacity(0.03),
                 width: 1,
               ),
             ),
@@ -430,7 +433,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                     shadows: isSelected
                         ? [
                             Shadow(
-                              color: Colors.black.withOpacity(0.3),
+                              color: Colors.black.withOpacity(0.03),
                               offset: const Offset(0, 1),
                               blurRadius: 2,
                             ),
@@ -458,7 +461,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withOpacity(0.03),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
