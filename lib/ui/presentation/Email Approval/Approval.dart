@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'dart:ui';
 
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/hr_and_pettycash_card.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/invoice_and_rfq_card.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/my_action_card.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/visibilty_icon.dart';
+import 'package:el_race/ui/widgets/glass_tab_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -354,91 +356,11 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                             });
                             _scrollToSelectedTab(index);
                           },
-                          child: Container(
-                            width: 90.w,
-                            padding: const EdgeInsets.symmetric(vertical: 7),
-                            decoration: BoxDecoration(
-                              color:
-                                  isSelected ? appFontColor : Colors.grey[300],
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.25),
-                                width: 1.5,
-                              ),
-                              gradient: isSelected
-                                  ? LinearGradient(
-                                      colors: [
-                                        const Color.fromARGB(255, 27, 27, 27)
-                                            .withOpacity(0.85),
-                                        appFontColor.withOpacity(0.9),
-                                      ],
-                                      stops: const [
-                                        0.02,
-                                        0.9,
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    )
-                                  : LinearGradient(
-                                      colors: [
-                                        Colors.white.withOpacity(0.6),
-                                        const Color(0xffADB2BD)
-                                            .withOpacity(0.5),
-                                      ],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                              boxShadow: [
-                                // iPhone style - main shadow
-                                BoxShadow(
-                                  color: isSelected
-                                      ? Colors.black.withOpacity(0.3)
-                                      : Colors.black.withOpacity(0.15),
-                                  blurRadius: isSelected ? 20 : 15,
-                                  spreadRadius: 0,
-                                  offset: const Offset(0, 8),
-                                ),
-                                // iPhone style - soft inner glow (top)
-                                BoxShadow(
-                                  color: Colors.white.withOpacity(0.5),
-                                  blurRadius: 10,
-                                  spreadRadius: -5,
-                                  offset: const Offset(0, -2),
-                                ),
-                                // iPhone style - soft outer glow
-                                BoxShadow(
-                                  color: isSelected
-                                      ? appFontColor.withOpacity(0.2)
-                                      : Colors.grey.withOpacity(0.1),
-                                  blurRadius: isSelected ? 30 : 25,
-                                  spreadRadius: 0,
-                                  offset: const Offset(0, 10),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                Image.asset(
-                                  categoryIcons[cat] ??
-                                      "assets/icons/default.png",
-                                  height: 30.w,
-                                  width: 30.w,
-                                  // color: isSelected ? Colors.white : Colors.black87,
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  cat,
-                                  style: GoogleFonts.koulen(
-                                    fontSize: 13.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : Colors.black87,
-                                    letterSpacing: 1.0,
-                                  ),
-                                ),
-                              ],
-                            ),
+                          child: _buildGlassTab(
+                            icon: categoryIcons[cat] ??
+                                "assets/icons/default.png",
+                            title: cat,
+                            isSelected: isSelected,
                           ),
                         ),
                       );
@@ -478,5 +400,121 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     } else {
       return const SizedBox.shrink();
     }
+  }
+
+  Widget _buildGlassTab({
+    required String icon,
+    required String title,
+    required bool isSelected,
+  }) {
+    return Container(
+      width: 90.w,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        // Professional layered shadows - extended outside the tab
+        boxShadow: [
+          // Main shadow - larger spread
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+            spreadRadius: 2,
+          ),
+          // Secondary shadow for depth
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+            spreadRadius: 1,
+          ),
+          // Top highlight shadow
+          BoxShadow(
+            color: Colors.white.withOpacity(0.4),
+            blurRadius: 10,
+            offset: const Offset(-3, -3),
+            spreadRadius: 0,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              // Advanced glass effect with gradient overlay
+              gradient: isSelected
+                  ? LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withOpacity(0.25),
+                        appFontColor.withOpacity(0.35),
+                        appFontColor.withOpacity(0.25),
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    )
+                  : LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withOpacity(0.5),
+                        Colors.white.withOpacity(0.3),
+                        Colors.grey.shade300.withOpacity(0.2),
+                      ],
+                      stops: const [0.0, 0.5, 1.0],
+                    ),
+              // Glass border
+              border: Border.all(
+                color: Colors.white.withOpacity(isSelected ? 0.5 : 0.7),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset(
+                  icon,
+                  height: 30.w,
+                  width: 30.w,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  title,
+                  style: GoogleFonts.koulen(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Colors.white : Colors.black87,
+                    letterSpacing: 1.0,
+                    shadows: isSelected
+                        ? [
+                            Shadow(
+                              color: Colors.black.withOpacity(0.4),
+                              offset: const Offset(0, 2),
+                              blurRadius: 4,
+                            ),
+                            Shadow(
+                              color: Colors.black.withOpacity(0.2),
+                              offset: const Offset(0, 1),
+                              blurRadius: 2,
+                            ),
+                          ]
+                        : [
+                            Shadow(
+                              color: Colors.white.withOpacity(0.8),
+                              offset: const Offset(0, 1),
+                              blurRadius: 2,
+                            ),
+                          ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
