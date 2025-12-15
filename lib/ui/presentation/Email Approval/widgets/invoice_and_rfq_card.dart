@@ -25,7 +25,7 @@ class InvoiceAndRfqCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 5) +
             EdgeInsets.only(bottom: 100.w, top: 100.w),
         itemCount: approvalItems.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 1),
+        separatorBuilder: (context, index) => const SizedBox(height: 6),
         itemBuilder: (context, index) {
           final item = approvalItems[index];
           String type = item["type"] ?? "";

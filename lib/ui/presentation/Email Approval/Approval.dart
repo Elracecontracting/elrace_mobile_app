@@ -269,7 +269,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
           // Main content - starts from top and scrolls behind tabs
           NotificationListener<ScrollNotification>(
             onNotification: (scrollNotification) {
-              if (scrollNotification is ScrollUpdateNotification) {
+              if (scrollNotification is ScrollUpdateNotification ||
+                  scrollNotification is ScrollEndNotification) {
                 final isScrolled = scrollNotification.metrics.pixels > 10;
                 if (isScrolled != _isScrolled) {
                   setState(() {
@@ -342,6 +343,14 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                                 _isScrolled = false;
                               });
                               _scrollToSelectedTab(index);
+                              // Force reset after frame
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted && _isScrolled) {
+                                  setState(() {
+                                    _isScrolled = false;
+                                  });
+                                }
+                              });
                             },
                             child: _buildGlassTab(
                               icon: categoryIcons[cat] ??

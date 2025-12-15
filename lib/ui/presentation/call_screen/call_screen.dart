@@ -6,7 +6,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hexcolor/hexcolor.dart';
-import 'dart:ui';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../../utils/di.dart';
@@ -67,15 +66,12 @@ class _CallScreenState extends State<CallScreen> {
           physics: const BouncingScrollPhysics(),
           slivers: [
             SliverPersistentHeader(
-              pinned: true,
+              pinned: false,
               delegate: _ContactHeaderDelegate(
-                minHeight: 70.h,
-                maxHeight: 90.h,
+                minHeight: 40.h,
+                maxHeight: 45.h,
                 headerKey: _headerKey,
               ),
-            ),
-            SliverToBoxAdapter(
-              child: SizedBox(height: 10.h),
             ),
             BlocBuilder<ContactBloc, ContactState>(
               bloc: _contactBloc,
@@ -121,6 +117,9 @@ class _CallScreenState extends State<CallScreen> {
                   child: Center(child: CircularProgressIndicator()),
                 );
               },
+            ),
+            SliverToBoxAdapter(
+              child: SizedBox(height: 100.h),
             ),
           ],
         ),
@@ -175,66 +174,23 @@ class _ContactHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
-    // compute fraction 0..1 based on shrinkOffset
-    final double range =
-        (maxExtent - minExtent) <= 0 ? 1.0 : (maxExtent - minExtent);
-    final double t = (shrinkOffset / range).clamp(0.0, 1.0);
-
-    // match CustomBottomNavbar visual values
-    final double maxBlur = 8.0;
-    final double sigma = maxBlur * t;
-    final double bgOpacity = 0.12 * t;
-    final double borderOpacity = 0.28 * t;
-    final double shadowOpacity = 0.12 * t;
-
-    return ClipRRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-        child: Container(
-          key: headerKey,
-          padding: EdgeInsets.symmetric(horizontal: 12.w),
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(bgOpacity),
-            border: Border.all(
-                color: Colors.white.withOpacity(borderOpacity), width: 1.0),
-            boxShadow: [
-              if (shadowOpacity > 0)
-                BoxShadow(
-                  color: Colors.black.withOpacity(shadowOpacity),
-                  blurRadius: 12 * t,
-                  offset: Offset(0, 6 * t),
-                ),
-            ],
+    return Container(
+      key: headerKey,
+      padding: EdgeInsets.symmetric(horizontal: 12.w),
+      alignment: Alignment.center,
+      color: Colors.white,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            translate('home.contact'),
+            style: GoogleFonts.koulen(
+              fontSize: 25.sp,
+              fontWeight: FontWeight.w400,
+              color: appFontColor,
+            ),
           ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(
-                icon: const Icon(
-                  Icons.arrow_back,
-                  size: 28,
-                  color: appFontColor,
-                ),
-                onPressed: () {
-                  // navigate back to home tab instead of popping
-                  HomeBloc.get(context).add(const ChangeCurrentIndex(index: 1));
-                },
-              ),
-
-              Text(
-                translate('home.contact'),
-                style: GoogleFonts.koulen(
-                  fontSize: 25.sp,
-                  fontWeight: FontWeight.w400,
-                  color: appFontColor,
-                ),
-              ),
-
-              const SizedBox(width: 35), // same width of back button
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
