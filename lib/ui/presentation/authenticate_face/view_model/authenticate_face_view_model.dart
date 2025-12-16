@@ -534,7 +534,8 @@ class AuthenticateFaceViewController extends GetxController {
   var geometricWeight = 0.3.obs; // Weight for geometric comparison
   var embeddingWeight = 0.7.obs; // Weight for embedding comparison
   var minGeometricSimilarity = 0.95.obs; // Minimum geometric similarity
-  var minEmbeddingSimilarity = 0.998.obs; // Minimum embedding similarity
+  var minEmbeddingSimilarity =
+      0.985.obs; // Minimum embedding similarity (lowered for better usability)
   var requireBothChecks = true.obs; // Require both checks to pass
 
   // More accurate face matching with multiple factors
@@ -698,14 +699,20 @@ class AuthenticateFaceViewController extends GetxController {
       print('✅ User not checked in - performing check-in');
       sl.get<CheckInBloc>().add(CheckInET());
       onCheckInStatusChanged?.call(true);
-      Get.find<TimerController>().startTimer();
+      // Safely start timer if TimerController is registered
+      if (Get.isRegistered<TimerController>()) {
+        Get.find<TimerController>().startTimer();
+      }
     } else {
       // User is already checked in - perform check-out
       print('✅ User already checked in - performing check-out');
       final checkInRecordId = currentCheckInRecordId.value;
       sl.get<CheckOutBloc>().add(CheckOutET(checkInRecordId));
       onCheckInStatusChanged?.call(false);
-      Get.find<TimerController>().stopTimer();
+      // Safely stop timer if TimerController is registered
+      if (Get.isRegistered<TimerController>()) {
+        Get.find<TimerController>().stopTimer();
+      }
     }
 
     /// ✅ Only navigate if face matched and check-in/out processed
@@ -1341,9 +1348,10 @@ class AuthenticateFaceViewController extends GetxController {
   void configureForMaximumAccuracy() {
     print('🔧 Configuring for maximum accuracy...');
 
-    // Set strict thresholds
-    minGeometricSimilarity.value = 0.98; // Very high geometric threshold
-    minEmbeddingSimilarity.value = 0.997; // Very high embedding threshold
+    // Set reasonable thresholds (slightly relaxed for better usability)
+    minGeometricSimilarity.value = 0.95; // Geometric threshold
+    minEmbeddingSimilarity.value =
+        0.985; // Embedding threshold (lowered from 0.997)
 
     // Require both checks to pass
     requireBothChecks.value = true;
@@ -1358,8 +1366,8 @@ class AuthenticateFaceViewController extends GetxController {
     print('🔧 Configuring for balanced accuracy...');
 
     // Set moderate thresholds
-    minGeometricSimilarity.value = 0.95;
-    minEmbeddingSimilarity.value = 0.998;
+    minGeometricSimilarity.value = 0.92;
+    minEmbeddingSimilarity.value = 0.98;
 
     // Use weighted score instead of requiring both
     requireBothChecks.value = false;

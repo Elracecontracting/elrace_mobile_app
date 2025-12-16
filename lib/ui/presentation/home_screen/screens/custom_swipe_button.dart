@@ -2,6 +2,9 @@ import 'package:camera/camera.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/authenticate_face/view_model/authenticate_face_view_model.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/project_list_dialog.dart';
+import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_in_bloc/check_in_bloc.dart';
+import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_out_bloc/check_out_bloc.dart';
+import 'package:el_race/utils/di.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,7 +13,7 @@ import 'package:flutter_translate/flutter_translate.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart' show GoogleFonts;
 
-import '../bloc/home_bloc.dart' hide CheckInET, CheckOutET;
+import '../bloc/home_bloc.dart';
 import '../widgets/timer_controller.dart';
 
 class CustomSwipeButton extends StatefulWidget {
@@ -178,10 +181,42 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           loginResponseModel: SharedPref.getLoginData(),
           isCheckedIn: isCheckedIn,
           onConfirmed: () async {
-            // Set pending face verification flag - must complete face verification
-            SharedPref().setPreferencesBoolean('pendingFaceVerification', true);
-            context.read<HomeBloc>().add(const UpdateFaceRecognitionStatus(
-                FaceRecognitionStatus.matching));
+            // Check if alternative auth method was used (fingerprint/PIN)
+            final authMethodUsed =
+                SharedPref().getPreferenceBoolean('authMethodUsed');
+
+            if (authMethodUsed) {
+              // Alternative auth successful - process check-in/out directly
+              SharedPref().setPreferencesBoolean('authMethodUsed', false);
+              SharedPref()
+                  .setPreferencesBoolean('pendingFaceVerification', false);
+
+              if (!isCheckedIn) {
+                // Perform check-in
+                sl.get<CheckInBloc>().add(CheckInET());
+                Get.find<TimerController>().startTimer();
+              } else {
+                // Perform check-out
+                final checkInRecordId =
+                    SharedPref().getPreferenceInt('checkInRecordId');
+                if (checkInRecordId != 0) {
+                  sl.get<CheckOutBloc>().add(CheckOutET(checkInRecordId));
+                  Get.find<TimerController>().stopTimer();
+                }
+              }
+
+              setState(() {
+                isCheckedIn = !isCheckedIn;
+                dragOffset = isCheckedIn ? (buttonWidth - knobSize) : 0;
+              });
+              SharedPref().setPreferencesBoolean('isCheckedIn', isCheckedIn);
+            } else {
+              // Face recognition flow - set pending flag
+              SharedPref()
+                  .setPreferencesBoolean('pendingFaceVerification', true);
+              context.read<HomeBloc>().add(const UpdateFaceRecognitionStatus(
+                  FaceRecognitionStatus.matching));
+            }
             _resetPosition();
           },
           onCancelled: _resetPosition,

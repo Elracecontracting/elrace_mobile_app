@@ -1,3 +1,4 @@
+import 'package:el_race/core/services/auth_verification_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/home_screen/repository/swipe_button_screen_repo.dart';
 import 'package:el_race/ui/presentation/signin/data/model.dart';
@@ -253,9 +254,6 @@ void showLeftToRightPopupClean({
                                       selectedBranch != null) &&
                                   !isSubmitting
                               ? () async {
-                                  print("object");
-                                  print("object");
-                                  print("object");
                                   setState(() {
                                     isSubmitting = true;
                                     errorMessage = null;
@@ -274,28 +272,44 @@ void showLeftToRightPopupClean({
                                     );
 
                                     if (result['status'] != 'success') {
-                                      Navigator.pop(context);
-                                      SharedPref().setPreferencesBoolean(
-                                          'wasCheckedInBeforeFaceAuth',
-                                          isCheckedIn);
+                                      // Show authentication options dialog
+                                      final authService =
+                                          AuthVerificationService();
+                                      final authResult = await authService
+                                          .showAuthOptionsDialog(context);
 
-                                      onConfirmed(); // your existing OK logic
+                                      if (authResult == null) {
+                                        // User cancelled authentication
+                                        setState(() => isSubmitting = false);
+                                        return;
+                                      }
 
-                                      // Util.pushPage(AuthenticateFaceView(
-                                      //       loginResponseModel: loginResponseModel,
-                                      //       isLeftToRight: !isCheckedIn,
-                                      //       onCheckInStatusChanged: (bool checkedIn) async {
-                                      //         SharedPref().setPreferencesBoolean('isCheckedIn', checkedIn);
-
-                                      //         final wasCheckedInBeforeFaceAuth =
-                                      //             SharedPref().getPreferenceBoolean('wasCheckedInBeforeFaceAuth');
-
-                                      //         // 🔁 Reset only if face match failed AND it was a check-in attempt
-                                      //         if (!checkedIn && !wasCheckedInBeforeFaceAuth) {
-                                      //           onCancelled();
-                                      //         }
-                                      //       },
-                                      //     ),context);
+                                      if (authResult.success) {
+                                        // Biometric/PIN authentication successful
+                                        Navigator.pop(context);
+                                        SharedPref().setPreferencesBoolean(
+                                            'wasCheckedInBeforeFaceAuth',
+                                            isCheckedIn);
+                                        // Skip face recognition and proceed directly
+                                        SharedPref().setPreferencesBoolean(
+                                            'authMethodUsed', true);
+                                        SharedPref().setPreferencesString(
+                                            'authMethodType',
+                                            authResult.method.name);
+                                        onConfirmed();
+                                      } else if (authResult.method ==
+                                          AuthMethod.faceRecognition) {
+                                        // User chose face recognition - proceed with existing flow
+                                        Navigator.pop(context);
+                                        SharedPref().setPreferencesBoolean(
+                                            'wasCheckedInBeforeFaceAuth',
+                                            isCheckedIn);
+                                        onConfirmed();
+                                      } else {
+                                        // Authentication failed
+                                        setState(() => errorMessage =
+                                            authResult.message ?? 'فشل التحقق');
+                                      }
                                     } else {
                                       setState(() => errorMessage =
                                           result['message'] ??
