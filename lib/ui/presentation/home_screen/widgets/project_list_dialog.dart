@@ -42,6 +42,7 @@ void _handleCheckOutWithSavedProject({
 }) async {
   final savedProjectId = SharedPref().getPreferenceInt('checkInProjectId');
   final savedBranchId = SharedPref().getPreferenceInt('checkInBranchId');
+  final savedAuthMethod = SharedPref().getPreferenceString('checkInAuthMethod');
 
   // Check if we have a saved project or branch
   if (savedProjectId == 0 && savedBranchId == 0) {
@@ -75,9 +76,27 @@ void _handleCheckOutWithSavedProject({
     Navigator.pop(context); // Close loading dialog
 
     if (result['status'] != 'success') {
-      // Show authentication options dialog
+      // Use the same authentication method as check-in
       final authService = AuthVerificationService();
-      final authResult = await authService.showAuthOptionsDialog(context);
+      AuthResult? authResult;
+
+      if (savedAuthMethod == 'faceRecognition') {
+        // Must use face recognition
+        authResult = AuthResult(
+          success: false,
+          method: AuthMethod.faceRecognition,
+          message: 'use_face_recognition',
+        );
+      } else if (savedAuthMethod == 'fingerprint') {
+        // Must use fingerprint
+        authResult = await authService.authenticateWithFingerprint();
+      } else if (savedAuthMethod == 'password') {
+        // Must use PIN - show PIN dialog
+        authResult = await _showPinOnlyDialog(context, authService);
+      } else {
+        // Fallback: show all options
+        authResult = await authService.showAuthOptionsDialog(context);
+      }
 
       if (authResult == null) {
         // User cancelled authentication
@@ -127,6 +146,85 @@ void _clearSavedCheckInProject() {
   SharedPref().setPreferenceInt('checkInProjectId', 0);
   SharedPref().setPreferencesString('checkInProjectName', '');
   SharedPref().setPreferenceInt('checkInBranchId', 0);
+  SharedPref().setPreferencesString('checkInAuthMethod', '');
+}
+
+/// Shows PIN-only dialog for check-out when check-in was done with PIN
+Future<AuthResult?> _showPinOnlyDialog(
+    BuildContext context, AuthVerificationService authService) async {
+  final pinController = TextEditingController();
+  String? errorMessage;
+
+  return showDialog<AuthResult>(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setState) => AlertDialog(
+        title: const Text(
+          'أدخل رمز PIN',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock, size: 48, color: Color(0xFF6C757D)),
+            const SizedBox(height: 16),
+            const Text(
+              'يجب استخدام نفس طريقة المصادقة المستخدمة عند تسجيل الدخول',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: pinController,
+              keyboardType: TextInputType.number,
+              obscureText: true,
+              textAlign: TextAlign.center,
+              maxLength: 6,
+              decoration: InputDecoration(
+                hintText: '****',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                counterText: '',
+              ),
+              style: const TextStyle(fontSize: 24, letterSpacing: 8),
+            ),
+            if (errorMessage != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  errorMessage!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, null),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (pinController.text.isEmpty) {
+                setState(() => errorMessage = 'الرجاء إدخال رمز PIN');
+                return;
+              }
+              final result = await authService.verifyPin(pinController.text);
+              if (result.success) {
+                Navigator.pop(context, result);
+              } else {
+                setState(() => errorMessage = result.message);
+              }
+            },
+            child: const Text('تأكيد'),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 /// Shows the project selection dialog for check-in
@@ -409,9 +507,10 @@ void _showProjectSelectionDialog({
 
                                       if (authResult.success) {
                                         // Biometric/PIN authentication successful
-                                        // Save selected project/branch for check-out
+                                        // Save selected project/branch and auth method for check-out
                                         _saveSelectedProject(
-                                            selectedProject, selectedBranch);
+                                            selectedProject, selectedBranch,
+                                            authMethod: authResult.method.name);
                                         Navigator.pop(context);
                                         SharedPref().setPreferencesBoolean(
                                             'wasCheckedInBeforeFaceAuth',
@@ -426,9 +525,10 @@ void _showProjectSelectionDialog({
                                       } else if (authResult.method ==
                                           AuthMethod.faceRecognition) {
                                         // User chose face recognition - proceed with existing flow
-                                        // Save selected project/branch for check-out
+                                        // Save selected project/branch and auth method for check-out
                                         _saveSelectedProject(
-                                            selectedProject, selectedBranch);
+                                            selectedProject, selectedBranch,
+                                            authMethod: 'faceRecognition');
                                         Navigator.pop(context);
                                         SharedPref().setPreferencesBoolean(
                                             'wasCheckedInBeforeFaceAuth',
@@ -475,7 +575,8 @@ void _showProjectSelectionDialog({
 }
 
 /// Saves the selected project or branch for use during check-out
-void _saveSelectedProject(Project? project, dynamic branch) {
+void _saveSelectedProject(Project? project, dynamic branch,
+    {String? authMethod}) {
   if (project != null) {
     SharedPref().setPreferenceInt('checkInProjectId', project.agreementId);
     SharedPref().setPreferencesString('checkInProjectName', project.name);
@@ -489,5 +590,9 @@ void _saveSelectedProject(Project? project, dynamic branch) {
     } else if (branch is int) {
       SharedPref().setPreferenceInt('checkInBranchId', branch);
     }
+  }
+  // Save the authentication method used for check-in
+  if (authMethod != null) {
+    SharedPref().setPreferencesString('checkInAuthMethod', authMethod);
   }
 }

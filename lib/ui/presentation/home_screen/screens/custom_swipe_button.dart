@@ -132,6 +132,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
     final storedState = SharedPref().getPreferenceBoolean('isCheckedIn');
     setState(() {
       isCheckedIn = storedState;
+      _isVisualCheckedIn = storedState; // Sync visual state with actual state
       dragOffset = isCheckedIn ? (buttonWidth - knobSize) : 0;
     });
   }
@@ -214,6 +215,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
 
               setState(() {
                 isCheckedIn = !isCheckedIn;
+                _isVisualCheckedIn = isCheckedIn; // Sync visual state
                 dragOffset = isCheckedIn ? (buttonWidth - knobSize) : 0;
               });
               SharedPref().setPreferencesBoolean('isCheckedIn', isCheckedIn);
