@@ -152,6 +152,13 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
         if (dragOffset < 2.0) {
           startSwipe = false;
         }
+        // Update visual state based on animation progress
+        final progress = dragOffset / (buttonWidth - knobSize);
+        if (progress > 0.5) {
+          _isVisualCheckedIn = true;
+        } else {
+          _isVisualCheckedIn = false;
+        }
       });
     });
 

@@ -14,6 +14,129 @@ void showLeftToRightPopupClean({
   required VoidCallback onConfirmed,
   required VoidCallback onCancelled,
 }) {
+  // If checking out, use the saved project from check-in directly
+  if (isCheckedIn) {
+    _handleCheckOutWithSavedProject(
+      context: context,
+      onConfirmed: onConfirmed,
+      onCancelled: onCancelled,
+    );
+    return;
+  }
+
+  // Check-in flow: show project selection dialog
+  _showProjectSelectionDialog(
+    context: context,
+    loginResponseModel: loginResponseModel,
+    isCheckedIn: isCheckedIn,
+    onConfirmed: onConfirmed,
+    onCancelled: onCancelled,
+  );
+}
+
+/// Handles check-out using the saved project from check-in
+void _handleCheckOutWithSavedProject({
+  required BuildContext context,
+  required VoidCallback onConfirmed,
+  required VoidCallback onCancelled,
+}) async {
+  final savedProjectId = SharedPref().getPreferenceInt('checkInProjectId');
+  final savedBranchId = SharedPref().getPreferenceInt('checkInBranchId');
+
+  // Check if we have a saved project or branch
+  if (savedProjectId == 0 && savedBranchId == 0) {
+    // No saved project, show error and cancel
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+          content: Text('No check-in project found. Please check-in first.')),
+    );
+    onCancelled();
+    return;
+  }
+
+  // Show loading dialog
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => const Center(child: CircularProgressIndicator()),
+  );
+
+  try {
+    final location = Location();
+    final locationData = await location.getLocation();
+    final projectIdToUse = savedProjectId != 0 ? savedProjectId : savedBranchId;
+
+    final result = await CustomSwipeButtonRepo.validateUserLocation(
+      projectIdToUse,
+      locationData.latitude ?? 0,
+      locationData.longitude ?? 0,
+    );
+
+    Navigator.pop(context); // Close loading dialog
+
+    if (result['status'] != 'success') {
+      // Show authentication options dialog
+      final authService = AuthVerificationService();
+      final authResult = await authService.showAuthOptionsDialog(context);
+
+      if (authResult == null) {
+        // User cancelled authentication
+        onCancelled();
+        return;
+      }
+
+      if (authResult.success) {
+        // Biometric/PIN authentication successful
+        SharedPref().setPreferencesBoolean('wasCheckedInBeforeFaceAuth', true);
+        SharedPref().setPreferencesBoolean('authMethodUsed', true);
+        SharedPref()
+            .setPreferencesString('authMethodType', authResult.method.name);
+        // Clear saved project on check-out
+        _clearSavedCheckInProject();
+        onConfirmed();
+      } else if (authResult.method == AuthMethod.faceRecognition) {
+        // User chose face recognition - proceed with existing flow
+        SharedPref().setPreferencesBoolean('wasCheckedInBeforeFaceAuth', true);
+        // Clear saved project on check-out
+        _clearSavedCheckInProject();
+        onConfirmed();
+      } else {
+        // Authentication failed
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(authResult.message ?? 'فشل التحقق')),
+        );
+        onCancelled();
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Validation failed.')),
+      );
+      onCancelled();
+    }
+  } catch (e) {
+    Navigator.pop(context); // Close loading dialog
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Something went wrong. Please try again.')),
+    );
+    onCancelled();
+  }
+}
+
+/// Clears saved check-in project data
+void _clearSavedCheckInProject() {
+  SharedPref().setPreferenceInt('checkInProjectId', 0);
+  SharedPref().setPreferencesString('checkInProjectName', '');
+  SharedPref().setPreferenceInt('checkInBranchId', 0);
+}
+
+/// Shows the project selection dialog for check-in
+void _showProjectSelectionDialog({
+  required BuildContext context,
+  required LoginResponseModel loginResponseModel,
+  required bool isCheckedIn,
+  required VoidCallback onConfirmed,
+  required VoidCallback onCancelled,
+}) {
   Project? selectedProject;
   List<Project> projects = [];
   bool isLoading = true;
@@ -286,6 +409,9 @@ void showLeftToRightPopupClean({
 
                                       if (authResult.success) {
                                         // Biometric/PIN authentication successful
+                                        // Save selected project/branch for check-out
+                                        _saveSelectedProject(
+                                            selectedProject, selectedBranch);
                                         Navigator.pop(context);
                                         SharedPref().setPreferencesBoolean(
                                             'wasCheckedInBeforeFaceAuth',
@@ -300,6 +426,9 @@ void showLeftToRightPopupClean({
                                       } else if (authResult.method ==
                                           AuthMethod.faceRecognition) {
                                         // User chose face recognition - proceed with existing flow
+                                        // Save selected project/branch for check-out
+                                        _saveSelectedProject(
+                                            selectedProject, selectedBranch);
                                         Navigator.pop(context);
                                         SharedPref().setPreferencesBoolean(
                                             'wasCheckedInBeforeFaceAuth',
@@ -343,4 +472,22 @@ void showLeftToRightPopupClean({
       );
     },
   );
+}
+
+/// Saves the selected project or branch for use during check-out
+void _saveSelectedProject(Project? project, dynamic branch) {
+  if (project != null) {
+    SharedPref().setPreferenceInt('checkInProjectId', project.agreementId);
+    SharedPref().setPreferencesString('checkInProjectName', project.name);
+    SharedPref().setPreferenceInt('checkInBranchId', 0);
+  } else if (branch != null) {
+    SharedPref().setPreferenceInt('checkInProjectId', 0);
+    SharedPref().setPreferencesString('checkInProjectName', '');
+    if (branch is List && branch.isNotEmpty) {
+      SharedPref().setPreferenceInt(
+          'checkInBranchId', branch[0] is int ? branch[0] : 0);
+    } else if (branch is int) {
+      SharedPref().setPreferenceInt('checkInBranchId', branch);
+    }
+  }
 }
