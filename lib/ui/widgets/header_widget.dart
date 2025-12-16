@@ -99,7 +99,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
           alignment: Alignment.center,
           children: [
             PositionedDirectional(
-              top: SizeConfig().getHeight(48.w),
+              top: SizeConfig().getHeight(40.w),
               start: SizeConfig().getWidth(10),
               //left: SizeConfig().getWidth(15),
               child: GestureDetector(
@@ -115,10 +115,10 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                   );
                 },
                 child: Image.asset(
-                  'assets/png/logo.gif',
+                  'assets/gif/el-race-logo.gif',
                   fit: BoxFit.cover,
-                  height: SizeConfig().getHeight(60),
-                  width: SizeConfig().getWidth(120),
+                  height: SizeConfig().getHeight(55),
+                  width: SizeConfig().getWidth(110),
                 ),
               ),
             ),

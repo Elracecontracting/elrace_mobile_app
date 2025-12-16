@@ -143,7 +143,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           height: SizeConfig().getHeight(110),
                         ),
                         Image.asset(
-                          'assets/png/logo.gif',
+                          'assets/gif/el-race-logo.gif',
                           fit: BoxFit.cover,
                           height: SizeConfig().getHeight(180),
                         ),

@@ -53,32 +53,31 @@ class CustomBottomNavbarState extends State<CustomBottomNavbar> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 12.0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(70.0),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
-          child: Container(
-            height: 70,
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(70.0),
-              border:
-                  Border.all(color: Colors.white.withOpacity(0.28), width: 1.0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.12),
-                  blurRadius: 12,
-                  offset: const Offset(0, 6),
+    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
+
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.only(
+          left: 16.0,
+          right: 16.0,
+          bottom: 12.0 + bottomInset,
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(70.0),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 8.0, sigmaY: 8.0),
+            child: Container(
+              height: 70,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(70.0),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.28),
+                  width: 1.0,
                 ),
-              ],
-            ),
-            child: SafeArea(
-              top: false,
-              bottom: false,
+              ),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   _navItem('assets/png/icons/message.png', 0),

@@ -45,30 +45,29 @@ class CustomBottomNavBar extends StatelessWidget {
     return BlocBuilder<HomeBloc, HomeState>(builder: (ctx, state) {
       var bloc = HomeBloc.get(ctx);
       if (bloc.enableBottomNav == false) return const SizedBox.shrink();
-      return Padding(
-        padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 20.0),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(70.r),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
-            child: Container(
-              height: 60.h,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(70.r),
-                border: Border.all(
-                    color: Colors.white.withOpacity(0.28), width: 1.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.12),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: SafeArea(
-                top: false,
-                bottom: false,
+      return SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 16.0, right: 16.0, bottom: 12.0),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(70.r),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
+              child: Container(
+                height: 60.h,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(70.r),
+                  border: Border.all(
+                      color: Colors.white.withOpacity(0.28), width: 1.0),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.12),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.spaceAround,

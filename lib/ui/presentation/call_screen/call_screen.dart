@@ -119,7 +119,13 @@ class _CallScreenState extends State<CallScreen> {
               },
             ),
             SliverToBoxAdapter(
-              child: SizedBox(height: 100.h),
+              child: Builder(
+                builder: (context) {
+                  final bottomPadding =
+                      MediaQuery.of(context).viewPadding.bottom;
+                  return SizedBox(height: 80.h + bottomPadding);
+                },
+              ),
             ),
           ],
         ),
