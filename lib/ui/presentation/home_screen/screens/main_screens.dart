@@ -1,15 +1,14 @@
-import 'dart:ui';
+import 'dart:ui' as ui;
 
-import 'package:camera/camera.dart';
 import 'package:el_race/core/constants/app_images.dart';
 import 'package:el_race/ui/presentation/call_screen/call_screen.dart';
-import 'package:el_race/ui/presentation/camera/camera_screen.dart';
+import 'package:el_race/ui/presentation/document_scanner/simple_document_scanner.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 class MainScreen extends StatelessWidget {
   const MainScreen({super.key});
@@ -52,7 +51,7 @@ class CustomBottomNavBar extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(70.r),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
+              filter: ui.ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
               child: Container(
                 height: 60.h,
                 decoration: BoxDecoration(
@@ -138,50 +137,31 @@ class CustomBottomNavBar extends StatelessWidget {
   }
 
   Future<void> _openCamera(BuildContext context) async {
-    // Request camera permission
-    final status = await Permission.camera.request();
-
-    if (status.isGranted) {
-      try {
-        // Get available cameras
-        final cameras = await availableCameras();
-        if (cameras.isEmpty) {
-          if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('No camera found')),
-            );
-          }
-          return;
-        }
-
-        // Open camera (you can create a custom camera screen later)
-        if (context.mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CameraScreen(camera: cameras.first),
-            ),
-          );
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error opening camera: $e')),
-          );
-        }
-      }
-    } else if (status.isDenied || status.isPermanentlyDenied) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Camera permission is required'),
-            action: SnackBarAction(
-              label: 'Settings',
-              onPressed: openAppSettings,
-            ),
+    // Open the Document Scanner
+    if (context.mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SimpleDocumentScanner(
+            maxPages: 10,
+            allowGalleryImport: true,
+            onScanComplete: (imagePaths) {
+              debugPrint('Scanned ${imagePaths.length} pages');
+            },
+            onExportComplete: (path, format) {
+              debugPrint('Exported to: $path');
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Document saved to: $path'),
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+            },
           ),
-        );
-      }
+        ),
+      );
     }
   }
 }
