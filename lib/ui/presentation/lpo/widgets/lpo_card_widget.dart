@@ -183,8 +183,8 @@ class LpoCardWidget extends StatelessWidget {
               children: [
                 // LEFT: Vendor Logo
                 Container(
-                  width: 90.w,
-                  height: 90.w,
+                  width: 62.w,
+                  height: 62.w,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white,
@@ -195,7 +195,7 @@ class LpoCardWidget extends StatelessWidget {
                       ? ClipOval(
                           child: Image.network(
                             clientPhoto!,
-                            fit: BoxFit.contain,
+                            fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) =>
                                 _buildInitialsAvatar(),
                           ),
@@ -226,7 +226,7 @@ class LpoCardWidget extends StatelessWidget {
                   ),
                 ),
                 SizedBox(width: 16.w),
-                SizedBox(width: 90.w), // Balance right side
+                SizedBox(width: 62.w), // Balance right side
               ],
             ),
             SizedBox(height: 14.h),

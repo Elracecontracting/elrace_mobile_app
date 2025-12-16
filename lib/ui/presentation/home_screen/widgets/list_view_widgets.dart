@@ -15,6 +15,7 @@ import 'package:el_race/ui/presentation/my_notes/screens/my_notes_screen.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/screens/my_project.dart';
 import 'package:el_race/ui/presentation/my_request/MyRequestsPage.dart';
 import 'package:el_race/ui/presentation/task_sheet/task_sheet_screen.dart';
+import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
 import 'package:el_race/ui/presentation/todo_list/screens/todo_list_screen.dart';
 import 'package:el_race/utils/custom_navigate.dart';
 import 'package:el_race/utils/Util.dart';
@@ -24,6 +25,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart';
 
 import '../bloc/home_bloc.dart';
 
@@ -324,39 +326,44 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   }
 
   Widget _buildTodoListWidget() {
-    return Stack(
-      children: [
-        GrayCardComponent(
-          cardTitle: translate('home.todo_list'),
-          backgroundImagePath: 'assets/png/blue_card.png',
-          onClick: () => Util.pushPage(const TodoListScreen(), context),
-          childWidget: const SizedBox.shrink(),
-        ),
-        Positioned(
-          right: 6.w,
-          top: 30.h,
-          child: Opacity(
-            opacity: 0.20,
-            child: Image.asset(
-              'assets/png/notes_icon.png',
-              errorBuilder: (_, __, ___) => Icon(
-                Icons.check_box_outlined,
-                size: 80.w,
-                color: Colors.white.withOpacity(0.2),
+    return Consumer<TodoProvider>(
+      builder: (context, todoProvider, child) {
+        final todoCount = todoProvider.totalCount.toString();
+        return Stack(
+          children: [
+            GrayCardComponent(
+              cardTitle: translate('home.todo_list'),
+              backgroundImagePath: 'assets/png/blue_card.png',
+              onClick: () => Util.pushPage(const TodoListScreen(), context),
+              childWidget: const SizedBox.shrink(),
+            ),
+            Positioned(
+              right: 6.w,
+              top: 30.h,
+              child: Opacity(
+                opacity: 0.20,
+                child: Image.asset(
+                  'assets/png/notes_icon.png',
+                  errorBuilder: (_, __, ___) => Icon(
+                    Icons.check_box_outlined,
+                    size: 80.w,
+                    color: Colors.white.withOpacity(0.2),
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
-        Positioned(
-          right: 10.w,
-          top: 10.w,
-          child: const CountWidget(
-            count: '5',
-            countColor: Colors.black,
-            containerColor: Colors.white,
-          ),
-        ),
-      ],
+            Positioned(
+              right: 10.w,
+              top: 10.w,
+              child: CountWidget(
+                count: todoCount,
+                countColor: Colors.black,
+                containerColor: Colors.white,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 

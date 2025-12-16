@@ -12,6 +12,7 @@ import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
 import 'package:el_race/ui/presentation/qr_code/bloc/qr_code_bloc.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
 import 'package:el_race/ui/presentation/splash_screen/splash_screen.dart';
+import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
 import 'package:el_race/utils/di.dart';
 import 'package:el_race/utils/generated_routes.dart';
 import 'package:el_race/utils/orientation_helper.dart';
@@ -144,6 +145,7 @@ class MyApp extends StatelessWidget {
           ChangeNotifierProvider(create: (_) => SliderProvider()),
           ChangeNotifierProvider(create: (_) => ProfileBoxProvider()),
           ChangeNotifierProvider(create: (_) => ReportProvider()),
+          ChangeNotifierProvider(create: (_) => TodoProvider()..initialize()),
         ],
         child: MultiBlocProvider(
           providers: [
