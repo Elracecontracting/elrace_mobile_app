@@ -148,6 +148,17 @@
     "enable_service": "Enable Location Service",
     "please_enable": "Please enable location services to proceed."
   },
+  "search": {
+    "title": "SEARCH",
+    "select_category": "Select a Category",
+    "select_category_desc": "Choose what you want to search in",
+    "search_placeholder": "Type to search...",
+    "view_all": "View All",
+    "no_results": "No results found",
+    "start_searching": "Start typing to search",
+    "error": "Something went wrong",
+    "retry": "Retry"
+  },
   "request": {
     "job_mission_success": "Job mission request submitted successfully!",
     "submission_failed": "Submission Failed",

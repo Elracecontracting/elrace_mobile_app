@@ -5,6 +5,7 @@ import 'package:el_race/ui/presentation/call_screen/call_screen.dart';
 import 'package:el_race/ui/presentation/document_scanner/simple_document_scanner.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
+import 'package:el_race/ui/presentation/search/screens/widget_search_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -130,6 +131,31 @@ class CustomBottomNavBar extends StatelessWidget {
           child: Image.asset(
             icon,
             width: 30.w,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchNavItem(BuildContext context) {
+    return IconButton(
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(),
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const WidgetSearchScreen(),
+          ),
+        );
+      },
+      icon: SizedBox(
+        height: 60.h,
+        child: Center(
+          child: Icon(
+            Icons.search,
+            size: 28.w,
+            color: Colors.black87,
           ),
         ),
       ),

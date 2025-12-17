@@ -148,6 +148,17 @@
     "enable_service": "تفعيل خدمة الموقع",
     "please_enable": "يرجى تفعيل خدمات الموقع للمتابعة."
   },
+  "search": {
+    "title": "البحث",
+    "select_category": "اختر فئة",
+    "select_category_desc": "اختر ما تريد البحث فيه",
+    "search_placeholder": "اكتب للبحث...",
+    "view_all": "عرض الكل",
+    "no_results": "لا توجد نتائج",
+    "start_searching": "ابدأ الكتابة للبحث",
+    "error": "حدث خطأ ما",
+    "retry": "إعادة المحاولة"
+  },
   "request": {
     "job_mission_success": "تم إرسال طلب المهمة بنجاح!",
     "submission_failed": "فشل الإرسال",

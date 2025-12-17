@@ -173,8 +173,9 @@ class MyApp extends StatelessWidget {
                               Provider.of<ProfileBoxProvider>(context,
                                   listen: false);
                           if (profileBoxProvider.isProfileVisible) {
-                            profileBoxProvider
-                                .hideProfileBox(); // Close the profile box
+                            profileBoxProvider.hideProfileBox();
+
+                            /// Close the profile box
                           }
                         },
                         child: child!,

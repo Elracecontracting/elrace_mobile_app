@@ -6,6 +6,7 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:el_race/ui/presentation/Email Approval/Approval.dart';
 import 'package:el_race/ui/presentation/Notification/notification_screen.dart';
+import 'package:el_race/ui/presentation/search/screens/widget_search_screen.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -20,7 +21,9 @@ import '../presentation/home_screen/bloc/home_bloc.dart';
 import '../presentation/home_screen/screens/home_screen.dart';
 
 class HeaderWidget extends StatefulWidget implements PreferredSizeWidget {
-  const HeaderWidget({super.key});
+  const HeaderWidget({super.key, this.hidden = true});
+
+  final bool hidden;
 
   @override
   State<HeaderWidget> createState() => _HeaderWidgetState();
@@ -136,6 +139,33 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                     ),
                     Row(
                       children: [
+                        // Search Icon (hidden by flag)
+                        widget.hidden
+                            ? const SizedBox.shrink()
+                            : GestureDetector(
+                                onTap: () {
+                                  if (SharedPref.isUserAuthenticated()) {
+                                    Navigator.push(
+                                      context,
+                                      SlideRightPageRoute(
+                                        child: const WidgetSearchScreen(),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: Container(
+                                  width: 30,
+                                  height: 30,
+                                  child: Icon(
+                                    Icons.search,
+                                    size: 28,
+                                    color: Colors.black.withOpacity(0.7),
+                                  ),
+                                ),
+                              ),
+                        widget.hidden
+                            ? const SizedBox.shrink()
+                            : SizedBox(width: SizeConfig().getWidth(10)),
                         GestureDetector(
                           onTap: () async {
                             if (SharedPref.isUserAuthenticated()) {
