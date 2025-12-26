@@ -254,11 +254,11 @@ class _ProfileBoxWithSlideAnimationState
                       child: Container(
                         decoration: const BoxDecoration(
                           color: Colors.white,
-                          image: const DecorationImage(
-                              image: const AssetImage(
+                          image: DecorationImage(
+                              image: AssetImage(
                                   "assets/newapp/profile_background.png"),
                               fit: BoxFit.fill),
-                          borderRadius: const BorderRadius.only(
+                          borderRadius: BorderRadius.only(
                             topRight: Radius.circular(20),
                             bottomRight: Radius.circular(20),
                           ),

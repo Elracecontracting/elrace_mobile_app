@@ -174,13 +174,13 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
           BlocBuilder<ProjectListBloc, ProjectListState>(
             builder: (ctx, state) {
               if (state is ProjectListLoading && bloc.visibleProjects.isEmpty) {
-                return SliverFillRemaining(
-                  child: const Center(child: CircularProgressIndicator()),
+                return const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()),
                 );
               } else if (!(state is ProjectListLoading) &&
                   bloc.visibleProjects.isEmpty) {
-                return SliverFillRemaining(
-                  child: const Center(child: Text('No data available')),
+                return const SliverFillRemaining(
+                  child: Center(child: Text('No data available')),
                 );
               } else if (state is ProjectListLoaded ||
                   bloc.visibleProjects.isNotEmpty) {

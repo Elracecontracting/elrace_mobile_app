@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/ui/presentation/instruction/views/instruction_view.dart';
-import 'package:el_race/ui/presentation/authenticate_face/views/authenticate_face_view.dart';
+import 'package:el_race/core/services/app_config_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -26,28 +26,17 @@ class _SplashScreenState extends State<SplashScreen> {
             SharedPref().getPreferenceBoolean('isFaceRegistered');
 
         if (isPendingFaceVerification) {
-          // Check if face is already registered
-          if (isFaceRegistered) {
-            // Face already registered, go to authenticate screen
-            Util.pushPageAndRemoveRoutes(
-              AuthenticateFaceView(
-                loginResponseModel: SharedPref.getLoginData(),
-                isLeftToRight: true,
-                onCheckInStatusChanged: (bool checkedIn) {
-                  // Face verification completed successfully
-                  SharedPref()
-                      .setPreferencesBoolean('pendingFaceVerification', false);
-                },
-              ),
-              context,
-            );
-          } else {
-            // Face not registered yet, go to instruction screen to register
-            Util.pushPageAndRemoveRoutes(
-              InstructionView(loginResponseModel: SharedPref.getLoginData()),
-              context,
-            );
+          // In Test Mode, skip any biometric flows
+          if (AppConfigService.instance.isTestMode) {
+            SharedPref()
+                .setPreferencesBoolean('pendingFaceVerification', false);
+            Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
+            return;
           }
+
+          // Clear the pending face verification flag (old face recognition system removed)
+          SharedPref().setPreferencesBoolean('pendingFaceVerification', false);
+          Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
         } else {
           Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
         }

@@ -9,7 +9,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../widgets/header_widget.dart';
 
 import '../home_screen/screens/main_screens.dart';
-import '../home_screen/widgets/visibilty_icon.dart';
 
 class ProjectAnnouncementPage extends StatelessWidget {
   final news;

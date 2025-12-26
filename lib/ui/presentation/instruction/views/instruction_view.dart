@@ -1,5 +1,5 @@
 import 'package:el_race/resources/app_colors.dart';
-import 'package:el_race/ui/presentation/register_face/views/register_face_view.dart';
+import 'package:el_race/core/services/app_config_service.dart';
 import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:el_race/ui/widgets/custom_button.dart';
 import 'package:el_race/utils/Util.dart';
@@ -104,7 +104,15 @@ class InstructionView extends StatelessWidget {
               // Action Button
               CustomButton(
                 text: translate('instruction.lets_go'),
-                onTap: () => Util.pushPage(const RegisterFaceView(), context),
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                          'Face registration is no longer available. Biometric authentication is now used automatically.'),
+                    ),
+                  );
+                  Navigator.of(context).pop();
+                },
               ),
               const Spacer(flex: 2),
             ],

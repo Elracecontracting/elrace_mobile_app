@@ -293,7 +293,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
             child: IgnorePointer(
               ignoring: !dropdownOpen,
               child: AnimatedOpacity(
-                duration: Duration(milliseconds: 450),
+                duration: const Duration(milliseconds: 450),
                 curve: Curves.easeInOut,
                 opacity: dropdownOpen ? 1.0 : 0.0,
                 child: Center(
@@ -310,7 +310,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                             color: Colors.black.withOpacity(0.08),
                             blurRadius: 8,
                             spreadRadius: 0,
-                            offset: Offset(0, 4),
+                            offset: const Offset(0, 4),
                           )
                         ],
                       ),
@@ -411,7 +411,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
             BoxShadow(
               color: Colors.black.withOpacity(0.25),
               blurRadius: 6,
-              offset: Offset(0, 3),
+              offset: const Offset(0, 3),
             ),
           ],
         ),

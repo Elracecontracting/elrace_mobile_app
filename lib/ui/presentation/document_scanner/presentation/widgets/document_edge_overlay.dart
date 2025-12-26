@@ -109,7 +109,7 @@ class EdgeOverlayPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1;
 
-    final margin = 40.0;
+    const margin = 40.0;
     final rect = Rect.fromLTWH(
       margin,
       margin,
@@ -123,7 +123,7 @@ class EdgeOverlayPainter extends CustomPainter {
     );
 
     // Draw corner marks
-    final cornerLength = 30.0;
+    const cornerLength = 30.0;
     final cornerPaint = Paint()
       ..color = Colors.white.withOpacity(0.6)
       ..style = PaintingStyle.stroke

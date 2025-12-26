@@ -20,15 +20,6 @@ class ChangeVisiablityIcon extends HomeEvent {
   const ChangeVisiablityIcon();
 }
 
-enum FaceRecognitionStatus { idle, matching, matched, failed }
-
-class UpdateFaceRecognitionStatus extends HomeEvent {
-  final FaceRecognitionStatus status;
-  const UpdateFaceRecognitionStatus(this.status);
-  @override
-  List<Object> get props => [status];
-}
-
 class CheckInStatusChangedEvent extends HomeEvent {
   final bool isCheckedIn;
   const CheckInStatusChangedEvent(this.isCheckedIn);

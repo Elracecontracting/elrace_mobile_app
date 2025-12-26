@@ -1,7 +1,6 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/report_module/presentation/screens/report_listing/report_app_home_screen.dart';
 import 'package:el_race/ui/presentation/Attendace_list/attendance_page.dart';
-import 'package:el_race/ui/presentation/PettyCash/PettyCashList.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashScreen.dart';
 import 'package:el_race/ui/presentation/home_screen/data/widget_model.dart';
 import 'package:el_race/ui/presentation/home_screen/services/widget_service.dart';
@@ -9,6 +8,7 @@ import 'package:el_race/ui/presentation/home_screen/widgets/card_tile.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/custom_bullet_point.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/tilting_card.dart';
 import 'package:el_race/ui/presentation/lpo/screens/lpo_screen.dart';
+import 'package:el_race/ui/presentation/home_screen/widgets/parayer_widgets/parayer_widget.dart';
 import 'package:el_race/ui/presentation/media/screens/media_list_screen.dart';
 import 'package:el_race/ui/presentation/my_documents/screens/my_documents_screen.dart';
 import 'package:el_race/ui/presentation/my_notes/screens/my_notes_screen.dart';
@@ -21,6 +21,7 @@ import 'package:el_race/utils/custom_navigate.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
@@ -65,6 +66,9 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   }
 
   void _reorderWidgets(int oldIndex, int newIndex) {
+    // Provide strong haptic feedback for reordering
+    HapticFeedback.mediumImpact();
+
     setState(() {
       if (newIndex > oldIndex) {
         newIndex -= 1;
@@ -74,6 +78,26 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       // حفظ الترتيب الجديد
       WidgetService.saveActiveWidgets(activeWidgets);
     });
+    // Stronger confirmation vibration if available
+    _vibrateConfirm();
+  }
+
+  void _vibrateConfirm() async {
+    try {
+      // Use strong haptic impact as confirmation
+      HapticFeedback.heavyImpact();
+    } catch (_) {
+      HapticFeedback.vibrate();
+    }
+  }
+
+  void _vibrateEnterReorder() async {
+    try {
+      // Stronger pulse when entering reorder mode
+      HapticFeedback.heavyImpact();
+    } catch (_) {
+      HapticFeedback.vibrate();
+    }
   }
 
   Widget _buildCustomWidget(WidgetModel widget) {
@@ -98,6 +122,10 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         return _buildMediaWidget();
       case 'my_report':
         return _buildMyReportWidget();
+      case 'attendance':
+        return _buildAttendanceWidget();
+      case 'prayer':
+        return const ParayerWidget();
       // QR widget removed from home screen - only available in sidebar
       default:
         return const SizedBox.shrink();
@@ -679,9 +707,6 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
             ignoring: !SharedPref.isUserAuthenticated(),
             child: Column(
               children: [
-                // Always show attendance widget
-                _buildAttendanceWidget(),
-
                 const SizedBox(height: 10),
 
                 // Show active widgets from edit widgets
@@ -694,6 +719,39 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: activeWidgets.length,
                     onReorder: _reorderWidgets,
+                    proxyDecorator: (child, index, animation) {
+                      // Custom decorator to remove white frame and improve visual feedback
+                      return AnimatedBuilder(
+                        animation: animation,
+                        builder: (context, child) {
+                          final double elevation = Tween<double>(
+                            begin: 0.0,
+                            end: 8.0,
+                          ).evaluate(animation);
+                          final double scale = Tween<double>(
+                            begin: 1.0,
+                            end: 1.05,
+                          ).evaluate(animation);
+
+                          return Transform.scale(
+                            scale: scale,
+                            child: Material(
+                              elevation: elevation + 6,
+                              color: Colors.transparent,
+                              shadowColor: Colors.black.withOpacity(0.35),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: child,
+                              ),
+                            ),
+                          );
+                        },
+                        child: child,
+                      );
+                    },
                     itemBuilder: (context, index) {
                       final widget = activeWidgets[index];
                       return TiltingCard(
@@ -712,6 +770,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                   ...activeWidgets.map((widget) {
                     return InkWell(
                       onLongPress: () {
+                        // Provide strong haptic feedback when entering reorder mode
+                        _vibrateEnterReorder();
                         // تفعيل وضع إعادة الترتيب عند الضغط الطويل
                         bloc.add(const ToggleReorderModeEvent());
                       },

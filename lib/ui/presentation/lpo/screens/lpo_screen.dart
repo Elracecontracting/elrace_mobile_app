@@ -199,8 +199,8 @@ class _LpoListScreenState extends State<LpoListScreen> {
 
           // 🔹 Loading or Error or List
           _isLoading
-              ? SliverFillRemaining(
-                  child: const Center(child: CircularProgressIndicator()),
+              ? const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()),
                 )
               : _error != null
                   ? SliverFillRemaining(

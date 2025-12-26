@@ -59,7 +59,6 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
                     Util.pushPage(const AddNoteScreen(), context);
                   },
                 ),
-
                 if (state is NotesLoading)
                   const Padding(
                     padding: EdgeInsets.all(50.0),
@@ -102,18 +101,24 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
                           ),
                         )
                       : Column(
-                        children: [
-                          searchWidget(state.notes ),
-                          RefreshIndicator(
+                          children: [
+                            searchWidget(state.notes),
+                            RefreshIndicator(
                               onRefresh: () async {
-                                context.read<NotesBloc>().add(const FetchNotes());
+                                context
+                                    .read<NotesBloc>()
+                                    .add(const FetchNotes());
                               },
                               child: ListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                itemCount:searchlist.length!=0?searchlist.length:state.notes.length,
+                                itemCount: searchlist.length != 0
+                                    ? searchlist.length
+                                    : state.notes.length,
                                 itemBuilder: (context, index) {
-                                  final note = searchlist.length!=0?searchlist[index]:state.notes[index];
+                                  final note = searchlist.length != 0
+                                      ? searchlist[index]
+                                      : state.notes[index];
                                   return NoteItemWidget(
                                     note: note,
                                     onTap: () {
@@ -126,8 +131,8 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
                                 },
                               ),
                             ),
-                        ],
-                      )
+                          ],
+                        )
                 else if (state is NotesError)
                   Padding(
                     padding: const EdgeInsets.all(50.0),
@@ -175,39 +180,41 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
         },
       ),
     );
-
   }
-  List<NoteModel> searchlist=[];
+
+  List<NoteModel> searchlist = [];
   Widget searchWidget(List<NoteModel> list) {
     return Container(
       height: 40,
       width: 250,
       decoration: BoxDecoration(
-        border: Border.all(
-          color: Colors.grey,
-        ),
-        // boxShadow: const [
-        //   BoxShadow(color: darkGrey, offset: Offset(2, 4), blurRadius: 12)
-        // ],
-        borderRadius: BorderRadius.circular(25),
-        gradient: const LinearGradient(
-            begin: Alignment.centerRight,
-            end: Alignment.centerLeft,
-            colors: [ Color(0xff999999),Color(0xffFFFFFF),])
-      ),
+          border: Border.all(
+            color: Colors.grey,
+          ),
+          // boxShadow: const [
+          //   BoxShadow(color: darkGrey, offset: Offset(2, 4), blurRadius: 12)
+          // ],
+          borderRadius: BorderRadius.circular(25),
+          gradient: const LinearGradient(
+              begin: Alignment.centerRight,
+              end: Alignment.centerLeft,
+              colors: [
+                Color(0xff999999),
+                Color(0xffFFFFFF),
+              ])),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10),
         child: TextFormField(
           onChanged: (value) {
             searchlist.clear();
-             final filtered = list
-                 .where((note) => note.title.toLowerCase().contains(value.toLowerCase()))
-                 .toList();
+            final filtered = list
+                .where((note) =>
+                    note.title.toLowerCase().contains(value.toLowerCase()))
+                .toList();
             setState(() {
               searchlist.addAll(filtered);
               print(searchlist.length);
             });
-
           },
           style: const TextStyle(
             color: Color(0xFF1A1A53),
@@ -261,7 +268,7 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
               controller: titleController,
               decoration: InputDecoration(
                 labelText: translate('notes.title'),
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
               maxLines: 1,
             ),
@@ -270,7 +277,7 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
               controller: descriptionController,
               decoration: InputDecoration(
                 labelText: translate('notes.description'),
-                border: OutlineInputBorder(),
+                border: const OutlineInputBorder(),
               ),
               maxLines: 3,
             ),

@@ -94,4 +94,15 @@ class HiveService {
     final box = await getPreferencesBox();
     await box.put('user_logged_in', isLoggedIn);
   }
+
+  // Track whether a prayer (by unique key) has already been played/shown
+  static Future<bool> hasPlayedPrayer(String key) async {
+    final box = await getPreferencesBox();
+    return box.get(key, defaultValue: false) as bool;
+  }
+
+  static Future<void> markPrayerPlayed(String key) async {
+    final box = await getPreferencesBox();
+    await box.put(key, true);
+  }
 }

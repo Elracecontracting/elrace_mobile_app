@@ -74,8 +74,8 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
             child: BlocBuilder<ProjectListBloc, ProjectListState>(
               builder: (ctx, state) {
                 if (state is ProjectAttachmentsLoading) {
-                  return SliverFillRemaining(
-                    child: const Center(child: CircularProgressIndicator()),
+                  return const SliverFillRemaining(
+                    child: Center(child: CircularProgressIndicator()),
                   );
                 } else if (state is ProjectAttachmentsLoaded) {
                   var list = widget.bloc.projectAttacmentList;
@@ -128,8 +128,8 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
                     ),
                   );
                 } else {
-                  return SliverFillRemaining(
-                    child: const Center(child: Text('No data available')),
+                  return const SliverFillRemaining(
+                    child: Center(child: Text('No data available')),
                   );
                 }
               },

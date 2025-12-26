@@ -227,8 +227,8 @@ class _MyProjectState extends State<MyProject> {
 
           // 🔹 Loading or Error or List
           _isLoading
-              ? SliverFillRemaining(
-                  child: const Center(child: CircularProgressIndicator()),
+              ? const SliverFillRemaining(
+                  child: Center(child: CircularProgressIndicator()),
                 )
               : _error != null
                   ? SliverFillRemaining(

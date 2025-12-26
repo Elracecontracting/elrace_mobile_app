@@ -49,7 +49,7 @@ class _GlassmorphismTabsDemoState extends State<GlassmorphismTabsDemo> {
             controller: _scrollController,
             slivers: [
               // Add spacing for the fixed tabs bar
-              SliverToBoxAdapter(
+              const SliverToBoxAdapter(
                 child: SizedBox(height: 100),
               ),
               // Content items
@@ -96,7 +96,7 @@ class _GlassmorphismTabsDemoState extends State<GlassmorphismTabsDemo> {
             bottom: false,
             child: Container(
               height: 60,
-              padding: EdgeInsets.symmetric(horizontal: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: _tabs.asMap().entries.map((entry) {
@@ -112,7 +112,7 @@ class _GlassmorphismTabsDemoState extends State<GlassmorphismTabsDemo> {
                         });
                       },
                       child: Container(
-                        padding: EdgeInsets.symmetric(vertical: 8),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -124,7 +124,7 @@ class _GlassmorphismTabsDemoState extends State<GlassmorphismTabsDemo> {
                                   ? Theme.of(context).primaryColor
                                   : Colors.grey[600],
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
                               tab.label,
                               style: TextStyle(
@@ -162,8 +162,8 @@ class _GlassmorphismTabsDemoState extends State<GlassmorphismTabsDemo> {
     ];
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: EdgeInsets.all(20),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: colors[index % colors.length],
         borderRadius: BorderRadius.circular(16),
@@ -171,7 +171,7 @@ class _GlassmorphismTabsDemoState extends State<GlassmorphismTabsDemo> {
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -186,7 +186,7 @@ class _GlassmorphismTabsDemoState extends State<GlassmorphismTabsDemo> {
               color: Colors.grey[800],
             ),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(
             'This is content item number ${index + 1}. Scroll to see the glassmorphism effect on the tabs bar above.',
             style: TextStyle(

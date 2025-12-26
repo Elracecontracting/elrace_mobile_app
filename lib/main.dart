@@ -17,6 +17,8 @@ import 'package:el_race/utils/di.dart';
 import 'package:el_race/utils/generated_routes.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:el_race/utils/screen_size_util.dart';
+import 'package:el_race/core/biometric/ios/face_id_helper.dart';
+import 'package:el_race/core/biometric/android/android_biometric_helper.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -26,6 +28,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'core/services/app_config_service.dart';
 import 'firebase_service.dart';
 import 'report_module/data/provider/reports_provider.dart';
 import 'ui/presentation/Email Approval/bloc/approval_bloc.dart';
@@ -79,6 +82,13 @@ void main() async {
     HiveService.setupHive(),
     Firebase.initializeApp(),
   ]);
+
+  // Load remote app configuration (e.g., Test Mode)
+  await AppConfigService.instance.load();
+
+  // Initialize platform-specific biometric authentication
+  FaceIdHelper.initialize(); // iOS only
+  AndroidBiometricHelper.initialize(); // Android only
 
   // Register background message handler قبل FirebaseService.initialize()
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);

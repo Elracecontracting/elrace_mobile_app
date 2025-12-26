@@ -100,7 +100,8 @@
     "delete": "Delete",
     "save": "Save",
     "edit": "Edit",
-    "undo": "Undo"
+    "undo": "Undo",
+    "press_back_again_to_exit": "Press back again to exit"
   },
   "notification": {
     "pending_approval": "Please be aware that this request will remain in pending status until it receives approval from all departments.",

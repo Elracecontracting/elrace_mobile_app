@@ -1,19 +1,17 @@
-import 'package:camera/camera.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/ui/presentation/authenticate_face/view_model/authenticate_face_view_model.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/project_list_dialog.dart';
 import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_in_bloc/check_in_bloc.dart';
 import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_out_bloc/check_out_bloc.dart';
 import 'package:el_race/utils/di.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:get/get.dart';
+import 'package:el_race/core/services/app_config_service.dart';
 import 'package:google_fonts/google_fonts.dart' show GoogleFonts;
+import 'package:el_race/core/biometric/unified_biometric_helper.dart';
 
-import '../bloc/home_bloc.dart';
 import '../widgets/timer_controller.dart';
 
 class CustomSwipeButton extends StatefulWidget {
@@ -30,42 +28,15 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   bool isDragging = false;
   bool _isVisualCheckedIn = false; // Visual state for transitions
   late AnimationController _arrowController;
-  late Animation<double> _arrowScaleAnimation;
-  late Animation<double> _arrowTranslationAnimation;
   bool? matchResult; // null = no result, true = matched, false = not matched
   late AnimationController _checkmarkController;
-  late Animation<double> _checkmarkScaleAnimation;
   late AnimationController _bounceController;
-  late Animation<double> _bounceAnimation;
-  AuthenticateFaceViewController? _faceController;
-  CameraController? _cameraController;
   bool isProcessingFace = false;
 
   final double buttonWidth = 300.w;
   final double buttonHeight = 48.w; // Reduced from 56.w to 48.w for shorter bar
   final double knobSize =
       35.w; // Reduced from 40.w to 35.w to maintain proportion
-
-  Color _getProgressiveColor() {
-    if (!isDragging && !isCheckedIn) return Colors.white;
-    if (isCheckedIn) return const Color(0xFF1E1E50);
-
-    final progress = (dragOffset / (buttonWidth - knobSize)).clamp(0.0, 1.0);
-
-    if (progress < 0.4) {
-      return Color.lerp(const Color(0xFFE8E8F0), const Color(0xFFD0D0E0),
-          (progress - 0.2) / 0.2)!;
-    } else if (progress < 0.6) {
-      return Color.lerp(const Color(0xFFD0D0E0), const Color(0xFF8080C0),
-          (progress - 0.4) / 0.2)!;
-    } else if (progress < 0.8) {
-      return Color.lerp(const Color(0xFF8080C0), const Color(0xFF4040A0),
-          (progress - 0.6) / 0.2)!;
-    } else {
-      return Color.lerp(const Color(0xFF4040A0), const Color(0xFF1E1E50),
-          (progress - 0.8) / 0.2)!;
-    }
-  }
 
   void _resetPosition() {
     setState(() {
@@ -86,18 +57,9 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
       duration: const Duration(milliseconds: 1200),
     )..repeat(reverse: true);
 
-    _arrowTranslationAnimation = Tween<double>(begin: -8.0, end: 8.0).animate(
-      CurvedAnimation(parent: _arrowController, curve: Curves.easeInOut),
-    );
-    _arrowScaleAnimation = Tween<double>(begin: 1.0, end: 1.4).animate(
-      CurvedAnimation(parent: _arrowController, curve: Curves.easeInOut),
-    );
     _checkmarkController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
-    );
-    _checkmarkScaleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _checkmarkController, curve: Curves.elasticOut),
     );
 
     // Forward movement animation controller
@@ -105,18 +67,12 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
       vsync: this,
       duration: const Duration(milliseconds: 800),
     );
-    _bounceAnimation = Tween<double>(begin: 0.0, end: 12.0).animate(
-      CurvedAnimation(parent: _bounceController, curve: Curves.elasticOut),
-    );
 
-    _faceController = Get.put(AuthenticateFaceViewController());
-
-    // Start forward movement animation with a small delay
-    Future.delayed(const Duration(milliseconds: 100), () {
+    if (!AppConfigService.instance.isTestMode) {
       if (mounted) {
         _bounceController.repeat(reverse: true);
       }
-    });
+    }
   }
 
   @override
@@ -124,7 +80,6 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
     _arrowController.dispose();
     _checkmarkController.dispose();
     _bounceController.dispose();
-    _cameraController?.dispose();
     super.dispose();
   }
 
@@ -189,51 +144,57 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           loginResponseModel: SharedPref.getLoginData(),
           isCheckedIn: isCheckedIn,
           onConfirmed: () async {
-            // Check if alternative auth method was used (fingerprint/PIN)
-            final authMethodUsed =
-                SharedPref().getPreferenceBoolean('authMethodUsed');
-
-            if (authMethodUsed) {
-              // Alternative auth successful - process check-in/out directly
-              SharedPref().setPreferencesBoolean('authMethodUsed', false);
-              SharedPref()
-                  .setPreferencesBoolean('pendingFaceVerification', false);
-
-              if (!isCheckedIn) {
-                // Perform check-in
-                sl.get<CheckInBloc>().add(CheckInET());
-                Get.find<TimerController>().startTimer();
-              } else {
-                // Perform check-out
-                final checkInRecordId =
-                    SharedPref().getPreferenceInt('checkInRecordId');
-                if (checkInRecordId != 0) {
-                  sl.get<CheckOutBloc>().add(CheckOutET(checkInRecordId));
-                  Get.find<TimerController>().stopTimer();
-                }
-              }
-
-              setState(() {
-                isCheckedIn = !isCheckedIn;
-                _isVisualCheckedIn = isCheckedIn; // Sync visual state
-                dragOffset = isCheckedIn ? (buttonWidth - knobSize) : 0;
-              });
-              SharedPref().setPreferencesBoolean('isCheckedIn', isCheckedIn);
-            } else {
-              // Face recognition flow - set pending flag
-              SharedPref()
-                  .setPreferencesBoolean('pendingFaceVerification', true);
-              context.read<HomeBloc>().add(const UpdateFaceRecognitionStatus(
-                  FaceRecognitionStatus.matching));
+            // In Test Mode, bypass authentication and perform action directly
+            if (AppConfigService.instance.isTestMode) {
+              _performCheckInOut();
+              _resetPosition();
+              return;
             }
+
+            // Show platform-specific biometric authentication (Face ID on iOS, Fingerprint on Android)
+            final authenticated =
+                await UnifiedBiometricHelper.authenticateForAttendance(context);
+
+            if (authenticated) {
+              // Authentication successful - perform check-in/out
+              _performCheckInOut();
+            } else {
+              // Authentication failed or cancelled - reset position
+              _resetPosition();
+            }
+          },
+          onCancelled: () {
+            // User cancelled the dialog - reset position
             _resetPosition();
           },
-          onCancelled: _resetPosition,
         );
       });
     } else {
       animateTo(isCheckedIn ? (buttonWidth - knobSize) : 0.0, () {});
     }
+  }
+
+  /// Perform check-in or check-out action
+  void _performCheckInOut() {
+    if (!isCheckedIn) {
+      // Perform check-in
+      sl.get<CheckInBloc>().add(CheckInET());
+      Get.find<TimerController>().startTimer();
+    } else {
+      // Perform check-out
+      final checkInRecordId = SharedPref().getPreferenceInt('checkInRecordId');
+      if (checkInRecordId != 0) {
+        sl.get<CheckOutBloc>().add(CheckOutET(checkInRecordId));
+        Get.find<TimerController>().stopTimer();
+      }
+    }
+
+    setState(() {
+      isCheckedIn = !isCheckedIn;
+      _isVisualCheckedIn = isCheckedIn;
+      dragOffset = isCheckedIn ? (buttonWidth - knobSize) : 0;
+    });
+    SharedPref().setPreferencesBoolean('isCheckedIn', isCheckedIn);
   }
 
   @override

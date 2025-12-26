@@ -169,7 +169,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
             BoxShadow(
               color: Colors.black.withOpacity(0.25),
               blurRadius: 6,
-              offset: Offset(0, 3),
+              offset: const Offset(0, 3),
             ),
           ],
         ),
@@ -661,7 +661,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                             color: Colors.black.withOpacity(0.08),
                             blurRadius: 8,
                             spreadRadius: 0,
-                            offset: Offset(0, 4),
+                            offset: const Offset(0, 4),
                           )
                         ],
                       ),

@@ -92,12 +92,24 @@ class PrayerAudioService {
 
         if (timeDiff.inSeconds >= 0 && timeDiff.inMinutes < 5) {
           // التحقق من أننا لم نشغل الأذان لهذه الصلاة مسبقاً
+          final playedKey =
+              'played_${prayerName}_${prayerTime.millisecondsSinceEpoch}';
+          final alreadyPlayed = await HiveService.hasPlayedPrayer(playedKey);
+
+          if (alreadyPlayed) {
+            debugPrint(
+                '⏭️ Already handled $prayerName at ${prayerTime.toIso8601String()}');
+            break;
+          }
+
           if (_lastPlayedTime == null ||
               _lastPlayedTime!.difference(prayerTime).abs().inMinutes > 10) {
             debugPrint('✅ Time for $prayerName prayer! Playing adhan...');
             await _notificationService.showAdhanNotification(prayerName);
             await _playAdhan();
             _lastPlayedTime = prayerTime;
+            // mark as played to prevent duplicates (foreground/background)
+            await HiveService.markPrayerPlayed(playedKey);
             break;
           } else {
             debugPrint('⏭️ Already played for this prayer time');
@@ -116,13 +128,26 @@ class PrayerAudioService {
       debugPrint('🎵 Starting adhan playback...');
       await _audioPlayer.stop();
       await _audioPlayer.setReleaseMode(ReleaseMode.stop);
-      await _audioPlayer.setVolume(1.0);
-      debugPrint('🔊 Volume set to 100%');
+      // start with low volume and fade in
+      await _audioPlayer.setVolume(0.1);
+      debugPrint('🔊 Volume set to 10% (starting fade-in)');
 
       // تشغيل ملف الصوت من assets
-      await _audioPlayer.play(AssetSource('mp3/pray-call.mp3'));
+      try {
+        await _audioPlayer.play(AssetSource('mp3/adhan-clear.mp3'));
+      } catch (_) {
+        await _audioPlayer.play(AssetSource('mp3/pray-call.mp3'));
+      }
 
-      debugPrint('✅ Adhan started playing successfully!');
+      // Gradually increase volume to full over ~3 seconds
+      for (int i = 1; i <= 10; i++) {
+        await Future.delayed(const Duration(milliseconds: 300));
+        try {
+          await _audioPlayer.setVolume(0.1 * i);
+        } catch (_) {}
+      }
+
+      debugPrint('✅ Adhan started playing successfully (with fade-in)!');
     } catch (e) {
       debugPrint('❌ Error playing adhan: $e');
     }

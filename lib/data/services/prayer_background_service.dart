@@ -3,6 +3,7 @@ import 'package:adhan/adhan.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:el_race/core/constants/hive_constants.dart';
 import 'package:el_race/data/services/hive_service.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -18,8 +19,8 @@ void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     debugPrint('Background task started: $task');
 
-    // إذا كانت المهمة هي إعادة الجدولة
-    if (task == rescheduleTaskName) {
+    // if this is a reschedule task (unique name like reschedule-prayers-<day>)
+    if (task != null && task.toString().startsWith('reschedule-prayers-')) {
       try {
         await PrayerBackgroundService.reschedule();
         return Future.value(true);
@@ -49,12 +50,35 @@ void callbackDispatcher() {
         return Future.value(true);
       }
 
-      // إظهار notification
-      await _showAdhanNotificationInBackground();
+      // If task corresponds to a scheduled prayer (format: prayer-<name>-<ms>)
+      if (task != null && task.toString().startsWith('prayer-')) {
+        try {
+          final parts = task.toString().split('-');
+          // expected: ['prayer', '<name>', '<ms>']
+          if (parts.length >= 3) {
+            final prayerName = parts[1];
+            final ms =
+                int.tryParse(parts[2]) ?? DateTime.now().millisecondsSinceEpoch;
+            final scheduledTime = DateTime.fromMillisecondsSinceEpoch(ms);
 
-      // تشغيل صوت الأذان
-      debugPrint('Playing adhan at prayer time!');
-      await _playAdhanInBackground();
+            // Prevent duplicates by checking if already played
+            final playedKey = 'played_${prayerName}_$ms';
+            final alreadyPlayed = await HiveService.hasPlayedPrayer(playedKey);
+            if (!alreadyPlayed) {
+              await _showAdhanNotificationInBackground(prayerName, ms);
+              debugPrint('Playing adhan at prayer time!');
+              await _playAdhanInBackground(prayerName, ms);
+            } else {
+              debugPrint(
+                  '🔁 Prayer $prayerName at ${scheduledTime.toIso8601String()} already handled');
+            }
+          } else {
+            debugPrint('Invalid prayer task format: $task');
+          }
+        } catch (e) {
+          debugPrint('Error handling prayer task: $e');
+        }
+      }
 
       return Future.value(true);
     } catch (e) {
@@ -64,7 +88,8 @@ void callbackDispatcher() {
   });
 }
 
-Future<void> _showAdhanNotificationInBackground() async {
+Future<void> _showAdhanNotificationInBackground(
+    String prayerName, int ms) async {
   try {
     final notificationsPlugin = FlutterLocalNotificationsPlugin();
 
@@ -95,29 +120,48 @@ Future<void> _showAdhanNotificationInBackground() async {
     await notificationsPlugin.show(
       0,
       '🕌 حان وقت الصلاة',
-      '🔔 حان الآن وقت الصلاة',
+      '🔔 حان الآن وقت صلاة $prayerName',
       details,
     );
 
     debugPrint('🔔 Background notification shown');
+    // mark as played
+    final playedKey = 'played_${prayerName}_$ms';
+    await HiveService.markPrayerPlayed(playedKey);
   } catch (e) {
     debugPrint('Error showing notification: $e');
   }
 }
 
-Future<void> _playAdhanInBackground() async {
+Future<void> _playAdhanInBackground(String prayerName, int ms) async {
   try {
     final player = AudioPlayer();
     await player.setReleaseMode(ReleaseMode.stop);
-    await player.setVolume(1.0);
-    await player.play(AssetSource('mp3/pray-call.mp3'));
+    // start with low volume and fade in for clarity
+    await player.setVolume(0.1);
+    try {
+      await player.play(AssetSource('mp3/adhan-clear.mp3'));
+    } catch (_) {
+      await player.play(AssetSource('mp3/pray-call.mp3'));
+    }
 
-    debugPrint('Background adhan started playing');
+    debugPrint('Background adhan started playing (fade-in)');
 
-    // الانتظار حتى ينتهي الصوت (أو وقت محدد)
-    await Future.delayed(const Duration(minutes: 3));
+    // Gradually increase volume to full over 3 seconds
+    for (int i = 1; i <= 10; i++) {
+      await Future.delayed(const Duration(milliseconds: 300));
+      try {
+        await player.setVolume(0.1 * i);
+      } catch (_) {}
+    }
+
+    // Wait until a reasonable max length (keep 4 minutes to ensure full adhan)
+    await Future.delayed(const Duration(minutes: 4));
     await player.stop();
     await player.dispose();
+    // mark as played as well (in case background played but notification failed earlier)
+    final playedKey = 'played_${prayerName}_$ms';
+    await HiveService.markPrayerPlayed(playedKey);
   } catch (e) {
     debugPrint('Error playing adhan in background: $e');
   }
@@ -145,7 +189,17 @@ class PrayerBackgroundService {
       debugPrint('🗑️ Cancelled all old tasks');
 
       // حساب أوقات الصلاة
-      final coords = Coordinates(25.2048, 55.2708); // Dubai
+      // Try to use device last-known location for accurate local Adhan times
+      Position? last;
+      try {
+        last = await Geolocator.getLastKnownPosition();
+      } catch (_) {
+        last = null;
+      }
+
+      final coords = last != null
+          ? Coordinates(last.latitude, last.longitude)
+          : Coordinates(25.2048, 55.2708); // fallback Dubai
       final params = CalculationMethod.egyptian.getParameters()
         ..madhab = Madhab.hanafi;
       final prayerTimes = PrayerTimes.today(coords, params);
@@ -170,8 +224,9 @@ class PrayerBackgroundService {
         if (prayerTime.isAfter(now)) {
           final delay = prayerTime.difference(now);
 
+          final ms = prayerTime.millisecondsSinceEpoch;
           await Workmanager().registerOneOffTask(
-            'prayer-$prayerName-${prayerTime.day}',
+            'prayer-$prayerName-$ms',
             prayerCheckTaskName,
             initialDelay: delay,
             constraints: Constraints(

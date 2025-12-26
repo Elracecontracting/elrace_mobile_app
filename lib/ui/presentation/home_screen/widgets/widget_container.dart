@@ -1,11 +1,8 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/custom_swipe_button.dart';
-import 'package:el_race/ui/presentation/home_screen/screens/edit_widgets_screen.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/list_view_widgets.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/parayer_widgets/parayer_widget.dart';
-import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
-import 'package:el_race/utils/dimens.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -181,8 +178,6 @@ class WidgetContainer extends StatelessWidget {
                   ),
                 ),
 
-                SizedBox(height: 10.w),
-                const ParayerWidget(),
                 SizedBox(height: 10.w),
                 const ListViewWidgets(),
 

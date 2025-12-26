@@ -48,6 +48,6 @@ class QrCodeBloc extends Bloc<QrCodeEvent, QrCodeState> {
   ) async {
     // Add a small delay to show refresh state
     await Future.delayed(const Duration(milliseconds: 500));
-    add(LoadQrCode());
+    add(const LoadQrCode());
   }
 }

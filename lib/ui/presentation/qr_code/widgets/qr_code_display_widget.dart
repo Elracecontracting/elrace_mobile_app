@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:el_race/ui/presentation/qr_code/bloc/qr_code_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';

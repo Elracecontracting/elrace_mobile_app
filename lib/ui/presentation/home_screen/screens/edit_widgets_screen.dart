@@ -18,7 +18,6 @@ import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../bloc/home_bloc.dart';
-import '../widgets/visibilty_icon.dart';
 
 class EditWidgetsScreen extends StatefulWidget {
   const EditWidgetsScreen({super.key});

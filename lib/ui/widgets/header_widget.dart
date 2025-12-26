@@ -7,6 +7,7 @@ import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:el_race/ui/presentation/Email Approval/Approval.dart';
 import 'package:el_race/ui/presentation/Notification/notification_screen.dart';
 import 'package:el_race/ui/presentation/search/screens/widget_search_screen.dart';
+import 'package:el_race/ui/presentation/home_screen/services/widget_service.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -16,7 +17,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
-import '../../main.dart';
 import '../presentation/home_screen/bloc/home_bloc.dart';
 import '../presentation/home_screen/screens/home_screen.dart';
 
@@ -169,12 +169,36 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                         GestureDetector(
                           onTap: () async {
                             if (SharedPref.isUserAuthenticated()) {
-                              await Navigator.push(
-                                context,
-                                SlideRightPageRoute(
-                                  child: const ApprovalsScreen(),
-                                ),
-                              );
+                              // Check current route by name
+                              final currentRoute = ModalRoute.of(context);
+                              final currentRouteName =
+                                  currentRoute?.settings.name;
+
+                              // Don't navigate if already on Approvals page
+                              if (currentRouteName == '/approvals') {
+                                return;
+                              }
+
+                              // If on Notifications, replace it; otherwise push
+                              if (currentRouteName == '/notifications') {
+                                await Navigator.pushReplacement(
+                                  context,
+                                  SlideRightPageRoute(
+                                    child: const ApprovalsScreen(),
+                                    settings:
+                                        const RouteSettings(name: '/approvals'),
+                                  ),
+                                );
+                              } else {
+                                await Navigator.push(
+                                  context,
+                                  SlideRightPageRoute(
+                                    child: const ApprovalsScreen(),
+                                    settings:
+                                        const RouteSettings(name: '/approvals'),
+                                  ),
+                                );
+                              }
                               // Refresh approval count after returning
                               _loadApprovalCount();
                             }
@@ -221,29 +245,46 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                             print('🔔 [HEADER] Notification bell tapped');
                             print(
                                 '   - User authenticated: ${SharedPref.isUserAuthenticated()}');
-                            print('   - isNotOpen: ${bloc.isNotOpen}');
 
                             if (SharedPref.isUserAuthenticated()) {
-                              if (!bloc.isNotOpen) {
-                                print('   - ✅ Opening notification screen...');
-                                bloc.isNotOpen =
-                                    true; // Mark as open before navigation
+                              // Check current route by name
+                              final currentRoute = ModalRoute.of(context);
+                              final currentRouteName =
+                                  currentRoute?.settings.name;
+
+                              // Don't navigate if already on Notifications page
+                              if (currentRouteName == '/notifications') {
+                                print(
+                                    '   - ⚠️ Already on notifications screen, ignoring tap');
+                                return;
+                              }
+
+                              print('   - ✅ Opening notification screen...');
+
+                              // If on Approvals, replace it; otherwise push
+                              if (currentRouteName == '/approvals') {
+                                await Navigator.pushReplacement(
+                                  context,
+                                  SlideRightPageRoute(
+                                    child: const NotificationScreen(),
+                                    settings: const RouteSettings(
+                                        name: '/notifications'),
+                                  ),
+                                );
+                              } else {
                                 await Navigator.push(
                                   context,
                                   SlideRightPageRoute(
                                     child: const NotificationScreen(),
+                                    settings: const RouteSettings(
+                                        name: '/notifications'),
                                   ),
                                 );
-                                print(
-                                    '   - ✅ Returned from notification screen');
-                                bloc.isNotOpen =
-                                    false; // Reset to allow reopening
-                                // Refresh notification count after returning
-                                _loadNotificationCount();
-                              } else {
-                                print(
-                                    '   - ⚠️ Screen already open, ignoring tap');
                               }
+
+                              print('   - ✅ Returned from notification screen');
+                              // Refresh notification count after returning
+                              _loadNotificationCount();
                             } else {
                               print('   - ❌ User not authenticated');
                             }

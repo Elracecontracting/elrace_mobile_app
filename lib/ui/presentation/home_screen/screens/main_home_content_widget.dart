@@ -46,7 +46,7 @@ class MainHomeContentWidget extends StatelessWidget {
                                   topLeft: Radius.circular(23.r),
                                   topRight: Radius.circular(23.r),
                                   bottomRight: Radius.circular(23.r),
-                                  bottomLeft: Radius.circular(0),
+                                  bottomLeft: const Radius.circular(0),
                                 ),
                                 gradient: LinearGradient(
                                   colors: itemIndex.isEven
@@ -59,7 +59,7 @@ class MainHomeContentWidget extends StatelessWidget {
                                   topLeft: Radius.circular(23.r),
                                   topRight: Radius.circular(23.r),
                                   bottomRight: Radius.circular(23.r),
-                                  bottomLeft: Radius.circular(0),
+                                  bottomLeft: const Radius.circular(0),
                                 ),
                                 child: Stack(
                                   children: [

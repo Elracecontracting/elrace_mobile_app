@@ -109,7 +109,7 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
           CompanyRepository.company!.logo,
           height: 60,
         ),
-        actions: [
+        actions: const [
           // SquareButton(
           //   icon: Icons.check,
           //   color: CustomColors.blue,

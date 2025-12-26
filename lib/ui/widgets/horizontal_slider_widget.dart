@@ -5,12 +5,10 @@ import 'dart:ui';
 
 import 'package:camera/camera.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/ui/presentation/authenticate_face/views/authenticate_face_view.dart';
 import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_in_bloc/check_in_bloc.dart';
 import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_out_bloc/check_out_bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:http/http.dart' as http;
 import 'package:location/location.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -70,105 +68,11 @@ class GradientSliderState extends State<GradientSliderWidget> {
     });
   }
 
+  // Face recognition removed - this is legacy code
   Future<bool> compareFaceWithStoredImages(File capturedImage) async {
-    final faceDetector = FaceDetector(
-      options: FaceDetectorOptions(
-        enableLandmarks: true, // Enable facial landmarks
-      ),
-    );
-
-    try {
-      // Detect faces in the captured image
-      final inputImage = InputImage.fromFile(capturedImage);
-      final capturedFaces = await faceDetector.processImage(inputImage);
-
-      if (capturedFaces.isEmpty) {
-        return false; // No face detected in the captured image
-      }
-
-      // Extract landmarks from the captured face
-      final capturedFace = capturedFaces.first;
-      final capturedLandmarks = _extractLandmarks(capturedFace);
-
-      // Retrieve stored selfies from SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
-      final storedPaths = prefs.getStringList('user_photos') ?? [];
-
-      for (final path in storedPaths) {
-        final storedImage = File(path);
-        final storedInputImage = InputImage.fromFile(storedImage);
-        final storedFaces = await faceDetector.processImage(storedInputImage);
-
-        if (storedFaces.isNotEmpty) {
-          // Extract landmarks from the stored face
-          final storedFace = storedFaces.first;
-          final storedLandmarks = _extractLandmarks(storedFace);
-
-          // Compare landmarks using Euclidean distance
-          if (_landmarksMatch(capturedLandmarks, storedLandmarks)) {
-            return true; // Face match found
-          }
-        }
-      }
-    } catch (e) {
-      print('Error during face comparison: $e');
-    } finally {
-      faceDetector.close();
-    }
-    return false; // No match found
-  }
-
-  Map<String, Point<int>> _extractLandmarks(Face face) {
-    final landmarks = <String, Point<int>>{};
-
-    // Extract landmarks using Point<int> values
-    if (face.landmarks[FaceLandmarkType.leftEye] != null) {
-      final position = face.landmarks[FaceLandmarkType.leftEye]!.position;
-      landmarks['leftEye'] = Point(position.x, position.y);
-    }
-    if (face.landmarks[FaceLandmarkType.rightEye] != null) {
-      final position = face.landmarks[FaceLandmarkType.rightEye]!.position;
-      landmarks['rightEye'] = Point(position.x, position.y);
-    }
-    if (face.landmarks[FaceLandmarkType.noseBase] != null) {
-      final position = face.landmarks[FaceLandmarkType.noseBase]!.position;
-      landmarks['noseBase'] = Point(position.x, position.y);
-    }
-
-    // For mouth landmarks, check availability in FaceLandmarkType
-    if (face.landmarks[FaceLandmarkType.leftMouth] != null) {
-      final position = face.landmarks[FaceLandmarkType.leftMouth]!.position;
-      landmarks['mouthLeft'] = Point(position.x, position.y);
-    }
-    if (face.landmarks[FaceLandmarkType.rightMouth] != null) {
-      final position = face.landmarks[FaceLandmarkType.rightMouth]!.position;
-      landmarks['mouthRight'] = Point(position.x, position.y);
-    }
-
-    return landmarks;
-  }
-
-  bool _landmarksMatch(
-      Map<String, Point<int>> captured, Map<String, Point<int>> stored) {
-    const double threshold = 50.0; // Define a similarity threshold (pixels)
-
-    double calculateDistance(Point<int> p1, Point<int> p2) {
-      return sqrt(pow(p1.x - p2.x, 2) + pow(p1.y - p2.y, 2));
-    }
-
-    double totalDistance = 0;
-    int count = 0;
-
-    for (final key in captured.keys) {
-      if (stored.containsKey(key)) {
-        totalDistance += calculateDistance(captured[key]!, stored[key]!);
-        count++;
-      }
-    }
-
-    // Average distance
-    final averageDistance = count > 0 ? totalDistance / count : double.infinity;
-    return averageDistance < threshold; // Return true if below threshold
+    // Face detection has been removed from the app
+    // Use UnifiedBiometricHelper for authentication instead
+    return false;
   }
 
   void _syncTimerWithBackground() {
@@ -641,16 +545,18 @@ class GradientSliderState extends State<GradientSliderWidget> {
                                         if (result['status'] != 'success') {
                                           Navigator.of(context).pop();
 
-                                          Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  AuthenticateFaceView(
-                                                loginResponseModel:
-                                                    widget.loginResponseModel,
-                                                isLeftToRight: true,
-                                              ),
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(result['message'] ??
+                                                  'Location validation failed'),
                                             ),
                                           );
+
+                                          setState(() {
+                                            _sliderValue = 0.0;
+                                            isSubmitting = false;
+                                          });
                                         } else {
                                           setState(() {
                                             errorMessage = result['message'] ??

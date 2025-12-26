@@ -36,13 +36,6 @@ class ChangeIndexLoading extends HomeState {}
 
 class ChangeIndexSuccess extends HomeState {}
 
-class FaceRecognitionStatusChanged extends HomeState {
-  final FaceRecognitionStatus status;
-  const FaceRecognitionStatusChanged(this.status);
-  @override
-  List<Object> get props => [status];
-}
-
 // Prayer States
 class PrayerTimesLoading extends HomeState {
   const PrayerTimesLoading();

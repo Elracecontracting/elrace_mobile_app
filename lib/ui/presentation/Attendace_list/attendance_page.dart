@@ -429,7 +429,8 @@ class _AttendancePageState extends State<AttendancePage>
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     border: Border.all(
-                                        color: Color(0xffD9D9D9), width: 2),
+                                        color: const Color(0xffD9D9D9),
+                                        width: 2),
                                   ),
                                   child: ClipOval(
                                     child: _isValidBase64(_imageBase64)

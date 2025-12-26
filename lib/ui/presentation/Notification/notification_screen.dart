@@ -1,7 +1,5 @@
 import 'package:el_race/core/services/notification_storage_service.dart';
-import 'package:el_race/ui/presentation/Attendace_list/attendance_page.dart';
 import 'package:el_race/ui/widgets/back_icon.dart';
-import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -10,9 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../widgets/header_widget.dart';
-import '../home_screen/bloc/home_bloc.dart';
 import '../home_screen/screens/main_screens.dart';
-import '../home_screen/widgets/visibilty_icon.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({
@@ -140,12 +136,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    var bloc = HomeBloc.get(context);
     return PopScope(
-      canPop: true, // 🔹 يمنع الرجوع تلقائيًا إلا لو انت سمحت بذلك
+      canPop: true,
       onPopInvokedWithResult: (didPop, result) async {
-        bloc.isNotOpen = false;
-        if (didPop) return; // المستخدم رجع فعلاً، خلاص نخرج
+        if (didPop) return;
       },
       child: Scaffold(
           appBar: const HeaderWidget(),

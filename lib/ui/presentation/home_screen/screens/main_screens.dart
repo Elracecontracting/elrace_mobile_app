@@ -6,13 +6,21 @@ import 'package:el_race/ui/presentation/document_scanner/simple_document_scanner
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/ui/presentation/search/screens/widget_search_screen.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 
-class MainScreen extends StatelessWidget {
+class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
+
+  @override
+  State<MainScreen> createState() => _MainScreenState();
+}
+
+class _MainScreenState extends State<MainScreen> {
+  DateTime? _lastBackPressTime;
 
   static const List<Widget> screens = [
     CallScreen(),
@@ -20,18 +28,53 @@ class MainScreen extends StatelessWidget {
     SizedBox(),
   ];
 
+  Future<bool> _onWillPop() async {
+    final now = DateTime.now();
+    final backButtonHasNotBeenPressedOrSnackBarHasBeenClosed =
+        _lastBackPressTime == null ||
+            now.difference(_lastBackPressTime!) > const Duration(seconds: 2);
+
+    if (backButtonHasNotBeenPressedOrSnackBarHasBeenClosed) {
+      _lastBackPressTime = now;
+
+      // Show toast message
+      Fluttertoast.showToast(
+        msg: translate('common.press_back_again_to_exit'),
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.black87,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+
+      return false; // Don't exit
+    }
+
+    return true; // Exit the app
+  }
+
   @override
   Widget build(BuildContext context) {
     final bloc = HomeBloc.get(context);
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      extendBody: true,
-      extendBodyBehindAppBar: true,
-      bottomNavigationBar: const CustomBottomNavBar(),
-      body: BlocBuilder<HomeBloc, HomeState>(
-        builder: (context, state) => screens[bloc.currentIndex],
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+
+        final shouldPop = await _onWillPop();
+        if (shouldPop && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        extendBody: true,
+        extendBodyBehindAppBar: true,
+        bottomNavigationBar: const CustomBottomNavBar(),
+        body: BlocBuilder<HomeBloc, HomeState>(
+          builder: (context, state) => screens[bloc.currentIndex],
+        ),
       ),
-      // bottomNavigationBar: ,
     );
   }
 }
@@ -115,14 +158,24 @@ class CustomBottomNavBar extends StatelessWidget {
           }
           bloc.add(ChangeCurrentIndex(index: index));
         } else {
-          bloc.add(ChangeCurrentIndex(index: index));
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const HomeScreen(),
-            ),
-            (route) => true,
-          );
+          // Check if already on MainScreen/HomeScreen
+          final currentRoute = ModalRoute.of(context);
+          final isOnMainScreen = currentRoute?.settings.name == '/' ||
+              currentRoute?.settings.arguments is MainScreen;
+
+          if (!isOnMainScreen) {
+            bloc.add(ChangeCurrentIndex(index: index));
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const MainScreen(),
+              ),
+              (route) => false, // Remove all previous routes
+            );
+          } else {
+            // Already on main screen, just change index
+            bloc.add(ChangeCurrentIndex(index: index));
+          }
         }
       },
       icon: SizedBox(

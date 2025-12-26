@@ -27,7 +27,8 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
       // يمكنك هنا emit لحالة نجاح إذا كان عندك state لذلك
       // emit(LocationLoaded(_location));
     } catch (e) {
-      emit(LocationError('تعذر جلب الموقع، تأكد من تفعيل اللوكيشن والإذن'));
+      emit(const LocationError(
+          'تعذر جلب الموقع، تأكد من تفعيل اللوكيشن والإذن'));
     }
   }
 }

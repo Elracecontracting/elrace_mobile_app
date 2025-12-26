@@ -535,7 +535,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                               children: [
                                 Text(
                                   "Select ${translate('pettycash.date')}",
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold),
                                 ),
@@ -587,7 +587,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                               children: [
                                 Text(
                                   translate('pettycash.holder'),
-                                  style: TextStyle(
+                                  style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold),
                                 ),

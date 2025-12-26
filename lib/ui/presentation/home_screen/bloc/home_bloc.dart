@@ -28,10 +28,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<ChangeVisiablityIcon>((event, emit) {
       changeBottomNavVisiblity(event, emit);
     });
-    on<UpdateFaceRecognitionStatus>((event, emit) {
-      faceRecognitionStatus = event.status;
-      emit(FaceRecognitionStatusChanged(event.status));
-    });
     on<InitPrayerTimesEvent>(_initPrayerTimes);
     on<LoadPrayerMuteStateEvent>(_loadPrayerMuteState);
     on<TogglePrayerMuteStateEvent>(_togglePrayerMuteState);
@@ -68,7 +64,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   }
 
   int attendedDays = 0;
-  FaceRecognitionStatus faceRecognitionStatus = FaceRecognitionStatus.idle;
 
   // Prayer times variables
   PrayerTimes? _prayerTimes;
@@ -144,7 +139,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         final data = jsonDecode(response.body);
 
         if (data['result']?['status'] == 'success') {
-          _setPrayerTimesFromAPI(data['result']['data']);
+          await _setPrayerTimesFromAPI(data['result']['data']);
 
           emit(PrayerTimesLoaded(
             prayerTimes: _prayerTimes,
@@ -197,37 +192,38 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
-  void _setPrayerTimesFromAPI(Map<String, dynamic> apiData) {
+  Future<void> _setPrayerTimesFromAPI(Map<String, dynamic> apiData) async {
     // final prayers = apiData['prayers'] as List;
     final nextPrayerData = apiData['next_prayer'];
+    // Build PrayerTimes using device last-known location when possible
+    try {
+      final last = await Geolocator.getLastKnownPosition();
+      final coords = last != null
+          ? Coordinates(last.latitude, last.longitude)
+          : Coordinates(25.2048, 55.2708);
 
-    // إنشاء PrayerTimes object باستخدام positional parameters
-    final coords = Coordinates(25.2048, 55.2708); // Dubai
-    final params = CalculationMethod.egyptian.getParameters();
-    final dateComponents = DateComponents.from(DateTime.now());
+      final params = CalculationMethod.egyptian.getParameters()
+        ..madhab = Madhab.hanafi;
+      final dateComponents = DateComponents.from(DateTime.now());
 
-    // استخدام constructor مع positional parameters
-    _prayerTimes = PrayerTimes(
-      coords,
-      dateComponents,
-      params,
-    );
+      _prayerTimes = PrayerTimes(coords, dateComponents, params);
 
-    // تحديد الصلاة القادمة من API
-    final nextPrayerTitle = nextPrayerData['title'] as String;
-    _nextPrayer = _getPrayerFromTitle(nextPrayerTitle);
-
-    // حساب الوقت المتبقي من remaining_time
-    final remainingTime =
-        nextPrayerData['remaining_time'] as String; // "05:36:29"
-    final parts = remainingTime.split(':');
-    final hours = int.parse(parts[0]);
-    final minutes = int.parse(parts[1]);
-    final seconds = int.parse(parts[2]);
-
-    _nextPrayerTime = DateTime.now().add(
-      Duration(hours: hours, minutes: minutes, seconds: seconds),
-    );
+      // Determine next prayer/time from the local PrayerTimes to keep sources consistent
+      final next = _prayerTimes!.nextPrayer();
+      final nt = _prayerTimes!.timeForPrayer(next);
+      _nextPrayer = next;
+      _nextPrayerTime = nt;
+    } catch (e) {
+      // fallback to Dubai if location lookup fails
+      final coords = Coordinates(25.2048, 55.2708);
+      final params = CalculationMethod.egyptian.getParameters()
+        ..madhab = Madhab.hanafi;
+      final dateComponents = DateComponents.from(DateTime.now());
+      _prayerTimes = PrayerTimes(coords, dateComponents, params);
+      final next = _prayerTimes!.nextPrayer();
+      _nextPrayer = next;
+      _nextPrayerTime = _prayerTimes!.timeForPrayer(next);
+    }
   }
 
   // DateTime _parseTime(String timeStr) {

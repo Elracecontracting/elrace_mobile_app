@@ -443,7 +443,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
     bool dropdownOpen = false;
     final List<String> expenseTypes = ['Petrol ', 'Hospitality ', 'Others'];
     String empID = '';
-    final String baseUrl = 'https://test.elrace.com/api/';
+    const String baseUrl = 'https://test.elrace.com/api/';
     bool isSubmitting = false;
 
     TextEditingController userController = TextEditingController();
@@ -899,7 +899,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                     // Create and insert overlay with opacity 0
                                     overlayVisible = false;
                                     expenseOverlay = _createOverlay();
-                                    Overlay.of(ctx)!.insert(expenseOverlay!);
+                                    Overlay.of(ctx).insert(expenseOverlay!);
                                     // Trigger fade in animation
                                     await Future.delayed(
                                         const Duration(milliseconds: 50));

@@ -118,5 +118,17 @@ List<WidgetModel> getAvailableWidgets() {
       iconPath: 'assets/png/qr_code.png',
       backgroundPath: 'assets/png/gray_card.png',
     ),
+    const WidgetModel(
+      id: 'attendance',
+      title: 'Attendance',
+      iconPath: 'assets/png/date_attendance.png',
+      backgroundPath: 'assets/png/attendace_new_bg.png',
+    ),
+    const WidgetModel(
+      id: 'prayer',
+      title: 'Prayer Times',
+      iconPath: 'assets/png/prayer_icon.png',
+      backgroundPath: 'assets/png/gray_card.png',
+    ),
   ];
 }

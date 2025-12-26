@@ -61,7 +61,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   void _scrollToSelectedTab(int index) {
     if (_tabScrollController.hasClients) {
       // Calculate the position based on tab width + padding
-      final double tabWidth =
+      const double tabWidth =
           90 + 9; // 90w for width + 5 right padding + 4 margin
       final double screenWidth = MediaQuery.of(context).size.width;
       final double targetPosition =
@@ -257,119 +257,127 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: const HeaderWidget(),
-      extendBody: true,
-      bottomNavigationBar: const CustomBottomNavBar(
-        isMain: false,
-      ),
-      body: Stack(
-        children: [
-          // Main content - starts from top and scrolls behind tabs
-          NotificationListener<ScrollNotification>(
-            onNotification: (scrollNotification) {
-              if (scrollNotification is ScrollUpdateNotification ||
-                  scrollNotification is ScrollEndNotification) {
-                final isScrolled = scrollNotification.metrics.pixels > 10;
-                if (isScrolled != _isScrolled) {
-                  setState(() {
-                    _isScrolled = isScrolled;
-                  });
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: const HeaderWidget(),
+        extendBody: true,
+        bottomNavigationBar: const CustomBottomNavBar(
+          isMain: false,
+        ),
+        body: Stack(
+          children: [
+            // Main content - starts from top and scrolls behind tabs
+            NotificationListener<ScrollNotification>(
+              onNotification: (scrollNotification) {
+                if (scrollNotification is ScrollUpdateNotification ||
+                    scrollNotification is ScrollEndNotification) {
+                  final isScrolled = scrollNotification.metrics.pixels > 10;
+                  if (isScrolled != _isScrolled) {
+                    setState(() {
+                      _isScrolled = isScrolled;
+                    });
+                  }
                 }
-              }
-              return false;
-            },
-            child: Column(
-              children: [
-                // Content body - this will scroll behind the tabs
-                body(),
-              ],
+                return false;
+              },
+              child: Column(
+                children: [
+                  // Content body - this will scroll behind the tabs
+                  body(),
+                ],
+              ),
             ),
-          ),
-          // iOS-style translucent tabs bar - fixed position, content scrolls behind it
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: ClipRRect(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(
-                  sigmaX: _isScrolled ? 5.0 : 0.0,
-                  sigmaY: _isScrolled ? 5.0 : 0.0,
-                ),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: _isScrolled
-                        ? Colors.white.withOpacity(0.1)
-                        : Colors.white,
-                    border: Border(
-                      bottom: BorderSide(
-                        color: _isScrolled
-                            ? Colors.grey.withOpacity(0.3)
-                            : Colors.transparent,
-                        width: 1.0,
-                      ),
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.03),
-                        blurRadius: 4,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
+            // iOS-style translucent tabs bar - fixed position, content scrolls behind it
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: ClipRRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(
+                    sigmaX: _isScrolled ? 5.0 : 0.0,
+                    sigmaY: _isScrolled ? 5.0 : 0.0,
                   ),
-                  child: SingleChildScrollView(
-                    controller: _tabScrollController,
-                    scrollDirection: Axis.horizontal,
-                    physics: const BouncingScrollPhysics(),
-                    clipBehavior: Clip.none,
-                    child: Row(
-                      children: categories.asMap().entries.map((entry) {
-                        int index = entry.key;
-                        String cat = entry.value;
-                        bool isSelected = selectedCategory == cat;
-                        return Container(
-                          margin: const EdgeInsets.only(right: 20.0, left: 5.0),
-                          child: GestureDetector(
-                            onTap: () {
-                              setState(() {
-                                selectedCategory = cat;
-                                approvalItems = _getFilteredItems();
-                                _isScrolled = false;
-                              });
-                              _scrollToSelectedTab(index);
-                              // Force reset after frame
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (mounted && _isScrolled) {
-                                  setState(() {
-                                    _isScrolled = false;
-                                  });
-                                }
-                              });
-                            },
-                            child: _buildGlassTab(
-                              icon: categoryIcons[cat] ??
-                                  "assets/icons/default.png",
-                              title: cat,
-                              isSelected: isSelected,
-                              count: _getCategoryCount(cat),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: _isScrolled
+                          ? Colors.white.withOpacity(0.1)
+                          : Colors.white,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: _isScrolled
+                              ? Colors.grey.withOpacity(0.3)
+                              : Colors.transparent,
+                          width: 1.0,
+                        ),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 4,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: SingleChildScrollView(
+                      controller: _tabScrollController,
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      clipBehavior: Clip.none,
+                      child: Row(
+                        children: categories.asMap().entries.map((entry) {
+                          int index = entry.key;
+                          String cat = entry.value;
+                          bool isSelected = selectedCategory == cat;
+                          return Container(
+                            margin:
+                                const EdgeInsets.only(right: 20.0, left: 5.0),
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  selectedCategory = cat;
+                                  approvalItems = _getFilteredItems();
+                                  _isScrolled = false;
+                                });
+                                _scrollToSelectedTab(index);
+                                // Force reset after frame
+                                WidgetsBinding.instance
+                                    .addPostFrameCallback((_) {
+                                  if (mounted && _isScrolled) {
+                                    setState(() {
+                                      _isScrolled = false;
+                                    });
+                                  }
+                                });
+                              },
+                              child: _buildGlassTab(
+                                icon: categoryIcons[cat] ??
+                                    "assets/icons/default.png",
+                                title: cat,
+                                isSelected: isSelected,
+                                count: _getCategoryCount(cat),
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        }).toList(),
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-          // Floating bottom navigation bar
-        ],
+            // Floating bottom navigation bar
+          ],
+        ),
       ),
     );
   }

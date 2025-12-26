@@ -549,7 +549,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                     style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xff151544),
+                      color: const Color(0xff151544),
                     ),
                   ),
                   Text(
@@ -648,7 +648,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
         Expanded(
           child: Text(
             translate('pettycash.received_message'),
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
           ),
         ),
       ],

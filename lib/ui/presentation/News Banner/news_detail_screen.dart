@@ -1,4 +1,3 @@
-import 'package:el_race/ui/widgets/back_icon.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';

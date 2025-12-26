@@ -1,14 +1,12 @@
 import 'dart:convert';
 
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/ui/presentation/task_sheet/EmployeeShiftRequestPage.dart';
 import 'package:el_race/ui/presentation/task_sheet/TaskDetailsPage.dart';
 import 'package:el_race/ui/presentation/task_sheet/add_task_sheet.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hexcolor/hexcolor.dart';
 import 'package:http/http.dart' as http;
 
 import '../../widgets/header_widget.dart';

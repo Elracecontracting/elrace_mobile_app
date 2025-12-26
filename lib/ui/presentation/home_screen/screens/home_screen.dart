@@ -3,9 +3,7 @@ import 'dart:async';
 import 'package:el_race/ui/presentation/home_screen/bloc/location_bloc/location_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/main_home_content_widget.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/main_screens.dart';
-import 'package:el_race/ui/presentation/home_screen/widgets/check_in_widgets/face_recogenize_check.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/timer_controller.dart';
-import 'package:el_race/ui/presentation/home_screen/widgets/visibilty_icon.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
@@ -122,8 +120,6 @@ class _HomeScreenState extends State<HomeScreenPage>
         children: [
           // Main Content
           MainHomeContentWidget(),
-          // Face Recognition Status Icon (top center)
-          FaceRecogenizeCheck(),
           // Bottom Nav Arrow
           // ArraowVisibalityBottomNav(),
         ],

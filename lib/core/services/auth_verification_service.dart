@@ -1,8 +1,9 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:el_race/core/services/app_config_service.dart';
+import 'package:el_race/core/services/biometric_auth_service.dart';
 
 /// Enum representing available authentication methods
 enum AuthMethod {
@@ -32,7 +33,7 @@ class AuthVerificationService {
   factory AuthVerificationService() => _instance;
   AuthVerificationService._internal();
 
-  final LocalAuthentication _localAuth = LocalAuthentication();
+  final BiometricAuthService _biometricService = BiometricAuthService.instance;
 
   // Keys for SharedPreferences
   static const String _userPinKey = 'user_verification_pin';
@@ -40,44 +41,41 @@ class AuthVerificationService {
 
   /// Check if device supports biometric authentication (fingerprint/face)
   Future<bool> isBiometricAvailable() async {
-    try {
-      final bool canAuthenticateWithBiometrics =
-          await _localAuth.canCheckBiometrics;
-      final bool canAuthenticate =
-          canAuthenticateWithBiometrics || await _localAuth.isDeviceSupported();
-      return canAuthenticate;
-    } on PlatformException catch (e) {
-      debugPrint('Error checking biometric availability: $e');
+    if (AppConfigService.instance.isTestMode) {
       return false;
     }
+    return await _biometricService.canAuthenticateWithBiometrics();
   }
 
   /// Get list of available biometric types
   Future<List<BiometricType>> getAvailableBiometrics() async {
-    try {
-      return await _localAuth.getAvailableBiometrics();
-    } on PlatformException catch (e) {
-      debugPrint('Error getting available biometrics: $e');
+    if (AppConfigService.instance.isTestMode) {
       return [];
     }
+    return await _biometricService.getAvailableBiometrics();
   }
 
   /// Check if fingerprint is available
   Future<bool> isFingerprintAvailable() async {
-    final biometrics = await getAvailableBiometrics();
-    return biometrics.contains(BiometricType.fingerprint) ||
-        biometrics.contains(BiometricType.strong) ||
-        biometrics.contains(BiometricType.weak);
+    if (AppConfigService.instance.isTestMode) {
+      return false;
+    }
+    return await _biometricService.isFingerprintAvailable();
   }
 
   /// Check if device face recognition (Face ID) is available
   Future<bool> isDeviceFaceIdAvailable() async {
-    final biometrics = await getAvailableBiometrics();
-    return biometrics.contains(BiometricType.face);
+    if (AppConfigService.instance.isTestMode) {
+      return false;
+    }
+    return await _biometricService.isFaceIdAvailable();
   }
 
   /// Check if front camera is available for face recognition
   Future<bool> isFrontCameraAvailable() async {
+    if (AppConfigService.instance.isTestMode) {
+      return false;
+    }
     try {
       final cameras = await availableCameras();
       return cameras
@@ -93,16 +91,22 @@ class AuthVerificationService {
     String localizedReason = 'الرجاء التحقق من هويتك للمتابعة',
     bool biometricOnly = false,
   }) async {
-    try {
-      final bool didAuthenticate = await _localAuth.authenticate(
-        localizedReason: localizedReason,
-        options: AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: biometricOnly,
-          useErrorDialogs: true,
-        ),
+    if (AppConfigService.instance.isTestMode) {
+      return AuthResult(
+        success: false,
+        method: AuthMethod.none,
+        message: 'تم تعطيل البصمات في وضع الاختبار',
       );
+    }
 
+    final result = await _biometricService.authenticate(
+      reason: localizedReason,
+      biometricOnly: biometricOnly,
+      stickyAuth: true,
+      useErrorDialogs: true,
+    );
+
+    if (result.success) {
       final biometrics = await getAvailableBiometrics();
       AuthMethod usedMethod = AuthMethod.fingerprint;
       if (biometrics.contains(BiometricType.face)) {
@@ -110,61 +114,35 @@ class AuthVerificationService {
       }
 
       return AuthResult(
-        success: didAuthenticate,
+        success: true,
         method: usedMethod,
-        message: didAuthenticate ? 'تم التحقق بنجاح' : 'فشل التحقق',
+        message: 'تم التحقق بنجاح',
       );
-    } on PlatformException catch (e) {
-      debugPrint('Biometric authentication error: $e');
+    } else {
       return AuthResult(
         success: false,
         method: AuthMethod.none,
-        message: _handleBiometricError(e),
+        message: result.errorMessage ?? 'فشل التحقق',
       );
     }
   }
 
   /// Authenticate using fingerprint only
   Future<AuthResult> authenticateWithFingerprint() async {
-    try {
-      final bool didAuthenticate = await _localAuth.authenticate(
-        localizedReason: 'ضع إصبعك على الماسح للتحقق',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: true,
-          useErrorDialogs: true,
-        ),
-      );
+    final result = await _biometricService.authenticate(
+      reason: 'ضع إصبعك على الماسح للتحقق',
+      biometricOnly: true,
+      stickyAuth: true,
+      useErrorDialogs: true,
+    );
 
-      return AuthResult(
-        success: didAuthenticate,
-        method: AuthMethod.fingerprint,
-        message: didAuthenticate ? 'تم التحقق بنجاح' : 'فشل التحقق بالبصمة',
-      );
-    } on PlatformException catch (e) {
-      debugPrint('Fingerprint authentication error: $e');
-      return AuthResult(
-        success: false,
-        method: AuthMethod.fingerprint,
-        message: _handleBiometricError(e),
-      );
-    }
-  }
-
-  /// Handle biometric errors and return user-friendly message
-  String _handleBiometricError(PlatformException e) {
-    switch (e.code) {
-      case 'NotEnrolled':
-        return 'لم يتم تسجيل أي بصمة على هذا الجهاز';
-      case 'LockedOut':
-        return 'تم تعطيل البصمة مؤقتاً بسبب المحاولات الكثيرة';
-      case 'PermanentlyLockedOut':
-        return 'تم تعطيل البصمة. الرجاء استخدام كلمة المرور';
-      case 'NotAvailable':
-        return 'البصمة غير متاحة على هذا الجهاز';
-      default:
-        return 'حدث خطأ أثناء التحقق: ${e.message}';
-    }
+    return AuthResult(
+      success: result.success,
+      method: AuthMethod.fingerprint,
+      message: result.success
+          ? 'تم التحقق بنجاح'
+          : result.errorMessage ?? 'فشل التحقق بالبصمة',
+    );
   }
 
   /// Save user PIN for password authentication
@@ -223,13 +201,14 @@ class AuthVerificationService {
   Future<List<AuthMethod>> getAvailableMethods() async {
     final methods = <AuthMethod>[];
 
-    // Add face recognition only if front camera is available
-    if (await isFrontCameraAvailable()) {
+    // Add face recognition only when not in test mode and front camera is available
+    if (!AppConfigService.instance.isTestMode &&
+        await isFrontCameraAvailable()) {
       methods.add(AuthMethod.faceRecognition);
     }
 
     // Check device biometrics
-    if (await isBiometricAvailable()) {
+    if (!AppConfigService.instance.isTestMode && await isBiometricAvailable()) {
       final biometrics = await getAvailableBiometrics();
 
       // Check for fingerprint

@@ -35,7 +35,9 @@ class WidgetService {
       'my_request',
       'media',
       'my_report',
-      'qr_code'
+      'qr_code',
+      'attendance',
+      'prayer'
     ];
 
     final allWidgets = getAvailableWidgets();
