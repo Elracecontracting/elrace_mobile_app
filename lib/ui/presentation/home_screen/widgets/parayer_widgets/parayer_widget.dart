@@ -2,6 +2,7 @@ import 'package:adhan/adhan.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/parayer_widgets/label_widget.dart';
+import 'package:el_race/ui/presentation/home_screen/widgets/parayer_widgets/prayer_countdown_timer.dart';
 import 'package:el_race/utils/dimens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -19,6 +20,11 @@ class ParayerWidget extends StatefulWidget {
 
 class _ParayerWidgetState extends State<ParayerWidget>
     with WidgetsBindingObserver {
+  // Keep track of last known values
+  DateTime? _lastNextTime;
+  Prayer? _lastNextPrayer;
+  PrayerTimes? _lastPrayerTimes;
+  
   String _prayerKey(Prayer p) {
     switch (p) {
       case Prayer.fajr:
@@ -113,13 +119,27 @@ class _ParayerWidgetState extends State<ParayerWidget>
           nextTime = state.nextTime;
           error = state.error;
           isSoundMuted = state.isSoundMuted;
+          
+          // Update cached values
+          _lastPrayerTimes = pt;
+          _lastNextPrayer = nextPrayer;
+          _lastNextTime = nextTime;
         } else if (state is PrayerTimesError) {
-          pt = state.prayerTimes;
+          pt = state.prayerTimes ?? _lastPrayerTimes;
           error = state.error;
           isSoundMuted = state.isSoundMuted;
+          // Use last known values
+          nextPrayer = _lastNextPrayer;
+          nextTime = _lastNextTime;
         } else if (state is PrayerMuteStateChanged) {
           isSoundMuted = state.isMuted;
+          // Use last known values
+          pt = _lastPrayerTimes;
+          nextPrayer = _lastNextPrayer;
+          nextTime = _lastNextTime;
         }
+
+        debugPrint('🕐 Prayer Widget Build - nextTime: $nextTime, nextPrayer: $nextPrayer');
 
         // If no prayer times yet, show loading
         // if (pt == null) {
@@ -366,13 +386,13 @@ class _ParayerWidgetState extends State<ParayerWidget>
                                             ),
                                           );
                                         }),
-                                        Text(
-                                          _hhmmssUntil(nextTime),
-                                          style: GoogleFonts.kanit(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w400,
-                                            color: Colors.white,
-                                          ),
+                                        Builder(
+                                          builder: (context) {
+                                            debugPrint('🕐 Prayer Timer - nextTime: $nextTime');
+                                            return PrayerCountdownTimer(
+                                              nextPrayerTime: nextTime,
+                                            );
+                                          }
                                         ),
                                       ],
                                     ),

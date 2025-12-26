@@ -101,8 +101,7 @@ class _ProfileBoxWithSlideAnimationState
   }
 
   void _showCertificateOverEverything() {
-    final overlayState = appOverlayKey.currentState;
-    if (overlayState == null) return;
+    print('🎯 _showCertificateOverEverything called');
 
     final loginData = SharedPref.getLoginData();
     final certificateData = loginData.result?.data?.certificate;
@@ -112,82 +111,224 @@ class _ProfileBoxWithSlideAnimationState
     print('DEBUG: certificateData type = ${certificateData.runtimeType}');
     if (certificateData != null) {
       print('DEBUG: certificateData["error"] = ${certificateData['error']}');
+      print(
+          'DEBUG: certificateData["image"] = ${certificateData['image'] != null ? "exists" : "null"}');
+      print('DEBUG: certificateData["url"] = ${certificateData['url']}');
     }
 
-    // Check if certificate has error
+    // Check if certificate has error or is null
     final hasError =
-        certificateData != null && certificateData['error'] != null;
+        certificateData == null || certificateData['error'] != null;
+    final hasImage =
+        certificateData != null && certificateData['image'] != null;
+    final hasUrl = certificateData != null && certificateData['url'] != null;
 
-    print('DEBUG: hasError = $hasError');
+    print(
+        'DEBUG: hasError = $hasError, hasImage = $hasImage, hasUrl = $hasUrl');
 
-    late OverlayEntry entry;
-    entry = OverlayEntry(
-      builder: (ctx) {
-        final size = MediaQuery.of(ctx).size;
-        return Material(
-          type: MaterialType.transparency,
-          child: Stack(
-            children: [
-              // خلفية (barrier) قابلة للإغلاق باللمس
-              Positioned.fill(
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => entry.remove(),
-                  child: Container(color: Colors.black54),
-                ),
-              ),
+    // Close the drawer first using the provider
+    final profileBoxProvider =
+        Provider.of<ProfileBoxProvider>(context, listen: false);
+    profileBoxProvider.toggleProfileBox();
 
-              // المحتوى في المنتصف
-              Center(
-                child: Dialog(
-                  insetPadding: const EdgeInsets.all(15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: hasError
-                      ? Container(
-                          padding: const EdgeInsets.all(24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.error_outline,
-                                color: Colors.red,
-                                size: 48,
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                certificateData['error'] ??
-                                    'No certificate found',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+    print('🚪 Closing drawer...');
+
+    // Use the navigation key to get proper context
+    final BuildContext? navContext = navKey.currentContext;
+    if (navContext == null) {
+      print('❌ navContext is null!');
+      return;
+    }
+
+    // Wait a bit for drawer to close, then show dialog
+    Future.delayed(const Duration(milliseconds: 300), () {
+      print('✅ Showing dialog with navContext');
+
+      // Show dialog directly with higher priority
+      showGeneralDialog(
+        context: navContext,
+        barrierDismissible: true,
+        barrierLabel: 'Certificate',
+        barrierColor: Colors.black87,
+        transitionDuration: const Duration(milliseconds: 200),
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.all(20),
+            child: hasError
+                ? Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          color: Colors.red,
+                          size: 64,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          certificateData?['error'] ?? 'No certificate found',
+                          style: GoogleFonts.inter(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                           ),
-                        )
-                      : ClipRRect(
-                          borderRadius: BorderRadius.circular(12),
-                          child: SizedBox(
-                            width: size.width * 0.85,
-                            height: size.height * 0.30,
-                            child: Image.asset(
-                              'assets/png/certificate.png',
-                              fit: BoxFit.cover,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: HexColor("#161B54"),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            child: Text(
+                              'OK',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),
+                      ],
+                    ),
+                  )
+                : Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.9,
+                        height: MediaQuery.of(context).size.height * 0.7,
+                        child: Stack(
+                          children: [
+                            // Certificate image
+                            Positioned.fill(
+                              child: hasImage
+                                  ? Image.memory(
+                                      base64Decode(certificateData['image']),
+                                      fit: BoxFit.contain,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        print(
+                                            'Error loading certificate image: $error');
+                                        return const Center(
+                                          child: Icon(
+                                            Icons.broken_image,
+                                            size: 48,
+                                            color: Colors.grey,
+                                          ),
+                                        );
+                                      },
+                                    )
+                                  : hasUrl
+                                      ? Image.network(
+                                          certificateData['url'],
+                                          fit: BoxFit.contain,
+                                          loadingBuilder: (context, child,
+                                              loadingProgress) {
+                                            if (loadingProgress == null)
+                                              return child;
+                                            return Center(
+                                              child: CircularProgressIndicator(
+                                                value: loadingProgress
+                                                            .expectedTotalBytes !=
+                                                        null
+                                                    ? loadingProgress
+                                                            .cumulativeBytesLoaded /
+                                                        loadingProgress
+                                                            .expectedTotalBytes!
+                                                    : null,
+                                              ),
+                                            );
+                                          },
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                            print(
+                                                'Error loading certificate from URL: $error');
+                                            return const Center(
+                                              child: Icon(
+                                                Icons.broken_image,
+                                                size: 48,
+                                                color: Colors.grey,
+                                              ),
+                                            );
+                                          },
+                                        )
+                                      : const Center(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.card_membership,
+                                                size: 64,
+                                                color: Colors.grey,
+                                              ),
+                                              SizedBox(height: 8),
+                                              Text(
+                                                  'No certificate data available'),
+                                            ],
+                                          ),
+                                        ),
+                            ),
+                            // Close button
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: IconButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                icon: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  padding: const EdgeInsets.all(4),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+          );
+        },
+        transitionBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOutBack,
                 ),
               ),
-            ],
-          ),
-        );
-      },
-    );
-
-    overlayState.insert(entry);
+              child: child,
+            ),
+          );
+        },
+      );
+    });
   }
 
   bool muteNotifications = false;
@@ -317,17 +458,32 @@ class _ProfileBoxWithSlideAnimationState
                                       fontSize: 11.26,
                                       fontWeight: FontWeight.w400),
                                 ),
-                                const SizedBox(height: 1),
-                                GestureDetector(
-                                  onTap: _showCertificateOverEverything,
-                                  child: Image.asset(
-                                    'assets/png/cert_icon.png',
-                                    height: 26.52,
-                                    width: 26.52,
-                                    //fit: BoxFit.cover,
+                                const SizedBox(height: 8),
+                                InkWell(
+                                  onTap: () {
+                                    print('🏆 Certificate icon tapped!');
+                                    _showCertificateOverEverything();
+                                  },
+                                  borderRadius: BorderRadius.circular(50),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    child: Image.asset(
+                                      'assets/png/cert_icon.png',
+                                      height: 30,
+                                      width: 30,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                        // If image not found, use icon instead
+                                        return const Icon(
+                                          Icons.workspace_premium,
+                                          size: 30,
+                                          color: Colors.amber,
+                                        );
+                                      },
+                                    ),
                                   ),
                                 ),
-                                SizedBox(height: 4.h),
+                                SizedBox(height: 8.h),
                                 Container(
                                   width: 220.w,
                                   child: Text(

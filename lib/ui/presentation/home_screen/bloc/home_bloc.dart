@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:adhan/adhan.dart';
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/data/services/prayer_audio_service.dart';
 import 'package:el_race/data/services/prayer_background_service.dart';
@@ -122,24 +123,39 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     InitPrayerTimesEvent event,
     Emitter<HomeState> emit,
   ) async {
+    debugPrint('🔄 InitPrayerTimes started');
     emit(const PrayerTimesLoading());
 
     try {
+      debugPrint('📡 Fetching prayer times from API...');
+      
+      // Get auth token
+      final token = SharedPref.getLoginData().result?.token;
+      debugPrint('🔑 Token: ${token != null ? "Available" : "NULL"}');
+      
       // جلب أوقات الصلاة من API
       final response = await http.post(
         Uri.parse('https://test.elrace.com/api/prayer_times'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
         body: jsonEncode({
           "jsonrpc": "2.0",
           "params": {"country_code": "AE"}
         }),
       );
 
+      debugPrint('📡 API Response status: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        debugPrint('📡 API Response data: $data');
 
         if (data['result']?['status'] == 'success') {
           await _setPrayerTimesFromAPI(data['result']['data']);
+
+          debugPrint('✅ Prayer times loaded - nextPrayer: $_nextPrayer, nextTime: $_nextPrayerTime');
 
           emit(PrayerTimesLoaded(
             prayerTimes: _prayerTimes,
@@ -163,6 +179,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       throw Exception('Failed to fetch prayer times from API');
     } catch (e) {
+      debugPrint('❌ Prayer times API failed: $e');
       // Fallback: استخدام الحساب المحلي
       try {
         final last = await Geolocator.getLastKnownPosition();
@@ -290,14 +307,14 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       // تحديث خدمة الصوت بأوقات الصلاة الجديدة
       _audioService.updatePrayerTimes(_prayerTimes!);
-    }
 
-    emit(PrayerTimesLoaded(
-      prayerTimes: _prayerTimes,
-      nextPrayer: _nextPrayer,
-      nextTime: _nextPrayerTime,
-      isSoundMuted: _isSoundMuted,
-    ));
+      emit(PrayerTimesLoaded(
+        prayerTimes: _prayerTimes,
+        nextPrayer: _nextPrayer,
+        nextTime: _nextPrayerTime,
+        isSoundMuted: _isSoundMuted,
+      ));
+    }
   }
 
   Future<void> _fetchLastMonthAttendanceSummary(
