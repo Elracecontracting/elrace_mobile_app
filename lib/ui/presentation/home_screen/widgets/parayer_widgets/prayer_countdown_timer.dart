@@ -41,7 +41,7 @@ class _PrayerCountdownTimerState extends State<PrayerCountdownTimer> {
   void _startTimer() {
     _timer?.cancel();
     _updateTime();
-    
+
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) {
         _updateTime();
@@ -51,7 +51,7 @@ class _PrayerCountdownTimerState extends State<PrayerCountdownTimer> {
 
   void _updateTime() {
     debugPrint('🔄 Update Time - nextPrayerTime: ${widget.nextPrayerTime}');
-    
+
     if (widget.nextPrayerTime == null) {
       debugPrint('⚠️ nextPrayerTime is NULL!');
       if (mounted) {
@@ -64,9 +64,9 @@ class _PrayerCountdownTimerState extends State<PrayerCountdownTimer> {
 
     final now = DateTime.now();
     final diff = widget.nextPrayerTime!.difference(now);
-    
+
     debugPrint('⏱️ Time difference: ${diff.inSeconds} seconds');
-    
+
     if (diff.isNegative) {
       debugPrint('⚠️ Time is negative!');
       if (mounted) {
@@ -82,9 +82,9 @@ class _PrayerCountdownTimerState extends State<PrayerCountdownTimer> {
     final seconds = diff.inSeconds.remainder(60);
 
     final timeString = '${hours.toString().padLeft(2, '0')}:'
-                       '${minutes.toString().padLeft(2, '0')}:'
-                       '${seconds.toString().padLeft(2, '0')}';
-    
+        '${minutes.toString().padLeft(2, '0')}:'
+        '${seconds.toString().padLeft(2, '0')}';
+
     debugPrint('✅ Time calculated: $timeString');
 
     if (mounted) {

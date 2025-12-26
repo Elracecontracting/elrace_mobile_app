@@ -24,7 +24,7 @@ class _ParayerWidgetState extends State<ParayerWidget>
   DateTime? _lastNextTime;
   Prayer? _lastNextPrayer;
   PrayerTimes? _lastPrayerTimes;
-  
+
   String _prayerKey(Prayer p) {
     switch (p) {
       case Prayer.fajr:
@@ -119,7 +119,7 @@ class _ParayerWidgetState extends State<ParayerWidget>
           nextTime = state.nextTime;
           error = state.error;
           isSoundMuted = state.isSoundMuted;
-          
+
           // Update cached values
           _lastPrayerTimes = pt;
           _lastNextPrayer = nextPrayer;
@@ -139,7 +139,8 @@ class _ParayerWidgetState extends State<ParayerWidget>
           nextTime = _lastNextTime;
         }
 
-        debugPrint('🕐 Prayer Widget Build - nextTime: $nextTime, nextPrayer: $nextPrayer');
+        debugPrint(
+            '🕐 Prayer Widget Build - nextTime: $nextTime, nextPrayer: $nextPrayer');
 
         // If no prayer times yet, show loading
         // if (pt == null) {
@@ -386,14 +387,13 @@ class _ParayerWidgetState extends State<ParayerWidget>
                                             ),
                                           );
                                         }),
-                                        Builder(
-                                          builder: (context) {
-                                            debugPrint('🕐 Prayer Timer - nextTime: $nextTime');
-                                            return PrayerCountdownTimer(
-                                              nextPrayerTime: nextTime,
-                                            );
-                                          }
-                                        ),
+                                        Builder(builder: (context) {
+                                          debugPrint(
+                                              '🕐 Prayer Timer - nextTime: $nextTime');
+                                          return PrayerCountdownTimer(
+                                            nextPrayerTime: nextTime,
+                                          );
+                                        }),
                                       ],
                                     ),
                                   ),
