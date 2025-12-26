@@ -3,7 +3,6 @@ import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/utils/Util.dart';
-import 'package:el_race/ui/presentation/instruction/views/instruction_view.dart';
 import 'package:el_race/core/services/app_config_service.dart';
 
 class SplashScreen extends StatefulWidget {

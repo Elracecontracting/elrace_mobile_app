@@ -148,7 +148,7 @@ class _AndroidBiometricExampleScreenState
   Widget _buildStatusCard(ColorScheme colorScheme) {
     return Card(
       elevation: 0,
-      color: colorScheme.surfaceVariant,
+      color: colorScheme.surfaceContainerHighest,
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -209,7 +209,7 @@ class _AndroidBiometricExampleScreenState
                 decoration: BoxDecoration(
                   color: _hasBiometric
                       ? colorScheme.primaryContainer
-                      : colorScheme.surfaceVariant,
+                      : colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -260,7 +260,7 @@ class _AndroidBiometricExampleScreenState
   Widget _buildResultCard(ColorScheme colorScheme) {
     return Card(
       elevation: 0,
-      color: colorScheme.surfaceVariant,
+      color: colorScheme.surfaceContainerHighest,
       child: Padding(
         padding: const EdgeInsets.all(20),
         child: Text(

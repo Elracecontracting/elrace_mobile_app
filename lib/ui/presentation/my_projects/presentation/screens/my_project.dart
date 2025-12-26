@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/my_projects/data/datasources/project_remote_datasource.dart';
 import 'package:el_race/ui/presentation/my_projects/data/repositories/project_repository_impl.dart';
-import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_partner_projects_usecase.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_by_partner_usecase.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_usecase.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_bloc.dart';

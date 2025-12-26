@@ -336,7 +336,7 @@ class _BiometricAuthBottomSheetState extends State<BiometricAuthBottomSheet>
                 child: Container(
                   width: 80,
                   height: 80,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: Colors.green,
                     shape: BoxShape.circle,
                   ),

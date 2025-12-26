@@ -7,7 +7,6 @@ import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:el_race/ui/presentation/Email Approval/Approval.dart';
 import 'package:el_race/ui/presentation/Notification/notification_screen.dart';
 import 'package:el_race/ui/presentation/search/screens/widget_search_screen.dart';
-import 'package:el_race/ui/presentation/home_screen/services/widget_service.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';

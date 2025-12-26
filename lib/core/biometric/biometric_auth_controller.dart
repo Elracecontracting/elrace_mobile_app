@@ -56,7 +56,7 @@ class BiometricAuthController extends GetxController {
       debugPrint('🔐 BiometricAuthController: $_biometricTypeName available');
     } catch (e) {
       debugPrint('🔐 BiometricAuthController: Error checking availability: $e');
-      _state.value = BiometricAuthNotAvailable(
+      _state.value = const BiometricAuthNotAvailable(
         reason: 'Unable to check biometric availability',
       );
     }

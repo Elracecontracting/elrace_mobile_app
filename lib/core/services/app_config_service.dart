@@ -28,7 +28,7 @@ class AppConfigService {
         receiveTimeout: const Duration(seconds: 8),
       ));
 
-      final String url = '${UrlUtil.baseUrl}app/config';
+      const String url = '${UrlUtil.baseUrl}app/config';
       final resp = await dio.get(url);
 
       // Response can be jsonrpc envelope: { jsonrpc, id, result: { success, isTestMode } }

@@ -3,12 +3,62 @@ import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import '../../widgets/header_widget.dart';
 import '../Attendace_list/repository/attendance_repository.dart';
+
+// Number formatter with thousand separators
+class ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) {
+      return newValue;
+    }
+
+    // Remove all non-digit characters except decimal point
+    String newText = newValue.text.replaceAll(RegExp(r'[^\d.]'), '');
+
+    // Ensure only one decimal point
+    if (newText.split('.').length > 2) {
+      return oldValue;
+    }
+
+    // Split into integer and decimal parts
+    List<String> parts = newText.split('.');
+    String integerPart = parts[0];
+    String decimalPart = parts.length > 1 ? parts[1] : '';
+
+    // Add thousand separators to integer part
+    String formattedInteger = '';
+    int count = 0;
+    for (int i = integerPart.length - 1; i >= 0; i--) {
+      if (count > 0 && count % 3 == 0) {
+        formattedInteger = ',$formattedInteger';
+      }
+      formattedInteger = integerPart[i] + formattedInteger;
+      count++;
+    }
+
+    // Combine with decimal part
+    String formattedText = formattedInteger;
+    if (parts.length > 1) {
+      formattedText += '.$decimalPart';
+    }
+
+    // Calculate new cursor position
+    int selectionIndex = formattedText.length;
+
+    return TextEditingValue(
+      text: formattedText,
+      selection: TextSelection.collapsed(offset: selectionIndex),
+    );
+  }
+}
 
 class PettyCashAddExpense extends StatefulWidget {
   const PettyCashAddExpense({Key? key}) : super(key: key);
@@ -645,12 +695,17 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                                       fontWeight: FontWeight.bold),
                                 ),
                                 TextField(
-                                  keyboardType: TextInputType.number,
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          decimal: true),
+                                  inputFormatters: [
+                                    ThousandsSeparatorInputFormatter(),
+                                  ],
                                   controller: amout,
                                   onChanged: (value) {
                                     // You can parse or validate here
                                     setState(() {
-                                      amount = value;
+                                      amount = value.replaceAll(',', '');
                                     });
                                   },
                                   onTapOutside: (b) {

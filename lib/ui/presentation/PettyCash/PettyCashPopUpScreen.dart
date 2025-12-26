@@ -11,7 +11,7 @@ import 'package:el_race/data/repositories/report_repository.dart';
 import 'package:el_race/data/services/pdf_service.dart';
 import 'package:el_race/ui/presentation/My_task/screens/report_detail/camera_screen.dart';
 import 'package:el_race/ui/presentation/My_task/screens/report_detail/pdf_preview_screen.dart';
-import 'package:el_race/ui/presentation/PettyCash/PettyCashAddExpense.dart'; // Import the login model
+// Import the login model
 import 'package:el_race/ui/presentation/Attendace_list/repository/attendance_repository.dart';
 import 'package:el_race/utils/color_utils.dart'; // Import global colors
 import 'package:flutter/material.dart';
@@ -24,6 +24,55 @@ import 'package:uuid/uuid.dart';
 
 import '../../widgets/custom_slider_button.dart';
 import '../../widgets/header_widget.dart';
+
+// Number formatter with thousand separators
+class ThousandsSeparatorInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.text.isEmpty) {
+      return newValue;
+    }
+
+    // Remove all non-digit characters except decimal point
+    String newText = newValue.text.replaceAll(RegExp(r'[^\d.]'), '');
+
+    // Ensure only one decimal point
+    if (newText.split('.').length > 2) {
+      return oldValue;
+    }
+
+    // Split into integer and decimal parts
+    List<String> parts = newText.split('.');
+    String integerPart = parts[0];
+    String decimalPart = parts.length > 1 ? parts[1] : '';
+
+    // Add thousand separators to integer part
+    String formattedInteger = '';
+    int count = 0;
+    for (int i = integerPart.length - 1; i >= 0; i--) {
+      if (count > 0 && count % 3 == 0) {
+        formattedInteger = ',$formattedInteger';
+      }
+      formattedInteger = integerPart[i] + formattedInteger;
+      count++;
+    }
+
+    // Combine with decimal part
+    String formattedText = formattedInteger;
+    if (parts.length > 1) {
+      formattedText += '.$decimalPart';
+    }
+
+    // Calculate new cursor position
+    int selectionIndex = formattedText.length;
+
+    return TextEditingValue(
+      text: formattedText,
+      selection: TextSelection.collapsed(offset: selectionIndex),
+    );
+  }
+}
 
 class PettyCashPopUpScreen extends StatefulWidget {
   const PettyCashPopUpScreen({super.key});
@@ -51,6 +100,114 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
   List<File> savedPdfs = [];
   List<int> draftExpenseIds = [];
 
+  Future<void> _showImageSourceDialog() async {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "Add Attachment",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: appFontColor,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    // Camera Option
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _addCameraImageForAttachment();
+                      },
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1B1464),
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            "Camera",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: appFontColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Gallery Option
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _addGalleryImages();
+                      },
+                      child: Column(
+                        children: [
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1B1464),
+                              borderRadius: BorderRadius.circular(15),
+                            ),
+                            child: const Icon(
+                              Icons.photo_library,
+                              color: Colors.white,
+                              size: 40,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            "Gallery",
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: appFontColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    "Cancel",
+                    style: TextStyle(color: Colors.red, fontSize: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _addCameraImageForAttachment() async {
     var result = await Navigator.push(
         context,
@@ -65,6 +222,124 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       }
       setState(() {}); // Refresh the UI
     }
+  }
+
+  Future<void> _addGalleryImages() async {
+    final ImagePicker picker = ImagePicker();
+    final List<XFile>? images = await picker.pickMultiImage();
+
+    if (images != null && images.isNotEmpty) {
+      for (var image in images) {
+        attachments.add(File(image.path));
+      }
+      setState(() {}); // Refresh the UI
+    }
+  }
+
+  void _showAttachmentsPreview() {
+    if (attachments.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No attachments added yet")),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Attachments",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: appFontColor,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 400),
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 8,
+                      mainAxisSpacing: 8,
+                    ),
+                    itemCount: attachments.length,
+                    itemBuilder: (context, index) {
+                      return Stack(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                attachments[index],
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: double.infinity,
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: 2,
+                            right: 2,
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  attachments.removeAt(index);
+                                });
+                                Navigator.pop(context);
+                                if (attachments.isNotEmpty) {
+                                  _showAttachmentsPreview();
+                                }
+                              },
+                              child: Container(
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                padding: const EdgeInsets.all(4),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -438,13 +713,15 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
     String searchQuery = '';
     bool isLoading = false;
     dynamic selectedUser;
-    String amount = '';
     String selectedExpenseType = 'EXPENSE TYPE';
-    bool dropdownOpen = false;
     final List<String> expenseTypes = ['Petrol ', 'Hospitality ', 'Others'];
     String empID = '';
     const String baseUrl = 'https://test.elrace.com/api/';
     bool isSubmitting = false;
+
+    // Overlay variables (moved to function scope to be accessible in WillPopScope and Cancel)
+    OverlayEntry? expenseOverlay;
+    bool overlayVisible = false;
 
     TextEditingController userController = TextEditingController();
     TextEditingController dateController = TextEditingController();
@@ -705,8 +982,9 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                     "project_id": null,
                     "employee_id": int.parse(empID),
                     "petty_cash_id": selectedUser['id'],
-                    "unit_amount":
-                        double.tryParse(amountController.text) ?? 0.0,
+                    "unit_amount": double.tryParse(
+                            amountController.text.replaceAll(',', '')) ??
+                        0.0,
                     "name": description.trim().isEmpty ? "-" : description,
                     "x_expense_type":
                         getExpenseTypeApiValue(selectedExpenseType),
@@ -760,347 +1038,469 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
               }
             }
 
-            return Dialog(
-              backgroundColor: Colors.white,
-              insetPadding: const EdgeInsets.symmetric(horizontal: 15),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20)),
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Title Image
-                      Image.asset(
-                        'assets/png/add_expense_title.png',
-                        width: 240,
-                        height: 80,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(height: 24),
+            return WillPopScope(
+                onWillPop: () async {
+                  // Remove overlay when user tries to exit
+                  if (expenseOverlay != null) {
+                    overlayVisible = false;
+                    expenseOverlay?.markNeedsBuild();
+                    await Future.delayed(const Duration(milliseconds: 200));
+                    expenseOverlay?.remove();
+                    expenseOverlay = null;
+                  }
+                  return true;
+                },
+                child: Dialog(
+                  backgroundColor: Colors.white,
+                  insetPadding: const EdgeInsets.symmetric(horizontal: 15),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20)),
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Title Image
+                          Image.asset(
+                            'assets/png/add_expense_title.png',
+                            width: 240,
+                            height: 80,
+                            fit: BoxFit.contain,
+                          ),
+                          const SizedBox(height: 24),
 
-                      // Expense Type Dropdown (uses OverlayEntry for proper z-order)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Builder(builder: (ctx) {
-                          // Overlay state variables inside dialog
-                          OverlayEntry? expenseOverlay;
-                          final headerKey = GlobalKey();
-                          bool overlayVisible = false;
+                          // Expense Type Dropdown (uses OverlayEntry for proper z-order)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Builder(builder: (ctx) {
+                              // Overlay state variables inside dialog
+                              final headerKey = GlobalKey();
 
-                          OverlayEntry _createOverlay() {
-                            final renderBox = headerKey.currentContext!
-                                .findRenderObject() as RenderBox;
-                            final size = renderBox.size;
-                            final offset = renderBox.localToGlobal(Offset.zero);
+                              OverlayEntry _createOverlay() {
+                                final renderBox = headerKey.currentContext!
+                                    .findRenderObject() as RenderBox;
+                                final size = renderBox.size;
+                                final offset =
+                                    renderBox.localToGlobal(Offset.zero);
 
-                            final left = offset.dx +
-                                (size.width / 2) -
-                                130; // center - half overlay width (260/2)
-                            final top = offset.dy + size.height + 8;
+                                final left = offset.dx +
+                                    (size.width / 2) -
+                                    130; // center - half overlay width (260/2)
+                                final top = offset.dy + size.height + 8;
 
-                            return OverlayEntry(builder: (context) {
-                              return StatefulBuilder(
-                                  builder: (context, overlaySetState) {
-                                return Positioned(
-                                  left: left,
-                                  top: top,
-                                  width: 260,
-                                  child: Material(
-                                    color: Colors.white,
-                                    elevation: 4,
-                                    borderRadius: BorderRadius.circular(22),
-                                    child: AnimatedOpacity(
-                                      duration:
-                                          const Duration(milliseconds: 450),
-                                      curve: Curves.easeInOut,
-                                      opacity: overlayVisible ? 1.0 : 0.0,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius:
-                                              BorderRadius.circular(22),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black
-                                                  .withOpacity(0.08),
-                                              blurRadius: 8,
-                                              offset: const Offset(0, 4),
+                                return OverlayEntry(builder: (context) {
+                                  return StatefulBuilder(
+                                      builder: (context, overlaySetState) {
+                                    return Positioned(
+                                      left: left,
+                                      top: top,
+                                      width: 260,
+                                      child: Material(
+                                        color: Colors.white,
+                                        elevation: 4,
+                                        borderRadius: BorderRadius.circular(22),
+                                        child: AnimatedOpacity(
+                                          duration:
+                                              const Duration(milliseconds: 450),
+                                          curve: Curves.easeInOut,
+                                          opacity: overlayVisible ? 1.0 : 0.0,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.white,
+                                              borderRadius:
+                                                  BorderRadius.circular(22),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.black
+                                                      .withOpacity(0.08),
+                                                  blurRadius: 8,
+                                                  offset: const Offset(0, 4),
+                                                ),
+                                              ],
                                             ),
-                                          ],
-                                        ),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: List.generate(
-                                              expenseTypes.length, (i) {
-                                            return Column(
-                                              children: [
-                                                GestureDetector(
-                                                  onTap: () async {
-                                                    // fade out animation
-                                                    overlayVisible = false;
-                                                    expenseOverlay
-                                                        ?.markNeedsBuild();
-                                                    await Future.delayed(
-                                                        const Duration(
-                                                            milliseconds: 450));
-                                                    // update dialog state and remove overlay
-                                                    setDialogState(() {
-                                                      selectedExpenseType =
-                                                          expenseTypes[i];
-                                                    });
-                                                    expenseOverlay?.remove();
-                                                    expenseOverlay = null;
-                                                  },
-                                                  child: Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        vertical: 14,
-                                                        horizontal: 20),
-                                                    alignment:
-                                                        Alignment.centerLeft,
-                                                    child: Text(
-                                                      expenseTypes[i],
-                                                      style: const TextStyle(
-                                                        fontSize: 13,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color: Colors.black,
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: List.generate(
+                                                  expenseTypes.length, (i) {
+                                                return Column(
+                                                  children: [
+                                                    InkWell(
+                                                      onTap: () async {
+                                                        // fade out animation
+                                                        overlayVisible = false;
+                                                        expenseOverlay
+                                                            ?.markNeedsBuild();
+                                                        await Future.delayed(
+                                                            const Duration(
+                                                                milliseconds:
+                                                                    450));
+                                                        // update dialog state and remove overlay
+                                                        setDialogState(() {
+                                                          selectedExpenseType =
+                                                              expenseTypes[i];
+                                                        });
+                                                        expenseOverlay
+                                                            ?.remove();
+                                                        expenseOverlay = null;
+                                                      },
+                                                      borderRadius: i == 0
+                                                          ? const BorderRadius.only(
+                                                              topLeft: Radius
+                                                                  .circular(22),
+                                                              topRight: Radius
+                                                                  .circular(22))
+                                                          : (i ==
+                                                                  expenseTypes
+                                                                          .length -
+                                                                      1
+                                                              ? const BorderRadius
+                                                                  .only(
+                                                                  bottomLeft: Radius
+                                                                      .circular(
+                                                                          22),
+                                                                  bottomRight: Radius
+                                                                      .circular(
+                                                                          22))
+                                                              : null),
+                                                      child: Container(
+                                                        width: double.infinity,
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                vertical: 14,
+                                                                horizontal: 20),
+                                                        alignment: Alignment
+                                                            .centerLeft,
+                                                        child: Text(
+                                                          expenseTypes[i],
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 13,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            color: Colors.black,
+                                                          ),
+                                                        ),
                                                       ),
                                                     ),
-                                                  ),
-                                                ),
-                                                if (i !=
-                                                    expenseTypes.length - 1)
-                                                  Divider(
-                                                      height: 1,
-                                                      color:
-                                                          Colors.grey.shade300)
-                                              ],
-                                            );
-                                          }),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              });
-                            });
-                          }
-
-                          return Column(
-                            children: [
-                              GestureDetector(
-                                key: headerKey,
-                                onTap: () async {
-                                  if (expenseOverlay == null) {
-                                    // Create and insert overlay with opacity 0
-                                    overlayVisible = false;
-                                    expenseOverlay = _createOverlay();
-                                    Overlay.of(ctx).insert(expenseOverlay!);
-                                    // Trigger fade in animation
-                                    await Future.delayed(
-                                        const Duration(milliseconds: 50));
-                                    overlayVisible = true;
-                                    expenseOverlay?.markNeedsBuild();
-                                  } else {
-                                    // Fade out animation before removing
-                                    overlayVisible = false;
-                                    expenseOverlay?.markNeedsBuild();
-                                    await Future.delayed(
-                                        const Duration(milliseconds: 450));
-                                    expenseOverlay?.remove();
-                                    expenseOverlay = null;
-                                  }
-                                },
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 14, horizontal: 16),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF1B1464),
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Flexible(
-                                        child: Text(
-                                          selectedExpenseType,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 15,
-                                            fontWeight: FontWeight.w600,
-                                            letterSpacing: 1.5,
+                                                    if (i !=
+                                                        expenseTypes.length - 1)
+                                                      Divider(
+                                                          height: 1,
+                                                          color: Colors
+                                                              .grey.shade300)
+                                                  ],
+                                                );
+                                              }),
+                                            ),
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(width: 8),
-                                      const Icon(Icons.arrow_drop_down,
-                                          color: Colors.white, size: 24),
-                                    ],
+                                    );
+                                  });
+                                });
+                              }
+
+                              return Column(
+                                children: [
+                                  GestureDetector(
+                                    key: headerKey,
+                                    onTap: () async {
+                                      if (expenseOverlay == null) {
+                                        // Create and insert overlay with opacity 0
+                                        overlayVisible = false;
+                                        expenseOverlay = _createOverlay();
+                                        Overlay.of(ctx).insert(expenseOverlay!);
+                                        // Trigger fade in animation
+                                        await Future.delayed(
+                                            const Duration(milliseconds: 50));
+                                        overlayVisible = true;
+                                        expenseOverlay?.markNeedsBuild();
+                                      } else {
+                                        // Fade out animation before removing
+                                        overlayVisible = false;
+                                        expenseOverlay?.markNeedsBuild();
+                                        await Future.delayed(
+                                            const Duration(milliseconds: 450));
+                                        expenseOverlay?.remove();
+                                        expenseOverlay = null;
+                                      }
+                                    },
+                                    child: Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 14, horizontal: 16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF1B1464),
+                                        borderRadius: BorderRadius.circular(25),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              selectedExpenseType,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w600,
+                                                letterSpacing: 1.5,
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Icon(Icons.arrow_drop_down,
+                                              color: Colors.white, size: 24),
+                                        ],
+                                      ),
+                                    ),
                                   ),
+                                  const SizedBox(height: 8),
+                                ],
+                              );
+                            }),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Date Field
+                          Row(
+                            children: [
+                              Image.asset('assets/png/calendar_icon.png',
+                                  width: 40, height: 40),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Padding(
+                                      padding: EdgeInsets.only(left: 12),
+                                      child: Text(
+                                        'Date',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    InkWell(
+                                      onTap: pickDate,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 12, horizontal: 12),
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(18),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.grey.withAlpha(
+                                                  (0.3 * 255).toInt()),
+                                              spreadRadius: 1,
+                                              blurRadius: 5,
+                                              offset: const Offset(2, 3),
+                                            ),
+                                          ],
+                                          image: const DecorationImage(
+                                            image: AssetImage(
+                                                'assets/png/desc_box.png'),
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          dateController.text.isEmpty
+                                              ? 'Select Date'
+                                              : dateController.text,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(height: 8),
                             ],
-                          );
-                        }),
-                      ),
+                          ),
 
-                      const SizedBox(height: 24),
+                          const SizedBox(height: 20),
 
-                      // Date Field
-                      Row(
-                        children: [
-                          Image.asset('assets/png/calendar_icon.png',
-                              width: 40, height: 40),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 12),
-                                  child: Text(
-                                    'Date',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                InkWell(
-                                  onTap: pickDate,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12, horizontal: 12),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(18),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.grey
-                                              .withAlpha((0.3 * 255).toInt()),
-                                          spreadRadius: 1,
-                                          blurRadius: 5,
-                                          offset: const Offset(2, 3),
+                          // Supplier Field
+                          Row(
+                            children: [
+                              Image.asset('assets/png/supplier_icon.png',
+                                  width: 40, height: 40),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Padding(
+                                      padding: EdgeInsets.only(left: 12),
+                                      child: Text(
+                                        'Supplier',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black,
                                         ),
-                                      ],
-                                      image: const DecorationImage(
-                                        image: AssetImage(
-                                            'assets/png/desc_box.png'),
-                                        fit: BoxFit.cover,
                                       ),
                                     ),
-                                    child: Text(
-                                      dateController.text.isEmpty
-                                          ? 'Select Date'
-                                          : dateController.text,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.black87,
+                                    const SizedBox(height: 4),
+                                    InkWell(
+                                      onTap: showPettyCashUserDialog,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 12, horizontal: 12),
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                              BorderRadius.circular(18),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.grey.withAlpha(
+                                                  (0.3 * 255).toInt()),
+                                              spreadRadius: 1,
+                                              blurRadius: 5,
+                                              offset: const Offset(2, 3),
+                                            ),
+                                          ],
+                                          image: const DecorationImage(
+                                            image: AssetImage(
+                                                'assets/png/desc_box.png'),
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          userController.text.isEmpty
+                                              ? 'Select Supplier'
+                                              : userController.text,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black87,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Amount Field
+                          Row(
+                            children: [
+                              Image.asset('assets/png/money_icon.png',
+                                  width: 40, height: 40),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Padding(
+                                      padding: EdgeInsets.only(left: 12),
+                                      child: Text(
+                                        'Amount',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(18),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: Colors.grey
+                                                .withAlpha((0.3 * 255).toInt()),
+                                            spreadRadius: 1,
+                                            blurRadius: 5,
+                                            offset: const Offset(2, 3),
+                                          ),
+                                        ],
+                                        image: const DecorationImage(
+                                          image: AssetImage(
+                                              'assets/png/desc_box.png'),
+                                          fit: BoxFit.fill,
+                                        ),
+                                      ),
+                                      child: TextField(
+                                        controller: amountController,
+                                        keyboardType: const TextInputType
+                                            .numberWithOptions(decimal: true),
+                                        inputFormatters: [
+                                          ThousandsSeparatorInputFormatter(),
+                                        ],
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.black87,
+                                        ),
+                                        decoration: InputDecoration(
+                                          hintText: 'Type an Amount',
+                                          border: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(18),
+                                            borderSide: const BorderSide(
+                                                color: Colors.grey, width: 0.5),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(18),
+                                            borderSide: const BorderSide(
+                                                color: Colors.grey, width: 0.5),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(18),
+                                            borderSide: const BorderSide(
+                                                color: Colors.blue, width: 2),
+                                          ),
+                                          filled: true,
+                                          fillColor: Colors.transparent,
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                                  vertical: 12, horizontal: 12),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Description
+                          const Center(
+                            child: Text(
+                              'DESCRIPTIONS',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black,
+                                letterSpacing: 1,
+                              ),
                             ),
                           ),
-                        ],
-                      ),
+                          const SizedBox(height: 12),
 
-                      const SizedBox(height: 20),
-
-                      // Supplier Field
-                      Row(
-                        children: [
-                          Image.asset('assets/png/supplier_icon.png',
-                              width: 40, height: 40),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          Padding(
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 6.0),
+                            child: Stack(
                               children: [
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 12),
-                                  child: Text(
-                                    'Supplier',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                InkWell(
-                                  onTap: showPettyCashUserDialog,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        vertical: 12, horizontal: 12),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(18),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.grey
-                                              .withAlpha((0.3 * 255).toInt()),
-                                          spreadRadius: 1,
-                                          blurRadius: 5,
-                                          offset: const Offset(2, 3),
-                                        ),
-                                      ],
-                                      image: const DecorationImage(
-                                        image: AssetImage(
-                                            'assets/png/desc_box.png'),
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                    child: Text(
-                                      userController.text.isEmpty
-                                          ? 'Select Supplier'
-                                          : userController.text,
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Amount Field
-                      Row(
-                        children: [
-                          Image.asset('assets/png/money_icon.png',
-                              width: 40, height: 40),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Padding(
-                                  padding: EdgeInsets.only(left: 12),
-                                  child: Text(
-                                    'Amount',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
                                 Container(
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(18),
@@ -1116,30 +1516,26 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                     image: const DecorationImage(
                                       image:
                                           AssetImage('assets/png/desc_box.png'),
-                                      fit: BoxFit.fill,
+                                      fit: BoxFit.cover,
                                     ),
                                   ),
                                   child: TextField(
-                                    controller: amountController,
-                                    keyboardType: TextInputType.number,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.black87,
-                                    ),
+                                    maxLines: 2,
+                                    onChanged: (value) => setDialogState(
+                                        () => description = value),
                                     decoration: InputDecoration(
-                                      hintText: 'Type an Amount',
                                       border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(18),
+                                        borderRadius: BorderRadius.circular(22),
                                         borderSide: const BorderSide(
                                             color: Colors.grey, width: 0.5),
                                       ),
                                       enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(18),
+                                        borderRadius: BorderRadius.circular(22),
                                         borderSide: const BorderSide(
                                             color: Colors.grey, width: 0.5),
                                       ),
                                       focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(18),
+                                        borderRadius: BorderRadius.circular(22),
                                         borderSide: const BorderSide(
                                             color: Colors.blue, width: 2),
                                       ),
@@ -1147,172 +1543,115 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                       fillColor: Colors.transparent,
                                       contentPadding:
                                           const EdgeInsets.symmetric(
-                                              vertical: 12, horizontal: 12),
+                                              vertical: 18, horizontal: 12),
                                     ),
+                                  ),
+                                ),
+                                Positioned(
+                                  bottom: 6,
+                                  right: 10,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Text(
+                                        '${description.trim().isEmpty ? 1 : description.trim().split(RegExp(r'\s+')).length}/50',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                      const Text(
+                                        'Max words',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ],
-                      ),
 
-                      const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                      // Description
-                      const Center(
-                        child: Text(
-                          'DESCRIPTIONS',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                            letterSpacing: 1,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                        child: Stack(
-                          children: [
-                            Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(18),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.grey
-                                        .withAlpha((0.3 * 255).toInt()),
-                                    spreadRadius: 1,
-                                    blurRadius: 5,
-                                    offset: const Offset(2, 3),
+                          // Buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF1B1464),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
                                   ),
-                                ],
-                                image: const DecorationImage(
-                                  image: AssetImage('assets/png/desc_box.png'),
-                                  fit: BoxFit.cover,
+                                  onPressed:
+                                      isSubmitting ? null : submitExpense,
+                                  child: isSubmitting
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2))
+                                      : const Text(
+                                          'Save',
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
                                 ),
                               ),
-                              child: TextField(
-                                maxLines: 2,
-                                onChanged: (value) =>
-                                    setDialogState(() => description = value),
-                                decoration: InputDecoration(
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(22),
-                                    borderSide: const BorderSide(
-                                        color: Colors.grey, width: 0.5),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFBA1719),
+                                    shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 14),
                                   ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(22),
-                                    borderSide: const BorderSide(
-                                        color: Colors.grey, width: 0.5),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(22),
-                                    borderSide: const BorderSide(
-                                        color: Colors.blue, width: 2),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.transparent,
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      vertical: 18, horizontal: 12),
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 6,
-                              right: 10,
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    '${description.trim().isEmpty ? 1 : description.trim().split(RegExp(r'\s+')).length}/50',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  const Text(
-                                    'Max words',
+                                  onPressed: () {
+                                    // Clean up overlay before closing
+                                    if (expenseOverlay != null) {
+                                      expenseOverlay?.remove();
+                                      expenseOverlay = null;
+                                    }
+                                    Navigator.pop(dialogContext);
+                                  },
+                                  child: const Text(
+                                    'Cancel',
                                     style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.black,
+                                      color: Colors.white,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Buttons
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1B1464),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              onPressed: isSubmitting ? null : submitExpense,
-                              child: isSubmitting
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                          color: Colors.white, strokeWidth: 2))
-                                  : const Text(
-                                      'Save',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFBA1719),
-                                shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12)),
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 14),
-                              ),
-                              onPressed: () => Navigator.pop(dialogContext),
-                              child: const Text(
-                                'Cancel',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                            ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
+                ) // End of WillPopScope child Dialog
+                ); // End of WillPopScope
+          }, // End of StatefulBuilder builder
+        ); // End of StatefulBuilder
+      }, // End of showDialog builder
+    ); // End of showDialog
+  } // End of _showAddExpenseDialog function
 
   @override
   Widget build(BuildContext context) {
@@ -1388,7 +1727,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       GestureDetector(
-                        onTap: _addCameraImageForAttachment,
+                        onTap: _showImageSourceDialog,
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -1432,6 +1771,39 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                     ],
                   ),
                 ),
+
+                // Preview Attachments Button
+                if (attachments.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: GestureDetector(
+                      onTap: _showAttachmentsPreview,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1B1464),
+                          borderRadius: BorderRadius.circular(25),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.visibility,
+                                color: Colors.white, size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              "View ${attachments.length} Attachment${attachments.length > 1 ? 's' : ''}",
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
 
                 // if (attachments.isNotEmpty)
                 //   Padding(
@@ -1558,7 +1930,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                               const state = "DRAFT";
                               final date = expense['date'];
                               final total = expense['amount'];
-                              final id = expense['id'];
+                              // final id = expense['id'];
 
                               return Padding(
                                 padding: const EdgeInsets.symmetric(

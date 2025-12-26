@@ -308,11 +308,11 @@ class _FaceIdCupertinoSheetState extends State<FaceIdCupertinoSheet>
     }
 
     if (state == FaceIdState.success) {
-      return Padding(
-        padding: const EdgeInsets.only(top: 8),
+      return const Padding(
+        padding: EdgeInsets.only(top: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             Icon(
               CupertinoIcons.checkmark_circle_fill,
               color: CupertinoColors.systemGreen,

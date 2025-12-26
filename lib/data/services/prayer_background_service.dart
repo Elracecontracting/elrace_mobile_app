@@ -20,7 +20,7 @@ void callbackDispatcher() {
     debugPrint('Background task started: $task');
 
     // if this is a reschedule task (unique name like reschedule-prayers-<day>)
-    if (task != null && task.toString().startsWith('reschedule-prayers-')) {
+    if (task.toString().startsWith('reschedule-prayers-')) {
       try {
         await PrayerBackgroundService.reschedule();
         return Future.value(true);
@@ -51,7 +51,7 @@ void callbackDispatcher() {
       }
 
       // If task corresponds to a scheduled prayer (format: prayer-<name>-<ms>)
-      if (task != null && task.toString().startsWith('prayer-')) {
+      if (task.toString().startsWith('prayer-')) {
         try {
           final parts = task.toString().split('-');
           // expected: ['prayer', '<name>', '<ms>']
