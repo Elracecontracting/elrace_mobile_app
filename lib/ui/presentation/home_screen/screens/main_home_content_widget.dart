@@ -17,7 +17,7 @@ class MainHomeContentWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final sliderProvider = Provider.of<SliderProvider>(context);
     final bottomPadding = MediaQuery.of(context).padding.bottom + 80.h;
-    
+
     return RefreshIndicator(
       onRefresh: () async => await Util.fetchHomeScreenData(context),
       child: SingleChildScrollView(
