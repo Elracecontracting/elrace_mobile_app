@@ -25,7 +25,7 @@ class InvoiceAndRfqCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 5) +
             EdgeInsets.only(bottom: 100.w, top: 100.w),
         itemCount: approvalItems.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 6),
+        separatorBuilder: (context, index) => const SizedBox(height: 1),
         itemBuilder: (context, index) {
           final item = approvalItems[index];
           String type = item["type"] ?? "";
@@ -60,7 +60,7 @@ class InvoiceAndRfqCard extends StatelessWidget {
             child: Container(
               height: 105.w,
               width: 350.w,
-              margin: EdgeInsets.symmetric(horizontal: 10.w),
+              margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 1.w),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [

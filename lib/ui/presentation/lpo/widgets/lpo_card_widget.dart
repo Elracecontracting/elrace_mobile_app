@@ -155,7 +155,7 @@ class LpoCardWidget extends StatelessWidget {
     final formattedDate = _formatDate(date);
 
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+      margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
       padding: const EdgeInsets.all(1),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22.r),

@@ -16,11 +16,16 @@ class MainHomeContentWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sliderProvider = Provider.of<SliderProvider>(context);
+    final bottomPadding = MediaQuery.of(context).padding.bottom + 80.h;
+    
     return RefreshIndicator(
       onRefresh: () async => await Util.fetchHomeScreenData(context),
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
-        padding: EdgeInsets.symmetric(vertical: SizeConfig().getHeight(10)),
+        padding: EdgeInsets.only(
+          top: SizeConfig().getHeight(10),
+          bottom: bottomPadding,
+        ),
         child: Column(
           children: [
             Column(

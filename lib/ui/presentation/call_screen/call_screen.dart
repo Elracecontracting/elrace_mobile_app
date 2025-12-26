@@ -120,7 +120,7 @@ class _CallScreenState extends State<CallScreen> {
                 builder: (context) {
                   final bottomPadding =
                       MediaQuery.of(context).viewPadding.bottom;
-                  return SizedBox(height: 80.h + bottomPadding);
+                  return SizedBox(height: 100.h + bottomPadding);
                 },
               ),
             ),
