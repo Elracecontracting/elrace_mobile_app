@@ -75,7 +75,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.only(top: 10.h, bottom: 16.h),
+                  padding: EdgeInsets.only(top: 6.h, bottom: 8.h),
                   child: _buildHeader(),
                 ),
               ),
@@ -87,7 +87,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                 )
               else
                 SliverPadding(
-                  padding: EdgeInsets.symmetric(horizontal: 40.w),
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
                   sliver: SliverToBoxAdapter(
                     child: Column(
                       children: [
@@ -146,7 +146,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                                     },
                                     separatorBuilder:
                                         (BuildContext context, int index) =>
-                                            SizedBox(height: 12.w),
+                                            SizedBox(height: 6.w),
                                   );
                           })()
                         else if (state is MediaError)

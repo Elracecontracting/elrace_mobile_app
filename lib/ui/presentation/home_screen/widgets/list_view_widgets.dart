@@ -59,7 +59,10 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     final widgets = await WidgetService.getActiveWidgets();
     if (mounted) {
       setState(() {
-        activeWidgets = widgets;
+        // Filter out time_sheet and my_notes widgets
+        activeWidgets = widgets
+            .where((w) => w.id != 'time_sheet' && w.id != 'my_notes')
+            .toList();
         isLoading = false;
       });
     }

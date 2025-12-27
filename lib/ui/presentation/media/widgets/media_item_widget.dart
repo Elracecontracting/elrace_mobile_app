@@ -187,7 +187,7 @@ class MediaItemWidget extends StatelessWidget {
                       onTap: onTap,
                       child: Icon(
                         Icons.visibility_outlined,
-                        size: 20.sp,
+                        size: 26.sp,
                         color: appFontColor,
                       ),
                     ),
@@ -239,8 +239,8 @@ class MediaItemWidget extends StatelessWidget {
                         }
                       },
                       child: SizedBox(
-                        width: 20.w,
-                        height: 20.h,
+                        width: 26.w,
+                        height: 26.h,
                         child: Image.asset(
                           'assets/png/icons/Capa_1.png',
                           fit: BoxFit.contain,

@@ -20,56 +20,56 @@ class PrayerAudioService {
 
   // تهيئة الخدمة
   Future<void> initialize(PrayerTimes prayerTimes) async {
-    debugPrint('🕌 PrayerAudioService: Initializing...');
+    // debugPrint('🕌 PrayerAudioService: Initializing...');
     _currentPrayerTimes = prayerTimes;
     await _notificationService.initialize();
     await _startChecking();
-    debugPrint('🕌 PrayerAudioService: Initialized successfully');
+    // debugPrint('🕌 PrayerAudioService: Initialized successfully');
   }
 
   // بدء التحقق الدوري من أوقات الصلاة
   Future<void> _startChecking() async {
     // إلغاء أي timer سابق
     _checkTimer?.cancel();
-    debugPrint('⏰ Starting prayer check timer (every 30 seconds)');
+    // debugPrint('⏰ Starting prayer check timer (every 30 seconds)');
 
     // التحقق كل 30 ثانية
     _checkTimer = Timer.periodic(const Duration(seconds: 30), (timer) async {
-      debugPrint('⏰ Timer tick - checking prayer times...');
+      // debugPrint('⏰ Timer tick - checking prayer times...');
       await _checkAndPlayAdhan();
     });
 
     // تحقق فوري عند البداية
-    debugPrint('⏰ Initial check at startup');
+    // debugPrint('⏰ Initial check at startup');
     await _checkAndPlayAdhan();
   }
 
   // التحقق وتشغيل الأذان إذا حان الوقت
   Future<void> _checkAndPlayAdhan() async {
     if (_currentPrayerTimes == null) {
-      debugPrint('❌ Prayer times not initialized');
+      // debugPrint('❌ Prayer times not initialized');
       return;
     }
 
     try {
       // التحقق من تسجيل الدخول
       final isLoggedIn = SharedPref.isUserAuthenticated();
-      debugPrint('🔑 User logged in: $isLoggedIn');
+      // debugPrint('🔑 User logged in: $isLoggedIn');
       if (!isLoggedIn) {
-        debugPrint('🚫 User not logged in, skipping adhan');
+        // debugPrint('🚫 User not logged in, skipping adhan');
         return;
       }
 
       // التحقق من حالة كتم الصوت
       final isMuted = await HiveService.isPrayerSoundMuted();
-      debugPrint('🔊 Sound muted: $isMuted');
+      // debugPrint('🔊 Sound muted: $isMuted');
       if (isMuted) {
-        debugPrint('🔇 Prayer sound is muted, skipping adhan');
+        // debugPrint('🔇 Prayer sound is muted, skipping adhan');
         return;
       }
 
       final now = DateTime.now();
-      debugPrint('🕐 Current time: ${now.hour}:${now.minute}:${now.second}');
+      // debugPrint('🕐 Current time: ${now.hour}:${now.minute}:${now.second}');
 
       final prayers = [
         {'prayer': Prayer.fajr, 'time': _currentPrayerTimes!.fajr},
@@ -87,8 +87,8 @@ class PrayerAudioService {
         // التحقق إذا كان الوقت الحالي بين وقت الصلاة و 5 دقائق بعدها
         final timeDiff = now.difference(prayerTime);
 
-        debugPrint(
-            '📋 Checking $prayerName: time=${prayerTime.hour}:${prayerTime.minute}, diff=${timeDiff.inSeconds}s');
+        // debugPrint(
+        //     '📋 Checking $prayerName: time=${prayerTime.hour}:${prayerTime.minute}, diff=${timeDiff.inSeconds}s');
 
         if (timeDiff.inSeconds >= 0 && timeDiff.inMinutes < 5) {
           // التحقق من أننا لم نشغل الأذان لهذه الصلاة مسبقاً
@@ -97,14 +97,14 @@ class PrayerAudioService {
           final alreadyPlayed = await HiveService.hasPlayedPrayer(playedKey);
 
           if (alreadyPlayed) {
-            debugPrint(
-                '⏭️ Already handled $prayerName at ${prayerTime.toIso8601String()}');
+            // debugPrint(
+            //     '⏭️ Already handled $prayerName at ${prayerTime.toIso8601String()}');
             break;
           }
 
           if (_lastPlayedTime == null ||
               _lastPlayedTime!.difference(prayerTime).abs().inMinutes > 10) {
-            debugPrint('✅ Time for $prayerName prayer! Playing adhan...');
+            // debugPrint('✅ Time for $prayerName prayer! Playing adhan...');
             await _notificationService.showAdhanNotification(prayerName);
             await _playAdhan();
             _lastPlayedTime = prayerTime;
@@ -112,25 +112,25 @@ class PrayerAudioService {
             await HiveService.markPrayerPlayed(playedKey);
             break;
           } else {
-            debugPrint('⏭️ Already played for this prayer time');
+            // debugPrint('⏭️ Already played for this prayer time');
           }
         }
       }
-      debugPrint('✓ Check completed');
+      // debugPrint('✓ Check completed');
     } catch (e) {
-      debugPrint('❌ Error checking prayer times: $e');
+      // debugPrint('❌ Error checking prayer times: $e');
     }
   }
 
   // تشغيل صوت الأذان
   Future<void> _playAdhan() async {
     try {
-      debugPrint('🎵 Starting adhan playback...');
+      // debugPrint('🎵 Starting adhan playback...');
       await _audioPlayer.stop();
       await _audioPlayer.setReleaseMode(ReleaseMode.stop);
       // start with low volume and fade in
       await _audioPlayer.setVolume(0.1);
-      debugPrint('🔊 Volume set to 10% (starting fade-in)');
+      // debugPrint('🔊 Volume set to 10% (starting fade-in)');
 
       // تشغيل ملف الصوت من assets
       try {
@@ -147,9 +147,9 @@ class PrayerAudioService {
         } catch (_) {}
       }
 
-      debugPrint('✅ Adhan started playing successfully (with fade-in)!');
+      // debugPrint('✅ Adhan started playing successfully (with fade-in)!');
     } catch (e) {
-      debugPrint('❌ Error playing adhan: $e');
+      // debugPrint('❌ Error playing adhan: $e');
     }
   }
 
@@ -157,9 +157,9 @@ class PrayerAudioService {
   Future<void> stopAdhan() async {
     try {
       await _audioPlayer.stop();
-      debugPrint('Adhan stopped');
+      // debugPrint('Adhan stopped');
     } catch (e) {
-      debugPrint('Error stopping adhan: $e');
+      // debugPrint('Error stopping adhan: $e');
     }
   }
 

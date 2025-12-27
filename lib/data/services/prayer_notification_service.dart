@@ -27,7 +27,7 @@ class PrayerNotificationService {
     );
 
     await _notificationsPlugin.initialize(settings);
-    debugPrint('🔔 Prayer notification service initialized');
+    // debugPrint('🔔 Prayer notification service initialized');
   }
 
   Future<void> showAdhanNotification(String prayerName) async {
@@ -62,6 +62,6 @@ class PrayerNotificationService {
       details,
     );
 
-    debugPrint('🔔 Adhan notification shown for $prayerName');
+    // debugPrint('🔔 Adhan notification shown for $prayerName');
   }
 }

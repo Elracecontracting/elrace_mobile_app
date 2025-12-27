@@ -52,12 +52,13 @@ class WidgetModel {
 
 List<WidgetModel> getAvailableWidgets() {
   return [
-    const WidgetModel(
-      id: 'time_sheet',
-      title: 'Time Sheet',
-      iconPath: 'assets/png/time_sheet.png',
-      backgroundPath: 'assets/png/time_sheet_bg.png',
-    ),
+    // Time Sheet widget hidden
+    // const WidgetModel(
+    //   id: 'time_sheet',
+    //   title: 'Time Sheet',
+    //   iconPath: 'assets/png/time_sheet.png',
+    //   backgroundPath: 'assets/png/time_sheet_bg.png',
+    // ),
     const WidgetModel(
       id: 'petty_cash',
       title: 'Petty Cash',
@@ -76,12 +77,13 @@ List<WidgetModel> getAvailableWidgets() {
       iconPath: 'assets/png/icons/doc_icon.png',
       backgroundPath: 'assets/png/gray_card.png',
     ),
-    const WidgetModel(
-      id: 'my_notes',
-      title: 'My Notes',
-      iconPath: 'assets/png/notes_icon.png',
-      backgroundPath: 'assets/png/blue_card.png',
-    ),
+    // My Notes widget hidden
+    // const WidgetModel(
+    //   id: 'my_notes',
+    //   title: 'My Notes',
+    //   iconPath: 'assets/png/notes_icon.png',
+    //   backgroundPath: 'assets/png/blue_card.png',
+    // ),
     const WidgetModel(
       id: 'todo_list',
       title: 'TO DO List',

@@ -25,11 +25,11 @@ class WidgetService {
 
   static Future<void> _initializeDefaultWidgets() async {
     final defaultWidgets = [
-      'time_sheet',
+      // 'time_sheet', // Hidden
       'petty_cash',
       'lpo',
       'documents',
-      'my_notes',
+      // 'my_notes', // Hidden
       'todo_list',
       'projects',
       'my_request',

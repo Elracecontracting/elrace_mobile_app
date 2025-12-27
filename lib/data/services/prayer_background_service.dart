@@ -17,7 +17,7 @@ const String rescheduleTaskName = 'reschedulePrayerTasks';
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
-    debugPrint('Background task started: $task');
+    // debugPrint('Background task started: $task');
 
     // if this is a reschedule task (unique name like reschedule-prayers-<day>)
     if (task.toString().startsWith('reschedule-prayers-')) {
@@ -25,7 +25,7 @@ void callbackDispatcher() {
         await PrayerBackgroundService.reschedule();
         return Future.value(true);
       } catch (e) {
-        debugPrint('Error rescheduling: $e');
+        // debugPrint('Error rescheduling: $e');
         return Future.value(false);
       }
     }
@@ -39,14 +39,14 @@ void callbackDispatcher() {
       // التحقق من تسجيل الدخول
       final isLoggedIn = await HiveService.isUserLoggedIn();
       if (!isLoggedIn) {
-        debugPrint('🚫 User not logged in, skipping adhan (background)');
+        // debugPrint('🚫 User not logged in, skipping adhan (background)');
         return Future.value(true);
       }
 
       // التحقق من حالة كتم الصوت
       final isMuted = await HiveService.isPrayerSoundMuted();
       if (isMuted) {
-        debugPrint('Prayer sound is muted, skipping adhan');
+        // debugPrint('Prayer sound is muted, skipping adhan');
         return Future.value(true);
       }
 
@@ -66,23 +66,23 @@ void callbackDispatcher() {
             final alreadyPlayed = await HiveService.hasPlayedPrayer(playedKey);
             if (!alreadyPlayed) {
               await _showAdhanNotificationInBackground(prayerName, ms);
-              debugPrint('Playing adhan at prayer time!');
+              // debugPrint('Playing adhan at prayer time!');
               await _playAdhanInBackground(prayerName, ms);
             } else {
-              debugPrint(
-                  '🔁 Prayer $prayerName at ${scheduledTime.toIso8601String()} already handled');
+              // debugPrint(
+              //     '🔁 Prayer $prayerName at ${scheduledTime.toIso8601String()} already handled');
             }
           } else {
-            debugPrint('Invalid prayer task format: $task');
+            // debugPrint('Invalid prayer task format: $task');
           }
         } catch (e) {
-          debugPrint('Error handling prayer task: $e');
+          // debugPrint('Error handling prayer task: $e');
         }
       }
 
       return Future.value(true);
     } catch (e) {
-      debugPrint('Error in background task: $e');
+      // debugPrint('Error in background task: $e');
       return Future.value(false);
     }
   });
@@ -124,12 +124,12 @@ Future<void> _showAdhanNotificationInBackground(
       details,
     );
 
-    debugPrint('🔔 Background notification shown');
+    // debugPrint('🔔 Background notification shown');
     // mark as played
     final playedKey = 'played_${prayerName}_$ms';
     await HiveService.markPrayerPlayed(playedKey);
   } catch (e) {
-    debugPrint('Error showing notification: $e');
+    // debugPrint('Error showing notification: $e');
   }
 }
 
@@ -145,7 +145,7 @@ Future<void> _playAdhanInBackground(String prayerName, int ms) async {
       await player.play(AssetSource('mp3/pray-call.mp3'));
     }
 
-    debugPrint('Background adhan started playing (fade-in)');
+    // debugPrint('Background adhan started playing (fade-in)');
 
     // Gradually increase volume to full over 3 seconds
     for (int i = 1; i <= 10; i++) {
@@ -163,7 +163,7 @@ Future<void> _playAdhanInBackground(String prayerName, int ms) async {
     final playedKey = 'played_${prayerName}_$ms';
     await HiveService.markPrayerPlayed(playedKey);
   } catch (e) {
-    debugPrint('Error playing adhan in background: $e');
+    // debugPrint('Error playing adhan in background: $e');
   }
 }
 
@@ -178,15 +178,15 @@ class PrayerBackgroundService {
     // جدولة المهام على أوقات الصلاة
     await _schedulePrayerTasks();
 
-    debugPrint('Prayer background service initialized');
+    // debugPrint('Prayer background service initialized');
   }
 
   static Future<void> _schedulePrayerTasks() async {
     try {
-      debugPrint('🔄 Scheduling prayer tasks...');
+      // debugPrint('🔄 Scheduling prayer tasks...');
       // إلغاء كل المهام القديمة
       await Workmanager().cancelAll();
-      debugPrint('🗑️ Cancelled all old tasks');
+      // debugPrint('🗑️ Cancelled all old tasks');
 
       // حساب أوقات الصلاة
       // Try to use device last-known location for accurate local Adhan times
@@ -205,7 +205,7 @@ class PrayerBackgroundService {
       final prayerTimes = PrayerTimes.today(coords, params);
 
       final now = DateTime.now();
-      debugPrint('🕐 Current time: ${now.hour}:${now.minute}:${now.second}');
+      // debugPrint('🕐 Current time: ${now.hour}:${now.minute}:${now.second}');
 
       final prayers = [
         {'name': 'fajr', 'time': prayerTimes.fajr},
@@ -238,11 +238,11 @@ class PrayerBackgroundService {
             ),
           );
 
-          debugPrint(
-              '✅ Scheduled $prayerName at ${prayerTime.hour}:${prayerTime.minute} (in ${delay.inMinutes}m ${delay.inSeconds % 60}s)');
+          // debugPrint(
+          //     '✅ Scheduled $prayerName at ${prayerTime.hour}:${prayerTime.minute} (in ${delay.inMinutes}m ${delay.inSeconds % 60}s)');
           taskId++;
         } else {
-          debugPrint('⏭️ Skipped $prayerName (already passed)');
+          // debugPrint('⏭️ Skipped $prayerName (already passed)');
         }
       }
 
@@ -259,9 +259,9 @@ class PrayerBackgroundService {
         ),
       );
 
-      debugPrint('Scheduled $taskId prayer tasks for today');
+      // debugPrint('Scheduled $taskId prayer tasks for today');
     } catch (e) {
-      debugPrint('Error scheduling prayer tasks: $e');
+      // debugPrint('Error scheduling prayer tasks: $e');
     }
   }
 
@@ -271,6 +271,6 @@ class PrayerBackgroundService {
 
   static Future<void> cancelAll() async {
     await Workmanager().cancelAll();
-    debugPrint('Prayer background service cancelled');
+    // debugPrint('Prayer background service cancelled');
   }
 }
