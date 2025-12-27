@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:adhan/adhan.dart';
-import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/data/services/prayer_audio_service.dart';
 import 'package:el_race/data/services/prayer_background_service.dart';
@@ -74,6 +73,13 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   Timer? _prayerTicker;
   final PrayerAudioService _audioService = PrayerAudioService();
 
+  // Aladhan API prayer times (more accurate)
+  DateTime? _aladhanFajr;
+  DateTime? _aladhanDhuhr;
+  DateTime? _aladhanAsr;
+  DateTime? _aladhanMaghrib;
+  DateTime? _aladhanIsha;
+
   @override
   Future<void> close() {
     _prayerTicker?.cancel();
@@ -127,33 +133,39 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     emit(const PrayerTimesLoading());
 
     try {
-      debugPrint('📡 Fetching prayer times from API...');
+      debugPrint('📡 Fetching prayer times from Aladhan API...');
 
-      // Get auth token
-      final token = SharedPref.getLoginData().result?.token;
-      debugPrint('🔑 Token: ${token != null ? "Available" : "NULL"}');
+      // Get location coordinates
+      Coordinates coords;
+      try {
+        final last = await Geolocator.getLastKnownPosition();
+        coords = last != null
+            ? Coordinates(last.latitude, last.longitude)
+            : Coordinates(25.2048, 55.2708); // Dubai default
+      } catch (_) {
+        coords = Coordinates(25.2048, 55.2708);
+      }
 
-      // جلب أوقات الصلاة من API
-      final response = await http.post(
-        Uri.parse('https://test.elrace.com/api/prayer_times'),
-        headers: {
-          'Content-Type': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          "jsonrpc": "2.0",
-          "params": {"country_code": "AE"}
-        }),
+      debugPrint('📍 Location: ${coords.latitude}, ${coords.longitude}');
+
+      // Get current date
+      final now = DateTime.now();
+      final timestamp = (now.millisecondsSinceEpoch / 1000).round();
+
+      // جلب أوقات الصلاة من Aladhan API
+      final response = await http.get(
+        Uri.parse(
+            'https://api.aladhan.com/v1/timings/$timestamp?latitude=${coords.latitude}&longitude=${coords.longitude}&method=5'),
       );
 
-      debugPrint('📡 API Response status: ${response.statusCode}');
+      debugPrint('📡 Aladhan API Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        debugPrint('📡 API Response data: $data');
+        debugPrint('📡 Aladhan API Response data: $data');
 
-        if (data['result']?['status'] == 'success') {
-          await _setPrayerTimesFromAPI(data['result']['data']);
+        if (data['code'] == 200 && data['data'] != null) {
+          await _setPrayerTimesFromAladhanAPI(data['data'], coords);
 
           debugPrint(
               '✅ Prayer times loaded - nextPrayer: $_nextPrayer, nextTime: $_nextPrayerTime');
@@ -178,7 +190,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         }
       }
 
-      throw Exception('Failed to fetch prayer times from API');
+      throw Exception('Failed to fetch prayer times from Aladhan API');
     } catch (e) {
       debugPrint('❌ Prayer times API failed: $e');
       // Fallback: استخدام الحساب المحلي
@@ -210,120 +222,77 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     }
   }
 
-  Future<void> _setPrayerTimesFromAPI(Map<String, dynamic> apiData) async {
-    final prayers = apiData['prayers'] as List?;
-    final nextPrayerData = apiData['next_prayer'] as Map<String, dynamic>?;
-    
-    debugPrint('🔍 API prayers data: $prayers');
-    debugPrint('🔍 API next_prayer: $nextPrayerData');
-    
-    // Build PrayerTimes using device last-known location when possible
-    try {
-      final last = await Geolocator.getLastKnownPosition();
-      final coords = last != null
-          ? Coordinates(last.latitude, last.longitude)
-          : Coordinates(25.2048, 55.2708);
+  Future<void> _setPrayerTimesFromAladhanAPI(
+      Map<String, dynamic> apiData, Coordinates coords) async {
+    final timings = apiData['timings'] as Map<String, dynamic>?;
 
-      final params = CalculationMethod.egyptian.getParameters()
-        ..madhab = Madhab.hanafi;
-      final dateComponents = DateComponents.from(DateTime.now());
+    debugPrint('🔍 Aladhan timings data: $timings');
 
-      _prayerTimes = PrayerTimes(coords, dateComponents, params);
-
-      // استخدام بيانات next_prayer من API إذا كانت متوفرة
-      if (nextPrayerData != null && nextPrayerData['title'] != null) {
-        final nextTitle = nextPrayerData['title'] as String;
-        _nextPrayer = _getPrayerFromTitle(nextTitle);
-        
-        // إيجاد وقت الصلاة التالية
-        if (_nextPrayer != null && _nextPrayer != Prayer.none) {
-          _nextPrayerTime = _prayerTimes!.timeForPrayer(_nextPrayer!);
-          
-          // التحقق من أن الوقت في المستقبل وليس الماضي
-          final now = DateTime.now();
-          if (_nextPrayerTime!.isBefore(now)) {
-            debugPrint('⚠️ API prayer time is in the past ($_nextPrayerTime), using tomorrow Fajr');
-            final tomorrow = now.add(const Duration(days: 1));
-            final tomorrowComponents = DateComponents.from(tomorrow);
-            final tomorrowPrayers = PrayerTimes(coords, tomorrowComponents, params);
-            _nextPrayer = Prayer.fajr;
-            _nextPrayerTime = tomorrowPrayers.fajr;
-          } else {
-            debugPrint('✅ Using API next prayer: $_nextPrayer at $_nextPrayerTime');
-          }
-        } else {
-          // إذا لم تكن هناك صلاة متبقية اليوم، استخدم فجر الغد
-          final tomorrow = DateTime.now().add(const Duration(days: 1));
-          final tomorrowComponents = DateComponents.from(tomorrow);
-          final tomorrowPrayers = PrayerTimes(coords, tomorrowComponents, params);
-          _nextPrayer = Prayer.fajr;
-          _nextPrayerTime = tomorrowPrayers.fajr;
-          debugPrint('✅ Using tomorrow Fajr: $_nextPrayerTime');
-        }
-      } else {
-        // Fallback: استخدام nextPrayer() المحلية
-        final next = _prayerTimes!.nextPrayer();
-        if (next != Prayer.none) {
-          _nextPrayer = next;
-          _nextPrayerTime = _prayerTimes!.timeForPrayer(next);
-          debugPrint('✅ Using local next prayer: $_nextPrayer at $_nextPrayerTime');
-        } else {
-          // إذا لم تكن هناك صلاة متبقية اليوم، استخدم فجر الغد
-          final tomorrow = DateTime.now().add(const Duration(days: 1));
-          final tomorrowComponents = DateComponents.from(tomorrow);
-          final tomorrowPrayers = PrayerTimes(coords, tomorrowComponents, params);
-          _nextPrayer = Prayer.fajr;
-          _nextPrayerTime = tomorrowPrayers.fajr;
-          debugPrint('✅ All prayers passed, using tomorrow Fajr: $_nextPrayerTime');
-        }
-      }
-    } catch (e) {
-      debugPrint('❌ Error in _setPrayerTimesFromAPI: $e');
-      // fallback to Dubai if location lookup fails
-      final coords = Coordinates(25.2048, 55.2708);
-      final params = CalculationMethod.egyptian.getParameters()
-        ..madhab = Madhab.hanafi;
-      final dateComponents = DateComponents.from(DateTime.now());
-      _prayerTimes = PrayerTimes(coords, dateComponents, params);
-      
-      final next = _prayerTimes!.nextPrayer();
-      if (next != Prayer.none) {
-        _nextPrayer = next;
-        _nextPrayerTime = _prayerTimes!.timeForPrayer(next);
-      } else {
-        // استخدام فجر الغد
-        final tomorrow = DateTime.now().add(const Duration(days: 1));
-        final tomorrowComponents = DateComponents.from(tomorrow);
-        final tomorrowPrayers = PrayerTimes(coords, tomorrowComponents, params);
-        _nextPrayer = Prayer.fajr;
-        _nextPrayerTime = tomorrowPrayers.fajr;
-      }
+    if (timings == null) {
+      throw Exception('No timings data from Aladhan API');
     }
+
+    // استخدام الأوقات من Aladhan API مباشرة (أدق من local calculation)
+    // بس نحتفظ بـ PrayerTimes object للـ UI
+    final params = CalculationMethod.egyptian.getParameters()
+      ..madhab = Madhab.hanafi;
+    final dateComponents = DateComponents.from(DateTime.now());
+    _prayerTimes = PrayerTimes(coords, dateComponents, params);
+
+    // Parse and store Aladhan prayer times
+    final now = DateTime.now();
+    _aladhanFajr = _parseAladhanTime(timings['Fajr']);
+    _aladhanDhuhr = _parseAladhanTime(timings['Dhuhr']);
+    _aladhanAsr = _parseAladhanTime(timings['Asr']);
+    _aladhanMaghrib = _parseAladhanTime(timings['Maghrib']);
+    _aladhanIsha = _parseAladhanTime(timings['Isha']);
+
+    debugPrint(
+        '🕐 Aladhan Times - Fajr: $_aladhanFajr, Dhuhr: $_aladhanDhuhr, Asr: $_aladhanAsr, Maghrib: $_aladhanMaghrib, Isha: $_aladhanIsha');
+    debugPrint('🕐 Current time: $now');
+
+    // إيجاد الصلاة التالية من أوقات Aladhan
+    if (now.isBefore(_aladhanFajr!)) {
+      _nextPrayer = Prayer.fajr;
+      _nextPrayerTime = _aladhanFajr;
+    } else if (now.isBefore(_aladhanDhuhr!)) {
+      _nextPrayer = Prayer.dhuhr;
+      _nextPrayerTime = _aladhanDhuhr;
+    } else if (now.isBefore(_aladhanAsr!)) {
+      _nextPrayer = Prayer.asr;
+      _nextPrayerTime = _aladhanAsr;
+    } else if (now.isBefore(_aladhanMaghrib!)) {
+      _nextPrayer = Prayer.maghrib;
+      _nextPrayerTime = _aladhanMaghrib;
+    } else if (now.isBefore(_aladhanIsha!)) {
+      _nextPrayer = Prayer.isha;
+      _nextPrayerTime = _aladhanIsha;
+    } else {
+      // إذا لم تكن هناك صلاة متبقية اليوم، استخدم فجر الغد
+      final tomorrow = now.add(const Duration(days: 1));
+      final tomorrowComponents = DateComponents.from(tomorrow);
+      final tomorrowPrayers = PrayerTimes(coords, tomorrowComponents, params);
+      _nextPrayer = Prayer.fajr;
+      _nextPrayerTime = tomorrowPrayers.fajr;
+      debugPrint('✅ All prayers passed, using tomorrow Fajr: $_nextPrayerTime');
+      return;
+    }
+
+    debugPrint('✅ Next prayer from Aladhan: $_nextPrayer at $_nextPrayerTime');
   }
 
-  // DateTime _parseTime(String timeStr) {
-  //   final parts = timeStr.split(':');
-  //   final hour = int.parse(parts[0]);
-  //   final minute = int.parse(parts[1]);
-  //   final now = DateTime.now();
-  //   return DateTime(now.year, now.month, now.day, hour, minute);
-  // }
+  DateTime _parseAladhanTime(String? timeStr) {
+    if (timeStr == null) throw Exception('Invalid time from Aladhan');
 
-  Prayer _getPrayerFromTitle(String title) {
-    switch (title.toLowerCase()) {
-      case 'fajr':
-        return Prayer.fajr;
-      case 'dhuhr':
-        return Prayer.dhuhr;
-      case 'asr':
-        return Prayer.asr;
-      case 'maghrib':
-        return Prayer.maghrib;
-      case 'isha':
-        return Prayer.isha;
-      default:
-        return Prayer.fajr;
-    }
+    // Aladhan returns time in format "HH:mm" (24-hour)
+    final parts = timeStr.split(':');
+    if (parts.length < 2) throw Exception('Invalid time format: $timeStr');
+
+    final hour = int.parse(parts[0]);
+    final minute = int.parse(parts[1]);
+
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day, hour, minute);
   }
 
   void _setPrayerTimesFor(Coordinates coords) {
@@ -356,8 +325,65 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   ) async {
     if (_prayerTimes == null) return;
 
-    final n = _prayerTimes!.nextPrayer();
-    final nt = _prayerTimes!.timeForPrayer(n);
+    final now = DateTime.now();
+    Prayer? n;
+    DateTime? nt;
+
+    // استخدام أوقات Aladhan إذا متوفرة
+    if (_aladhanFajr != null &&
+        _aladhanDhuhr != null &&
+        _aladhanAsr != null &&
+        _aladhanMaghrib != null &&
+        _aladhanIsha != null) {
+      // إيجاد الصلاة التالية من أوقات Aladhan
+      if (now.isBefore(_aladhanFajr!)) {
+        n = Prayer.fajr;
+        nt = _aladhanFajr;
+      } else if (now.isBefore(_aladhanDhuhr!)) {
+        n = Prayer.dhuhr;
+        nt = _aladhanDhuhr;
+      } else if (now.isBefore(_aladhanAsr!)) {
+        n = Prayer.asr;
+        nt = _aladhanAsr;
+      } else if (now.isBefore(_aladhanMaghrib!)) {
+        n = Prayer.maghrib;
+        nt = _aladhanMaghrib;
+      } else if (now.isBefore(_aladhanIsha!)) {
+        n = Prayer.isha;
+        nt = _aladhanIsha;
+      } else {
+        // كل الصلوات خلصت، استخدم فجر الغد
+        n = Prayer.none;
+      }
+    } else {
+      // Fallback to local calculation
+      n = _prayerTimes!.nextPrayer();
+      nt = _prayerTimes!.timeForPrayer(n);
+    }
+
+    // استخدم فجر الغد فقط إذا انتهت جميع صلوات اليوم (Prayer.none)
+    if (n == Prayer.none) {
+      try {
+        final last = await Geolocator.getLastKnownPosition();
+        final coords = last != null
+            ? Coordinates(last.latitude, last.longitude)
+            : Coordinates(25.2048, 55.2708);
+
+        final params = CalculationMethod.egyptian.getParameters()
+          ..madhab = Madhab.hanafi;
+
+        final tomorrow = now.add(const Duration(days: 1));
+        final tomorrowComponents = DateComponents.from(tomorrow);
+        final tomorrowPrayers = PrayerTimes(coords, tomorrowComponents, params);
+
+        n = Prayer.fajr;
+        nt = tomorrowPrayers.fajr;
+
+        debugPrint('⏭️ All prayers passed, using tomorrow Fajr: $nt');
+      } catch (e) {
+        debugPrint('❌ Error calculating tomorrow Fajr: $e');
+      }
+    }
 
     if (n != _nextPrayer || nt != _nextPrayerTime) {
       _nextPrayer = n;
