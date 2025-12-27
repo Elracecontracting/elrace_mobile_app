@@ -50,10 +50,10 @@ class _PrayerCountdownTimerState extends State<PrayerCountdownTimer> {
   }
 
   void _updateTime() {
-    debugPrint('🔄 Update Time - nextPrayerTime: ${widget.nextPrayerTime}');
+    // debugPrint('🔄 Update Time - nextPrayerTime: ${widget.nextPrayerTime}');
 
     if (widget.nextPrayerTime == null) {
-      debugPrint('⚠️ nextPrayerTime is NULL!');
+      // debugPrint('⚠️ nextPrayerTime is NULL!');
       if (mounted) {
         setState(() {
           _timeLeft = '--:--:--';

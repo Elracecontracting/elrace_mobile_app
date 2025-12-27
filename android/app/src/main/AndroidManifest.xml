@@ -50,6 +50,10 @@
             <meta-data
                 android:name="com.google.android.gms.ads.AD_ID_OPT_OUT"
                 android:value="true" />
+            
+            <!-- Deep linking disabled by default -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="false" />
+            
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
@@ -64,6 +68,14 @@
   <category android:name="android.intent.category.BROWSABLE" />
   <data android:scheme="elrace" android:host="callback" />
 </intent-filter>
+            
+            <!-- QR Code Deep Link Configuration -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="elrace.com" android:pathPrefix="/RCC4/Requirements/qrcodeapp" />
+            </intent-filter>
 
         </activity>
         <!-- Don't delete the meta-data below.

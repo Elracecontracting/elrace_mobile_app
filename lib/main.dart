@@ -13,6 +13,10 @@ import 'package:el_race/ui/presentation/qr_code/bloc/qr_code_bloc.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
 import 'package:el_race/ui/presentation/splash_screen/splash_screen.dart';
 import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
+import 'package:el_race/ui/presentation/qr_survey/providers/qr_survey_data_provider.dart';
+import 'package:el_race/ui/presentation/qr_survey/services/qr_survey_api_service.dart';
+import 'package:el_race/ui/presentation/qr_survey/screens/qr_code_wrapper.dart';
+import 'package:el_race/ui/presentation/qr_survey/screens/qr_survey_authenticated_screen.dart';
 import 'package:el_race/utils/di.dart';
 import 'package:el_race/utils/generated_routes.dart';
 import 'package:el_race/utils/orientation_helper.dart';
@@ -28,6 +32,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:app_links/app_links.dart';
 import 'core/services/app_config_service.dart';
 import 'firebase_service.dart';
 import 'report_module/data/provider/reports_provider.dart';
@@ -148,6 +153,10 @@ class MyApp extends StatelessWidget {
     final localizationDelegate = LocalizedApp.of(context).delegate;
     SizeConfig().init(context);
     OnGeneratedRoutes onGeneratedRoutes = OnGeneratedRoutes();
+
+    // Initialize deep linking
+    _initDeepLinking(context);
+
     return LocalizationProvider(
       state: LocalizationProvider.of(context).state,
       child: MultiProvider(
@@ -156,6 +165,7 @@ class MyApp extends StatelessWidget {
           ChangeNotifierProvider(create: (_) => ProfileBoxProvider()),
           ChangeNotifierProvider(create: (_) => ReportProvider()),
           ChangeNotifierProvider(create: (_) => TodoProvider()..initialize()),
+          ChangeNotifierProvider(create: (_) => QrSurveyDataProvider()),
         ],
         child: MultiBlocProvider(
           providers: [
@@ -243,3 +253,105 @@ class MyApp extends StatelessWidget {
 
 GlobalKey<NavigatorState> navKey = GlobalKey();
 final GlobalKey<OverlayState> appOverlayKey = GlobalKey<OverlayState>();
+
+// Deep Linking Handler
+void _initDeepLinking(BuildContext context) {
+  print(
+      '🚀 ==================== INITIALIZING DEEP LINKING ====================');
+  final appLinks = AppLinks();
+
+  // Handle incoming links - the app is already started
+  print('👂 Listening for incoming deep links...');
+  appLinks.uriLinkStream.listen((uri) {
+    print('🔗 Deep link received (stream): $uri');
+    _handleDeepLink(uri, context);
+  }, onError: (err) {
+    print('❌ Deep link stream error: $err');
+  });
+
+  // Handle initial link - the app was started via a link
+  print('🔍 Checking for initial deep link...');
+  appLinks.getInitialLink().then((uri) {
+    if (uri != null) {
+      print('🔗 Initial deep link found: $uri');
+      _handleDeepLink(uri, context);
+    } else {
+      print('ℹ️ No initial deep link found (app opened normally)');
+    }
+  });
+  print(
+      '🚀 ==================== DEEP LINKING INITIALIZED ====================');
+}
+
+void _handleDeepLink(Uri uri, BuildContext context) async {
+  print('🔗 ==================== DEEP LINK HANDLER ====================');
+  print('🔗 Received URI: $uri');
+  print('🔗 Host: ${uri.host}');
+  print('🔗 Path: ${uri.path}');
+  print('🔗 Query Parameters: ${uri.queryParameters}');
+
+  // Check if it's a QR code survey link
+  // Format: https://elrace.com/RCC4/Requirements/qrcodeapp
+  if (uri.host == 'elrace.com' &&
+      uri.path.contains('/RCC4/Requirements/qrcodeapp')) {
+    print('📱 QR Survey link detected!');
+    print('📱 Starting API call to fetch content...');
+
+    // Fetch content from API
+    try {
+      final content = await QrSurveyApiService().getContentAfterQrCodeScanned();
+      print(
+          '📦 API Response received: ${content != null ? "Success" : "Null"}');
+
+      if (content != null && context.mounted) {
+        print('📦 Content Data: $content');
+
+        // Store in provider
+        final provider =
+            Provider.of<QrSurveyDataProvider>(context, listen: false);
+        provider.setContentData(content);
+        print('✅ Content stored in provider');
+
+        // Check if user is logged in
+        print('🔐 Checking login status...');
+        final loginData = await SharedPref.getLoginData();
+        final token = loginData.result?.token;
+        final isLoggedIn = token != null && token.isNotEmpty;
+        print(
+            '🔐 Token: ${token != null ? "Found (${token.substring(0, 10)}...)" : "Not Found"}');
+        print('🔐 Is Logged In: $isLoggedIn');
+
+        // Navigate based on login status
+        if (isLoggedIn) {
+          // Logged in user - show with AppBar and BottomBar
+          print(
+              '✅ User logged in - showing authenticated screen with AppBar/BottomBar');
+          navKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (context) => const QrSurveyAuthenticatedScreen(),
+            ),
+          );
+        } else {
+          // Guest user - show without AppBar and BottomBar
+          print('👤 Guest user - showing guest screen (no AppBar/BottomBar)');
+          navKey.currentState?.push(
+            MaterialPageRoute(
+              builder: (context) => const QrCodeWrapper(),
+            ),
+          );
+        }
+        print(
+            '🔗 ==================== NAVIGATION COMPLETE ====================');
+      } else {
+        print('❌ Content is null or context not mounted');
+      }
+    } catch (e, stackTrace) {
+      print('❌ Error handling QR deep link: $e');
+      print('❌ Stack trace: $stackTrace');
+    }
+  } else {
+    print('⚠️ URI does not match expected pattern');
+    print('⚠️ Expected: https://elrace.com/RCC4/Requirements/qrcodeapp');
+  }
+  print('🔗 ==================== END DEEP LINK HANDLER ====================');
+}
