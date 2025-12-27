@@ -1,4 +1,8 @@
+
 plugins {
+
+
+
     id "com.android.application"
     // START: FlutterFire Configuration
     id 'com.google.gms.google-services'
@@ -26,7 +30,7 @@ if (keystorePropertiesFile.exists()) {
 
 def flutterVersionCode = localProperties.getProperty("flutter.versionCode")
 if (flutterVersionCode == null) {
-    flutterVersionCode = "2"
+    flutterVersionCodne = "2"
 }
 
 def flutterVersionName = localProperties.getProperty("flutter.versionName")

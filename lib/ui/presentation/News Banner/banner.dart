@@ -112,209 +112,214 @@ We extend our gratitude to our skilled team, trusted partners, and the community
               ],
             ),
           ),
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                      var item = sliderList[index];
-                      return Container(
-                        margin: EdgeInsets.only(bottom: 3.h),
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                var item = sliderList[index];
+                return Container(
+                  margin: EdgeInsets.only(bottom: 3.h),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    // borderRadius: BorderRadius.circular(14),
+                    // boxShadow: [
+                    //   BoxShadow(
+                    //     color: Colors.black.withOpacity(0.1),
+                    //     blurRadius: 6,
+                    //     offset: const Offset(0, 3),
+                    //   )
+                    // ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // 🔹 Title
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(5, 15, 0, 10),
                         decoration: const BoxDecoration(
-                          color: Colors.white,
-                          // borderRadius: BorderRadius.circular(14),
-                          // boxShadow: [
-                          //   BoxShadow(
-                          //     color: Colors.black.withOpacity(0.1),
-                          //     blurRadius: 6,
-                          //     offset: const Offset(0, 3),
-                          //   )
-                          // ],
+                          gradient: LinearGradient(
+                            colors: [
+                              Color(0xFFD6D6D6),
+                              Color(0xFFADB2BD),
+                            ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                          ),
+                          boxShadow: [
+                            // Inner shadow (inset)
+                            BoxShadow(
+                              color: Color.fromRGBO(0, 0, 0, 0.25),
+                              offset: Offset(0, 4),
+                              blurRadius: 4,
+                              spreadRadius: 0,
+                            ),
+                            // Outer shadow
+                            BoxShadow(
+                              color: Color.fromRGBO(0, 0, 0, 0.46),
+                              offset: Offset(0, 10),
+                              blurRadius: 9.6,
+                              spreadRadius: 0,
+                            ),
+                          ],
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // 🔹 Title
-                            Container(
-                              padding: const EdgeInsets.fromLTRB(5, 15, 0, 10),
-                              decoration: const BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: [
-                                    Color(0xFFD6D6D6),
-                                    Color(0xFFADB2BD),
-                                  ],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
+                            Center(
+                              child: Text(
+                                "${item['titles']}".toUpperCase(),
+                                style: GoogleFonts.koulen(
+                                  color: appFontColor,
+                                  fontWeight: FontWeight.w400,
+                                  fontSize: 24,
                                 ),
-                                boxShadow: [
-                                  // Inner shadow (inset)
-                                  BoxShadow(
-                                    color: Color.fromRGBO(0, 0, 0, 0.25),
-                                    offset: Offset(0, 4),
-                                    blurRadius: 4,
-                                    spreadRadius: 0,
-                                  ),
-                                  // Outer shadow
-                                  BoxShadow(
-                                    color: Color.fromRGBO(0, 0, 0, 0.46),
-                                    offset: Offset(0, 10),
-                                    blurRadius: 9.6,
-                                    spreadRadius: 0,
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Center(
-                                    child: Text(
-                                      "${item['titles']}".toUpperCase(),
-                                      style: GoogleFonts.koulen(
-                                        color: appFontColor,
-                                        fontWeight: FontWeight.w400,
-                                        fontSize: 24,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            // 🔹 Image
-                            Container(
-                              decoration: BoxDecoration(
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black
-                                        .withOpacity(0.4), // شادو خفيف
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4), // لتحت بس
-                                  ),
-                                ],
-                              ),
-                              child: ClipRRect(
-                                borderRadius: const BorderRadius.vertical(
-                                    bottom: Radius.circular(0)),
-                                child: Stack(
-                                  children: [
-                                    Image.asset(
-                                      "${item['image']}",
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: 200.w,
-                                    ),
-                                    Positioned.fill(
-                                      child: DecoratedBox(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topCenter,
-                                            end: Alignment.center,
-                                            colors: [
-                                              const Color.fromARGB(255, 0, 0, 0)
-                                                  .withOpacity(0.50),
-                                              Colors.transparent,
-                                            ],
-                                            stops: const [0.0, 0.6],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            // 🔹 Description
-                            Padding(
-                              padding: EdgeInsets.only(
-                                left: 40, // ← padding يسار 20
-                                right: 12.w,
-                                top: 10.h,
-                                bottom: 10.h,
-                              ),
-                              child: _buildExpandableDescription(
-                                context: context,
-                                fullText: "${item['des2']}",
-                                newsItem: item,
-                                onSeeAllTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) =>
-                                          NewsDetailScreen(newsItem: item),
-                                    ),
-                                  );
-                                },
                               ),
                             ),
                           ],
                         ),
-                      );
-                    },
-                    childCount: sliderList.length,
+                      ),
+
+                      // 🔹 Image
+                      Container(
+                        decoration: BoxDecoration(
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.4), // شادو خفيف
+                              blurRadius: 10,
+                              offset: const Offset(0, 4), // لتحت بس
+                            ),
+                          ],
+                        ),
+                        child: ClipRRect(
+                          borderRadius: const BorderRadius.vertical(
+                              bottom: Radius.circular(0)),
+                          child: Stack(
+                            children: [
+                              Image.asset(
+                                "${item['image']}",
+                                fit: BoxFit.cover,
+                                width: double.infinity,
+                                height: 200.w,
+                              ),
+                              Positioned.fill(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.center,
+                                      colors: [
+                                        const Color.fromARGB(255, 0, 0, 0)
+                                            .withOpacity(0.50),
+                                        Colors.transparent,
+                                      ],
+                                      stops: const [0.0, 0.6],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      // 🔹 Description
+                      Padding(
+                        padding: EdgeInsets.only(
+                          left: 40, // ← padding يسار 20
+                          right: 12.w,
+                          top: 10.h,
+                          bottom: 10.h,
+                        ),
+                        child: _buildExpandableDescription(
+                          context: context,
+                          fullText: "${item['des2']}",
+                          newsItem: item,
+                          onSeeAllTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    NewsDetailScreen(newsItem: item),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                );
+              },
+              childCount: sliderList.length,
             ),
-        );
-  required VoidCallback onSeeAllTap,
-}) {
-  // --- إعداد TextPainter لقص النص إلى سطرين ---
-  final span = TextSpan(
-    text: fullText,
-    style: GoogleFonts.inter(
-      fontSize: 14.sp,
-      color: Colors.black,
-    ),
-  );
-
-  final tp = TextPainter(
-    text: span,
-    maxLines: 2,
-    textDirection: TextDirection.ltr,
-  )..layout(maxWidth: MediaQuery.of(context).size.width - 40);
-
-  // إن كان النص أصلاً أقل من سطرين → أعرضه عادي + زر See All
-  final isOverflowing = tp.didExceedMaxLines;
-
-  // النص المقصوص
-  String clippedText = fullText;
-
-  if (isOverflowing) {
-    // قص النص بناءً على مكان الدخول في السطر الثاني
-    int endIndex = tp
-        .getPositionForOffset(
-          Offset(MediaQuery.of(context).size.width - 40, 40),
-        )
-        .offset;
-
-    // قص + نقاط
-    clippedText = fullText.substring(0, endIndex).trim();
-    if (!clippedText.endsWith("...")) {
-      clippedText = "$clippedText...";
-    }
+          ),
+        ],
+      ),
+    );
   }
 
-  // --- واجهة العرض ---
-  return RichText(
-    text: TextSpan(
+  Widget _buildExpandableDescription({
+    required BuildContext context,
+    required String fullText,
+    required Map newsItem,
+    required VoidCallback onSeeAllTap,
+  }) {
+    // --- إعداد TextPainter لقص النص إلى سطرين ---
+    final span = TextSpan(
+      text: fullText,
       style: GoogleFonts.inter(
         fontSize: 14.sp,
         color: Colors.black,
       ),
-      children: [
-        TextSpan(text: clippedText),
-        TextSpan(
-          text: "  See All",
-          style: GoogleFonts.inter(
-            color: const Color(0xFF868686),
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
-          recognizer: TapGestureRecognizer()..onTap = onSeeAllTap,
+    );
+
+    final tp = TextPainter(
+      text: span,
+      maxLines: 2,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: MediaQuery.of(context).size.width - 40);
+
+    // إن كان النص أصلاً أقل من سطرين → أعرضه عادي + زر See All
+    final isOverflowing = tp.didExceedMaxLines;
+
+    // النص المقصوص
+    String clippedText = fullText;
+
+    if (isOverflowing) {
+      // قص النص بناءً على مكان الدخول في السطر الثاني
+      int endIndex = tp
+          .getPositionForOffset(
+            Offset(MediaQuery.of(context).size.width - 40, 40),
+          )
+          .offset;
+
+      // قص + نقاط
+      clippedText = fullText.substring(0, endIndex).trim();
+      if (!clippedText.endsWith("...")) {
+        clippedText = "$clippedText...";
+      }
+    }
+
+    // --- واجهة العرض ---
+    return RichText(
+      text: TextSpan(
+        style: GoogleFonts.inter(
+          fontSize: 14.sp,
+          color: Colors.black,
         ),
-      ],
-    ),
-  );
-}
+        children: [
+          TextSpan(text: clippedText),
+          TextSpan(
+            text: "  See All",
+            style: GoogleFonts.inter(
+              color: const Color(0xFF868686),
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+            recognizer: TapGestureRecognizer()..onTap = onSeeAllTap,
+          ),
+        ],
+      ),
+    );
+  }
 
 // class NewsPage2 extends StatelessWidget {
 //   const NewsPage2({super.key});
@@ -485,3 +490,4 @@ We extend our gratitude to our skilled team, trusted partners, and the community
 //     );
 //   }
 // }
+}
