@@ -396,7 +396,7 @@ class _ContactTileState extends State<ContactTile> {
                       image: widget.image.isNotEmpty
                           ? DecorationImage(
                               image: NetworkImage(widget.image),
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain,
                             )
                           : null,
                       shape: BoxShape.circle,

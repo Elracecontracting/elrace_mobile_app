@@ -195,7 +195,7 @@ class LpoCardWidget extends StatelessWidget {
                       ? ClipOval(
                           child: Image.network(
                             clientPhoto!,
-                            fit: BoxFit.cover,
+                            fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) =>
                                 _buildInitialsAvatar(),
                           ),
@@ -284,7 +284,7 @@ class LpoCardWidget extends StatelessWidget {
                               requestedByUserPhoto!.isNotEmpty
                           ? Image.network(
                               requestedByUserPhoto!,
-                              fit: BoxFit.cover,
+                              fit: BoxFit.contain,
                               width: 40.w,
                               height: 40.w,
                               errorBuilder: (_, __, ___) => Icon(

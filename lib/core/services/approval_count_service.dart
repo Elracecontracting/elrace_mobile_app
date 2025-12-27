@@ -60,8 +60,20 @@ class ApprovalCountService {
         final result = jsonData['result'];
 
         if (result != null && result['data'] != null) {
-          final List<dynamic> data = result['data'];
-          return data.length;
+          // Map the category to the actual response key
+          const Map<String, String> responseKeys = {
+            "hr": "human_resources",
+            "rfq": "rfq",
+            "invoice": "invoices",
+            "petty_cash": "petty_cash",
+          };
+
+          final actualKey = responseKeys[category] ?? category;
+          final data = result['data'][actualKey];
+
+          if (data is List) {
+            return data.length;
+          }
         }
       }
       return 0;

@@ -175,7 +175,9 @@
     "client_details": "Client Details",
     "project_details": "Project Details",
     "max_words": "Max words",
-    "add_new_request": "Add a new request"
+    "add_new_request": "Add a new request",
+    "temp_permission_notice": "Please be aware that this request will remain in pending status until it receives approval from all departments.",
+    "request_submitted": "Request submitted successfully!"
   },
   "pettycash": {
     "received_message": "You have received 2,500 AED from accounts department transferred by Mohamed Jouda on 25/03/2025",

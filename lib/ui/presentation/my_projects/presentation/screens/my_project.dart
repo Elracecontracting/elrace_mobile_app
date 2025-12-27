@@ -342,7 +342,7 @@ Widget buildProjectCard({
             child: ClipOval(
               child: Image.network(
                 photoUrl,
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
                 errorBuilder: (_, __, ___) => Center(
                   child: Text(
                     name.isNotEmpty ? name[0] : 'C',
