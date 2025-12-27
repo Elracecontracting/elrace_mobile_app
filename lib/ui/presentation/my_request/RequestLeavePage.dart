@@ -132,6 +132,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
     try {
@@ -165,6 +166,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   void _showErrorDialog(String msg) {
     showDialog(
       context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (context) => AlertDialog(
         title: const Text("Submission Failed"),
         content: Text(msg),
@@ -212,12 +214,12 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
           // Main Content
           Container(
-            color: Colors.black,
+            color: Colors.transparent,
             child: Column(
               children: [
                 const SizedBox(height: 50),

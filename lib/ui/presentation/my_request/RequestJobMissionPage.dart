@@ -109,6 +109,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
+        barrierColor: Colors.black.withOpacity(0.5),
         builder: (_) => const Center(child: CircularProgressIndicator()),
       );
 
@@ -139,6 +140,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
   void _showErrorDialog(String msg) {
     showDialog(
       context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (context) => AlertDialog(
         title: Text(translate('request.submission_failed')),
         content: Text(msg),
@@ -199,11 +201,11 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
     String dateFormatted = formatDate(selectedDate);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
           Container(
-            color: Colors.black,
+            color: Colors.transparent,
             child: Column(
               children: [
                 const SizedBox(height: 50),

@@ -78,12 +78,12 @@ class _RequestPermissionState extends State<RequestPermission> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
           // Main content
           Container(
-            color: Colors.black, // Dark background
+            color: Colors.transparent, // Transparent background
             child: Column(
               children: [
                 const SizedBox(height: 60),
@@ -511,6 +511,7 @@ class _RequestPermissionState extends State<RequestPermission> {
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (ctx) => AlertDialog(
         title: Text(translate('common.error')),
         content: Text(message),

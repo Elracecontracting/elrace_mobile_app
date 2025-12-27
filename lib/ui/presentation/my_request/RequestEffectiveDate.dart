@@ -100,6 +100,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
     showDialog(
       context: context,
       barrierDismissible: false,
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
 
@@ -129,6 +130,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
   void _showErrorDialog(String message) {
     showDialog(
       context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (_) => AlertDialog(
         title: const Text("Error"),
         content: Text(message),
@@ -145,11 +147,11 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       body: Stack(
         children: [
           Container(
-            color: Colors.black,
+            color: Colors.transparent,
             child: Column(
               children: [
                 const SizedBox(height: 70),

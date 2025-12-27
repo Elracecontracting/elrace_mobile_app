@@ -134,10 +134,14 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
 
     showDialog(
       context: context,
+      barrierColor: Colors.black.withOpacity(0.5),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return Dialog(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              insetPadding: EdgeInsets.symmetric(horizontal: 20.w),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12)),
               child: Stack(
@@ -226,60 +230,56 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                               child: Column(
                                 children: List.generate(
                                   requestOptions.length,
-                                  (index) => Column(
-                                    children: [
-                                      GestureDetector(
-                                        onTap: () async {
-                                          setDialogState(() {
-                                            isDropdownOpen = false;
-                                            selectedRequestType =
-                                                requestOptions[index];
-                                          });
-                                          Navigator.pop(context);
+                                  (index) => GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () async {
+                                      setDialogState(() {
+                                        isDropdownOpen = false;
+                                        selectedRequestType =
+                                            requestOptions[index];
+                                      });
+                                      Navigator.pop(context);
 
-                                          if (requestOptions[index] ==
-                                              'Leave') {
-                                            Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                    builder: (_) =>
-                                                        RequestDetailsPage(
-                                                            loginResponseModel:
-                                                                SharedPref
-                                                                    .getLoginData())));
-                                          } else if (requestOptions[index] ==
-                                              'Temporary Permission') {
-                                            Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                    builder: (_) =>
-                                                        RequestPermission(
-                                                            loginResponseModel:
-                                                                SharedPref
-                                                                    .getLoginData())));
-                                          } else if (requestOptions[index] ==
-                                              'Effective Date') {
-                                            Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                    builder: (_) =>
-                                                        EffectiveDatePage(
-                                                            loginResponseModel:
-                                                                SharedPref
-                                                                    .getLoginData())));
-                                          } else if (requestOptions[index] ==
-                                              'Job Mission') {
-                                            Navigator.push(
-                                                context,
-                                                MaterialPageRoute(
-                                                    builder: (_) =>
-                                                        RequestJobMissionPage(
-                                                            loginResponseModel:
-                                                                SharedPref
-                                                                    .getLoginData())));
-                                          }
-                                        },
-                                        child: Container(
+                                      // Show as dialog instead of navigation
+                                      Widget? pageWidget;
+                                      if (requestOptions[index] == 'Leave') {
+                                        pageWidget = RequestDetailsPage(
+                                            loginResponseModel:
+                                                SharedPref.getLoginData());
+                                      } else if (requestOptions[index] ==
+                                          'Temporary Permission') {
+                                        pageWidget = RequestPermission(
+                                            loginResponseModel:
+                                                SharedPref.getLoginData());
+                                      } else if (requestOptions[index] ==
+                                          'Effective Date') {
+                                        pageWidget = EffectiveDatePage(
+                                            loginResponseModel:
+                                                SharedPref.getLoginData());
+                                      } else if (requestOptions[index] ==
+                                          'Job Mission') {
+                                        pageWidget = RequestJobMissionPage(
+                                            loginResponseModel:
+                                                SharedPref.getLoginData());
+                                      }
+
+                                      if (pageWidget != null) {
+                                        showDialog(
+                                          context: context,
+                                          barrierColor:
+                                              Colors.black.withOpacity(0.5),
+                                          builder: (context) => Dialog(
+                                            backgroundColor: Colors.transparent,
+                                            insetPadding: EdgeInsets.zero,
+                                            child: pageWidget,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    child: Column(
+                                      children: [
+                                        Container(
+                                          width: double.infinity,
                                           padding: EdgeInsets.symmetric(
                                               vertical: 14.h, horizontal: 18.w),
                                           alignment: Alignment.centerLeft,
@@ -292,14 +292,14 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                                             ),
                                           ),
                                         ),
-                                      ),
-                                      if (index != requestOptions.length - 1)
-                                        Divider(
-                                          height: 1,
-                                          thickness: 0.7,
-                                          color: Colors.grey.shade300,
-                                        ),
-                                    ],
+                                        if (index != requestOptions.length - 1)
+                                          Divider(
+                                            height: 1,
+                                            thickness: 0.7,
+                                            color: Colors.grey.shade300,
+                                          ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               ),
