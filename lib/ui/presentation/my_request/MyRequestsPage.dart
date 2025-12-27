@@ -409,7 +409,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         });
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+        padding: const EdgeInsets.symmetric(vertical: 2.0, horizontal: 8.0),
         child: SizedBox(
           height: 60.w,
           child: Stack(
@@ -638,7 +638,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Column(
                   children: [
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 5),
                     // Header Row
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -668,14 +668,14 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                           child: IconButton(
                             padding: EdgeInsets.zero,
                             constraints: const BoxConstraints(),
-                            icon:
-                                Icon(Icons.add, size: 28.sp, color: appFontColor),
+                            icon: Icon(Icons.add,
+                                size: 28.sp, color: appFontColor),
                             onPressed: _showRequestTypeDialog,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     // Centered rounded search field
                     Align(
                       alignment: Alignment.center,
@@ -689,7 +689,8 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                               color: const Color(0xFFD9D9D9), width: 1),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.grey.withAlpha((0.06 * 255).toInt()),
+                              color:
+                                  Colors.grey.withAlpha((0.06 * 255).toInt()),
                               blurRadius: 6,
                               spreadRadius: 0,
                             ),
@@ -712,13 +713,14 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                                   size: 20.sp, color: appFontColor),
                             ),
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(vertical: 14.h),
+                            contentPadding:
+                                EdgeInsets.symmetric(vertical: 14.h),
                           ),
                           onChanged: (query) {},
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 10),
                   ],
                 ),
               ),
@@ -730,10 +732,11 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
               SliverFillRemaining(child: Center(child: Text(error)))
             else
               SliverPadding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
-                    (context, index) => _buildRequestItem(requests[index], index),
+                    (context, index) =>
+                        _buildRequestItem(requests[index], index),
                     childCount: requests.length,
                   ),
                 ),

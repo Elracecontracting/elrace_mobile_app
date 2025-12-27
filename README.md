@@ -1,2 +1,0 @@
-# appdev
-elrace app development

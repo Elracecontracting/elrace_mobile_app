@@ -80,59 +80,44 @@ We extend our gratitude to our skilled team, trusted partners, and the community
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Colors.white,
-        appBar: const HeaderWidget(),
-        extendBody: true,
-        bottomNavigationBar: const CustomBottomNavBar(
-          isMain: false,
-        ),
-        body: Stack(
-          alignment: Alignment.bottomCenter,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: Colors.white,
+      appBar: const HeaderWidget(),
+      extendBody: true,
+      bottomNavigationBar: const CustomBottomNavBar(
+        isMain: false,
+      ),
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
               children: [
-                const SizedBox(height: 10),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back,
-                          size: 32,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      Row(
-                        children: [
-                          const SizedBox(width: 30),
-                          Image.asset('assets/png/news_logo.png'),
-                          const SizedBox(width: 8),
-                          Text(
-                            translate('home.news'),
-                            style: GoogleFonts.koulen(
-                                fontSize: 25,
-                                fontWeight: FontWeight.w400,
-                                color: appFontColor),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(width: 100),
-                    ],
-                  ),
+                const SizedBox(height: 5),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset('assets/png/news_logo.png',
+                        height: 20.h, width: 20.w),
+                    const SizedBox(width: 4),
+                    Text(
+                      translate('home.news'),
+                      style: GoogleFonts.koulen(
+                          fontSize: 20.sp,
+                          fontWeight: FontWeight.w400,
+                          color: appFontColor),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 10),
-                Expanded(
-                  child: ListView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    //  padding: EdgeInsets.symmetric(horizontal: 10.w),
-                    itemCount: sliderList.length,
-                    itemBuilder: (context, index) {
+                const SizedBox(height: 5),
+              ],
+            ),
+          ),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
                       var item = sliderList[index];
                       return Container(
-                        margin: EdgeInsets.only(bottom: 5.h),
+                        margin: EdgeInsets.only(bottom: 3.h),
                         decoration: const BoxDecoration(
                           color: Colors.white,
                           // borderRadius: BorderRadius.circular(14),
@@ -264,22 +249,12 @@ We extend our gratitude to our skilled team, trusted partners, and the community
                         ),
                       );
                     },
+                    childCount: sliderList.length,
                   ),
                 ),
               ],
             ),
-            // const ArraowVisibalityBottomNav(
-            //   bottomMargin: 105,
-            // ),
-          ],
-        ));
-  }
-}
-
-Widget _buildExpandableDescription({
-  required BuildContext context,
-  required String fullText,
-  required Map<String, dynamic> newsItem,
+        );
   required VoidCallback onSeeAllTap,
 }) {
   // --- إعداد TextPainter لقص النص إلى سطرين ---

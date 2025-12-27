@@ -164,7 +164,7 @@ class _AttendancePageState extends State<AttendancePage>
                 if (index == 0) {
                   return Column(
                     children: [
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 5),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -212,7 +212,7 @@ class _AttendancePageState extends State<AttendancePage>
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 8),
                     ],
                   );
                 }
@@ -268,10 +268,10 @@ class _AttendancePageState extends State<AttendancePage>
                 return Padding(
                   padding: EdgeInsets.only(
                     bottom:
-                        itemIndex < state.attendanceList.length - 1 ? 13 : 30,
+                        itemIndex < state.attendanceList.length - 1 ? 4 : 20,
                     left: itemIndex == 0 ? 0 : 0,
                     right: 0,
-                    top: itemIndex == 0 ? 10 : 0,
+                    top: itemIndex == 0 ? 0 : 0,
                   ),
                   child: GestureDetector(
                     onTap: () async {

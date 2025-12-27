@@ -104,24 +104,11 @@ class _HeaderWidgetState extends State<HeaderWidget> {
               top: SizeConfig().getHeight(40.w),
               start: SizeConfig().getWidth(10),
               //left: SizeConfig().getWidth(15),
-              child: GestureDetector(
-                onTap: () {
-                  bloc.isNotOpen = false;
-                  bloc.add(const ChangeCurrentIndex(index: 1));
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const HomeScreen(),
-                    ),
-                    (route) => true,
-                  );
-                },
-                child: Image.asset(
-                  'assets/gif/el-race-logo.gif',
-                  fit: BoxFit.cover,
-                  height: SizeConfig().getHeight(55),
-                  width: SizeConfig().getWidth(110),
-                ),
+              child: Image.asset(
+                'assets/gif/el-race-logo.gif',
+                fit: BoxFit.cover,
+                height: SizeConfig().getHeight(55),
+                width: SizeConfig().getWidth(110),
               ),
             ),
             SafeArea(

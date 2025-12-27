@@ -229,318 +229,288 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const HeaderWidget(),
       backgroundColor: Colors.white,
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              const BackIcon(),
-              if (!_showSearch)
-                Text(
-                  translate('home.documents'),
-                  style: GoogleFonts.koulen(
-                    fontSize: 26.sp,
-                    fontWeight: FontWeight.w600,
-                    color: appFontColor,
-                    letterSpacing: 1.5,
+      appBar: const HeaderWidget(),
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                const SizedBox(height: 5),
+                Center(
+                  child: Text(
+                    translate('home.documents'),
+                    style: GoogleFonts.koulen(
+                      fontSize: 26.sp,
+                      fontWeight: FontWeight.w600,
+                      color: appFontColor,
+                      letterSpacing: 1.5,
+                    ),
                   ),
-                )
-              else
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
-                  child: _buildInlineSearchField(),
                 ),
-              Positioned(
-                right: 16,
-                child: GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      _showSearch = !_showSearch;
-                      if (!_showSearch) {
-                        _searchController.clear();
-                        _query = '';
-                        // fetch all when closing search
-                        _fetchMyDocuments(keyword: '');
+                const SizedBox(height: 10),
+                SizedBox(
+                  height: 55.w,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.only(left: 10, right: 10),
+                    itemCount: notificationType.length,
+                    physics: const BouncingScrollPhysics(),
+                    scrollDirection: Axis.horizontal,
+                    itemBuilder: (context, index) {
+                      String notificationIcon = notificationType[index]['icon'];
+                      String notificationTitle =
+                          notificationType[index]['title'];
+
+                      // Select icon based on selection state
+                      String displayIcon;
+                      if (index == 0) {
+                        // My Documents tab
+                        displayIcon = index == currentIndex
+                            ? notificationIcon
+                            : 'assets/png/folder_unfocus.png';
+                      } else {
+                        // Family Documents tab
+                        displayIcon = index == currentIndex
+                            ? 'assets/png/family_focus.png'
+                            : notificationIcon;
                       }
-                    });
-                  },
-                  child: Image.asset('assets/png/search.png',
-                      width: 35.w, height: 35.w),
+
+                      return InkWell(
+                        onTap: () {
+                          setState(() => currentIndex = index);
+                          _fetchMyDocuments(); // Re-fetch with new family_only value
+                        },
+                        child: Container(
+                          alignment: Alignment.center,
+                          margin: const EdgeInsets.only(top: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          decoration: BoxDecoration(
+                            color: index == currentIndex
+                                ? appFontColor
+                                : greyText2,
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color:
+                                    Colors.black.withAlpha((0.1 * 255).toInt()),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                displayIcon,
+                                height: 25.w,
+                              ),
+                              const SizedBox(
+                                width: 5,
+                              ),
+                              Text(
+                                notificationTitle.toUpperCase(),
+                                style: GoogleFonts.koulen(
+                                  color: index == currentIndex
+                                      ? Colors.white
+                                      : const Color(0xFF1A237E),
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.7,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    separatorBuilder: (BuildContext context, int index) =>
+                        const SizedBox(
+                      width: 10,
+                    ),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                children: [
-                  SizedBox(
-                    height: 55.w,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.only(left: 10, right: 10),
-                      itemCount: notificationType.length,
-                      physics: const BouncingScrollPhysics(),
-                      scrollDirection: Axis.horizontal,
-                      itemBuilder: (context, index) {
-                        String notificationIcon =
-                            notificationType[index]['icon'];
-                        String notificationTitle =
-                            notificationType[index]['title'];
-
-                        // Select icon based on selection state
-                        String displayIcon;
-                        if (index == 0) {
-                          // My Documents tab
-                          displayIcon = index == currentIndex
-                              ? notificationIcon
-                              : 'assets/png/folder_unfocus.png';
-                        } else {
-                          // Family Documents tab
-                          displayIcon = index == currentIndex
-                              ? 'assets/png/family_focus.png'
-                              : notificationIcon;
-                        }
-
-                        return InkWell(
-                          onTap: () {
-                            setState(() => currentIndex = index);
-                            _fetchMyDocuments(); // Re-fetch with new family_only value
-                          },
-                          child: Container(
-                            alignment: Alignment.center,
-                            margin: const EdgeInsets.only(top: 6),
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            decoration: BoxDecoration(
-                              color: index == currentIndex
-                                  ? appFontColor
-                                  : greyText2,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black
-                                      .withAlpha((0.1 * 255).toInt()),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
+                // Row(
+                //   mainAxisAlignment: MainAxisAlignment.center,
+                //   children: List.generate(3, (dotIndex) {
+                //     return Container(
+                //       margin: const EdgeInsets.symmetric(horizontal: 4),
+                //       width: 8,
+                //       height: 8,
+                //       decoration: BoxDecoration(
+                //         shape: BoxShape.circle,
+                //         color: dotIndex == currentIndex ? Colors.black : Colors.grey[400],
+                //       ),
+                //     );
+                //   }),
+                // ),
+                SizedBox(height: 8.h),
+                Padding(
+                  padding: EdgeInsets.only(left: 20.w),
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(30.18),
+                        border: Border.all(
+                          color: const Color(0xffD9D9D9),
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 13.5.w,
+                              vertical: 8.5.h,
                             ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  displayIcon,
-                                  height: 25.w,
-                                ),
-                                const SizedBox(
-                                  width: 5,
-                                ),
-                                Text(
-                                  notificationTitle.toUpperCase(),
-                                  style: GoogleFonts.koulen(
-                                    color: index == currentIndex
-                                        ? Colors.white
-                                        : const Color(0xFF1A237E),
-                                    fontSize: 18.sp,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1.7,
-                                  ),
-                                ),
-                              ],
+                            child: Text(
+                              'total : ${_filteredDocs().length}',
+                              style: GoogleFonts.aBeeZee(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w400,
+                                fontStyle: FontStyle.italic,
+                                letterSpacing: .10,
+                                color: const Color(0xff949494),
+                              ),
                             ),
                           ),
-                        );
-                      },
-                      separatorBuilder: (BuildContext context, int index) =>
-                          const SizedBox(
-                        width: 10,
+                        ],
                       ),
                     ),
                   ),
-                  // Row(
-                  //   mainAxisAlignment: MainAxisAlignment.center,
-                  //   children: List.generate(3, (dotIndex) {
-                  //     return Container(
-                  //       margin: const EdgeInsets.symmetric(horizontal: 4),
-                  //       width: 8,
-                  //       height: 8,
-                  //       decoration: BoxDecoration(
-                  //         shape: BoxShape.circle,
-                  //         color: dotIndex == currentIndex ? Colors.black : Colors.grey[400],
-                  //       ),
-                  //     );
-                  //   }),
-                  // ),
-                  SizedBox(height: 20.h),
+                ),
+                SizedBox(height: 8.h),
+                if (_loading)
+                  const Padding(
+                    padding: EdgeInsets.all(40),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (_error != null)
                   Padding(
-                    padding: EdgeInsets.only(left: 20.w),
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(30.18),
-                          border: Border.all(
-                            color: const Color(0xffD9D9D9),
-                          ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 13.5.w,
-                                vertical: 8.5.h,
+                    padding: const EdgeInsets.all(16.0),
+                    child: Text(
+                      _error!,
+                      style: const TextStyle(color: Colors.red),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                else
+                  Center(
+                    child: GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: _filteredDocs().length +
+                          1, // +1 for Add New Document card
+                      itemBuilder: (context, index) {
+                        // First item is "Add New Document"
+                        if (index == 0) {
+                          return GestureDetector(
+                            onTap: () {
+                              showDocumentDialog(context);
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(30.18),
+                                border: Border.all(
+                                  color: const Color(0xffD9D9D9),
+                                ),
                               ),
-                              child: Text(
-                                'total : ${_filteredDocs().length}',
-                                style: GoogleFonts.aBeeZee(
-                                  fontSize: 11,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SvgPicture.asset('assets/png/add_doc.svg'),
+                                  SizedBox(height: 10.h),
+                                  Text(
+                                    'Add New Document',
+                                    style: GoogleFonts.aBeeZee(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w400,
+                                      fontStyle: FontStyle.italic,
+                                      letterSpacing: .10,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        // Regular document cards
+                        final item = _filteredDocs()[index - 1];
+
+                        // Check if document is expired
+                        bool isExpired = false;
+                        if (item['expiry_date'] != null &&
+                            item['expiry_date'] != false) {
+                          try {
+                            final expiryDate =
+                                DateTime.parse(item['expiry_date'].toString());
+                            isExpired = expiryDate.isBefore(DateTime.now());
+                          } catch (e) {
+                            // If parsing fails, not expired
+                            isExpired = false;
+                          }
+                        }
+
+                        return Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(30.18),
+                            border: Border.all(
+                              color: isExpired
+                                  ? const Color(0xFFBA1719)
+                                  : const Color(0xffD9D9D9),
+                              width: isExpired ? 2 : 1,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Image.asset(item['icon']),
+                              SizedBox(height: 8.h),
+                              Text(
+                                item['title'],
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.koulen(
+                                  fontSize: 11.35,
                                   fontWeight: FontWeight.w400,
-                                  fontStyle: FontStyle.italic,
                                   letterSpacing: .10,
                                   color: const Color(0xff949494),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                item['name'],
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.aBeeZee(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w400,
+                                  fontStyle: FontStyle.italic,
+                                  letterSpacing: .10,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
                       ),
                     ),
                   ),
-                  SizedBox(height: 15.h),
-                  if (_loading)
-                    const Padding(
-                      padding: EdgeInsets.all(40),
-                      child: Center(child: CircularProgressIndicator()),
-                    )
-                  else if (_error != null)
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        _error!,
-                        style: const TextStyle(color: Colors.red),
-                        textAlign: TextAlign.center,
-                      ),
-                    )
-                  else
-                    Center(
-                      child: GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: _filteredDocs().length +
-                            1, // +1 for Add New Document card
-                        itemBuilder: (context, index) {
-                          // First item is "Add New Document"
-                          if (index == 0) {
-                            return GestureDetector(
-                              onTap: () {
-                                showDocumentDialog(context);
-                              },
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(30.18),
-                                  border: Border.all(
-                                    color: const Color(0xffD9D9D9),
-                                  ),
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    SvgPicture.asset('assets/png/add_doc.svg'),
-                                    SizedBox(height: 10.h),
-                                    Text(
-                                      'Add New Document',
-                                      style: GoogleFonts.aBeeZee(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w400,
-                                        fontStyle: FontStyle.italic,
-                                        letterSpacing: .10,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }
-
-                          // Regular document cards
-                          final item = _filteredDocs()[index - 1];
-
-                          // Check if document is expired
-                          bool isExpired = false;
-                          if (item['expiry_date'] != null &&
-                              item['expiry_date'] != false) {
-                            try {
-                              final expiryDate = DateTime.parse(
-                                  item['expiry_date'].toString());
-                              isExpired = expiryDate.isBefore(DateTime.now());
-                            } catch (e) {
-                              // If parsing fails, not expired
-                              isExpired = false;
-                            }
-                          }
-
-                          return Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(30.18),
-                              border: Border.all(
-                                color: isExpired
-                                    ? const Color(0xFFBA1719)
-                                    : const Color(0xffD9D9D9),
-                                width: isExpired ? 2 : 1,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Image.asset(item['icon']),
-                                SizedBox(height: 8.h),
-                                Text(
-                                  item['title'],
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.koulen(
-                                    fontSize: 11.35,
-                                    fontWeight: FontWeight.w400,
-                                    letterSpacing: .10,
-                                    color: const Color(0xff949494),
-                                  ),
-                                ),
-                                SizedBox(height: 4.h),
-                                Text(
-                                  item['name'],
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.aBeeZee(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w400,
-                                    fontStyle: FontStyle.italic,
-                                    letterSpacing: .10,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 18,
-                          mainAxisSpacing: 30,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
+                SizedBox(height: 20.h),
+              ],
             ),
-          )
+          ),
         ],
       ),
     );

@@ -1934,7 +1934,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
 
                               return Padding(
                                 padding: const EdgeInsets.symmetric(
-                                    vertical: 4.0, horizontal: 12.0),
+                                    vertical: 2.0, horizontal: 12.0),
                                 child: _buildTransactionItem_2(
                                   state is String
                                       ? capitalize(state)

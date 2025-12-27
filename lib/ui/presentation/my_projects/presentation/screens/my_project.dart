@@ -196,7 +196,7 @@ class _MyProjectState extends State<MyProject> {
           SliverToBoxAdapter(
             child: Column(
               children: [
-                const SizedBox(height: 10),
+                const SizedBox(height: 5),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.w),
                   child: Row(
@@ -219,7 +219,7 @@ class _MyProjectState extends State<MyProject> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 5),
               ],
             ),
           ),
@@ -307,7 +307,7 @@ Widget buildProjectCard({
   required String amount,
 }) {
   return Container(
-    margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+    margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
     padding: const EdgeInsets.all(1),
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(22.r),
