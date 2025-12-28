@@ -1,5 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 
+import 'package:el_race/core/biometric/face_recognition/face_recognition_di.dart';
+import 'package:el_race/core/biometric/face_recognition/presentation/bloc/face_recognition_bloc.dart';
+import 'package:el_race/core/biometric/face_recognition/presentation/screens/face_registration_screen.dart';
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/location_bloc/location_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/main_home_content_widget.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/main_screens.dart';
@@ -7,6 +12,7 @@ import 'package:el_race/ui/presentation/home_screen/widgets/timer_controller.dar
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:get/get.dart';
 import 'package:location/location.dart';
@@ -52,7 +58,56 @@ class _HomeScreenState extends State<HomeScreenPage>
     // });
     _checkLocationService(); // Check location service on initialization
     _locationBloc.add(GetCurrentLocationET());
+    // Check if face registration is pending
+    _checkFaceRegistration();
     // List of pages or widgets that you want to display for each navigation ite
+  }
+
+  Future<void> _checkFaceRegistration() async {
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    if (!mounted) return;
+
+    final isPending =
+        SharedPref().getPreferenceBoolean('pendingFaceVerification');
+    final isRegistered = SharedPref().getPreferenceBoolean('isFaceRegistered');
+
+    if (isPending && !isRegistered) {
+      // Get userId from SharedPref
+      final loginDataStr = SharedPref().getPreferenceString('loginResponse');
+      if (loginDataStr.isNotEmpty) {
+        try {
+          final loginData = jsonDecode(loginDataStr);
+          final userId = (loginData['result']?['data']?['uid'] ??
+                  loginData['result']?['data']?['username'] ??
+                  'user_${DateTime.now().millisecondsSinceEpoch}')
+              .toString();
+
+          // Navigate to face registration with BLoC provider
+          final success = await Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => BlocProvider(
+                create: (_) => FaceRecognitionDI.get<FaceRecognitionBloc>(),
+                child: FaceRegistrationScreen(
+                  userId: userId,
+                  title: 'Register Your Face (Required)',
+                  subtitle: 'Face registration is required to use the app',
+                ),
+              ),
+            ),
+          );
+
+          if (success == true) {
+            // Mark as registered
+            SharedPref().setPreferencesBoolean('isFaceRegistered', true);
+            SharedPref()
+                .setPreferencesBoolean('pendingFaceVerification', false);
+          }
+        } catch (e) {
+          print('Error parsing login data: $e');
+        }
+      }
+    }
   }
 
   @override

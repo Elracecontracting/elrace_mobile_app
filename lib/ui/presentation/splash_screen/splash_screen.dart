@@ -33,8 +33,7 @@ class _SplashScreenState extends State<SplashScreen> {
             return;
           }
 
-          // User needs to register face - redirect to face registration
-          // This will be handled by InstructionView after login
+          // User needs to register face - go to home, it will be triggered from there
           Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
         } else {
           // User already registered or no pending verification

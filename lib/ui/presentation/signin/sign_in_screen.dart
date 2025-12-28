@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/ui/presentation/instruction/views/instruction_view.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -13,7 +12,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hexcolor/hexcolor.dart';
-import 'package:el_race/core/biometric/face_recognition_helper.dart';
+import 'package:el_race/core/biometric/face_recognition/face_recognition_di.dart';
+import 'package:el_race/core/biometric/face_recognition/data/services/face_embedding_storage_service.dart';
 
 import '../home_screen/screens/home_screen.dart';
 
@@ -44,16 +44,49 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
-  /// Proceed to app after successful face verification
-  void _proceedToApp(dynamic loginResponse) {
-    Util.fetchHomeScreenData(context);
+  // Register face and print embeddings
+  Future<void> _printEmbeddings(String userId) async {
+    // Wait a bit for registration to complete
+    await Future.delayed(const Duration(seconds: 2));
 
-    SharedPref().setPreferencesString(
-        'loginResponse', jsonEncode(loginResponse.toJson()));
-    SharedPref().setPreferencesBoolean('isRegistered', true);
+    try {
+      final storageService =
+          FaceRecognitionDI.get<FaceEmbeddingStorageService>();
+      final embeddings = await storageService.getEmbeddings(userId);
 
-    Util.pushPageAndRemoveRoutes(
-        InstructionView(loginResponseModel: loginResponse), context);
+      if (embeddings.isNotEmpty) {
+        final embedding = embeddings.first;
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('✅ FACE REGISTERED SUCCESSFULLY!');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('👤 User ID: $userId');
+        print('📅 Created At: ${embedding.createdAt}');
+        print('🏷️  Label: ${embedding.label ?? "primary"}');
+        print('📊 Embedding Dimensions: ${embedding.embedding.length}');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('🔢 FACE EMBEDDING VALUES:');
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+        // Print embeddings in groups of 8 for readability
+        for (int i = 0; i < embedding.embedding.length; i += 8) {
+          final end = (i + 8 < embedding.embedding.length)
+              ? i + 8
+              : embedding.embedding.length;
+          final group = embedding.embedding.sublist(i, end);
+          final formatted = group.map((v) => v.toStringAsFixed(6)).join(', ');
+          print('[$i-${end - 1}]: $formatted');
+        }
+
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        print('💾 Full JSON:');
+        print(jsonEncode(embedding.toJson()));
+        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+      } else {
+        print('⚠️ No embeddings found for user: $userId');
+      }
+    } catch (e) {
+      print('⚠️ Error printing embeddings: $e');
+    }
   }
 
   @override
@@ -89,89 +122,37 @@ class _SignInScreenState extends State<SignInScreen> {
               builder: (_) => const Center(child: CircularProgressIndicator()),
             );
           } else {
-            Navigator.of(context, rootNavigator: true).maybePop();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Navigator.of(context, rootNavigator: true).maybePop();
+            });
           }
         }
         if (state is InitialSignedInST) {
-          Navigator.of(context, rootNavigator: true).maybePop();
+          Util.fetchHomeScreenData(context);
 
-          // Get user ID for face verification
-          final userId = state.loginResponse.result?.data?.uid?.toString() ??
-              state.loginResponse.result?.data?.username ??
-              state.loginResponse.result?.data?.emp_id ??
-              'user_unknown';
+          SharedPref().setPreferencesString(
+              'loginResponse', jsonEncode(state.loginResponse.toJson()));
+          SharedPref().setPreferencesBoolean('isRegistered', true);
 
-          // Check if user has face registered
-          final hasFace = await FaceRecognitionHelper.hasFaceRegistered(userId);
+          // Set flag that face verification is pending after login
+          SharedPref().setPreferencesBoolean('pendingFaceVerification', true);
 
-          if (hasFace) {
-            // User has face registered - verify it
-            final faceVerified = await FaceRecognitionHelper.authenticate(
-              context: context,
-              userId: userId,
-              title: 'التحقق من الهوية',
-              subtitle: 'استخدم وجهك للتحقق من هويتك',
+          // Get user ID for printing embeddings later
+          final loginData = state.loginResponse;
+          final userId = loginData.result?.data?.uid?.toString() ??
+              loginData.result?.data?.username ??
+              'user_${DateTime.now().millisecondsSinceEpoch}';
+
+          // Navigate to HomeScreen - face registration will be triggered from splash screen
+          WidgetsBinding.instance.addPostFrameCallback((_) async {
+            // Navigate to home and trigger face registration
+            await Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const HomeScreen()),
             );
 
-            if (!faceVerified) {
-              // Face verification failed
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content:
-                      Text('فشل التحقق من الوجه. الرجاء المحاولة مرة أخرى.'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-              return;
-            }
-          } else {
-            // User doesn't have face registered - register now
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (context) => AlertDialog(
-                title: const Text('تسجيل الوجه'),
-                content: const Text(
-                  'لم يتم تسجيل وجهك بعد. هل تريد تسجيله الآن لتسهيل تسجيل الدخول مستقبلاً؟',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _proceedToApp(state.loginResponse);
-                    },
-                    child: const Text('لاحقاً'),
-                  ),
-                  ElevatedButton(
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      final registered =
-                          await FaceRecognitionHelper.registerFace(
-                        context,
-                        userId: userId,
-                      );
-
-                      if (registered) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('تم تسجيل وجهك بنجاح!'),
-                            backgroundColor: Colors.green,
-                          ),
-                        );
-                      }
-
-                      _proceedToApp(state.loginResponse);
-                    },
-                    child: const Text('تسجيل الآن'),
-                  ),
-                ],
-              ),
-            );
-            return;
-          }
-
-          // Face verification successful - proceed to app
-          _proceedToApp(state.loginResponse);
+            // After navigation, print embeddings if registered
+            _printEmbeddings(userId);
+          });
         }
       },
       buildWhen: (previous, current) =>
