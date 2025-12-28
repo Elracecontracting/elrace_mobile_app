@@ -23,6 +23,7 @@ import 'package:el_race/utils/orientation_helper.dart';
 import 'package:el_race/utils/screen_size_util.dart';
 import 'package:el_race/core/biometric/ios/face_id_helper.dart';
 import 'package:el_race/core/biometric/android/android_biometric_helper.dart';
+import 'package:el_race/core/biometric/face_recognition/face_recognition_di.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -94,6 +95,9 @@ void main() async {
   // Initialize platform-specific biometric authentication
   FaceIdHelper.initialize(); // iOS only
   AndroidBiometricHelper.initialize(); // Android only
+
+  // Initialize Face Recognition System
+  await FaceRecognitionDI.init();
 
   // Register background message handler قبل FirebaseService.initialize()
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);

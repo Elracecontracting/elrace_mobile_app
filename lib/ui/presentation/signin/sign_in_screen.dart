@@ -13,6 +13,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hexcolor/hexcolor.dart';
+import 'package:el_race/core/biometric/face_recognition_helper.dart';
 
 import '../home_screen/screens/home_screen.dart';
 
@@ -41,6 +42,18 @@ class _SignInScreenState extends State<SignInScreen> {
     passwordController.dispose();
 
     super.dispose();
+  }
+
+  /// Proceed to app after successful face verification
+  void _proceedToApp(dynamic loginResponse) {
+    Util.fetchHomeScreenData(context);
+
+    SharedPref().setPreferencesString(
+        'loginResponse', jsonEncode(loginResponse.toJson()));
+    SharedPref().setPreferencesBoolean('isRegistered', true);
+
+    Util.pushPageAndRemoveRoutes(
+        InstructionView(loginResponseModel: loginResponse), context);
   }
 
   @override
@@ -80,24 +93,85 @@ class _SignInScreenState extends State<SignInScreen> {
           }
         }
         if (state is InitialSignedInST) {
-          Util.fetchHomeScreenData(context);
+          Navigator.of(context, rootNavigator: true).maybePop();
 
-          SharedPref().setPreferencesString(
-              'loginResponse', jsonEncode(state.loginResponse.toJson()));
-          SharedPref().setPreferencesBoolean('isRegistered', true);
+          // Get user ID for face verification
+          final userId = state.loginResponse.result?.data?.uid?.toString() ??
+              state.loginResponse.result?.data?.username ??
+              state.loginResponse.result?.data?.emp_id ??
+              'user_unknown';
 
-          // Set flag that face verification is pending after login
-          SharedPref().setPreferencesBoolean('pendingFaceVerification', true);
+          // Check if user has face registered
+          final hasFace = await FaceRecognitionHelper.hasFaceRegistered(userId);
 
-          // final name = state.loginResponse.result?.data?.username?.toLowerCase() ?? "";
+          if (hasFace) {
+            // User has face registered - verify it
+            final faceVerified = await FaceRecognitionHelper.authenticate(
+              context: context,
+              userId: userId,
+              title: 'التحقق من الهوية',
+              subtitle: 'استخدم وجهك للتحقق من هويتك',
+            );
 
-          // if (name == "jawad@elrace.com" || name == "aziz@elrace.com") {
-          //   Util.pushPageAndRemoveRoutes(const SplashScreen(), context);
-          // } else {
-          Util.pushPageAndRemoveRoutes(
-              InstructionView(loginResponseModel: state.loginResponse),
-              context);
-          // }
+            if (!faceVerified) {
+              // Face verification failed
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content:
+                      Text('فشل التحقق من الوجه. الرجاء المحاولة مرة أخرى.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return;
+            }
+          } else {
+            // User doesn't have face registered - register now
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => AlertDialog(
+                title: const Text('تسجيل الوجه'),
+                content: const Text(
+                  'لم يتم تسجيل وجهك بعد. هل تريد تسجيله الآن لتسهيل تسجيل الدخول مستقبلاً؟',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      _proceedToApp(state.loginResponse);
+                    },
+                    child: const Text('لاحقاً'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () async {
+                      Navigator.pop(context);
+                      final registered =
+                          await FaceRecognitionHelper.registerFace(
+                        context,
+                        userId: userId,
+                      );
+
+                      if (registered) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('تم تسجيل وجهك بنجاح!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+
+                      _proceedToApp(state.loginResponse);
+                    },
+                    child: const Text('تسجيل الآن'),
+                  ),
+                ],
+              ),
+            );
+            return;
+          }
+
+          // Face verification successful - proceed to app
+          _proceedToApp(state.loginResponse);
         }
       },
       buildWhen: (previous, current) =>

@@ -103,8 +103,5 @@ dependencies {
     implementation("com.google.firebase:firebase-analytics")
     implementation 'com.google.firebase:firebase-crashlytics:18.3.2'
     implementation 'com.google.firebase:firebase-messaging:23.1.0'
-    implementation 'org.tensorflow:tensorflow-lite:2.12.0'
-    implementation 'org.tensorflow:tensorflow-lite-gpu:2.12.0'
-    implementation 'org.tensorflow:tensorflow-lite-support:0.4.4'
-    implementation 'org.tensorflow:tensorflow-lite-gpu-delegate-plugin:0.4.0'
+    // TensorFlow Lite dependencies removed - now handled by tflite_flutter plugin
 }

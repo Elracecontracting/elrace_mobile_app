@@ -26,6 +26,12 @@ class AuthResult {
   });
 }
 
+/// ⚠️ LEGACY SERVICE - Used for project selection dialogs only
+///
+/// For attendance (check-in/out), use UnifiedBiometricHelper instead.
+/// This service uses platform-specific biometrics (Face ID/Fingerprint)
+/// while attendance system uses Face Recognition with MobileFaceNet model.
+///
 /// Service to handle multiple authentication methods with fallback
 class AuthVerificationService {
   static final AuthVerificationService _instance =

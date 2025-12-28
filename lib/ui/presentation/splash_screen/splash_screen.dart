@@ -24,8 +24,8 @@ class _SplashScreenState extends State<SplashScreen> {
         final isFaceRegistered =
             SharedPref().getPreferenceBoolean('isFaceRegistered');
 
-        if (isPendingFaceVerification) {
-          // In Test Mode, skip any biometric flows
+        if (isPendingFaceVerification && !isFaceRegistered) {
+          // In Test Mode, skip face registration
           if (AppConfigService.instance.isTestMode) {
             SharedPref()
                 .setPreferencesBoolean('pendingFaceVerification', false);
@@ -33,10 +33,11 @@ class _SplashScreenState extends State<SplashScreen> {
             return;
           }
 
-          // Clear the pending face verification flag (old face recognition system removed)
-          SharedPref().setPreferencesBoolean('pendingFaceVerification', false);
+          // User needs to register face - redirect to face registration
+          // This will be handled by InstructionView after login
           Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
         } else {
+          // User already registered or no pending verification
           Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
         }
       } else {
