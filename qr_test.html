@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Generator - El Race</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #1E3A5F 0%, #2980b9 100%);
+            color: white;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 500px;
+        }
+        h1 {
+            color: #1E3A5F;
+            margin-bottom: 20px;
+        }
+        #qrcode {
+            margin: 30px auto;
+            padding: 20px;
+            background: white;
+            display: inline-block;
+            border: 2px solid #1E3A5F;
+            border-radius: 10px;
+        }
+        .url {
+            color: #666;
+            word-break: break-all;
+            margin: 20px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 5px;
+            font-family: monospace;
+        }
+        .instructions {
+            color: #666;
+            text-align: left;
+            margin-top: 20px;
+            line-height: 1.6;
+        }
+        .instructions li {
+            margin: 10px 0;
+        }
+        .btn {
+            display: inline-block;
+            margin: 10px;
+            padding: 12px 30px;
+            background: #1E3A5F;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 QR Code Test - El Race</h1>
+        
+        <div id="qrcode"></div>
+        
+        <div class="url">
+            https://elrace.com/RCC4/Requirements/qrcodeapp
+        </div>
+        
+        <div class="instructions">
+            <h3 style="color: #1E3A5F;">📱 Test Instructions:</h3>
+            <ol>
+                <li><strong>Android:</strong> امسح الـ QR code بالكاميرا أو أي QR scanner app</li>
+                <li><strong>iOS:</strong> امسح الـ QR code بالكاميرا (Camera app)</li>
+                <li><strong>Expected:</strong> يفتح التطبيق مباشرة أو يوجهك للـ store</li>
+            </ol>
+            
+            <h3 style="color: #1E3A5F;">🔧 Alternative Tests:</h3>
+            <ul>
+                <li>أرسل الرابط لنفسك في WhatsApp واضغط عليه</li>
+                <li>أرسل الرابط في SMS واضغط عليه</li>
+                <li>افتح الرابط في Safari (iOS) أو Chrome (Android)</li>
+            </ul>
+        </div>
+        
+        <a href="https://elrace.com/RCC4/Requirements/qrcodeapp" class="btn" target="_blank">
+            🔗 Test Link Directly
+        </a>
+    </div>
+
+    <!-- QR Code Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        // Generate QR Code
+        new QRCode(document.getElementById("qrcode"), {
+            text: "https://elrace.com/RCC4/Requirements/qrcodeapp",
+            width: 256,
+            height: 256,
+            colorDark : "#1E3A5F",
+            colorLight : "#ffffff",
+            correctLevel : QRCode.CorrectLevel.H
+        });
+    </script>
+</body>
+</html>
