@@ -409,110 +409,73 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     required bool isSelected,
     int count = 0,
   }) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: 90.w,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            // Shadow for depth
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha((0.08 * 255).toInt()),
-                blurRadius: 4,
-                spreadRadius: 2,
-                offset: const Offset(0, 0),
-              ),
-            ],
+    return Container(
+      width: 90.w,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        // Shadow for depth
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha((0.08 * 255).toInt()),
+            blurRadius: 4,
+            spreadRadius: 2,
+            offset: const Offset(0, 0),
           ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              // Solid/gradient based on selection
-              color: isSelected ? const Color(0xFF1A2540) : null,
-              gradient: isSelected
-                  ? null
-                  : const LinearGradient(
-                      colors: [Color(0xffD6D6D6), Color(0xffADB2BD)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-              // Glass border
-              border: Border.all(
-                color: isSelected
-                    ? Colors.white.withOpacity(0.03)
-                    : Colors.grey.withOpacity(0.03),
-                width: 1,
-              ),
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  icon,
-                  height: 30.w,
-                  width: 30.w,
+        ],
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          // Solid/gradient based on selection
+          color: isSelected ? const Color(0xFF1A2540) : null,
+          gradient: isSelected
+              ? null
+              : const LinearGradient(
+                  colors: [Color(0xffD6D6D6), Color(0xffADB2BD)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  title,
-                  style: GoogleFonts.koulen(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.bold,
-                    color: isSelected
-                        ? Colors.white
-                        : appFontColor, // White for active, blue for inactive
-                    letterSpacing: 1.0,
-                    shadows: isSelected
-                        ? [
-                            Shadow(
-                              color: Colors.black.withOpacity(0.03),
-                              offset: const Offset(0, 1),
-                              blurRadius: 2,
-                            ),
-                          ]
-                        : null,
-                  ),
-                ),
-              ],
-            ),
+          // Glass border
+          border: Border.all(
+            color: isSelected
+                ? Colors.white.withOpacity(0.03)
+                : Colors.grey.withOpacity(0.03),
+            width: 1,
           ),
         ),
-        // Badge for count
-        if (count > 0)
-          Positioned(
-            right: -5,
-            top: -5,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: red,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: Colors.white,
-                  width: 2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Text(
-                count > 99 ? '99+' : count.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset(
+              icon,
+              height: 30.w,
+              width: 30.w,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              title,
+              style: GoogleFonts.koulen(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.bold,
+                color: isSelected
+                    ? Colors.white
+                    : appFontColor, // White for active, blue for inactive
+                letterSpacing: 1.0,
+                shadows: isSelected
+                    ? [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.03),
+                          offset: const Offset(0, 1),
+                          blurRadius: 2,
+                        ),
+                      ]
+                    : null,
               ),
             ),
-          ),
-      ],
+          ],
+        ),
+      ),
     );
   }
 }

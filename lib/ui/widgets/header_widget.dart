@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:el_race/core/services/approval_count_service.dart';
+import 'package:el_race/core/services/approval_viewed_service.dart';
 import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
@@ -42,6 +43,20 @@ class _HeaderWidgetState extends State<HeaderWidget> {
     _loadUserData();
     _loadNotificationCount();
     _loadApprovalCount();
+
+    // Register callback to update approval count when items are viewed
+    ApprovalViewedService.setOnCountChangedCallback(() {
+      if (mounted) {
+        _loadApprovalCount();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    // Unregister callback
+    ApprovalViewedService.setOnCountChangedCallback(null);
+    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -60,11 +75,16 @@ class _HeaderWidgetState extends State<HeaderWidget> {
   }
 
   Future<void> _loadApprovalCount() async {
+    print('🔄 Loading approval count...');
     final count = await ApprovalCountService.getTotalApprovalCount();
+    print('   - Count received: $count');
     if (mounted) {
       setState(() {
         _approvalCount = count;
+        print('   - ✅ State updated with count: $count');
       });
+    } else {
+      print('   - ⚠️ Widget not mounted, cannot update state');
     }
   }
 
@@ -200,28 +220,29 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                                   fit: BoxFit.contain,
                                 ),
                               ),
-                              if (_approvalCount > 0)
-                                Positioned(
-                                  right: 0,
-                                  top: -5,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(3),
-                                    decoration: const BoxDecoration(
-                                      color: red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Text(
-                                      _approvalCount > 99
-                                          ? '99+'
-                                          : _approvalCount.toString(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                              // Badge temporarily hidden
+                              // if (_approvalCount > 0)
+                              //   Positioned(
+                              //     right: 0,
+                              //     top: -5,
+                              //     child: Container(
+                              //       padding: const EdgeInsets.all(3),
+                              //       decoration: const BoxDecoration(
+                              //         color: red,
+                              //         shape: BoxShape.circle,
+                              //       ),
+                              //       child: Text(
+                              //         _approvalCount > 99
+                              //             ? '99+'
+                              //             : _approvalCount.toString(),
+                              //         style: const TextStyle(
+                              //           color: Colors.white,
+                              //           fontSize: 10,
+                              //           fontWeight: FontWeight.bold,
+                              //         ),
+                              //       ),
+                              //     ),
+                              //   ),
                             ],
                           ),
                         ),

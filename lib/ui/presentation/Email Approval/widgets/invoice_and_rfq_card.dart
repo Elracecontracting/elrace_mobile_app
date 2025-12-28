@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:el_race/core/services/approval_viewed_service.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_card_type_two.dart';
 import 'package:flutter/material.dart';
@@ -46,16 +47,30 @@ class InvoiceAndRfqCard extends StatelessWidget {
               .replaceAll('true', '');
 
           return GestureDetector(
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (BuildContext context) {
-                  return ApprovalConfirmationScreen(
-                    requestId: id,
-                    type: type,
-                  );
-                },
+            onTap: () async {
+              // Mark item as viewed
+              print('🔵 Marking as viewed - Type: $type, ID: $id');
+              await ApprovalViewedService.markAsViewed(
+                type,
+                id,
               );
+
+              if (context.mounted) {
+                await showDialog(
+                  context: context,
+                  builder: (BuildContext context) {
+                    return ApprovalConfirmationScreen(
+                      requestId: id,
+                      type: type,
+                    );
+                  },
+                );
+                // Trigger a rebuild to update any badge counts
+                if (context.mounted) {
+                  // Force parent to reload by calling setState if available
+                  (context as Element).markNeedsBuild();
+                }
+              }
             },
             child: Container(
               height: 105.w,
