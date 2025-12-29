@@ -68,11 +68,20 @@ class _HomeScreenState extends State<HomeScreenPage>
 
     if (!mounted) return;
 
+    final isInProgress =
+        SharedPref().getPreferenceBoolean('isFaceRegistrationInProgress');
     final isPending =
         SharedPref().getPreferenceBoolean('pendingFaceVerification');
     final isRegistered = SharedPref().getPreferenceBoolean('isFaceRegistered');
 
-    if (isPending && !isRegistered) {
+    print('🔍 Face Registration Check:');
+    print('  - isInProgress: $isInProgress');
+    print('  - isPending: $isPending');
+    print('  - isRegistered: $isRegistered');
+
+    // If registration is in progress or pending and not yet registered
+    if (isInProgress || (isPending && !isRegistered)) {
+      print('✅ Opening face registration screen...');
       // Get userId from SharedPref
       final loginDataStr = SharedPref().getPreferenceString('loginResponse');
       if (loginDataStr.isNotEmpty) {
@@ -83,8 +92,13 @@ class _HomeScreenState extends State<HomeScreenPage>
                   'user_${DateTime.now().millisecondsSinceEpoch}')
               .toString();
 
+          // Set flag to indicate face registration is in progress
+          SharedPref()
+              .setPreferencesBoolean('isFaceRegistrationInProgress', true);
+
           // Navigate to face registration with BLoC provider
-          final success = await Navigator.of(context).push(
+          // Use regular push - WillPopScope in FaceRegistrationScreen will prevent going back
+          final success = await Navigator.of(context).push<bool>(
             MaterialPageRoute(
               builder: (context) => BlocProvider(
                 create: (_) => FaceRecognitionDI.get<FaceRecognitionBloc>(),
@@ -97,16 +111,25 @@ class _HomeScreenState extends State<HomeScreenPage>
             ),
           );
 
-          if (success == true) {
-            // Mark as registered
+          if (success == true && mounted) {
+            // Mark as registered and clear in-progress flag
             SharedPref().setPreferencesBoolean('isFaceRegistered', true);
             SharedPref()
                 .setPreferencesBoolean('pendingFaceVerification', false);
+            SharedPref()
+                .setPreferencesBoolean('isFaceRegistrationInProgress', false);
+
+            // Force rebuild to show home content
+            setState(() {});
           }
         } catch (e) {
-          print('Error parsing login data: $e');
+          print('❌ Error parsing login data: $e');
         }
+      } else {
+        print('⚠️ loginDataStr is empty!');
       }
+    } else {
+      print('⏭️ Skipping face registration (conditions not met)');
     }
   }
 
@@ -119,6 +142,9 @@ class _HomeScreenState extends State<HomeScreenPage>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      // Check face registration status when app resumes
+      _checkFaceRegistration();
+
       _checkLocationService(); // إعادة التحقق عند العودة
       _locationBloc.add(GetCurrentLocationET()); // إعادة جلب اللوكيشن
     }

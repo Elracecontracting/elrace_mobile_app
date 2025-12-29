@@ -65,10 +65,10 @@ class _PrayerCountdownTimerState extends State<PrayerCountdownTimer> {
     final now = DateTime.now();
     final diff = widget.nextPrayerTime!.difference(now);
 
-    debugPrint('⏱️ Time difference: ${diff.inSeconds} seconds');
+    // debugPrint('⏱️ Time difference: ${diff.inSeconds} seconds');
 
     if (diff.isNegative) {
-      debugPrint('⚠️ Time is negative!');
+      // debugPrint('⚠️ Time is negative!');
       if (mounted) {
         setState(() {
           _timeLeft = '00:00:00';
@@ -85,7 +85,7 @@ class _PrayerCountdownTimerState extends State<PrayerCountdownTimer> {
         '${minutes.toString().padLeft(2, '0')}:'
         '${seconds.toString().padLeft(2, '0')}';
 
-    debugPrint('✅ Time calculated: $timeString');
+    // debugPrint('✅ Time calculated: $timeString');
 
     if (mounted) {
       setState(() {

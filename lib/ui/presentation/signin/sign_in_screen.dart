@@ -134,8 +134,10 @@ class _SignInScreenState extends State<SignInScreen> {
               'loginResponse', jsonEncode(state.loginResponse.toJson()));
           SharedPref().setPreferencesBoolean('isRegistered', true);
 
-          // Set flag that face verification is pending after login
+          // Set flags that face verification is pending after login
           SharedPref().setPreferencesBoolean('pendingFaceVerification', true);
+          SharedPref()
+              .setPreferencesBoolean('isFaceRegistrationInProgress', false);
 
           // Get user ID for printing embeddings later
           final loginData = state.loginResponse;

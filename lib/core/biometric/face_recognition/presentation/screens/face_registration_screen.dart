@@ -27,11 +27,19 @@ class FaceRegistrationScreen extends StatefulWidget {
 class _FaceRegistrationScreenState extends State<FaceRegistrationScreen> {
   CameraController? _cameraController;
   bool _isProcessing = false;
+  bool _isMandatory = false; // Track if registration is mandatory
 
   @override
   void initState() {
     super.initState();
+    // Check if this is mandatory (after login) or optional (during swipe)
+    _checkIfMandatory();
     _initializeCamera();
+  }
+
+  Future<void> _checkIfMandatory() async {
+    // If title contains "Required", it's mandatory
+    _isMandatory = widget.title.contains('Required');
   }
 
   Future<void> _initializeCamera() async {
@@ -78,7 +86,12 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen> {
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        // Prevent back button - registration is mandatory
+        // Allow back button if not mandatory, prevent if mandatory
+        if (_isMandatory) {
+          return false;
+        }
+        // Return false (cancel) when closing
+        Navigator.of(context).pop(false);
         return false;
       },
       child: Scaffold(
@@ -108,29 +121,51 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen> {
             return SafeArea(
               child: Column(
                 children: [
-                  // Header
+                  // Header with close button
                   Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
+                    child: Row(
                       children: [
-                        Text(
-                          widget.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
+                        // Close button (only if not mandatory)
+                        if (!_isMandatory)
+                          IconButton(
+                            onPressed: () {
+                              Navigator.of(context).pop(false);
+                            },
+                            icon: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          )
+                        else
+                          const SizedBox(width: 48), // Spacer
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Text(
+                                widget.title,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                widget.subtitle,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 14,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.subtitle,
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
+                        const SizedBox(width: 48), // Balance the close button
                       ],
                     ),
                   ),

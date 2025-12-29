@@ -186,6 +186,10 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
       if (checkInRecordId != 0) {
         sl.get<CheckOutBloc>().add(CheckOutET(checkInRecordId));
         Get.find<TimerController>().stopTimer();
+        // Clear saved check-in project after successful check-out
+        SharedPref().removePreference('checkInProjectId');
+        SharedPref().removePreference('checkInBranchId');
+        SharedPref().removePreference('checkInAuthMethod');
       }
     }
 

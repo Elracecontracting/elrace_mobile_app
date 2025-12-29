@@ -42,7 +42,6 @@ void _handleCheckOutWithSavedProject({
 }) async {
   final savedProjectId = SharedPref().getPreferenceInt('checkInProjectId');
   final savedBranchId = SharedPref().getPreferenceInt('checkInBranchId');
-  final savedAuthMethod = SharedPref().getPreferenceString('checkInAuthMethod');
 
   // Check if we have a saved project or branch
   if (savedProjectId == 0 && savedBranchId == 0) {
@@ -76,56 +75,10 @@ void _handleCheckOutWithSavedProject({
     Navigator.pop(context); // Close loading dialog
 
     if (result['status'] != 'success') {
-      // Use the same authentication method as check-in
-      final authService = AuthVerificationService();
-      AuthResult? authResult;
-
-      if (savedAuthMethod == 'faceRecognition') {
-        // Must use face recognition
-        authResult = AuthResult(
-          success: false,
-          method: AuthMethod.faceRecognition,
-          message: 'use_face_recognition',
-        );
-      } else if (savedAuthMethod == 'fingerprint') {
-        // Must use fingerprint
-        authResult = await authService.authenticateWithFingerprint();
-      } else if (savedAuthMethod == 'password') {
-        // Must use PIN - show PIN dialog
-        authResult = await _showPinOnlyDialog(context, authService);
-      } else {
-        // Fallback: show all options
-        authResult = await authService.showAuthOptionsDialog(context);
-      }
-
-      if (authResult == null) {
-        // User cancelled authentication
-        onCancelled();
-        return;
-      }
-
-      if (authResult.success) {
-        // Biometric/PIN authentication successful
-        SharedPref().setPreferencesBoolean('wasCheckedInBeforeFaceAuth', true);
-        SharedPref().setPreferencesBoolean('authMethodUsed', true);
-        SharedPref()
-            .setPreferencesString('authMethodType', authResult.method.name);
-        // Clear saved project on check-out
-        _clearSavedCheckInProject();
-        onConfirmed();
-      } else if (authResult.method == AuthMethod.faceRecognition) {
-        // User chose face recognition - proceed with existing flow
-        SharedPref().setPreferencesBoolean('wasCheckedInBeforeFaceAuth', true);
-        // Clear saved project on check-out
-        _clearSavedCheckInProject();
-        onConfirmed();
-      } else {
-        // Authentication failed
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(authResult.message ?? 'فشل التحقق')),
-        );
-        onCancelled();
-      }
+      // Force face recognition only - no other options
+      // Set flag and proceed with face recognition
+      SharedPref().setPreferencesBoolean('wasCheckedInBeforeFaceAuth', true);
+      onConfirmed(); // This will trigger face verification in custom_swipe_button
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result['message'] ?? 'Validation failed.')),
@@ -493,52 +446,16 @@ void _showProjectSelectionDialog({
                                     );
 
                                     if (result['status'] != 'success') {
-                                      // Show authentication options dialog
-                                      final authService =
-                                          AuthVerificationService();
-                                      final authResult = await authService
-                                          .showAuthOptionsDialog(context);
-
-                                      if (authResult == null) {
-                                        // User cancelled authentication
-                                        setState(() => isSubmitting = false);
-                                        return;
-                                      }
-
-                                      if (authResult.success) {
-                                        // Biometric/PIN authentication successful
-                                        // Save selected project/branch and auth method for check-out
-                                        _saveSelectedProject(
-                                            selectedProject, selectedBranch,
-                                            authMethod: authResult.method.name);
-                                        Navigator.pop(context);
-                                        SharedPref().setPreferencesBoolean(
-                                            'wasCheckedInBeforeFaceAuth',
-                                            isCheckedIn);
-                                        // Skip face recognition and proceed directly
-                                        SharedPref().setPreferencesBoolean(
-                                            'authMethodUsed', true);
-                                        SharedPref().setPreferencesString(
-                                            'authMethodType',
-                                            authResult.method.name);
-                                        onConfirmed();
-                                      } else if (authResult.method ==
-                                          AuthMethod.faceRecognition) {
-                                        // User chose face recognition - proceed with existing flow
-                                        // Save selected project/branch and auth method for check-out
-                                        _saveSelectedProject(
-                                            selectedProject, selectedBranch,
-                                            authMethod: 'faceRecognition');
-                                        Navigator.pop(context);
-                                        SharedPref().setPreferencesBoolean(
-                                            'wasCheckedInBeforeFaceAuth',
-                                            isCheckedIn);
-                                        onConfirmed();
-                                      } else {
-                                        // Authentication failed
-                                        setState(() => errorMessage =
-                                            authResult.message ?? 'فشل التحقق');
-                                      }
+                                      // Force face recognition only - no other options
+                                      // Save selected project/branch with face recognition method
+                                      _saveSelectedProject(
+                                          selectedProject, selectedBranch,
+                                          authMethod: 'faceRecognition');
+                                      Navigator.pop(context);
+                                      SharedPref().setPreferencesBoolean(
+                                          'wasCheckedInBeforeFaceAuth',
+                                          isCheckedIn);
+                                      onConfirmed();
                                     } else {
                                       setState(() => errorMessage =
                                           result['message'] ??

@@ -18,17 +18,23 @@ class _SplashScreenState extends State<SplashScreen> {
     Future.delayed(const Duration(seconds: 6), () {
       Util.fetchHomeScreenData(context);
       if (SharedPref.isUserAuthenticated()) {
-        // Check if there's a pending face verification
+        // Check if face registration is in progress or pending
+        final isRegistrationInProgress =
+            SharedPref().getPreferenceBoolean('isFaceRegistrationInProgress');
         final isPendingFaceVerification =
             SharedPref().getPreferenceBoolean('pendingFaceVerification');
         final isFaceRegistered =
             SharedPref().getPreferenceBoolean('isFaceRegistered');
 
-        if (isPendingFaceVerification && !isFaceRegistered) {
+        // If registration was in progress, user must complete it
+        if (isRegistrationInProgress ||
+            (isPendingFaceVerification && !isFaceRegistered)) {
           // In Test Mode, skip face registration
           if (AppConfigService.instance.isTestMode) {
             SharedPref()
                 .setPreferencesBoolean('pendingFaceVerification', false);
+            SharedPref()
+                .setPreferencesBoolean('isFaceRegistrationInProgress', false);
             Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
             return;
           }

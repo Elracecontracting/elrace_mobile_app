@@ -88,11 +88,10 @@ class _FaceVerificationScreenState extends State<FaceVerificationScreen> {
               Navigator.of(context).pop(true);
             } else {
               setState(() => _isProcessing = false);
-              _showError(state.message);
+              // Show error but don't auto-retry, let user click Try Again
             }
           } else if (state is FaceRecognitionError) {
             setState(() => _isProcessing = false);
-            _showError(state.message);
           }
         },
         builder: (context, state) {
@@ -160,6 +159,35 @@ class _FaceVerificationScreenState extends State<FaceVerificationScreen> {
                         ),
                         textAlign: TextAlign.center,
                       ),
+                      // Try Again button on error or failed verification
+                      if ((state is FaceRecognitionError ||
+                              (state is FaceVerificationResult &&
+                                  !state.isVerified)) &&
+                          !_isProcessing) ...[
+                        const SizedBox(height: 24),
+                        ElevatedButton.icon(
+                          onPressed: _captureAndVerify,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text(
+                            'Try Again',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -191,6 +219,8 @@ class _FaceVerificationScreenState extends State<FaceVerificationScreen> {
       return 'Processing...';
     } else if (state is FaceRecognitionError) {
       return 'Error: ${state.message}';
+    } else if (state is FaceVerificationResult && !state.isVerified) {
+      return 'Verification Failed: ${state.message}';
     }
     return 'Position your face in the frame';
   }
