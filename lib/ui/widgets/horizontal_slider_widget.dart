@@ -223,7 +223,7 @@ class GradientSliderState extends State<GradientSliderWidget> {
       Map<String, dynamic> body = {"jsonrpc": "2.0", "params": {}};
 
       // URL
-      var url = Uri.parse("https://test.elrace.com/api/get_projects");
+      var url = Uri.parse("https://erp.elrace.com/api/get_projects");
 
       // Build the GET request
       final request = http.Request('GET', url)
@@ -616,7 +616,7 @@ class GradientSliderState extends State<GradientSliderWidget> {
     final loginResponse = widget.loginResponseModel;
     final token = loginResponse.result.token;
 
-    final url = Uri.parse("https://test.elrace.com/api/validate_user_location");
+    final url = Uri.parse("https://erp.elrace.com/api/validate_user_location");
 
     final headers = {
       'Content-Type': 'application/json',

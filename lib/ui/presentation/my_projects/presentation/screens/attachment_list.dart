@@ -270,7 +270,7 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
   void _downloadFile(String url, String fileName) async {
     try {
       // Complete URL
-      final fullUrl = 'https://test.elrace.com$url';
+      final fullUrl = 'https://erp.elrace.com$url';
 
       // Launch URL to download
       final Uri uri = Uri.parse(fullUrl);
@@ -465,7 +465,7 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog>
       final token = SharedPref.getLoginData().result?.token;
 
       final response = await http.post(
-        Uri.parse('https://test.elrace.com/api/upload_project_attachments'),
+        Uri.parse('https://erp.elrace.com/api/upload_project_attachments'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

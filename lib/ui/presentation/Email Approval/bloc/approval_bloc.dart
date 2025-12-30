@@ -19,7 +19,7 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
     required String action,
     required String? comment,
   }) async {
-    final url = Uri.parse('https://test.elrace.com/api/approve_reject_hr_request');
+    final url = Uri.parse('https://erp.elrace.com/api/approve_reject_hr_request');
     final headers = {
       "Content-Type": "application/json",
       "Accept": "application/json",

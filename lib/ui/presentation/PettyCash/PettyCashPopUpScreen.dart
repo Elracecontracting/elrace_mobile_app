@@ -388,7 +388,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
         "Authorization": "Bearer $token", // ✅ Use dynamic token
       };
 
-      final url = Uri.parse("https://test.elrace.com/api/draft_summary");
+      final url = Uri.parse("https://erp.elrace.com/api/draft_summary");
       final body = jsonEncode({
         "jsonrpc": "2.0",
         "params": {"last_limit": 6400, "last_limit_date": "2025-04-28"},
@@ -564,7 +564,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
 
       // Call API
       final response = await http.post(
-        Uri.parse("https://test.elrace.com/api/submit_expense"),
+        Uri.parse("https://erp.elrace.com/api/submit_expense"),
         headers: headers,
         body: body,
       );
@@ -716,7 +716,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
     String selectedExpenseType = 'EXPENSE TYPE';
     final List<String> expenseTypes = ['Petrol ', 'Hospitality ', 'Others'];
     String empID = '';
-    const String baseUrl = 'https://test.elrace.com/api/';
+    const String baseUrl = 'https://erp.elrace.com/api/';
     bool isSubmitting = false;
 
     // Overlay variables (moved to function scope to be accessible in WillPopScope and Cancel)
@@ -746,7 +746,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                 };
 
                 final url = Uri.parse(
-                    "https://test.elrace.com/api/get_petty_cash_records");
+                    "https://erp.elrace.com/api/get_petty_cash_records");
                 final body = jsonEncode({"jsonrpc": "2.0", "params": {}});
 
                 final request = http.Request('POST', url)

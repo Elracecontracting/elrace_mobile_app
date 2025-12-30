@@ -113,7 +113,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       "Authorization": "Bearer $token",
     };
 
-    final url = Uri.parse("https://test.elrace.com/api/my_approvals_grouped");
+    final url = Uri.parse("https://erp.elrace.com/api/my_approvals_grouped");
 
     final body = jsonEncode({
       "jsonrpc": "2.0",

@@ -27,7 +27,7 @@ class AttendanceRepo {
         "Authorization": "Bearer $token"
       };
 
-      var url = Uri.parse("https://test.elrace.com/attendance/filter-by-date");
+      var url = Uri.parse("https://erp.elrace.com/attendance/filter-by-date");
       final body = jsonEncode({
         "jsonrpc": "2.0",
         "params": {
@@ -81,7 +81,7 @@ class AttendanceRepo {
       });
 
       final response = await http.post(
-        Uri.parse("https://test.elrace.com/attendance/summary"),
+        Uri.parse("https://erp.elrace.com/attendance/summary"),
         headers: headers,
         body: body,
       );

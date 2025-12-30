@@ -65,7 +65,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
 
   Future<void> _submitEffectiveDateRequest() async {
     final token = SharedPref.getLoginData().result?.token;
-    final url = Uri.parse("https://test.elrace.com/api/submit_request");
+    final url = Uri.parse("https://erp.elrace.com/api/submit_request");
 
     final body = jsonEncode({
       "jsonrpc": "2.0",

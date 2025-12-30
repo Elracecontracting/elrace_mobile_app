@@ -301,7 +301,8 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
   // Drop duplicate events that arrive back-to-back for the same URI
   if (_lastHandledDeepLink == uri) {
     final now = DateTime.now();
-    if (_lastHandledAt != null && now.difference(_lastHandledAt!) <= _deepLinkDedupWindow) {
+    if (_lastHandledAt != null &&
+        now.difference(_lastHandledAt!) <= _deepLinkDedupWindow) {
       print('⏩ Skipping duplicate deep link within debounce window: $uri');
       return;
     }
@@ -318,7 +319,7 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
 
   // Check if it's a QR code survey link
   // Format: https://elrace.com/RCC4/Requirements/qrcodeapp
-    if (uri.host == 'elrace.com' &&
+  if (uri.host == 'elrace.com' &&
       uri.path.contains('/RCC4/Requirements/qrcodeapp')) {
     print('📱 QR Survey link detected!');
     print('📱 Starting API call to fetch content...');
@@ -334,8 +335,8 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
 
         // Store in provider
         final effectiveContext = navKey.currentContext ?? context;
-        final provider = Provider.of<QrSurveyDataProvider>(effectiveContext,
-          listen: false);
+        final provider =
+            Provider.of<QrSurveyDataProvider>(effectiveContext, listen: false);
         provider.setContentData(content);
         print('✅ Content stored in provider');
 
@@ -370,7 +371,8 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
         print(
             '🔗 ==================== NAVIGATION COMPLETE ====================');
       } else {
-        print('❌ Content is null or context not mounted - using guest fallback');
+        print(
+            '❌ Content is null or context not mounted - using guest fallback');
         final effectiveContext = navKey.currentContext ?? context;
         try {
           final provider = Provider.of<QrSurveyDataProvider>(effectiveContext,
@@ -391,11 +393,12 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
       // In case of error, still route to guest flow so user sees something
       final effectiveContext = navKey.currentContext ?? context;
       try {
-        final provider = Provider.of<QrSurveyDataProvider>(effectiveContext,
-            listen: false);
+        final provider =
+            Provider.of<QrSurveyDataProvider>(effectiveContext, listen: false);
         provider.clearData();
       } catch (_) {
-        print('⚠️ Provider<QrSurveyDataProvider> not found during error fallback');
+        print(
+            '⚠️ Provider<QrSurveyDataProvider> not found during error fallback');
       }
       navKey.currentState?.push(
         MaterialPageRoute(

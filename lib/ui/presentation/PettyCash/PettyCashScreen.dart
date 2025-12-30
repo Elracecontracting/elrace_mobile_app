@@ -49,7 +49,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
         "Authorization": "Bearer $token",
       };
 
-      final url = Uri.parse("https://test.elrace.com/api/draft_summary");
+      final url = Uri.parse("https://erp.elrace.com/api/draft_summary");
       final body = jsonEncode({
         "jsonrpc": "2.0",
         "params": {},
@@ -96,7 +96,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
         "Authorization": "Bearer $token",
       };
 
-      final url = Uri.parse("https://test.elrace.com/api/petty_cash_home");
+      final url = Uri.parse("https://erp.elrace.com/api/petty_cash_home");
       final body = jsonEncode({
         "jsonrpc": "2.0",
         "params": {

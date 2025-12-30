@@ -123,7 +123,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
 
     try {
       final response = await http.post(
-        Uri.parse("https://test.elrace.com/api/timesheet/submit"),
+        Uri.parse("https://erp.elrace.com/api/timesheet/submit"),
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
@@ -187,7 +187,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
         "params": {},
       });
 
-      final url = Uri.parse("https://test.elrace.com/api/employee/listx");
+      final url = Uri.parse("https://erp.elrace.com/api/employee/listx");
 
       final request = http.Request('GET', url)
         ..headers.addAll(headers)

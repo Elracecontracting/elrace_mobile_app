@@ -33,7 +33,7 @@ class _EmptyShiftPageState extends State<EmptyShiftPage> {
   }
 
   Future<void> fetchTimesheets() async {
-    final url = Uri.parse("https://test.elrace.com/api/task/timesheets/list");
+    final url = Uri.parse("https://erp.elrace.com/api/task/timesheets/list");
 
     final body = {
       "jsonrpc": "2.0",

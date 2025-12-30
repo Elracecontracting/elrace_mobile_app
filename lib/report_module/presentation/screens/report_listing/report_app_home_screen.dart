@@ -36,7 +36,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
 
   getData() async {
     await CompanyRepository().getCompany(); // ✅ Ensure company is set
-    ReportProvider().init(base: "https://test.elrace.com");
+    ReportProvider().init(base: "https://erp.elrace.com");
     isLoading = true;
     setState(() {});
     await reportProvider.fetchAllFolders();

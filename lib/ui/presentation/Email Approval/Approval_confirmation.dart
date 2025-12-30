@@ -65,13 +65,13 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
     String getApiUrl(String type) {
       switch (type.toUpperCase()) {
         case 'HR':
-          return "https://test.elrace.com/api/get_hr_request_details";
+          return "https://erp.elrace.com/api/get_hr_request_details";
         case 'RFQ':
-          return "https://test.elrace.com/api/get_rfq_details";
+          return "https://erp.elrace.com/api/get_rfq_details";
         case 'INVOICE':
-          return "https://test.elrace.com/api/get_invoice_details";
+          return "https://erp.elrace.com/api/get_invoice_details";
         case 'PETTYCASH':
-          return "https://test.elrace.com/api/get_petty_cash_details";
+          return "https://erp.elrace.com/api/get_petty_cash_details";
         default:
           throw Exception("Invalid request type: ${widget.type}");
       }
@@ -664,7 +664,7 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
       final response = await Dio().fetch(
         RequestOptions(
           method: 'GET',
-          path: 'https://test.elrace.com/api/get_attachment_details',
+          path: 'https://erp.elrace.com/api/get_attachment_details',
           headers: headers,
           data: data,
           responseType: ResponseType.json,

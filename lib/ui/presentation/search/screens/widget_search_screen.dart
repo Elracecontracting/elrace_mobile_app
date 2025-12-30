@@ -179,7 +179,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
 
   Future<List<SearchResultItem>> _searchPettyCash(
       Map<String, String> headers, String query) async {
-    final url = Uri.parse('https://test.elrace.com/api/get_expenses');
+    final url = Uri.parse('https://erp.elrace.com/api/get_expenses');
     final body = jsonEncode({
       'jsonrpc': '2.0',
       'params': {'keyword': query},
@@ -207,7 +207,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
 
   Future<List<SearchResultItem>> _searchLpo(
       Map<String, String> headers, String query) async {
-    final url = Uri.parse('https://test.elrace.com/api/get_lpos');
+    final url = Uri.parse('https://erp.elrace.com/api/get_lpos');
     final body = jsonEncode({
       'jsonrpc': '2.0',
       'params': {'keyword': query},
@@ -235,7 +235,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
 
   Future<List<SearchResultItem>> _searchDocuments(
       Map<String, String> headers, String query) async {
-    final url = Uri.parse('https://test.elrace.com/api/get_employee_documents');
+    final url = Uri.parse('https://erp.elrace.com/api/get_employee_documents');
     final body = jsonEncode({
       'jsonrpc': '2.0',
       'params': {'keyword': query},
@@ -262,7 +262,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
 
   Future<List<SearchResultItem>> _searchNotes(
       Map<String, String> headers, String query) async {
-    final url = Uri.parse('https://test.elrace.com/api/get_notes');
+    final url = Uri.parse('https://erp.elrace.com/api/get_notes');
     final body = jsonEncode({
       'jsonrpc': '2.0',
       'params': {'keyword': query},
@@ -289,7 +289,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
 
   Future<List<SearchResultItem>> _searchTodoList(
       Map<String, String> headers, String query) async {
-    final url = Uri.parse('https://test.elrace.com/api/get_todos');
+    final url = Uri.parse('https://erp.elrace.com/api/get_todos');
     final body = jsonEncode({
       'jsonrpc': '2.0',
       'params': {'keyword': query},
@@ -317,7 +317,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
 
   Future<List<SearchResultItem>> _searchProjects(
       Map<String, String> headers, String query) async {
-    final url = Uri.parse('https://test.elrace.com/api/get_projects');
+    final url = Uri.parse('https://erp.elrace.com/api/get_projects');
     final body = jsonEncode({
       'jsonrpc': '2.0',
       'params': {'keyword': query},

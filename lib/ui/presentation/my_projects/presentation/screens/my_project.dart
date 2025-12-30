@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
-import 'package:el_race/core/utils/shared_pref.dart';
+
 import 'package:el_race/ui/presentation/my_projects/data/datasources/project_remote_datasource.dart';
+import 'package:el_race/ui/presentation/my_projects/data/models/user_project_model.dart';
+import 'package:el_race/ui/presentation/my_projects/data/models/user_projects_response.dart';
 import 'package:el_race/ui/presentation/my_projects/data/repositories/project_repository_impl.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_by_partner_usecase.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_usecase.dart';
@@ -14,8 +15,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
-import 'package:intl/intl.dart';
 
 class MarqueeText extends StatefulWidget {
   final String text;
@@ -128,60 +127,36 @@ class MyProject extends StatefulWidget {
 class _MyProjectState extends State<MyProject> {
   bool _isLoading = false;
   String? _error;
-  List<Map<String, dynamic>> _clients = [];
+  int? _employeeId;
+  List<UserProjectModel> _projects = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchClients();
+    _fetchUserProjects();
   }
 
-  Future<void> _fetchClients() async {
+  Future<void> _fetchUserProjects() async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final token = SharedPref.getLoginData().result?.token ?? '';
-      final url = Uri.parse('https://test.elrace.com/api/clients/list');
+      final UserProjectsResponse response =
+          await ProjectRemoteDataSource().fetchUserProjects();
 
-      final request = http.Request("GET", url);
-      request.headers.addAll({
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $token',
+      setState(() {
+        _employeeId = response.employeeId;
+        _projects = response.projects;
+        _isLoading = false;
       });
-
-      request.body = jsonEncode({"jsonrpc": "2.0", "params": {}});
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 && data['result'] != null) {
-        setState(() {
-          _clients = List<Map<String, dynamic>>.from(data['result']['data']);
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _error = data['error']?.toString() ?? 'Failed to load clients';
-          _isLoading = false;
-        });
-      }
     } catch (e) {
       setState(() {
         _error = e.toString();
         _isLoading = false;
       });
     }
-  }
-
-  String _formatAmount(double amount) {
-    final formatter = NumberFormat('#,##0', 'en');
-    return formatter.format(amount);
   }
 
   @override
@@ -236,60 +211,66 @@ class _MyProjectState extends State<MyProject> {
                             style: const TextStyle(color: Colors.red)),
                       ),
                     )
-                  : SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final c = _clients[index];
+                  : _projects.isEmpty
+                      ? const SliverFillRemaining(
+                          child: Center(
+                            child: Text('No projects found'),
+                          ),
+                        )
+                      : SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final project = _projects[index];
 
-                          final id = c['id'] ?? 0;
-                          final name = c['name'] ?? '';
-                          final totalProjects = c['total_projects'] ?? 0;
-                          final totalAmount =
-                              (c['total_projects_amount'] ?? 0).toDouble();
-                          final photo = c['photo_url'] ?? '';
+                              final id = project.projectId;
+                              final name = project.projectName;
 
-                          return GestureDetector(
-                            onTap: () {
-                              final repo = ProjectRepositoryImpl(
-                                  ProjectRemoteDataSource());
-                              final bloc = ProjectListBloc(
-                                getProjectsUseCase: GetProjectsUseCase(
-                                  repository: repo,
-                                ),
-                                getProjectAttachmentsUseCase:
-                                    GetProjectAttachmentsUseCase(
-                                        repository: repo),
-                                getProjectsByPartnerUseCase:
-                                    GetProjectsByPartnerUseCase(
-                                        repository: repo),
-                              );
-
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => BlocProvider.value(
-                                    value: bloc,
-                                    child: ProjectListScreen(
-                                      bloc: bloc,
-                                      partnerId: id,
-                                      partnerName: name,
-                                      partnerPhoto: photo,
+                              return GestureDetector(
+                                onTap: () {
+                                  final repo = ProjectRepositoryImpl(
+                                      ProjectRemoteDataSource());
+                                  final bloc = ProjectListBloc(
+                                    getProjectsUseCase: GetProjectsUseCase(
+                                      repository: repo,
                                     ),
-                                  ),
+                                    getProjectAttachmentsUseCase:
+                                        GetProjectAttachmentsUseCase(
+                                            repository: repo),
+                                    getProjectsByPartnerUseCase:
+                                        GetProjectsByPartnerUseCase(
+                                            repository: repo),
+                                  );
+
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => BlocProvider.value(
+                                        value: bloc,
+                                        child: ProjectListScreen(
+                                          bloc: bloc,
+                                          partnerId: id,
+                                          partnerName: name,
+                                          partnerPhoto: '',
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: buildProjectCard(
+                                  name: name,
+                                  photoUrl: '',
+                                  wo: "#$id",
+                                  amount: _employeeId != null
+                                      ? "#$_employeeId"
+                                      : '-',
+                                  leftLabel: 'PROJECT ID',
+                                  rightLabel: 'EMPLOYEE',
                                 ),
                               );
                             },
-                            child: buildProjectCard(
-                              name: name,
-                              photoUrl: photo,
-                              wo: "#$totalProjects",
-                              amount: _formatAmount(totalAmount),
-                            ),
-                          );
-                        },
-                        childCount: _clients.length,
-                      ),
-                    ),
+                            childCount: _projects.length,
+                          ),
+                        ),
         ],
       ),
     );
@@ -305,6 +286,8 @@ Widget buildProjectCard({
   required String photoUrl,
   required String wo,
   required String amount,
+  String leftLabel = 'W.O',
+  String rightLabel = 'AMOUNT',
 }) {
   return Container(
     margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
@@ -387,9 +370,9 @@ Widget buildProjectCard({
                 SizedBox(height: 12.h),
                 Row(
                   children: [
-                    _pillData("W.O", wo),
+                    _pillData(leftLabel, wo),
                     SizedBox(width: 12.w),
-                    _pillData("AMOUNT", amount),
+                    _pillData(rightLabel, amount),
                   ],
                 ),
               ],

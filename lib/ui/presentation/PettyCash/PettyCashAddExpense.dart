@@ -82,7 +82,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
   final List<String> expenseTypes = ['Petrol ', 'Hospitality ', 'Others'];
   String empID = '';
   String companyId = '';
-  final String baseUrl = 'https://test.elrace.com/api/';
+  final String baseUrl = 'https://erp.elrace.com/api/';
   bool isSubmitting = false;
 
   Future<void> _showPettyCashUserDialog() async {
@@ -101,7 +101,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
       };
 
       final url =
-          Uri.parse("https://test.elrace.com/api/get_petty_cash_records");
+          Uri.parse("https://erp.elrace.com/api/get_petty_cash_records");
       final body = jsonEncode({
         "jsonrpc": "2.0",
         "params": {},

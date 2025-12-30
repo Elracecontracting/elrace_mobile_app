@@ -16,7 +16,7 @@ class AttachmentWidget extends StatelessWidget {
     
 
     return GestureDetector(
-      onTap: () => Util.openUrl('https://test.elrace.com${item.url}'),
+      onTap: () => Util.openUrl('https://erp.elrace.com${item.url}'),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12,),
         decoration: BoxDecoration(

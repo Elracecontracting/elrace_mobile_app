@@ -4,6 +4,8 @@ import 'package:el_race/report_module/data/models/folder_model.dart';
 import 'package:el_race/report_module/presentation/screens/report_listing/folder_reports_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class FolderTile extends StatelessWidget {
   final FolderModel folder;
@@ -13,6 +15,12 @@ class FolderTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final String day = DateFormat.d().format(folder.createdAt);
+    final String month = DateFormat.MMMM().format(folder.createdAt);
+    final String year = DateFormat.y().format(folder.createdAt);
+    final String formattedDate =
+        DateFormat("dd MMM yyyy, HH:mma").format(folder.createdAt);
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -21,63 +29,103 @@ class FolderTile extends StatelessWidget {
                 builder: (context) => FolderReportScreen(folder: folder)));
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-        decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8),
-            color: CustomColors.containerColor),
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        margin: EdgeInsets.only(bottom: 12.h),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            height: 180.h,
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage("assets/png/background.png"),
+                fit: BoxFit.fill,
+              ),
+            ),
+            child: Stack(
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        folder.name,
-                        style: CustomTextStyle.reportTitle,
+                Padding(
+                  padding: EdgeInsets.fromLTRB(20.w, 16.h, 16.w, 16.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            "assets/png/my_documents.png",
+                            height: 22.h,
+                            width: 22.w,
+                          ),
+                          SizedBox(width: 8.w),
+                          Expanded(
+                            child: Text(
+                              folder.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.koulen(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.black,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    InkWell(
-                        onTap: onMoreClicked,
-                        child: const Icon(Icons.more_vert_rounded)),
-                  ],
+                      SizedBox(height: 10.h),
+                      if (folder.description.isNotEmpty)
+                        Padding(
+                          padding: EdgeInsets.only(right: 12.w),
+                          child: Text(
+                            folder.description,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: CustomTextStyle.reportHeader.copyWith(
+                              fontWeight: FontWeight.normal,
+                              color: CustomColors.black,
+                            ),
+                          ),
+                        ),
+                      SizedBox(height: 12.h),
+                      Text(
+                        formattedDate,
+                        style: CustomTextStyle.smallGrey.copyWith(
+                          color: CustomColors.black,
+                        ),
+                      ),
+                      SizedBox(height: 12.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: CustomColors.blue,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: EdgeInsets.symmetric(
+                                vertical: 4.h, horizontal: 12.w),
+                            child: Text(
+                              "Project",
+                              style: CustomTextStyle.smallWhite,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                Text(
-                  DateFormat("dd MMM yyyy HH:mma").format(folder.createdAt),
-                  style: CustomTextStyle.smallGrey,
+                Positioned(
+                  right: 6.w,
+                  top: 6.h,
+                  child: InkWell(
+                      onTap: onMoreClicked,
+                      child: const Icon(
+                        Icons.more_vert_rounded,
+                        color: Colors.black,
+                      )),
                 ),
-                if (folder.description != "")
-                  Padding(
-                    padding: const EdgeInsets.only(top: 5),
-                    child: Text(
-                      folder.description,
-                      style: CustomTextStyle.smallGrey,
-                    ),
-                  ),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: CustomColors.blue,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
-                  child: Text(
-                    "Project",
-                    style: CustomTextStyle.smallWhite,
-                  ),
-                )
               ],
             ),
-            // Positioned(
-            //     right: 0,
-            //     top: 0,
-            //     child: ))
-          ],
+          ),
         ),
       ),
     );

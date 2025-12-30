@@ -4,6 +4,8 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/attachment_model.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/partner_model.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/project_model.dart';
+import 'package:el_race/ui/presentation/my_projects/data/models/user_project_model.dart';
+import 'package:el_race/ui/presentation/my_projects/data/models/user_projects_response.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/folder_model.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -15,11 +17,26 @@ abstract class ProjectRemoteDataSourceImpl {
       {int? partnerId, String? keyword});
   Future<List<ProjectModel>> fetchProjectsByPartnerId(int partnerId);
   Future<List<FolderModel>> fetchProjectFolders();
+  Future<UserProjectsResponse> fetchUserProjects();
 }
 
 class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
+  ProjectRemoteDataSource({
+    http.Client? client,
+    String Function()? getToken,
+  })  : _client = client ?? http.Client(),
+        _getToken = getToken ?? _defaultGetToken;
+
+  final http.Client _client;
+  final String Function() _getToken;
+
+  static String _defaultGetToken() {
+    return SharedPref.getLoginData().result?.token ?? '';
+  }
+
+  @override
   Future<List<ProjectModel>> fetchProjects() async {
-    final token = SharedPref.getLoginData().result?.token;
+    final token = _getToken();
 
     final headers = {
       "Content-Type": "application/json",
@@ -27,7 +44,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       "Authorization": "Bearer $token",
     };
 
-    final url = Uri.parse("https://test.elrace.com/api/get_projects");
+    final url = Uri.parse("https://erp.elrace.com/api/get_projects");
 
     final body = jsonEncode({
       "jsonrpc": "2.0",
@@ -40,7 +57,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       ..headers.addAll(headers)
       ..body = body;
 
-    final streamedResponse = await request.send();
+    final streamedResponse = await _client.send(request);
     final response = await http.Response.fromStream(streamedResponse);
 
     debugPrint("fetchProjects: ${request.url} \n${response.body}");
@@ -56,7 +73,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
 
   Future<List<AttachmentModel>> fetchProjectAttachments(
       String projectId) async {
-    final token = SharedPref.getLoginData().result?.token;
+    final token = _getToken();
 
     final headers = {
       "Content-Type": "application/json",
@@ -64,8 +81,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       "Authorization": "Bearer $token",
     };
 
-    final url =
-        Uri.parse("https://test.elrace.com/api/get_project_attachments");
+    final url = Uri.parse("https://erp.elrace.com/api/get_project_attachments");
 
     final body = jsonEncode({
       "jsonrpc": "2.0",
@@ -74,7 +90,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       },
     });
 
-    final response = await http.post(url, headers: headers, body: body);
+    final response = await _client.post(url, headers: headers, body: body);
 
     debugPrint("fetchProjectAttachments: ${response.body}");
 
@@ -98,7 +114,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
   @override
   Future<List<PartnerModel>> fetchPartnerProjects(
       {int? partnerId, String? keyword}) async {
-    final token = SharedPref.getLoginData().result?.token;
+    final token = _getToken();
 
     final headers = {
       "Content-Type": "application/json",
@@ -106,7 +122,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       "Authorization": "Bearer $token",
     };
 
-    final url = Uri.parse("https://test.elrace.com/api/get_partner_projects");
+    final url = Uri.parse("https://erp.elrace.com/api/get_partner_projects");
 
     final body = jsonEncode({
       "jsonrpc": "2.0",
@@ -116,7 +132,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       },
     });
 
-    final response = await http.post(url, headers: headers, body: body);
+    final response = await _client.post(url, headers: headers, body: body);
 
     debugPrint("fetchPartnerProjects: ${response.body}");
 
@@ -132,7 +148,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
 
   @override
   Future<List<ProjectModel>> fetchProjectsByPartnerId(int partnerId) async {
-    final token = SharedPref.getLoginData().result?.token;
+    final token = _getToken();
 
     final headers = {
       "Content-Type": "application/json",
@@ -140,7 +156,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       "Authorization": "Bearer $token",
     };
 
-    final url = Uri.parse("https://test.elrace.com/api/get_partner_projects");
+    final url = Uri.parse("https://erp.elrace.com/api/get_partner_projects");
 
     final body = jsonEncode({
       "jsonrpc": "2.0",
@@ -150,7 +166,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       },
     });
 
-    final response = await http.post(url, headers: headers, body: body);
+    final response = await _client.post(url, headers: headers, body: body);
 
     debugPrint("fetchProjectsByPartnerId: ${response.body}");
 
@@ -183,7 +199,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
   }
 
   Future<List<FolderModel>> fetchProjectFolders() async {
-    final token = SharedPref.getLoginData().result?.token;
+    final token = _getToken();
 
     final headers = {
       "Content-Type": "application/json",
@@ -191,7 +207,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       "Authorization": "Bearer $token",
     };
 
-    final url = Uri.parse("https://test.elrace.com/api/project_folders");
+    final url = Uri.parse("https://erp.elrace.com/api/project_folders");
 
     final body = jsonEncode({
       "jsonrpc": "2.0",
@@ -202,7 +218,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       ..headers.addAll(headers)
       ..body = body;
 
-    final streamedResponse = await request.send();
+    final streamedResponse = await _client.send(request);
     final response = await http.Response.fromStream(streamedResponse);
 
     debugPrint("fetchProjectFolders: ${response.body}");
@@ -220,6 +236,68 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       }
     } else {
       throw Exception('Failed to load folders: ${response.statusCode}');
+    }
+  }
+
+  @override
+  Future<UserProjectsResponse> fetchUserProjects() async {
+    final token = _getToken();
+
+    final headers = {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Authorization": "Bearer $token",
+    };
+
+    final url = Uri.parse("https://erp.elrace.com/api/user/projects");
+
+    final body = jsonEncode({
+      "jsonrpc": "2.0",
+      "params": {},
+    });
+
+    debugPrint("=== fetchUserProjects REQUEST ===");
+    debugPrint("URL: $url");
+    debugPrint("Method: GET");
+    debugPrint("Headers: $headers");
+    debugPrint("Body: $body");
+    debugPrint(
+        "Token (first 20 chars): ${token.length > 20 ? token.substring(0, 20) : token}...");
+    debugPrint("===================================");
+
+    final request = http.Request('GET', url)
+      ..headers.addAll(headers)
+      ..body = body;
+
+    final streamedResponse = await _client.send(request);
+    final response = await http.Response.fromStream(streamedResponse);
+
+    debugPrint("=== fetchUserProjects RESPONSE ===");
+    debugPrint("Status Code: ${response.statusCode}");
+    debugPrint("Response Headers: ${response.headers}");
+    debugPrint("Response Body: ${response.body}");
+    debugPrint("Body Length: ${response.body.length}");
+    debugPrint("===================================");
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(response.body) as Map<String, dynamic>;
+      final result = decoded['result'] as Map<String, dynamic>?;
+
+      if (result != null && result['success'] == true) {
+        final projectsJson = result['projects'] as List<dynamic>? ?? [];
+        final projects =
+            projectsJson.map((e) => UserProjectModel.fromJson(e)).toList();
+
+        return UserProjectsResponse(
+          success: true,
+          employeeId: result['employee_id'] as int? ?? 0,
+          projects: projects,
+        );
+      }
+
+      throw Exception('Invalid response format');
+    } else {
+      throw Exception('Failed to load user projects: ${response.statusCode}');
     }
   }
 }

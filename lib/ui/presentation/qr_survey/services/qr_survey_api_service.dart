@@ -6,7 +6,7 @@ import '../models/qr_document_model.dart';
 import '../models/qr_media_model.dart';
 
 class QrSurveyApiService {
-  static const String baseUrl = 'https://test.elrace.com/api';
+  static const String baseUrl = 'https://erp.elrace.com/api';
 
   /// Get content after QR code is scanned
   /// Returns a Map with type and data
@@ -31,7 +31,8 @@ class QrSurveyApiService {
 
       final response = await http.post(url, headers: headers, body: body);
 
-      print('🌐 QR API call -> ${response.statusCode} ${response.reasonPhrase}');
+      print(
+          '🌐 QR API call -> ${response.statusCode} ${response.reasonPhrase}');
       print('🌐 Headers sent: hasAuth=${token != null}');
       print('🌐 Request body: $body');
 

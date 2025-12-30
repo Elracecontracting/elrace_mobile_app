@@ -25,7 +25,7 @@ class CustomSwipeButtonRepo{
     }
 
     try {
-      final url = Uri.parse("https://test.elrace.com/api/get_projects");
+      final url = Uri.parse("https://erp.elrace.com/api/get_projects");
       final headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",
@@ -68,7 +68,7 @@ class CustomSwipeButtonRepo{
   static Future<Map<String, dynamic>> validateUserLocation(int projectId, double latitude, double longitude) async {
     final token = SharedPref.getLoginData().result?.token;
 
-    final url = Uri.parse("https://test.elrace.com/api/validate_user_location");
+    final url = Uri.parse("https://erp.elrace.com/api/validate_user_location");
 
     final headers = {
       'Content-Type': 'application/json',

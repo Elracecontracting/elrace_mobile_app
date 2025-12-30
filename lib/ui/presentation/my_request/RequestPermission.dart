@@ -455,7 +455,7 @@ class _RequestPermissionState extends State<RequestPermission> {
       }
 
       final response = await http.post(
-        Uri.parse('https://test.elrace.com/api/submit_request'),
+        Uri.parse('https://erp.elrace.com/api/submit_request'),
         headers: {
           "Content-Type": "application/json",
           "Authorization": "Bearer $token",

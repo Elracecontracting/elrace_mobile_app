@@ -69,7 +69,7 @@ class _LpoListScreenState extends State<LpoListScreen> {
 
     try {
       final token = SharedPref.getLoginData().result?.token ?? '';
-      final url = Uri.parse('https://test.elrace.com/api/get_lpos');
+      final url = Uri.parse('https://erp.elrace.com/api/get_lpos');
       final headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',

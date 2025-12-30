@@ -87,7 +87,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     try {
       final token = SharedPref.getLoginData().result?.token ?? '';
       final url =
-          Uri.parse('https://test.elrace.com/api/get_employee_documents');
+          Uri.parse('https://erp.elrace.com/api/get_employee_documents');
       final headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -838,7 +838,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
       final token = SharedPref.getLoginData().result?.token ?? '';
       final userName = SharedPref.getLoginData().result?.data?.name ?? '';
       final url =
-          Uri.parse('https://test.elrace.com/api/upload_employee_document');
+          Uri.parse('https://erp.elrace.com/api/upload_employee_document');
 
       // Debug: Check values before sending
       print('🔍 Debug - userName: "$userName"');

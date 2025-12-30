@@ -95,7 +95,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
 
     // Prepare request
     final token = SharedPref.getLoginData().result?.token;
-    final url = Uri.parse("https://test.elrace.com/api/submit_request");
+    final url = Uri.parse("https://erp.elrace.com/api/submit_request");
     final body = jsonEncode({
       "jsonrpc": "2.0",
       "params": {
