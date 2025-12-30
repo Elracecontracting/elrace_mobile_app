@@ -15,6 +15,7 @@ class QrSurveyApiService {
     try {
       final token = SharedPref.getLoginData().result?.token;
 
+      // Backend expects JSON; use POST with minimal JSON body
       final headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -23,16 +24,28 @@ class QrSurveyApiService {
 
       final url = Uri.parse('$baseUrl/survey/any_published');
 
-      final response = await http.get(url, headers: headers);
+      final body = jsonEncode({
+        'jsonrpc': '2.0',
+        'params': {},
+      });
+
+      final response = await http.post(url, headers: headers, body: body);
+
+      print('🌐 QR API call -> ${response.statusCode} ${response.reasonPhrase}');
+      print('🌐 Headers sent: hasAuth=${token != null}');
+      print('🌐 Request body: $body');
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final bodyText = response.body;
+        print('🌐 QR API body length: ${bodyText.length}');
+        final data = jsonDecode(bodyText);
 
         if (data['result'] != null && data['result']['data'] != null) {
           final result = data['result']['data'];
 
           // Check what type of content is available
           if (result['survey'] != null) {
+            print('🌐 QR API payload: survey found');
             return {
               'type': 'survey',
               'survey_id': result['survey']['id'],
@@ -42,6 +55,7 @@ class QrSurveyApiService {
                   .toList(),
             };
           } else if (result['documents'] != null) {
+            print('🌐 QR API payload: documents found');
             return {
               'type': 'documents',
               'data': (result['documents'] as List)
@@ -49,14 +63,21 @@ class QrSurveyApiService {
                   .toList(),
             };
           } else if (result['media'] != null) {
+            print('🌐 QR API payload: media found');
             return {
               'type': 'media',
               'data': (result['media'] as List)
                   .map((m) => QrMediaModel.fromJson(m))
                   .toList(),
             };
+          } else {
+            print('⚠️ QR API payload: no survey/documents/media in result');
           }
+        } else {
+          print('⚠️ QR API payload: result.data missing');
         }
+      } else {
+        print('❌ QR API non-200: body=${response.body}');
       }
 
       return null;

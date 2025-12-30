@@ -40,7 +40,7 @@ Future<bool> showAddNewReport(BuildContext context,
                   inputType: TextInputType.text,
                   hintText: type == 1
                       ? DateTime.now().toIso8601String()
-                      : "Folder Name",
+                      : "Project Name",
                 ),
                 if (type == 2) const SizedBox(height: 10),
                 if (type == 2)

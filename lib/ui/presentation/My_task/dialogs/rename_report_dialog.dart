@@ -33,7 +33,7 @@ Future<ReportModel> showRenameDialog(BuildContext context,
                 required: true,
                 controller: renameController,
                 inputType: TextInputType.phone,
-                hintText: "Rename ${report.report == 1 ? "Report" : "Folder"}",
+                hintText: "Rename ${report.report == 1 ? "Report" : "Project"}",
               ),
               const SizedBox(height: 20),
               Row(

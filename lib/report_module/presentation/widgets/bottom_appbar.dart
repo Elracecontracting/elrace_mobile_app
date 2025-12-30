@@ -58,7 +58,7 @@ PreferredSize getBottomAppBar(context,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    "Folder : " + folderName,
+                    "Project : " + folderName,
                     style: CustomTextStyle.reportHeader,
                   ),
                 ],

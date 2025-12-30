@@ -79,7 +79,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
               borderColor: CustomColors.white,
               onPressed: () async {
                 int selectedOptionStatus =
-                    await showEditOptions(context, options: ['Add Folder']);
+                    await showEditOptions(context, options: ['Add Project']);
 
                 if (selectedOptionStatus == 0) {
                   if (!context.mounted) return;
@@ -123,7 +123,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                     padding: EdgeInsets.zero,
                     onPressed: () async {
                       int selectedOptionStatus = await showEditOptions(context,
-                          options: ['Add Folder']);
+                          options: ['Add Project']);
 
                       if (selectedOptionStatus == 0) {
                         if (!context.mounted) return;
@@ -137,7 +137,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          "New Folder",
+                          "New Project",
                           style: CustomTextStyle.heading.copyWith(color: black),
                         ),
                         Image.asset("assets/png/icons/add_folder.png")

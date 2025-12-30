@@ -42,8 +42,8 @@ class FolderTile extends StatelessWidget {
                       ),
                     ),
                     InkWell(
-                    onTap: onMoreClicked,
-                    child: const Icon(Icons.more_vert_rounded)),
+                        onTap: onMoreClicked,
+                        child: const Icon(Icons.more_vert_rounded)),
                   ],
                 ),
                 Text(
@@ -64,9 +64,10 @@ class FolderTile extends StatelessWidget {
                     color: CustomColors.blue,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
                   child: Text(
-                    "Folder",
+                    "Project",
                     style: CustomTextStyle.smallWhite,
                   ),
                 )

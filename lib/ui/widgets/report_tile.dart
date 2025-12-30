@@ -76,9 +76,10 @@ class ReportTile extends StatelessWidget {
                     color: CustomColors.blue,
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 2, horizontal: 12),
                   child: Text(
-                    report.report == 1 ? "Report" : "Folder",
+                    report.report == 1 ? "Report" : "Project",
                     style: CustomTextStyle.smallWhite,
                   ),
                 )
@@ -88,7 +89,8 @@ class ReportTile extends StatelessWidget {
                 right: 0,
                 top: 0,
                 child: InkWell(
-                    onTap: onMoreClicked, child: const Icon(Icons.more_vert_rounded)))
+                    onTap: onMoreClicked,
+                    child: const Icon(Icons.more_vert_rounded)))
           ],
         ),
       ),

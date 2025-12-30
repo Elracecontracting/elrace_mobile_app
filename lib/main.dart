@@ -257,9 +257,19 @@ class MyApp extends StatelessWidget {
 
 GlobalKey<NavigatorState> navKey = GlobalKey();
 final GlobalKey<OverlayState> appOverlayKey = GlobalKey<OverlayState>();
+bool _deepLinkingInitialized = false;
+Uri? _lastHandledDeepLink;
+DateTime? _lastHandledAt;
+const Duration _deepLinkDedupWindow = Duration(seconds: 2);
 
 // Deep Linking Handler
 void _initDeepLinking(BuildContext context) {
+  // Prevent multiple initializations on rebuild
+  if (_deepLinkingInitialized) {
+    return;
+  }
+  _deepLinkingInitialized = true;
+
   print(
       '🚀 ==================== INITIALIZING DEEP LINKING ====================');
   final appLinks = AppLinks();
@@ -288,6 +298,18 @@ void _initDeepLinking(BuildContext context) {
 }
 
 void _handleDeepLink(Uri uri, BuildContext context) async {
+  // Drop duplicate events that arrive back-to-back for the same URI
+  if (_lastHandledDeepLink == uri) {
+    final now = DateTime.now();
+    if (_lastHandledAt != null && now.difference(_lastHandledAt!) <= _deepLinkDedupWindow) {
+      print('⏩ Skipping duplicate deep link within debounce window: $uri');
+      return;
+    }
+  }
+
+  _lastHandledDeepLink = uri;
+  _lastHandledAt = DateTime.now();
+
   print('🔗 ==================== DEEP LINK HANDLER ====================');
   print('🔗 Received URI: $uri');
   print('🔗 Host: ${uri.host}');
@@ -296,7 +318,7 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
 
   // Check if it's a QR code survey link
   // Format: https://elrace.com/RCC4/Requirements/qrcodeapp
-  if (uri.host == 'elrace.com' &&
+    if (uri.host == 'elrace.com' &&
       uri.path.contains('/RCC4/Requirements/qrcodeapp')) {
     print('📱 QR Survey link detected!');
     print('📱 Starting API call to fetch content...');
@@ -311,8 +333,9 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
         print('📦 Content Data: $content');
 
         // Store in provider
-        final provider =
-            Provider.of<QrSurveyDataProvider>(context, listen: false);
+        final effectiveContext = navKey.currentContext ?? context;
+        final provider = Provider.of<QrSurveyDataProvider>(effectiveContext,
+          listen: false);
         provider.setContentData(content);
         print('✅ Content stored in provider');
 
@@ -347,11 +370,38 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
         print(
             '🔗 ==================== NAVIGATION COMPLETE ====================');
       } else {
-        print('❌ Content is null or context not mounted');
+        print('❌ Content is null or context not mounted - using guest fallback');
+        final effectiveContext = navKey.currentContext ?? context;
+        try {
+          final provider = Provider.of<QrSurveyDataProvider>(effectiveContext,
+              listen: false);
+          provider.clearData();
+        } catch (_) {
+          print('⚠️ Provider<QrSurveyDataProvider> not found during fallback');
+        }
+        navKey.currentState?.push(
+          MaterialPageRoute(
+            builder: (context) => const QrCodeWrapper(),
+          ),
+        );
       }
     } catch (e, stackTrace) {
       print('❌ Error handling QR deep link: $e');
       print('❌ Stack trace: $stackTrace');
+      // In case of error, still route to guest flow so user sees something
+      final effectiveContext = navKey.currentContext ?? context;
+      try {
+        final provider = Provider.of<QrSurveyDataProvider>(effectiveContext,
+            listen: false);
+        provider.clearData();
+      } catch (_) {
+        print('⚠️ Provider<QrSurveyDataProvider> not found during error fallback');
+      }
+      navKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (context) => const QrCodeWrapper(),
+        ),
+      );
     }
   } else {
     print('⚠️ URI does not match expected pattern');

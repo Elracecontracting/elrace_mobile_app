@@ -6,6 +6,7 @@ $android_fallback = "https://play.google.com/store/apps/details?id=$android_pack
 $ios_fallback = 'https://apps.apple.com/us/app/el-race-cont-operations/id6748855825';
 
 $deep_link = "https://elrace.com/RCC4/Requirements/qrcodeapp";
+$app_link = $deep_link; // used for any legacy PHP echoes to avoid undefined variable warnings
 
 $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
 $isAndroid = stripos($userAgent, 'Android') !== false;
@@ -99,6 +100,16 @@ $isIOS = stripos($userAgent, 'iPhone') !== false || stripos($userAgent, 'iPad') 
             var androidPackage = "<?php echo $android_package; ?>";
             var androidFallback = "<?php echo $android_fallback; ?>";
             var iosFallback = "<?php echo $ios_fallback; ?>";
+
+            // Avoid infinite reload: attempt once per page load
+            var attemptKey = 'elrace_qr_deeplink_attempted';
+            if (sessionStorage.getItem(attemptKey)) {
+                console.log('Skip repeated deep link attempt');
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('desktop-message').style.display = 'block';
+                return;
+            }
+            sessionStorage.setItem(attemptKey, '1');
             
             if (isAndroid()) {
                 console.log('Android detected - attempting to open app');

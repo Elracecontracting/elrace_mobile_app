@@ -83,6 +83,7 @@ class PrayerAudioService {
         final prayerTime = prayerData['time'] as DateTime;
         final prayer = prayerData['prayer'] as Prayer;
         final prayerName = _getPrayerName(prayer);
+        final normalizedPrayerName = prayerName.toLowerCase();
 
         // التحقق إذا كان الوقت الحالي بين وقت الصلاة و 5 دقائق بعدها
         final timeDiff = now.difference(prayerTime);
@@ -93,7 +94,7 @@ class PrayerAudioService {
         if (timeDiff.inSeconds >= 0 && timeDiff.inMinutes < 5) {
           // التحقق من أننا لم نشغل الأذان لهذه الصلاة مسبقاً
           final playedKey =
-              'played_${prayerName}_${prayerTime.millisecondsSinceEpoch}';
+              'played_${normalizedPrayerName}_${prayerTime.millisecondsSinceEpoch}';
           final alreadyPlayed = await HiveService.hasPlayedPrayer(playedKey);
 
           if (alreadyPlayed) {
@@ -133,11 +134,7 @@ class PrayerAudioService {
       // debugPrint('🔊 Volume set to 10% (starting fade-in)');
 
       // تشغيل ملف الصوت من assets
-      try {
-        await _audioPlayer.play(AssetSource('mp3/adhan-clear.mp3'));
-      } catch (_) {
-        await _audioPlayer.play(AssetSource('mp3/pray-call.mp3'));
-      }
+      await _audioPlayer.play(AssetSource('mp3/azan.mp3'));
 
       // Gradually increase volume to full over ~3 seconds
       for (int i = 1; i <= 10; i++) {

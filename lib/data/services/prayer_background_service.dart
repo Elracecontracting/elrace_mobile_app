@@ -20,7 +20,8 @@ void callbackDispatcher() {
     // debugPrint('Background task started: $task');
 
     // if this is a reschedule task (unique name like reschedule-prayers-<day>)
-    if (task.toString().startsWith('reschedule-prayers-')) {
+    if (task == rescheduleTaskName ||
+        task.toString().startsWith('reschedule-prayers-')) {
       try {
         await PrayerBackgroundService.reschedule();
         return Future.value(true);
@@ -50,30 +51,26 @@ void callbackDispatcher() {
         return Future.value(true);
       }
 
-      // If task corresponds to a scheduled prayer (format: prayer-<name>-<ms>)
-      if (task.toString().startsWith('prayer-')) {
-        try {
-          final parts = task.toString().split('-');
-          // expected: ['prayer', '<name>', '<ms>']
-          if (parts.length >= 3) {
-            final prayerName = parts[1];
-            final ms =
-                int.tryParse(parts[2]) ?? DateTime.now().millisecondsSinceEpoch;
-            final scheduledTime = DateTime.fromMillisecondsSinceEpoch(ms);
+      // If task corresponds to a scheduled prayer
+      final prayerName = inputData?['prayer'] as String?;
+      final rawMs = inputData?['ms'];
+      final parsedMs = rawMs is int ? rawMs : int.tryParse('$rawMs');
 
-            // Prevent duplicates by checking if already played
-            final playedKey = 'played_${prayerName}_$ms';
-            final alreadyPlayed = await HiveService.hasPlayedPrayer(playedKey);
-            if (!alreadyPlayed) {
-              await _showAdhanNotificationInBackground(prayerName, ms);
-              // debugPrint('Playing adhan at prayer time!');
-              await _playAdhanInBackground(prayerName, ms);
-            } else {
-              // debugPrint(
-              //     '🔁 Prayer $prayerName at ${scheduledTime.toIso8601String()} already handled');
-            }
+      if (prayerName != null && parsedMs != null) {
+        try {
+          final ms = parsedMs;
+          final scheduledTime = DateTime.fromMillisecondsSinceEpoch(ms);
+
+          // Prevent duplicates by checking if already played
+          final playedKey = 'played_${prayerName}_$ms';
+          final alreadyPlayed = await HiveService.hasPlayedPrayer(playedKey);
+          if (!alreadyPlayed) {
+            await _showAdhanNotificationInBackground(prayerName, ms);
+            // debugPrint('Playing adhan at prayer time!');
+            await _playAdhanInBackground(prayerName, ms);
           } else {
-            // debugPrint('Invalid prayer task format: $task');
+            // debugPrint(
+            //     '🔁 Prayer $prayerName at ${scheduledTime.toIso8601String()} already handled');
           }
         } catch (e) {
           // debugPrint('Error handling prayer task: $e');
@@ -139,11 +136,7 @@ Future<void> _playAdhanInBackground(String prayerName, int ms) async {
     await player.setReleaseMode(ReleaseMode.stop);
     // start with low volume and fade in for clarity
     await player.setVolume(0.1);
-    try {
-      await player.play(AssetSource('mp3/adhan-clear.mp3'));
-    } catch (_) {
-      await player.play(AssetSource('mp3/pray-call.mp3'));
-    }
+    await player.play(AssetSource('mp3/azan.mp3'));
 
     // debugPrint('Background adhan started playing (fade-in)');
 
@@ -172,7 +165,7 @@ class PrayerBackgroundService {
     // تهيئة Workmanager
     await Workmanager().initialize(
       callbackDispatcher,
-      isInDebugMode: true, // غيرها لـ false في Production
+      isInDebugMode: false,
     );
 
     // جدولة المهام على أوقات الصلاة
@@ -228,6 +221,7 @@ class PrayerBackgroundService {
           await Workmanager().registerOneOffTask(
             'prayer-$prayerName-$ms',
             prayerCheckTaskName,
+            inputData: {'prayer': prayerName, 'ms': ms},
             initialDelay: delay,
             constraints: Constraints(
               networkType: NetworkType.notRequired,

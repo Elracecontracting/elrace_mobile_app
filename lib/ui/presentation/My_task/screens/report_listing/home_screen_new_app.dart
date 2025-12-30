@@ -19,7 +19,7 @@ import '../../../../widgets/square_button.dart';
 class HomeScreenApp extends StatefulWidget {
   final dynamic loginResponseModel;
 
-  const HomeScreenApp({super.key,required this.loginResponseModel});
+  const HomeScreenApp({super.key, required this.loginResponseModel});
 
   @override
   State<HomeScreenApp> createState() => _HomeScreenAppState();
@@ -65,11 +65,11 @@ class _HomeScreenAppState extends State<HomeScreenApp> {
               borderColor: CustomColors.white,
               onPressed: () async {
                 int selectedOptionStatus = await showEditOptions(context,
-                    options: ['Add Report', 'Add Folder']);
+                    options: ['Add Report', 'Add Project']);
                 if (selectedOptionStatus == 0) {
                   if (!context.mounted) return;
                   ReportModel? report =
-                  await showAddNewReport(context, type: 1);
+                      await showAddNewReport(context, type: 1);
                   if (report != null) {
                     await reportRepository.addReport(report);
                     reports.insert(0, report);
@@ -81,7 +81,7 @@ class _HomeScreenAppState extends State<HomeScreenApp> {
                 if (selectedOptionStatus == 1) {
                   if (!context.mounted) return;
                   ReportModel? report =
-                  await showAddNewReport(context, type: 2);
+                      await showAddNewReport(context, type: 2);
                   if (!mounted) return;
                   if (report != null) {
                     await reportRepository.addReport(report);
@@ -95,8 +95,10 @@ class _HomeScreenAppState extends State<HomeScreenApp> {
           ),
         ],
         bottom: getBottomAppBar(context, edit: true, onClick: () async {
-          await Navigator.push(context,
-              MaterialPageRoute(builder: (context) => const CompanyInfoScreen()));
+          await Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => const CompanyInfoScreen()));
           await CompanyRepository().getCompany();
           setState(() {});
           _loadReports();
@@ -104,54 +106,54 @@ class _HomeScreenAppState extends State<HomeScreenApp> {
       ),
       body: reports.isEmpty
           ? Center(
-        child: Text(
-          "No Report Added Yet",
-          style:
-          CustomTextStyle.heading.copyWith(color: CustomColors.black),
-        ),
-      )
+              child: Text(
+                "No Report Added Yet",
+                style:
+                    CustomTextStyle.heading.copyWith(color: CustomColors.black),
+              ),
+            )
           : ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: reports.length,
-        itemBuilder: (context, index) {
-          return ReportTile(
-            report: reports[index],
-            onMoreClicked: () async {
-              int selectedOptionStatus = await showEditOptions(context,
-                  options: ['rename', 'delete']);
-              if (selectedOptionStatus == 0) {
-                if (!context.mounted) return;
-                ReportModel updatedReport = await showRenameDialog(
-                    context,
-                    report: reports[index]);
-                int reportIndex = reports.indexWhere((r) {
-                  return r.id == reports[index].id;
-                });
+              padding: const EdgeInsets.all(16),
+              itemCount: reports.length,
+              itemBuilder: (context, index) {
+                return ReportTile(
+                  report: reports[index],
+                  onMoreClicked: () async {
+                    int selectedOptionStatus = await showEditOptions(context,
+                        options: ['rename', 'delete']);
+                    if (selectedOptionStatus == 0) {
+                      if (!context.mounted) return;
+                      ReportModel updatedReport = await showRenameDialog(
+                          context,
+                          report: reports[index]);
+                      int reportIndex = reports.indexWhere((r) {
+                        return r.id == reports[index].id;
+                      });
 
-                reports[reportIndex] = updatedReport;
-                setState(() {});
-                await reportRepository.updateReport(updatedReport);
-                return;
-              }
-              if (selectedOptionStatus == 1) {
-                if (!context.mounted) return;
-                int deleteCodeStatus = await showEditOptions(context,
-                    options: ['Confirm Delete', 'Cancel']);
-                if (deleteCodeStatus == 0) {
-                  await reportRepository.deleteReport(reports[index]);
-                  await deleteImageForWholeReport(reports[index].id);
-                  reports.removeWhere((r) {
-                    return r.id == reports[index].id;
-                  });
-                  setState(() {});
+                      reports[reportIndex] = updatedReport;
+                      setState(() {});
+                      await reportRepository.updateReport(updatedReport);
+                      return;
+                    }
+                    if (selectedOptionStatus == 1) {
+                      if (!context.mounted) return;
+                      int deleteCodeStatus = await showEditOptions(context,
+                          options: ['Confirm Delete', 'Cancel']);
+                      if (deleteCodeStatus == 0) {
+                        await reportRepository.deleteReport(reports[index]);
+                        await deleteImageForWholeReport(reports[index].id);
+                        reports.removeWhere((r) {
+                          return r.id == reports[index].id;
+                        });
+                        setState(() {});
 
-                  return;
-                }
-              }
-            },
-          );
-        },
-      ),
+                        return;
+                      }
+                    }
+                  },
+                );
+              },
+            ),
     );
   }
 }
