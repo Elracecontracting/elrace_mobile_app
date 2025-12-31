@@ -148,7 +148,7 @@ class _SignInScreenState extends State<SignInScreen> {
           // Navigate to HomeScreen - face registration will be triggered from splash screen
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             // Navigate to home and trigger face registration
-            await Navigator.of(context).pushReplacement(
+            await Navigator.of(context, rootNavigator: true).pushReplacement(
               MaterialPageRoute(builder: (context) => const HomeScreen()),
             );
 
