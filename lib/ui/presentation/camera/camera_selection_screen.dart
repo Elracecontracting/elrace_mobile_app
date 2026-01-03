@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -22,12 +26,25 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
   String _currentDate = '';
   String _currentTime = '';
   bool _isCapturing = false;
+  ui.Image? _logoImage;
 
   @override
   void initState() {
     super.initState();
     _initializeCamera();
     _updateTime();
+    _loadLogo();
+  }
+
+  Future<void> _loadLogo() async {
+    try {
+      final data = await rootBundle.load('assets/png/main logo 1.png');
+      final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+      final frame = await codec.getNextFrame();
+      _logoImage = frame.image;
+    } catch (e) {
+      debugPrint('Error loading logo: $e');
+    }
   }
 
   Future<void> _initializeCamera() async {
@@ -81,9 +98,10 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
     try {
       await _initializeControllerFuture;
       final file = await _controller!.takePicture();
+      final composedPath = await _composeWithOverlay(file.path);
 
       // Save to gallery using Gal
-      await Gal.putImage(file.path, album: 'RCC');
+      await Gal.putImage(composedPath ?? file.path, album: 'RCC');
 
       if (!mounted) return;
 
@@ -113,6 +131,108 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
           _isCapturing = false;
         });
       }
+    }
+  }
+
+  Future<ui.Image> _decodeImage(Uint8List bytes) {
+    final completer = Completer<ui.Image>();
+    ui.decodeImageFromList(bytes, (img) => completer.complete(img));
+    return completer.future;
+  }
+
+  Future<String?> _composeWithOverlay(String imagePath) async {
+    try {
+      final bytes = await File(imagePath).readAsBytes();
+      final baseImage = await _decodeImage(bytes);
+
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      final paint = Paint();
+
+      // Draw captured photo
+      canvas.drawImage(baseImage, Offset.zero, paint);
+
+      final double padding = baseImage.width * 0.04;
+      final double topBarHeight = baseImage.height * 0.20;
+      final double bottomBarHeight = baseImage.height * 0.28;
+
+      // Glass-like overlays to match live UI
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, baseImage.width.toDouble(), topBarHeight),
+        Paint()..color = Colors.black.withOpacity(0.35),
+      );
+
+      canvas.drawRect(
+        Rect.fromLTWH(
+          0,
+          baseImage.height - bottomBarHeight,
+          baseImage.width.toDouble(),
+          bottomBarHeight,
+        ),
+        Paint()..color = Colors.black.withOpacity(0.5),
+      );
+
+      // Draw logo top-left
+      if (_logoImage != null) {
+        final logo = _logoImage!;
+        final double logoWidth = baseImage.width * 0.28;
+        final double logoHeight = logoWidth * logo.height / logo.width;
+        final Rect dst = Rect.fromLTWH(padding, padding, logoWidth, logoHeight);
+
+        // Soft shadow behind logo
+        final shadowPaint = Paint()
+          ..color = Colors.black.withOpacity(0.25)
+          ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 8);
+        canvas.drawRRect(
+          RRect.fromRectAndRadius(dst.inflate(6), const Radius.circular(8)),
+          shadowPaint,
+        );
+
+        canvas.drawImageRect(
+          logo,
+          Rect.fromLTWH(0, 0, logo.width.toDouble(), logo.height.toDouble()),
+          dst,
+          paint,
+        );
+      }
+
+      // Draw date + time bottom-right
+      final textPainter = TextPainter(
+        text: TextSpan(
+          text: '$_currentDate\n$_currentTime',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: baseImage.width * 0.04,
+            fontWeight: FontWeight.w600,
+            shadows: const [
+              Shadow(
+                  offset: Offset(0, 1.5), blurRadius: 2, color: Colors.black54),
+            ],
+          ),
+        ),
+        textDirection: ui.TextDirection.ltr,
+        textAlign: TextAlign.right,
+      )..layout(maxWidth: baseImage.width.toDouble());
+
+      final Offset textOffset = Offset(
+        baseImage.width - padding - textPainter.width,
+        baseImage.height - bottomBarHeight + padding,
+      );
+      textPainter.paint(canvas, textOffset);
+
+      final ui.Image composed = await recorder.endRecording().toImage(
+            baseImage.width,
+            baseImage.height,
+          );
+
+      final ByteData? pngBytes =
+          await composed.toByteData(format: ui.ImageByteFormat.png);
+      if (pngBytes == null) return imagePath;
+      await File(imagePath).writeAsBytes(pngBytes.buffer.asUint8List());
+      return imagePath;
+    } catch (e) {
+      debugPrint('Error composing overlay: $e');
+      return imagePath;
     }
   }
 

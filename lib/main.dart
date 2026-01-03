@@ -80,7 +80,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // منع Screenshot و Screen Recording
-  await ScreenProtector.protectDataLeakageOn();
+  //await ScreenProtector.protectDataLeakageOn();
 
   await Future.wait([
     SharedPref().instantiatePreferences(),

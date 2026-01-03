@@ -134,26 +134,16 @@ class _SignInScreenState extends State<SignInScreen> {
               'loginResponse', jsonEncode(state.loginResponse.toJson()));
           SharedPref().setPreferencesBoolean('isRegistered', true);
 
-          // Set flags that face verification is pending after login
+          // ✅ Face Recognition with LOCAL storage only
           SharedPref().setPreferencesBoolean('pendingFaceVerification', true);
           SharedPref()
               .setPreferencesBoolean('isFaceRegistrationInProgress', false);
 
-          // Get user ID for printing embeddings later
-          final loginData = state.loginResponse;
-          final userId = loginData.result?.data?.uid?.toString() ??
-              loginData.result?.data?.username ??
-              'user_${DateTime.now().millisecondsSinceEpoch}';
-
-          // Navigate to HomeScreen - face registration will be triggered from splash screen
+          // Navigate to HomeScreen - face registration will be triggered
           WidgetsBinding.instance.addPostFrameCallback((_) async {
-            // Navigate to home and trigger face registration
             await Navigator.of(context, rootNavigator: true).pushReplacement(
               MaterialPageRoute(builder: (context) => const HomeScreen()),
             );
-
-            // After navigation, print embeddings if registered
-            _printEmbeddings(userId);
           });
         }
       },
