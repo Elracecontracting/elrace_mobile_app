@@ -14,10 +14,15 @@ import 'package:el_race/report_module/presentation/screens/report_detail/camera_
 import 'package:el_race/report_module/presentation/widgets/bottom_appbar.dart';
 import 'package:el_race/report_module/presentation/widgets/report_item.dart';
 import 'package:el_race/report_module/presentation/widgets/square_button.dart';
+import 'package:el_race/report_module/presentation/bottom_sheets/create_task_from_report_sheet.dart';
+import 'package:el_race/report_module/presentation/widgets/linked_tasks_list.dart';
+import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
+import 'package:el_race/ui/presentation/todo_list/data/todo_model.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../../../data/models/report_detail_model.dart';
 import '../../widgets/cover_page.dart';
@@ -34,15 +39,45 @@ class ReportDetailScreen extends StatefulWidget {
 
 class _ReportDetailScreenState extends State<ReportDetailScreen> {
   ReportDetailModel? reportDetail;
+  int _linkedTasksCount = 0;
+  List<TodoModel> _linkedTasks = [];
 
   @override
   void initState() {
     super.initState();
     _loadUpdatedRecord();
+    _loadTasksCount();
+    _loadLinkedTasks();
   }
 
   bool _loading = true;
   String loadingText = "";
+
+  Future<void> _loadTasksCount() async {
+    if (reportDetail != null) {
+      final todoProvider = Provider.of<TodoProvider>(context, listen: false);
+      final count =
+          await todoProvider.getTasksCountByReportId(reportDetail!.report.id);
+      if (mounted) {
+        setState(() {
+          _linkedTasksCount = count;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadLinkedTasks() async {
+    if (reportDetail != null) {
+      final todoProvider = Provider.of<TodoProvider>(context, listen: false);
+      final tasks =
+          await todoProvider.getTodosByReportId(reportDetail!.report.id);
+      if (mounted) {
+        setState(() {
+          _linkedTasks = tasks;
+        });
+      }
+    }
+  }
 
   Future<void> _loadUpdatedRecord() async {
     loadingText = "";
@@ -80,13 +115,50 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           borderColor: CustomColors.black,
           onPressed: () => Navigator.pop(context),
         ),
-        title: Image.asset(
-          CompanyRepository.company!.logo,
-          height: 60,
-        ),
+        title: CompanyRepository.company?.logo != null
+            ? Image.asset(
+                CompanyRepository.company!.logo,
+                height: 60,
+              )
+            : const SizedBox.shrink(),
         bottom: getBottomAppBar(context,
             folderName: widget.folderName, report: reportDetail),
         actions: [
+          // Tasks Badge Indicator
+          if (_linkedTasksCount > 0)
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: Center(
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: CustomColors.maroon.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: CustomColors.maroon, width: 1.5),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.task_alt,
+                        color: CustomColors.maroon,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$_linkedTasksCount',
+                        style: TextStyle(
+                          color: CustomColors.maroon,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           SquareButton(
             icon: Icons.share_outlined,
             color: CustomColors.maroon,
@@ -104,11 +176,25 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           const SizedBox(width: 10),
         ],
       ),
-      floatingActionButton: SquareButton(
-        icon: Icons.add,
-        color: CustomColors.maroon,
-        borderColor: CustomColors.white,
-        onPressed: _showAddOptions,
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Create Task FAB
+          FloatingActionButton(
+            heroTag: 'create_task_fab',
+            backgroundColor: CustomColors.maroon,
+            onPressed: _showCreateTaskSheet,
+            child: const Icon(Icons.task_alt, color: Colors.white),
+          ),
+          const SizedBox(height: 12),
+          // Add Items FAB
+          FloatingActionButton(
+            heroTag: 'add_items_fab',
+            backgroundColor: CustomColors.maroon,
+            onPressed: _showAddOptions,
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
+        ],
       ),
       body: reportDetail != null
           ? Stack(
@@ -116,6 +202,12 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 ListView(
                   padding: const EdgeInsets.only(bottom: 50),
                   children: [
+                    // Linked Tasks Section
+                    if (_linkedTasks.isNotEmpty)
+                      LinkedTasksList(
+                        tasks: _linkedTasks,
+                      ),
+
                     if (reportDetail!.coverPage != null)
                       CoverPageTile(
                         data: reportDetail!.coverPage!,
@@ -430,6 +522,26 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
       await _loadUpdatedRecord();
       return;
+    }
+  }
+
+  /// Show Create Task from Report bottom sheet
+  Future<void> _showCreateTaskSheet() async {
+    if (reportDetail == null) return;
+
+    final result = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CreateTaskFromReportSheet(
+        reportDetail: reportDetail!,
+      ),
+    );
+
+    // Refresh tasks count and list if task was created
+    if (result == true) {
+      await _loadTasksCount();
+      await _loadLinkedTasks();
     }
   }
 }

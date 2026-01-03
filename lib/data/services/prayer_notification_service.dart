@@ -1,5 +1,4 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:flutter/material.dart';
 
 class PrayerNotificationService {
   static final PrayerNotificationService _instance =
@@ -42,12 +41,16 @@ class PrayerNotificationService {
       playSound: false, // الصوت بيشتغل من AudioPlayer
       enableVibration: true,
       visibility: NotificationVisibility.public,
+      autoCancel: false, // لا تختفي تلقائياً
+      ongoing: false,
+      fullScreenIntent: false,
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: false, // الصوت بيشتغل من AudioPlayer
+      interruptionLevel: InterruptionLevel.timeSensitive,
     );
 
     const NotificationDetails details = NotificationDetails(
@@ -56,7 +59,7 @@ class PrayerNotificationService {
     );
 
     await _notificationsPlugin.show(
-      0, // notification ID
+      0, // notification ID - استخدام 0 لاستبدال الإشعار السابق
       '🕌 حان وقت الصلاة',
       '🔔 حان الآن وقت صلاة $prayerName',
       details,

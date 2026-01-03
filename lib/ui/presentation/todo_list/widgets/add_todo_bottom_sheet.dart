@@ -1,3 +1,6 @@
+import 'package:el_race/report_module/data/models/report_detail_model.dart';
+import 'package:el_race/report_module/data/services/report_hive_service.dart';
+import 'package:el_race/report_module/presentation/screens/report_detail/report_detail.dart';
 import 'package:el_race/ui/presentation/todo_list/data/todo_model.dart';
 import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
 import 'package:flutter/material.dart';
@@ -196,6 +199,68 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                   ),
                 ],
               ),
+
+              // View Report Button (if task is linked to a report)
+              if (widget.todo?.reportId != null) ...[
+                SizedBox(height: 16.h),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(12.w),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A1A53).withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: const Color(0xFF1A1A53).withOpacity(0.2),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.link,
+                            size: 16.sp,
+                            color: const Color(0xFF1A1A53),
+                          ),
+                          SizedBox(width: 6.w),
+                          Text(
+                            'Linked to Report',
+                            style: GoogleFonts.inter(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF1A1A53),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8.h),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: () => _navigateToReport(context),
+                          icon: Icon(Icons.description, size: 16.sp),
+                          label: Text(
+                            'View Report',
+                            style: GoogleFonts.inter(fontSize: 13.sp),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: const Color(0xFF1A1A53),
+                            side: BorderSide(
+                              color: const Color(0xFF1A1A53).withOpacity(0.3),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            padding: EdgeInsets.symmetric(vertical: 10.h),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
               SizedBox(height: 24.h),
               // Action buttons
               Row(
@@ -430,6 +495,58 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
     if (confirm == true && mounted) {
       await context.read<TodoProvider>().deleteTodo(widget.todo!.id!);
       if (mounted) Navigator.pop(context);
+    }
+  }
+
+  Future<void> _navigateToReport(BuildContext context) async {
+    if (widget.todo?.reportId == null) return;
+
+    try {
+      // Get Hive box
+      final reportBox = await ReportHiveService.getReportDetailBox();
+
+      // Search for the report by ID
+      ReportDetailModel? reportDetail;
+      for (var key in reportBox.keys) {
+        final detail = reportBox.get(key);
+        if (detail?.report.id == widget.todo!.reportId) {
+          reportDetail = detail;
+          break;
+        }
+      }
+
+      if (reportDetail != null && mounted) {
+        // Close bottom sheet
+        Navigator.pop(context);
+
+        // Navigate to report detail
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ReportDetailScreen(
+              report: reportDetail!.report,
+              folderName: 'Report', // We don't have folder name here
+            ),
+          ),
+        );
+      } else if (mounted) {
+        // Report not found
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('⚠️ Report not found. Please sync reports first.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }

@@ -38,9 +38,7 @@ Future<bool> showAddNewReport(BuildContext context,
                   required: true,
                   controller: nameController,
                   inputType: TextInputType.text,
-                  hintText: type == 1
-                      ? DateTime.now().toIso8601String()
-                      : "Project Name",
+                  hintText: type == 1 ? "Report Name" : "Project Name",
                 ),
                 if (type == 2) const SizedBox(height: 10),
                 if (type == 2)

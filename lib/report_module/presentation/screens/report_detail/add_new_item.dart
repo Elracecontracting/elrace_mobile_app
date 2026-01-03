@@ -313,69 +313,91 @@ class _AddNewItemState extends State<AddNewItem> {
           //         ),
           // ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: MaterialButton(
-                  disabledColor: CustomColors.maroon.withValues(alpha: .3),
-                  onPressed: currentIndex == 0
-                      ? null
-                      : () async {
-                          currentIndex--;
-                          setState(() {});
-                          locationController = TextEditingController(
-                              text: widget
-                                  .report.reportItems[currentIndex].location);
-                          descriptionController = TextEditingController(
-                              text: widget.report.reportItems[currentIndex]
-                                  .description);
-                        },
-                  height: 44,
-                  color: CustomColors.maroon,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15)),
-                  child: Text(
-                    "Previous",
-                    style: CustomTextStyle.reportTitle.copyWith(
-                      color: CustomColors.white,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: MaterialButton(
-                  disabledColor: CustomColors.blue.withValues(alpha: .3),
-                  onPressed:
-                      (currentIndex + 1) == widget.report.reportItems.length
-                          ? null
-                          : () async {
-                              currentIndex++;
-                              locationController = TextEditingController(
-                                  text: widget.report.reportItems[currentIndex]
-                                      .location);
-                              descriptionController = TextEditingController(
-                                  text: widget.report.reportItems[currentIndex]
-                                      .description);
 
-                              setState(() {});
-                            },
-                  height: 44,
-                  color: CustomColors.blue,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15)),
-                  child: Text(
-                    "Next",
-                    style: CustomTextStyle.reportTitle.copyWith(
-                      color: CustomColors.white,
-                      fontWeight: FontWeight.w500,
+          // Show navigation buttons only if there are multiple items
+          if (widget.report.reportItems.length > 1)
+            Row(
+              children: [
+                Expanded(
+                  child: MaterialButton(
+                    disabledColor: CustomColors.maroon.withValues(alpha: .3),
+                    onPressed: currentIndex == 0
+                        ? null
+                        : () async {
+                            currentIndex--;
+                            setState(() {});
+                            locationController = TextEditingController(
+                                text: widget
+                                    .report.reportItems[currentIndex].location);
+                            descriptionController = TextEditingController(
+                                text: widget.report.reportItems[currentIndex]
+                                    .description);
+                          },
+                    height: 44,
+                    color: CustomColors.maroon,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15)),
+                    child: Text(
+                      "Previous",
+                      style: CustomTextStyle.reportTitle.copyWith(
+                        color: CustomColors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: MaterialButton(
+                    disabledColor: CustomColors.blue.withValues(alpha: .3),
+                    onPressed:
+                        (currentIndex + 1) == widget.report.reportItems.length
+                            ? null
+                            : () async {
+                                currentIndex++;
+                                locationController = TextEditingController(
+                                    text: widget.report
+                                        .reportItems[currentIndex].location);
+                                descriptionController = TextEditingController(
+                                    text: widget.report
+                                        .reportItems[currentIndex].description);
+
+                                setState(() {});
+                              },
+                    height: 44,
+                    color: CustomColors.blue,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15)),
+                    child: Text(
+                      "Next",
+                      style: CustomTextStyle.reportTitle.copyWith(
+                        color: CustomColors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            // Show Done button if only one item
+            MaterialButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              height: 44,
+              color: Colors.green,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(15)),
+              child: Text(
+                "Done",
+                style: CustomTextStyle.reportTitle.copyWith(
+                  color: CustomColors.white,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ],
-          ),
+            ),
+
           const SizedBox(height: 30),
         ],
       ),

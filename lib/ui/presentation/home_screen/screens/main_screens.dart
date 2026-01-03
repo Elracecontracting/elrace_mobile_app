@@ -6,6 +6,7 @@ import 'package:el_race/ui/presentation/camera/camera_selection_screen.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -61,8 +62,9 @@ class _MainScreenState extends State<MainScreen> {
         if (didPop) return;
 
         final shouldPop = await _onWillPop();
-        if (shouldPop && context.mounted) {
-          Navigator.of(context).pop();
+        if (shouldPop) {
+          // Close the app properly instead of navigating to a black screen
+          SystemNavigator.pop();
         }
       },
       child: Scaffold(

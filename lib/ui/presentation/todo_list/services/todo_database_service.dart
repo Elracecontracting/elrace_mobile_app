@@ -22,8 +22,9 @@ class TodoDatabaseService {
     String path = join(await getDatabasesPath(), 'todo_database.db');
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // Incremented for report_id migration
       onCreate: _onCreate,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -53,6 +54,7 @@ class TodoDatabaseService {
         due_date TEXT,
         assigned_to TEXT,
         list_id INTEGER,
+        report_id TEXT,
         sort_order INTEGER DEFAULT 0,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
@@ -68,6 +70,15 @@ class TodoDatabaseService {
     await db.execute('CREATE INDEX idx_todos_is_my_day ON todos(is_my_day)');
     await db.execute('CREATE INDEX idx_todos_due_date ON todos(due_date)');
     await db.execute('CREATE INDEX idx_todos_list_id ON todos(list_id)');
+    await db.execute('CREATE INDEX idx_todos_report_id ON todos(report_id)');
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Add report_id column for version 2
+      await db.execute('ALTER TABLE todos ADD COLUMN report_id TEXT');
+      await db.execute('CREATE INDEX idx_todos_report_id ON todos(report_id)');
+    }
   }
 
   // ==================== TODO OPERATIONS ====================
@@ -181,6 +192,26 @@ class TodoDatabaseService {
       orderBy: 'is_completed ASC, sort_order ASC, created_at DESC',
     );
     return maps.map((map) => TodoModel.fromMap(map)).toList();
+  }
+
+  Future<List<TodoModel>> getTodosByReportId(String reportId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'todos',
+      where: 'report_id = ?',
+      whereArgs: [reportId],
+      orderBy: 'is_completed ASC, sort_order ASC, created_at DESC',
+    );
+    return maps.map((map) => TodoModel.fromMap(map)).toList();
+  }
+
+  Future<int> getTasksCountByReportId(String reportId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM todos WHERE report_id = ?',
+      [reportId],
+    );
+    return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<List<TodoModel>> searchTodos(String query) async {

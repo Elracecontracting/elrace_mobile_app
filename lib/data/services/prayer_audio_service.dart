@@ -4,7 +4,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/data/services/prayer_notification_service.dart';
-import 'package:flutter/material.dart';
 
 class PrayerAudioService {
   static final PrayerAudioService _instance = PrayerAudioService._internal();
@@ -17,6 +16,7 @@ class PrayerAudioService {
   Timer? _checkTimer;
   PrayerTimes? _currentPrayerTimes;
   DateTime? _lastPlayedTime;
+  bool _isPlaying = false; // منع تشغيل متعدد
 
   // تهيئة الخدمة
   Future<void> initialize(PrayerTimes prayerTimes) async {
@@ -46,6 +46,12 @@ class PrayerAudioService {
 
   // التحقق وتشغيل الأذان إذا حان الوقت
   Future<void> _checkAndPlayAdhan() async {
+    // منع التشغيل المتعدد
+    if (_isPlaying) {
+      // debugPrint('⏭️ Adhan already playing, skipping check');
+      return;
+    }
+
     if (_currentPrayerTimes == null) {
       // debugPrint('❌ Prayer times not initialized');
       return;
@@ -100,17 +106,19 @@ class PrayerAudioService {
           if (alreadyPlayed) {
             // debugPrint(
             //     '⏭️ Already handled $prayerName at ${prayerTime.toIso8601String()}');
-            break;
+            continue;
           }
 
           if (_lastPlayedTime == null ||
               _lastPlayedTime!.difference(prayerTime).abs().inMinutes > 10) {
             // debugPrint('✅ Time for $prayerName prayer! Playing adhan...');
+            _isPlaying = true; // تعيين الحالة قبل التشغيل
             await _notificationService.showAdhanNotification(prayerName);
             await _playAdhan();
             _lastPlayedTime = prayerTime;
             // mark as played to prevent duplicates (foreground/background)
             await HiveService.markPrayerPlayed(playedKey);
+            _isPlaying = false; // إعادة الحالة بعد الانتهاء
             break;
           } else {
             // debugPrint('⏭️ Already played for this prayer time');
@@ -120,6 +128,7 @@ class PrayerAudioService {
       // debugPrint('✓ Check completed');
     } catch (e) {
       // debugPrint('❌ Error checking prayer times: $e');
+      _isPlaying = false; // التأكد من إعادة الحالة في حالة الخطأ
     }
   }
 
@@ -145,8 +154,17 @@ class PrayerAudioService {
       }
 
       // debugPrint('✅ Adhan started playing successfully (with fade-in)!');
+
+      // إيقاف الصوت تلقائياً بعد 4 دقائق (مدة الأذان الكاملة)
+      Future.delayed(const Duration(minutes: 4), () async {
+        if (_isPlaying) {
+          await stopAdhan();
+          _isPlaying = false;
+        }
+      });
     } catch (e) {
       // debugPrint('❌ Error playing adhan: $e');
+      _isPlaying = false;
     }
   }
 
@@ -154,6 +172,7 @@ class PrayerAudioService {
   Future<void> stopAdhan() async {
     try {
       await _audioPlayer.stop();
+      _isPlaying = false;
       // debugPrint('Adhan stopped');
     } catch (e) {
       // debugPrint('Error stopping adhan: $e');
@@ -185,8 +204,11 @@ class PrayerAudioService {
   }
 
   // تنظيف الموارد
-  void dispose() {
+  Future<void> dispose() async {
     _checkTimer?.cancel();
-    _audioPlayer.dispose();
+    await _audioPlayer.stop();
+    await _audioPlayer.dispose();
+    _isPlaying = false;
+    // debugPrint('PrayerAudioService disposed');
   }
 }

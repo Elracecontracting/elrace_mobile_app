@@ -237,33 +237,33 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
   }
 
   void _openScanner() async {
-    // Dispose camera before opening scanner
+    // Pause camera before opening scanner
     await _controller?.dispose();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SimpleDocumentScanner(
-            maxPages: 10,
-            allowGalleryImport: true,
-            onScanComplete: (imagePaths) {
-              debugPrint('Scanned ${imagePaths.length} pages');
-            },
-            onExportComplete: (path, format) {
-              debugPrint('Exported to: $path');
-              if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Document saved to: $path'),
-                    duration: const Duration(seconds: 3),
-                  ),
-                );
-              }
-            },
-          ),
+
+    if (!mounted) return;
+
+    // Replace camera screen with scanner (so back button goes to main screen)
+    await Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SimpleDocumentScanner(
+          maxPages: 10,
+          allowGalleryImport: true,
+          onScanComplete: (imagePaths) {
+            debugPrint('Scanned ${imagePaths.length} pages');
+          },
+          onExportComplete: (path, format) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Document saved to: $path'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+          },
         ),
-      );
-    }
+      ),
+    );
   }
 
   @override

@@ -254,6 +254,69 @@ class TodoProvider extends ChangeNotifier {
     }
   }
 
+  // ==================== REPORT RELATED METHODS ====================
+
+  /// Get todos linked to a specific report
+  Future<List<TodoModel>> getTodosByReportId(String reportId) async {
+    try {
+      return await _dbService.getTodosByReportId(reportId);
+    } catch (e) {
+      debugPrint('Error getting todos by report: $e');
+      return [];
+    }
+  }
+
+  /// Get count of tasks for a report
+  Future<int> getTasksCountByReportId(String reportId) async {
+    try {
+      return await _dbService.getTasksCountByReportId(reportId);
+    } catch (e) {
+      debugPrint('Error getting tasks count: $e');
+      return 0;
+    }
+  }
+
+  /// Create a task from a report
+  Future<TodoModel?> createTaskFromReport({
+    required String reportId,
+    required String reportName,
+    String? description,
+    bool isImportant = false,
+    DateTime? dueDate,
+  }) async {
+    try {
+      final now = DateTime.now();
+      final todo = TodoModel(
+        title: reportName,
+        description: description,
+        reportId: reportId,
+        isImportant: isImportant,
+        dueDate: dueDate,
+        isCompleted: false,
+        isMyDay: false,
+        sortOrder: 0,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      final id = await _dbService.insertTodo(todo);
+      final newTodo = todo.copyWith(id: id);
+
+      _todos.insert(0, newTodo);
+      _applyFilter();
+      await refreshCounts();
+      notifyListeners();
+
+      return newTodo;
+    } catch (e) {
+      _errorMessage = 'Failed to create task from report: $e';
+      notifyListeners();
+      return null;
+    }
+  }
+
+  // ==================== END REPORT METHODS ====================
+
   // Toggle complete
   Future<void> toggleComplete(int id) async {
     try {

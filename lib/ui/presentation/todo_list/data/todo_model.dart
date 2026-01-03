@@ -8,6 +8,7 @@ class TodoModel {
   final DateTime? dueDate;
   final String? assignedTo;
   final int? listId;
+  final String? reportId; // Reference to Report
   final int sortOrder;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -22,6 +23,7 @@ class TodoModel {
     this.dueDate,
     this.assignedTo,
     this.listId,
+    this.reportId,
     this.sortOrder = 0,
     required this.createdAt,
     required this.updatedAt,
@@ -40,6 +42,7 @@ class TodoModel {
           : null,
       assignedTo: map['assigned_to'] as String?,
       listId: map['list_id'] as int?,
+      reportId: map['report_id'] as String?,
       sortOrder: map['sort_order'] as int? ?? 0,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
@@ -57,6 +60,7 @@ class TodoModel {
       'due_date': dueDate?.toIso8601String(),
       'assigned_to': assignedTo,
       'list_id': listId,
+      'report_id': reportId,
       'sort_order': sortOrder,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -73,6 +77,7 @@ class TodoModel {
     DateTime? dueDate,
     String? assignedTo,
     int? listId,
+    String? reportId,
     int? sortOrder,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -87,6 +92,7 @@ class TodoModel {
       dueDate: dueDate ?? this.dueDate,
       assignedTo: assignedTo ?? this.assignedTo,
       listId: listId ?? this.listId,
+      reportId: reportId ?? this.reportId,
       sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -105,6 +111,7 @@ class TodoModel {
       dueDate: null,
       assignedTo: assignedTo,
       listId: listId,
+      reportId: reportId,
       sortOrder: sortOrder,
       createdAt: createdAt,
       updatedAt: DateTime.now(),

@@ -11,22 +11,36 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Create notification channel for Android 8.0+
+        // Create notification channels for Android 8.0+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channelId = "high_importance_channel"
-            val channelName = "High Importance Notifications"
-            val channelDescription = "This channel is used for important notifications"
-            val importance = NotificationManager.IMPORTANCE_HIGH
+            val notificationManager: NotificationManager =
+                getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             
-            val channel = NotificationChannel(channelId, channelName, importance).apply {
-                description = channelDescription
+            // High importance channel for general notifications
+            val highChannel = NotificationChannel(
+                "high_importance_channel",
+                "High Importance Notifications",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "This channel is used for important notifications"
                 enableLights(true)
                 enableVibration(true)
             }
+            notificationManager.createNotificationChannel(highChannel)
             
-            val notificationManager: NotificationManager =
-                getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannel(channel)
+            // Prayer Adhan channel with maximum importance
+            val adhanChannel = NotificationChannel(
+                "prayer_adhan_channel",
+                "Prayer Adhan",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Notifications for prayer adhan times"
+                enableLights(true)
+                enableVibration(true)
+                setSound(null, null) // Sound handled by AudioPlayer
+                setShowBadge(true)
+            }
+            notificationManager.createNotificationChannel(adhanChannel)
         }
     }
     

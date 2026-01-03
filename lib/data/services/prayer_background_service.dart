@@ -4,7 +4,6 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:el_race/core/constants/hive_constants.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:workmanager/workmanager.dart';
@@ -59,12 +58,13 @@ void callbackDispatcher() {
       if (prayerName != null && parsedMs != null) {
         try {
           final ms = parsedMs;
-          final scheduledTime = DateTime.fromMillisecondsSinceEpoch(ms);
 
           // Prevent duplicates by checking if already played
           final playedKey = 'played_${prayerName}_$ms';
           final alreadyPlayed = await HiveService.hasPlayedPrayer(playedKey);
           if (!alreadyPlayed) {
+            // تحديد إشارة أن الأذان قيد التشغيل
+            await HiveService.markPrayerPlayed(playedKey);
             await _showAdhanNotificationInBackground(prayerName, ms);
             // debugPrint('Playing adhan at prayer time!');
             await _playAdhanInBackground(prayerName, ms);
@@ -101,12 +101,15 @@ Future<void> _showAdhanNotificationInBackground(
       playSound: false,
       enableVibration: true,
       visibility: NotificationVisibility.public,
+      autoCancel: false, // لا تختفي تلقائياً
+      ongoing: false,
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: false,
+      interruptionLevel: InterruptionLevel.timeSensitive,
     );
 
     const NotificationDetails details = NotificationDetails(
@@ -122,9 +125,6 @@ Future<void> _showAdhanNotificationInBackground(
     );
 
     // debugPrint('🔔 Background notification shown');
-    // mark as played
-    final playedKey = 'played_${prayerName}_$ms';
-    await HiveService.markPrayerPlayed(playedKey);
   } catch (e) {
     // debugPrint('Error showing notification: $e');
   }
@@ -133,7 +133,12 @@ Future<void> _showAdhanNotificationInBackground(
 Future<void> _playAdhanInBackground(String prayerName, int ms) async {
   try {
     final player = AudioPlayer();
+
+    // إعداد AudioPlayer
     await player.setReleaseMode(ReleaseMode.stop);
+    await player
+        .setPlayerMode(PlayerMode.mediaPlayer); // استخدام media player mode
+
     // start with low volume and fade in for clarity
     await player.setVolume(0.1);
     await player.play(AssetSource('mp3/azan.mp3'));
@@ -152,9 +157,6 @@ Future<void> _playAdhanInBackground(String prayerName, int ms) async {
     await Future.delayed(const Duration(minutes: 4));
     await player.stop();
     await player.dispose();
-    // mark as played as well (in case background played but notification failed earlier)
-    final playedKey = 'played_${prayerName}_$ms';
-    await HiveService.markPrayerPlayed(playedKey);
   } catch (e) {
     // debugPrint('Error playing adhan in background: $e');
   }
@@ -208,7 +210,6 @@ class PrayerBackgroundService {
         {'name': 'isha', 'time': prayerTimes.isha},
       ];
 
-      int taskId = 0;
       for (var prayerData in prayers) {
         final prayerTime = prayerData['time'] as DateTime;
         final prayerName = prayerData['name'] as String;
@@ -234,7 +235,6 @@ class PrayerBackgroundService {
 
           // debugPrint(
           //     '✅ Scheduled $prayerName at ${prayerTime.hour}:${prayerTime.minute} (in ${delay.inMinutes}m ${delay.inSeconds % 60}s)');
-          taskId++;
         } else {
           // debugPrint('⏭️ Skipped $prayerName (already passed)');
         }

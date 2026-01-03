@@ -140,9 +140,11 @@ class _SignInScreenState extends State<SignInScreen> {
               .setPreferencesBoolean('isFaceRegistrationInProgress', false);
 
           // Navigate to HomeScreen - face registration will be triggered
+          // Using pushAndRemoveUntil to remove all previous routes including login screen
           WidgetsBinding.instance.addPostFrameCallback((_) async {
-            await Navigator.of(context, rootNavigator: true).pushReplacement(
+            await Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
               MaterialPageRoute(builder: (context) => const HomeScreen()),
+              (route) => false, // Remove all previous routes
             );
           });
         }
