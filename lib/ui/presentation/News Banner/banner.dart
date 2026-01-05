@@ -116,8 +116,12 @@ We extend our gratitude to our skilled team, trusted partners, and the community
             delegate: SliverChildBuilderDelegate(
               (context, index) {
                 var item = sliderList[index];
+                // Add extra bottom padding to the last item
+                final isLastItem = index == sliderList.length - 1;
                 return Container(
-                  margin: EdgeInsets.only(bottom: 3.h),
+                  margin: EdgeInsets.only(
+                    bottom: isLastItem ? 100.h : 3.h,
+                  ),
                   decoration: const BoxDecoration(
                     color: Colors.white,
                     // borderRadius: BorderRadius.circular(14),

@@ -376,11 +376,11 @@ class PdfService {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                'Page ${context.pageNumber} of ${context.pagesCount}',
+                'User: $userName',
                 style: const pw.TextStyle(fontSize: 12),
               ),
               pw.Text(
-                'User: $userName',
+                'Page ${context.pageNumber} of ${context.pagesCount}',
                 style: const pw.TextStyle(fontSize: 12),
               ),
             ]));
@@ -393,7 +393,7 @@ class PdfService {
 
     if (companyData.employeeName.isNotEmpty) return companyData.employeeName;
     if (loginName != null && loginName.isNotEmpty) return loginName;
-    return '';
+    return 'Unknown User';
   }
 
   Future<pw.Font> _loadPdfFont() async {

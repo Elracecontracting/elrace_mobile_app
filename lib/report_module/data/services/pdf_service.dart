@@ -410,11 +410,11 @@ class PdfService {
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
               pw.Text(
-                '${companyData.employeeName}-${companyData.employeeID}',
+                'Page ${context.pageNumber} of ${context.pagesCount}',
                 style: const pw.TextStyle(fontSize: 12),
               ),
               pw.Text(
-                'Page ${context.pageNumber} of ${context.pagesCount}',
+                '${companyData.employeeName}-${companyData.employeeID}',
                 style: const pw.TextStyle(fontSize: 12),
               ),
             ]));
