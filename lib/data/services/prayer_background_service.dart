@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:el_race/core/constants/hive_constants.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:workmanager/workmanager.dart';
@@ -16,6 +17,9 @@ const String rescheduleTaskName = 'reschedulePrayerTasks';
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
+    // Ensure binding available in background isolate
+    WidgetsFlutterBinding.ensureInitialized();
+
     // debugPrint('Background task started: $task');
 
     // if this is a reschedule task (unique name like reschedule-prayers-<day>)
@@ -88,40 +92,13 @@ void callbackDispatcher() {
 Future<void> _showAdhanNotificationInBackground(
     String prayerName, int ms) async {
   try {
-    final notificationsPlugin = FlutterLocalNotificationsPlugin();
-
-    const AndroidNotificationDetails androidDetails =
-        AndroidNotificationDetails(
-      'prayer_adhan_channel',
-      'Prayer Adhan',
-      channelDescription: 'Notifications for prayer adhan times',
-      importance: Importance.high,
-      priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
-      playSound: false,
-      enableVibration: true,
-      visibility: NotificationVisibility.public,
-      autoCancel: false, // لا تختفي تلقائياً
-      ongoing: false,
-    );
-
-    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: false,
-      interruptionLevel: InterruptionLevel.timeSensitive,
-    );
-
-    const NotificationDetails details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+    final notificationsPlugin = await _ensureNotificationsInitialized();
 
     await notificationsPlugin.show(
       0,
       '🕌 حان وقت الصلاة',
       '🔔 حان الآن وقت صلاة $prayerName',
-      details,
+      _defaultNotificationDetails,
     );
 
     // debugPrint('🔔 Background notification shown');
@@ -129,6 +106,48 @@ Future<void> _showAdhanNotificationInBackground(
     // debugPrint('Error showing notification: $e');
   }
 }
+
+Future<FlutterLocalNotificationsPlugin>
+    _ensureNotificationsInitialized() async {
+  final plugin = FlutterLocalNotificationsPlugin();
+
+  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const iosSettings = DarwinInitializationSettings(
+    requestAlertPermission: true,
+    requestBadgePermission: true,
+    requestSoundPermission: true,
+  );
+
+  const settings = InitializationSettings(
+    android: androidSettings,
+    iOS: iosSettings,
+  );
+
+  await plugin.initialize(settings);
+  return plugin;
+}
+
+const NotificationDetails _defaultNotificationDetails = NotificationDetails(
+  android: AndroidNotificationDetails(
+    'prayer_adhan_channel',
+    'Prayer Adhan',
+    channelDescription: 'Notifications for prayer adhan times',
+    importance: Importance.high,
+    priority: Priority.high,
+    icon: '@mipmap/ic_launcher',
+    playSound: false,
+    enableVibration: true,
+    visibility: NotificationVisibility.public,
+    autoCancel: false,
+    ongoing: false,
+  ),
+  iOS: DarwinNotificationDetails(
+    presentAlert: true,
+    presentBadge: true,
+    presentSound: false,
+    interruptionLevel: InterruptionLevel.timeSensitive,
+  ),
+);
 
 Future<void> _playAdhanInBackground(String prayerName, int ms) async {
   try {
