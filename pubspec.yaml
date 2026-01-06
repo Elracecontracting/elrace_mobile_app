@@ -149,6 +149,7 @@ flutter:
     - assets/newapp/
     - assets/fonts/arbicsupport.ttf
     - assets/mobilefacenet.tflite
+    - AssetManifest.json
   #  fonts:
   #    - family: Inter
   #      fonts:
