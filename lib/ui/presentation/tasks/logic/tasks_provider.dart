@@ -1,0 +1,158 @@
+import 'package:el_race/ui/presentation/tasks/data/assignable_user_model.dart';
+import 'package:el_race/ui/presentation/tasks/data/task_model.dart';
+import 'package:el_race/ui/presentation/tasks/data/tasks_api_service.dart';
+import 'package:el_race/ui/presentation/tasks/data/tasks_repository.dart';
+import 'package:flutter/foundation.dart';
+
+enum TasksStatus { initial, loading, loaded, empty, error }
+
+class TasksProvider extends ChangeNotifier {
+  final TasksRepository _repository;
+
+  TasksStatus status = TasksStatus.initial;
+  List<TaskModel> tasks = const [];
+  String? errorMessage;
+
+  List<AssignableUser> assignableUsers = const [];
+  bool isLoadingUsers = false;
+  bool usersLoaded = false;
+  bool isCreating = false;
+  final Set<int> completingTaskIds = {};
+  final Set<int> linkingTaskIds = {};
+
+  TasksProvider(this._repository);
+
+  Future<void> loadTasks({bool forceRefresh = false}) async {
+    if (status == TasksStatus.loading) return;
+    status = TasksStatus.loading;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      final response = await _repository.getUserTasks();
+      tasks = response;
+      status = tasks.isEmpty ? TasksStatus.empty : TasksStatus.loaded;
+    } on TasksUnauthorizedException {
+      errorMessage = 'Your session has expired. Please sign in again.';
+      status = TasksStatus.error;
+    } on TasksApiException catch (e) {
+      errorMessage = e.message;
+      status = TasksStatus.error;
+    } catch (e) {
+      errorMessage = 'Unexpected error. Please try again.';
+      status = TasksStatus.error;
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> refreshTasks() async {
+    await loadTasks(forceRefresh: true);
+  }
+
+  Future<void> loadAssignableUsers() async {
+    if (usersLoaded || isLoadingUsers) return;
+    errorMessage = null;
+    isLoadingUsers = true;
+    notifyListeners();
+    try {
+      assignableUsers = await _repository.getAssignableUsers();
+      usersLoaded = true;
+    } on TasksApiException catch (e) {
+      errorMessage = e.message;
+    } finally {
+      isLoadingUsers = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> createTask({
+    required String name,
+    String? description,
+    String? priority,
+    int? userId,
+  }) async {
+    if (isCreating) return null;
+    errorMessage = null;
+    isCreating = true;
+    notifyListeners();
+    try {
+      final created = await _repository.createTask(
+        name: name,
+        description: description,
+        priority: priority,
+        userId: userId,
+      );
+
+      // Ensure task has a creation date and priority
+      var taskWithData = created;
+      if (created.createdAt == null) {
+        taskWithData = taskWithData.copyWith(createdAt: DateTime.now());
+      }
+      if (created.priority == null && priority != null) {
+        taskWithData = taskWithData.copyWith(priority: priority);
+      }
+
+      // Add the created task to the beginning of the list immediately
+      tasks = [taskWithData, ...tasks];
+      status = TasksStatus.loaded;
+      notifyListeners();
+
+      // Refresh from server after a longer delay to get project/team info
+      await Future.delayed(const Duration(milliseconds: 1500));
+      await loadTasks(forceRefresh: true);
+
+      return 'Task "${taskWithData.name ?? ''}" created';
+    } on TasksApiException catch (e) {
+      errorMessage = e.message;
+      return null;
+    } finally {
+      isCreating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<String?> completeTask(int taskId) async {
+    errorMessage = null;
+    completingTaskIds.add(taskId);
+    notifyListeners();
+    try {
+      final message = await _repository.submitTask(taskId: taskId);
+
+      await loadTasks(forceRefresh: true);
+      return message;
+    } on TasksApiException catch (e) {
+      errorMessage = e.message;
+      return null;
+    } finally {
+      completingTaskIds.remove(taskId);
+      notifyListeners();
+    }
+  }
+
+  Future<String?> linkReport({
+    required int taskId,
+    required String reportId,
+  }) async {
+    errorMessage = null;
+    linkingTaskIds.add(taskId);
+    notifyListeners();
+    try {
+      final message = await _repository.linkReportToTask(
+        taskId: taskId,
+        reportId: reportId,
+      );
+
+      // Refresh tasks to show the linked report
+      await loadTasks(forceRefresh: true);
+
+      return message;
+    } on TasksApiException catch (e) {
+      errorMessage = e.message;
+      return null;
+    } finally {
+      linkingTaskIds.remove(taskId);
+      notifyListeners();
+    }
+  }
+}

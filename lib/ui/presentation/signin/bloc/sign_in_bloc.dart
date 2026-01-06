@@ -66,14 +66,20 @@ class SignInBloc extends Bloc<SignInEvent, SignInState> {
       Response response =
           await userRepo.loginApiCall(event.email, event.password, deviceName);
       if (response.statusCode == 200) {
-        var n = jsonEncode(response.data);
-        loginResponseModel = loginResponseModelFromJson(n);
+        final raw = response.data;
+        final decoded = raw is String ? jsonDecode(raw) : raw;
+        if (decoded is! Map) {
+          throw Exception(
+              'Unexpected login payload type: ${decoded.runtimeType}');
+        }
+        final Map<String, dynamic> json = Map<String, dynamic>.from(decoded);
+        loginResponseModel = LoginResponseModel.fromJson(json);
 
         await userRepo.setDeviceInfo(deviceName);
 
         log('loginResponseModel ${response.data}');
 
-        if (loginResponseModel.result!.success == true) {
+        if (loginResponseModel.result?.success == true) {
           emit(InitialSignedInST(loginResponse: loginResponseModel));
           emit(const LoadingST(isLoading: false));
           await userRepo.setLoginResponse(loginResponseModel);
@@ -81,16 +87,17 @@ class SignInBloc extends Bloc<SignInEvent, SignInState> {
           // Update login state in Hive for background service
           await HiveService.setUserLoggedIn(true);
         } else {
-          emit(ErrMsg(
-              msg: (loginResponseModel.result?.message ??
-                  'something'
-                      ' went wrong')));
+          final message = loginResponseModel.result?.message ??
+              'Login failed. Please try again.';
+          emit(ErrMsg(msg: message));
           emit(const LoadingST(isLoading: false));
         }
+      } else {
+        throw Exception('Login HTTP ${response.statusCode}');
       }
     } catch (e) {
-      log('signInMethod $e');
-      emit(const ErrMsg(msg: 'something went wrong'));
+      log('signInMethod error: $e');
+      emit(ErrMsg(msg: e.toString()));
       emit(const LoadingST(isLoading: false));
     }
   }

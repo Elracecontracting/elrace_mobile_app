@@ -3,7 +3,7 @@ import 'package:el_race/ui/presentation/home_screen/services/widget_service.dart
 import 'package:el_race/ui/presentation/home_screen/widgets/card_tile.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/custom_bullet_point.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/tilting_card.dart';
-import 'package:el_race/ui/presentation/todo_list/screens/todo_list_screen.dart';
+import 'package:el_race/ui/presentation/tasks/tasks_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/orientation_helper.dart';
@@ -59,7 +59,7 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
     // Navigate to the widget screen based on widget id
     switch (widgetModel.id) {
       case 'todo_list':
-        Util.pushPage(const TodoListScreen(), context);
+        Util.pushPage(const TasksScreen(), context);
         break;
       // Add other cases as needed
       default:
@@ -255,7 +255,7 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
           right: 10.w,
           top: 10.w,
           child: const CountWidget(
-            count: '5',
+            count: '...',
             countColor: Colors.black,
             containerColor: Colors.white,
           ),

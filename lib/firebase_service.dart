@@ -143,7 +143,7 @@ class FirebaseService {
       String? token = await _firebaseMessaging.getToken();
       if (token != null) {
         SharedPref().setPreferencesString(fcm_token, token);
-        print('📱 FCM Token obtained: ${token.substring(0, 20)}...');
+        print('📱 FCM Token obtained: $token'); // full token for debugging
       } else {
         print('❌ FCM Token is null - this may indicate APNS token issue');
       }
@@ -154,7 +154,7 @@ class FirebaseService {
     // Listen for token refresh
     FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
       SharedPref().setPreferencesString(fcm_token, newToken.toString());
-      print('🔁 FCM Token refreshed: $newToken');
+      print('🔁 FCM Token refreshed: $newToken'); // full token for debugging
     });
   }
 

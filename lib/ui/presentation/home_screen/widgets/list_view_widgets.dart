@@ -15,8 +15,8 @@ import 'package:el_race/ui/presentation/my_notes/screens/my_notes_screen.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/screens/my_project.dart';
 import 'package:el_race/ui/presentation/my_request/MyRequestsPage.dart';
 import 'package:el_race/ui/presentation/task_sheet/task_sheet_screen.dart';
-import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
-import 'package:el_race/ui/presentation/todo_list/screens/todo_list_screen.dart';
+import 'package:el_race/ui/presentation/tasks/logic/tasks_provider.dart';
+import 'package:el_race/ui/presentation/tasks/tasks_screen.dart';
 import 'package:el_race/utils/custom_navigate.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/orientation_helper.dart';
@@ -357,16 +357,30 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   }
 
   Widget _buildTodoListWidget() {
-    return Consumer<TodoProvider>(
-      builder: (context, todoProvider, child) {
-        final todoCount = todoProvider.totalCount.toString();
+    return Consumer<TasksProvider>(
+      builder: (context, tasksProvider, child) {
+        if (tasksProvider.status == TasksStatus.initial) {
+          Future.microtask(() => tasksProvider.loadTasks());
+        }
+
+        final isLoading = tasksProvider.status == TasksStatus.loading ||
+            tasksProvider.status == TasksStatus.initial;
+        final hasError = tasksProvider.status == TasksStatus.error;
+        final todoCount = hasError
+            ? '!'
+            : isLoading
+                ? '...'
+                : tasksProvider.tasks.length.toString();
+
         return Stack(
           children: [
             GrayCardComponent(
               cardTitle: translate('home.todo_list'),
               backgroundImagePath: 'assets/png/blue_card.png',
-              onClick: () => Util.pushPage(const TodoListScreen(), context),
-              childWidget: const SizedBox.shrink(),
+              onClick: () => Util.pushPage(const TasksScreen(), context),
+              childWidget: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : const SizedBox.shrink(),
             ),
             Positioned(
               right: 6.w,

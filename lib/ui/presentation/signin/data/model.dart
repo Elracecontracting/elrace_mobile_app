@@ -177,9 +177,11 @@ class Data {
             ? []
             : List<String>.from(json["roles"]!.map((x) => x)),
         qr_status: json["qr_status"],
-        certificate: json["certificate"] != null
+        certificate: json["certificate"] is Map
             ? Map<String, dynamic>.from(json["certificate"])
-            : null,
+            : (json["certificate"] is String
+                ? _tryDecodeCertificate(json["certificate"] as String)
+                : null),
         defaultWidgets: json["default_widgets"] == null
             ? null
             : DefaultWidgets.fromJson(json["default_widgets"]),
@@ -386,4 +388,16 @@ class DefaultWidgets {
   Map<String, dynamic> toJson() => {
         "data": data,
       };
+}
+
+Map<String, dynamic>? _tryDecodeCertificate(String value) {
+  try {
+    final decoded = jsonDecode(value);
+    if (decoded is Map) {
+      return Map<String, dynamic>.from(decoded);
+    }
+  } catch (_) {
+    // ignore malformed certificate payloads
+  }
+  return null;
 }

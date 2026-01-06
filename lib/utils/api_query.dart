@@ -42,14 +42,14 @@ class ApiQuery {
       response = await dio.post(isBaseUrlAdded ? UrlUtil.baseUrl + url : url,
           data: jsonEncode(data), options: options);
 
-      return response;
+      return _normalizeResponse(response);
     } on DioException catch (exception) {
       if (exception.toString().contains('SocketException')) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else if (exception.type == DioException.receiveTimeout) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       }
     }
   }
@@ -75,14 +75,14 @@ class ApiQuery {
       ));
       response =
           await dio.put(UrlUtil.baseUrl + url, data: data, options: options);
-      return response;
+      return _normalizeResponse(response);
     } on DioException catch (exception) {
       if (exception.toString().contains('SocketException')) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else if (exception.type == DioException.receiveTimeout) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       }
     }
   }
@@ -146,14 +146,14 @@ class ApiQuery {
               queryParameters: (query != null) ? query : null);
         }
       }
-      return response;
+      return _normalizeResponse(response);
     } on DioException catch (exception) {
       if (exception.toString().contains('SocketException')) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else if (exception.type == DioException.receiveTimeout) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       }
     }
   }
@@ -184,14 +184,14 @@ class ApiQuery {
       } else {
         response = await dio.patch(url, data: data);
       }
-      return response;
+      return _normalizeResponse(response);
     } on DioException catch (exception) {
       if (exception.toString().contains('SocketException')) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else if (exception.type == DioException.receiveTimeout) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       }
     }
   }
@@ -220,14 +220,14 @@ class ApiQuery {
       ));
       response = await dio.post(UrlUtil.baseUrl + url, data: data);
 
-      return response;
+      return _normalizeResponse(response);
     } on DioException catch (exception) {
       if (exception.toString().contains('SocketException')) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else if (exception.type == DioException.receiveTimeout) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       }
     }
   }
@@ -259,15 +259,37 @@ class ApiQuery {
         response =
             await dio.delete(url, queryParameters: data, options: options);
       }
-      return response;
+      return _normalizeResponse(response);
     } on DioException catch (exception) {
       if (exception.toString().contains('SocketException')) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else if (exception.type == DioException.receiveTimeout) {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       } else {
-        return exception.response;
+        return _normalizeResponse(exception.response);
       }
     }
+  }
+
+  dynamic _decodeIfJsonString(dynamic data) {
+    if (data is String) {
+      try {
+        return jsonDecode(data);
+      } catch (e) {
+        log('Response decode failed: $e');
+      }
+    }
+    return data;
+  }
+
+  Response? _normalizeResponse(Response? response) {
+    if (response == null) return null;
+    final decoded = _decodeIfJsonString(response.data);
+    if (decoded is Map) {
+      response.data = Map<String, dynamic>.from(decoded);
+    } else {
+      response.data = decoded;
+    }
+    return response;
   }
 }

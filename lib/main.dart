@@ -17,6 +17,9 @@ import 'package:el_race/ui/presentation/qr_survey/providers/qr_survey_data_provi
 import 'package:el_race/ui/presentation/qr_survey/services/qr_survey_api_service.dart';
 import 'package:el_race/ui/presentation/qr_survey/screens/qr_code_wrapper.dart';
 import 'package:el_race/ui/presentation/qr_survey/screens/qr_survey_authenticated_screen.dart';
+import 'package:el_race/ui/presentation/tasks/data/tasks_api_service.dart';
+import 'package:el_race/ui/presentation/tasks/data/tasks_repository.dart';
+import 'package:el_race/ui/presentation/tasks/logic/tasks_provider.dart';
 import 'package:el_race/utils/di.dart';
 import 'package:el_race/utils/generated_routes.dart';
 import 'package:el_race/utils/orientation_helper.dart';
@@ -170,6 +173,11 @@ class MyApp extends StatelessWidget {
           ChangeNotifierProvider(create: (_) => ReportProvider()),
           ChangeNotifierProvider(create: (_) => TodoProvider()..initialize()),
           ChangeNotifierProvider(create: (_) => QrSurveyDataProvider()),
+          ChangeNotifierProvider(
+            create: (_) =>
+                TasksProvider(TasksRepository(api: TasksApiService()))
+                  ..loadTasks(),
+          ),
         ],
         child: MultiBlocProvider(
           providers: [

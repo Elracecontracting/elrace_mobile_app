@@ -518,7 +518,7 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
           right: 10.w,
           top: 10.w,
           child: const CountWidget(
-            count: '5',
+            count: '...',
             countColor: Colors.black,
             containerColor: Colors.white,
           ),
