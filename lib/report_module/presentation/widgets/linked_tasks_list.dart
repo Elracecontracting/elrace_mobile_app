@@ -1,19 +1,23 @@
 import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
-import 'package:el_race/ui/presentation/todo_list/data/todo_model.dart';
-import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
-import 'package:el_race/ui/presentation/todo_list/screens/todo_category_screen.dart';
+import 'package:el_race/ui/presentation/tasks/data/task_model.dart';
+import 'package:el_race/ui/presentation/tasks/task_details_screen.dart';
+import 'package:el_race/ui/presentation/tasks/tasks_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 
 /// Widget لعرض Tasks المرتبطة بـ Report
 class LinkedTasksList extends StatelessWidget {
-  final List<TodoModel> tasks;
+  final List<TaskModel> tasks;
+  final Future<void> Function(TaskModel task)? onSubmit;
+  final Set<int> submittingTaskIds;
 
   const LinkedTasksList({
     super.key,
     required this.tasks,
+    this.onSubmit,
+    this.submittingTaskIds = const {},
   });
 
   @override
@@ -141,22 +145,36 @@ class LinkedTasksList extends StatelessWidget {
     );
   }
 
-  Widget _buildTaskItem(BuildContext context, TodoModel task) {
+  Widget _buildTaskItem(BuildContext context, TaskModel task) {
+    final completed = task.isCompleted;
+    final isSubmitting = submittingTaskIds.contains((task.id ?? -1));
+    final stageLabel = (task.stage ?? '').isNotEmpty
+        ? task.stage!
+        : completed
+            ? 'Completed'
+            : 'In Progress';
+    final projectLabel = (task.projectId ?? '').isNotEmpty
+        ? 'Project ${task.projectId}'
+        : 'No project linked';
+    final createdDate = task.createdAt != null
+        ? DateFormat('dd MMM yyyy').format(task.createdAt!)
+        : null;
+
     return Padding(
       padding: EdgeInsets.only(bottom: 8.h),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _navigateToTasks(context),
+          onTap: () => _openTaskDetails(context, task),
           borderRadius: BorderRadius.circular(12.r),
           child: Ink(
             decoration: BoxDecoration(
-              color: task.isCompleted
+              color: completed
                   ? Colors.grey[100]
                   : CustomColors.maroon.withOpacity(0.05),
               borderRadius: BorderRadius.circular(12.r),
               border: Border.all(
-                color: task.isCompleted
+                color: completed
                     ? Colors.grey[300]!
                     : CustomColors.maroon.withOpacity(0.2),
                 width: 1,
@@ -166,22 +184,18 @@ class LinkedTasksList extends StatelessWidget {
               padding: EdgeInsets.all(12.w),
               child: Row(
                 children: [
-                  // Checkbox
                   Container(
                     width: 20.w,
                     height: 20.w,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(
-                        color: task.isCompleted
-                            ? Colors.green
-                            : CustomColors.maroon,
+                        color: completed ? Colors.green : CustomColors.maroon,
                         width: 2,
                       ),
-                      color:
-                          task.isCompleted ? Colors.green : Colors.transparent,
+                      color: completed ? Colors.green : Colors.transparent,
                     ),
-                    child: task.isCompleted
+                    child: completed
                         ? Icon(
                             Icons.check,
                             size: 14.sp,
@@ -189,51 +203,61 @@ class LinkedTasksList extends StatelessWidget {
                           )
                         : null,
                   ),
-
                   SizedBox(width: 12.w),
-
-                  // Task Info
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          task.title,
+                          task.name ?? 'Untitled task',
                           style: CustomTextStyle.reportTitle.copyWith(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w600,
-                            color: task.isCompleted
+                            color: completed
                                 ? Colors.grey[600]
                                 : CustomColors.black,
-                            decoration: task.isCompleted
+                            decoration: completed
                                 ? TextDecoration.lineThrough
                                 : TextDecoration.none,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        if (task.dueDate != null) ...[
+                        SizedBox(height: 4.h),
+                        Text(
+                          stageLabel,
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color:
+                                completed ? Colors.green : CustomColors.maroon,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          projectLabel,
+                          style: TextStyle(
+                            fontSize: 11.sp,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (createdDate != null) ...[
                           SizedBox(height: 4.h),
                           Row(
                             children: [
                               Icon(
                                 Icons.calendar_today,
                                 size: 12.sp,
-                                color: _isOverdue(task.dueDate!)
-                                    ? Colors.red
-                                    : Colors.grey[600],
+                                color: Colors.grey[600],
                               ),
                               SizedBox(width: 4.w),
                               Text(
-                                DateFormat('dd MMM yyyy').format(task.dueDate!),
+                                createdDate,
                                 style: TextStyle(
                                   fontSize: 11.sp,
-                                  color: _isOverdue(task.dueDate!)
-                                      ? Colors.red
-                                      : Colors.grey[600],
-                                  fontWeight: _isOverdue(task.dueDate!)
-                                      ? FontWeight.w600
-                                      : FontWeight.normal,
+                                  color: Colors.grey[600],
                                 ),
                               ),
                             ],
@@ -242,13 +266,34 @@ class LinkedTasksList extends StatelessWidget {
                       ],
                     ),
                   ),
-
-                  // Important Star
-                  if (task.isImportant)
-                    Icon(
-                      Icons.star,
-                      size: 18.sp,
-                      color: CustomColors.maroon,
+                  if (!completed && onSubmit != null)
+                    TextButton.icon(
+                      onPressed:
+                          isSubmitting ? null : () => onSubmit?.call(task),
+                      icon: isSubmitting
+                          ? SizedBox(
+                              width: 16.w,
+                              height: 16.w,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Icon(
+                              Icons.send,
+                              size: 16.sp,
+                              color: CustomColors.maroon,
+                            ),
+                      label: Text(
+                        'Submit',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: CustomColors.maroon,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.symmetric(horizontal: 10.w),
+                      ),
                     ),
                 ],
               ),
@@ -259,19 +304,20 @@ class LinkedTasksList extends StatelessWidget {
     );
   }
 
-  bool _isOverdue(DateTime dueDate) {
-    return dueDate.isBefore(DateTime.now()) &&
-        !DateUtils.isSameDay(dueDate, DateTime.now());
+  void _openTaskDetails(BuildContext context, TaskModel task) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => TaskDetailsScreen(task: task),
+      ),
+    );
   }
 
   void _navigateToTasks(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => TodoCategoryScreen(
-          filter: TodoFilter.tasks,
-          title: 'Tasks',
-        ),
+        builder: (_) => const TasksScreen(),
       ),
     );
   }

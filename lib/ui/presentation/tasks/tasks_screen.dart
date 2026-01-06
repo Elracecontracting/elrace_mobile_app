@@ -37,10 +37,10 @@ class TasksScreen extends StatelessWidget {
       builder: (ctx) {
         return Padding(
           padding: EdgeInsets.only(
-            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
-            left: 16,
-            right: 16,
-            top: 16,
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 20,
           ),
           child: StatefulBuilder(builder: (context, setState) {
             return SingleChildScrollView(
@@ -48,135 +48,182 @@ class TasksScreen extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Create Task',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  Row(
+                    children: [
+                      Icon(Icons.task_alt, color: appFontColor, size: 24),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Create Task',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Task Title',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
                   TextField(
                     controller: nameController,
-                    decoration: const InputDecoration(
-                      labelText: 'Name',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: descController,
-                    maxLines: 3,
-                    decoration: const InputDecoration(
-                      labelText: 'Description',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    value: priority,
                     decoration: InputDecoration(
-                      labelText: 'Priority',
-                      labelStyle: TextStyle(
-                        fontSize: 14,
-                        color: appFontColor,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      hintText: 'Enter task title',
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Colors.grey),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.grey.shade400),
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                         borderSide: BorderSide(color: appFontColor, width: 2),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
+                          horizontal: 14, vertical: 12),
                     ),
-                    icon: const Icon(Icons.arrow_drop_down),
-                    dropdownColor: Colors.white,
-                    isExpanded: true,
-                    items: const [
-                      DropdownMenuItem(
-                        value: '1',
-                        child: Text('🔴 High', style: TextStyle(fontSize: 14)),
-                      ),
-                      DropdownMenuItem(
-                        value: '2',
-                        child:
-                            Text('🟠 Medium', style: TextStyle(fontSize: 14)),
-                      ),
-                      DropdownMenuItem(
-                        value: '3',
-                        child: Text('🟢 Low', style: TextStyle(fontSize: 14)),
-                      ),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) setState(() => priority = val);
-                    },
                   ),
-                  const SizedBox(height: 12),
-                  provider.isLoadingUsers
-                      ? const Center(
-                          child: Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: CircularProgressIndicator(),
-                        ))
-                      : DropdownButtonFormField<int>(
-                          value: selectedUserId,
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Description',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: descController,
+                    maxLines: 6,
+                    decoration: InputDecoration(
+                      hintText: 'Add a description (optional)',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: appFontColor, width: 2),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          value: priority,
                           decoration: InputDecoration(
-                            labelText: 'Assign to',
-                            labelStyle: TextStyle(
-                              fontSize: 14,
-                              color: appFontColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            hintText: 'Leave empty for personal task',
-                            hintStyle: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey.shade500,
-                            ),
+                            labelText: 'Priority',
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
-                              borderSide: const BorderSide(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide:
+                                  const BorderSide(color: Colors.transparent),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                               borderSide:
-                                  BorderSide(color: Colors.grey.shade400),
+                                  BorderSide(color: Colors.grey.shade300),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.circular(12),
                               borderSide:
                                   BorderSide(color: appFontColor, width: 2),
                             ),
                             contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
+                                horizontal: 14, vertical: 12),
                           ),
                           icon: const Icon(Icons.arrow_drop_down),
                           dropdownColor: Colors.white,
                           isExpanded: true,
-                          items: provider.assignableUsers
-                              .map((u) => DropdownMenuItem(
-                                    value: u.id,
-                                    child: Text(
-                                      u.name,
-                                      style: const TextStyle(fontSize: 14),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ))
-                              .toList(),
-                          onChanged: (val) =>
-                              setState(() => selectedUserId = val),
+                          items: const [
+                            DropdownMenuItem(
+                              value: '1',
+                              child: Text('🔴 High',
+                                  style: TextStyle(fontSize: 14)),
+                            ),
+                            DropdownMenuItem(
+                              value: '2',
+                              child: Text('🟠 Medium',
+                                  style: TextStyle(fontSize: 14)),
+                            ),
+                            DropdownMenuItem(
+                              value: '3',
+                              child: Text('🟢 Low',
+                                  style: TextStyle(fontSize: 14)),
+                            ),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setState(() => priority = val);
+                          },
                         ),
-                  const SizedBox(height: 16),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: provider.isLoadingUsers
+                            ? const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: CircularProgressIndicator(),
+                                ),
+                              )
+                            : DropdownButtonFormField<int>(
+                                value: selectedUserId,
+                                decoration: InputDecoration(
+                                  labelText: 'Assign to',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                        color: Colors.transparent),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide:
+                                        BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: BorderSide(
+                                        color: appFontColor, width: 2),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 14, vertical: 12),
+                                ),
+                                icon: const Icon(Icons.arrow_drop_down),
+                                dropdownColor: Colors.white,
+                                isExpanded: true,
+                                items: provider.assignableUsers
+                                    .map((u) => DropdownMenuItem(
+                                          value: u.id,
+                                          child: Text(
+                                            u.name,
+                                            style:
+                                                const TextStyle(fontSize: 14),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ))
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => selectedUserId = val),
+                              ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,
+                    height: 50,
                     child: ElevatedButton(
                       onPressed: provider.isCreating
                           ? null
@@ -220,20 +267,20 @@ class TasksScreen extends StatelessWidget {
                             },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: appFontColor,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                          borderRadius: BorderRadius.circular(12),
                         ),
+                        elevation: 0,
                       ),
                       child: provider.isCreating
                           ? const SizedBox(
-                              height: 20,
-                              width: 20,
+                              height: 22,
+                              width: 22,
                               child: CircularProgressIndicator(
                                   strokeWidth: 2, color: Colors.white),
                             )
                           : const Text(
-                              'Create',
+                              'Create Task',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,
@@ -833,6 +880,16 @@ class _TaskTile extends StatelessWidget {
                   const SizedBox(height: 10),
                   Consumer<ReportProvider>(
                     builder: (context, reportProvider, _) {
+                      final parsedReports = task.reportIds.map((e) {
+                        if (e is Map && e['id'] != null) {
+                          return (
+                            id: e['id'].toString(),
+                            name: e['name']?.toString(),
+                          );
+                        }
+                        return (id: e.toString(), name: null);
+                      }).toList();
+
                       return Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
@@ -852,7 +909,7 @@ class _TaskTile extends StatelessWidget {
                                     size: 16, color: Colors.blue.shade700),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Linked Reports (${task.reportIds.length}):',
+                                  'Linked Reports (${parsedReports.length}):',
                                   style: TextStyle(
                                     fontSize: 13,
                                     color: Colors.blue.shade700,
@@ -862,13 +919,13 @@ class _TaskTile extends StatelessWidget {
                               ],
                             ),
                             const SizedBox(height: 6),
-                            ...task.reportIds.map((reportId) {
-                              // Find report name from reportProvider
+                            ...parsedReports.map((reportData) {
                               final report = reportProvider.reports.firstWhere(
-                                (r) => r.id == reportId,
+                                (r) => r.id == reportData.id,
                                 orElse: () => ReportModel(
-                                  id: reportId,
-                                  name: 'Report $reportId',
+                                  id: reportData.id,
+                                  name: reportData.name ??
+                                      'Report ${reportData.id}',
                                   companyId: '',
                                   folderId: '',
                                   createdAt: DateTime.now(),

@@ -3,6 +3,7 @@ import 'package:el_race/ui/presentation/tasks/data/task_model.dart';
 import 'package:el_race/ui/presentation/tasks/data/tasks_api_service.dart';
 import 'package:el_race/ui/presentation/tasks/data/tasks_repository.dart';
 import 'package:flutter/foundation.dart';
+import 'package:el_race/core/utils/shared_pref.dart';
 
 enum TasksStatus { initial, loading, loaded, empty, error }
 
@@ -105,6 +106,65 @@ class TasksProvider extends ChangeNotifier {
       return 'Task "${taskWithData.name ?? ''}" created';
     } on TasksApiException catch (e) {
       errorMessage = e.message;
+      return null;
+    } finally {
+      isCreating = false;
+      notifyListeners();
+    }
+  }
+
+  Future<TaskModel?> createTaskForReport({
+    required String name,
+    String? description,
+    String? priority,
+    int? userId,
+    required String reportId,
+  }) async {
+    if (isCreating) return null;
+    errorMessage = null;
+    isCreating = true;
+    notifyListeners();
+
+    try {
+      // default assignee = current user if none provided
+      var resolvedUserId = userId;
+      if (resolvedUserId == null) {
+        final login = SharedPref.getLoginDataOrNull();
+        resolvedUserId = login?.result?.data?.uid;
+      }
+
+      var created = await _repository.createTask(
+        name: name,
+        description: description,
+        priority: priority,
+        userId: resolvedUserId,
+      );
+
+      if (created.createdAt == null) {
+        created = created.copyWith(createdAt: DateTime.now());
+      }
+      if (created.priority == null && priority != null) {
+        created = created.copyWith(priority: priority);
+      }
+
+      tasks = [created, ...tasks];
+      status = TasksStatus.loaded;
+      notifyListeners();
+
+      if (created.id != null && reportId.isNotEmpty) {
+        await _repository.linkReportToTask(
+          taskId: created.id!,
+          reportId: reportId,
+        );
+      }
+
+      await loadTasks(forceRefresh: true);
+      return created;
+    } on TasksApiException catch (e) {
+      errorMessage = e.message;
+      return null;
+    } catch (e) {
+      errorMessage = 'Failed to create task: $e';
       return null;
     } finally {
       isCreating = false;

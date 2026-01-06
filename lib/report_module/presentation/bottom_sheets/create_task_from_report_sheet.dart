@@ -1,8 +1,9 @@
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
 import 'package:el_race/report_module/data/models/report_detail_model.dart';
-import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
-import 'package:el_race/ui/presentation/todo_list/screens/todo_category_screen.dart';
+import 'package:el_race/ui/presentation/tasks/logic/tasks_provider.dart';
+import 'package:el_race/ui/presentation/tasks/tasks_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
@@ -26,14 +27,16 @@ class CreateTaskFromReportSheet extends StatefulWidget {
 class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
-  bool _isImportant = false;
-  DateTime? _dueDate;
   bool _isLoading = false;
+  String _priority = '1';
+  int? _selectedUserId;
 
   @override
   void initState() {
     super.initState();
     _initializeControllers();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) => _ensureAssignableUsers());
   }
 
   void _initializeControllers() {
@@ -86,31 +89,10 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
     return buffer.toString();
   }
 
-  Future<void> _selectDueDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _dueDate ?? DateTime.now().add(const Duration(days: 1)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: ColorScheme.light(
-              primary: CustomColors.maroon,
-              onPrimary: CustomColors.white,
-              surface: CustomColors.white,
-              onSurface: CustomColors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        _dueDate = picked;
-      });
+  Future<void> _ensureAssignableUsers() async {
+    final tasksProvider = Provider.of<TasksProvider>(context, listen: false);
+    if (!tasksProvider.usersLoaded && !tasksProvider.isLoadingUsers) {
+      await tasksProvider.loadAssignableUsers();
     }
   }
 
@@ -126,21 +108,28 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
       _isLoading = true;
     });
 
-    final todoProvider = Provider.of<TodoProvider>(context, listen: false);
+    final tasksProvider = Provider.of<TasksProvider>(context, listen: false);
 
-    final task = await todoProvider.createTaskFromReport(
-      reportId: widget.reportDetail.report.id,
-      reportName: _titleController.text.trim(),
+    // Default assignee to current user if none selected
+    int? userId = _selectedUserId;
+    if (userId == null) {
+      final login = SharedPref.getLoginDataOrNull();
+      userId = login?.result?.data?.uid;
+    }
+
+    final createdTask = await tasksProvider.createTaskForReport(
+      name: _titleController.text.trim(),
       description: _descriptionController.text.trim(),
-      isImportant: _isImportant,
-      dueDate: _dueDate,
+      priority: _priority,
+      reportId: widget.reportDetail.report.id,
+      userId: userId,
     );
 
     setState(() {
       _isLoading = false;
     });
 
-    if (task != null && mounted) {
+    if (createdTask != null && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('✅ Task created successfully!'),
@@ -149,14 +138,10 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
             label: 'VIEW',
             textColor: Colors.white,
             onPressed: () {
-              // Navigate to Todo List
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => TodoCategoryScreen(
-                    filter: TodoFilter.tasks,
-                    title: 'Tasks',
-                  ),
+                  builder: (_) => const TasksScreen(),
                 ),
               );
             },
@@ -165,12 +150,9 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
       );
       Navigator.pop(context, true); // Return true to indicate success
     } else if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to create task'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      final error = tasksProvider.errorMessage ?? 'Failed to create task';
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(error)));
     }
   }
 
@@ -298,142 +280,116 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
 
             SizedBox(height: 16.h),
 
-            // Options Row
+            // Priority & Assign
             Row(
               children: [
-                // Important Toggle
                 Expanded(
-                  child: InkWell(
-                    onTap: () {
-                      setState(() {
-                        _isImportant = !_isImportant;
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(12.r),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12.w,
-                        vertical: 12.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _isImportant
-                            ? CustomColors.maroon.withOpacity(0.1)
-                            : Colors.grey[100],
+                  child: DropdownButtonFormField<String>(
+                    value: _priority,
+                    decoration: InputDecoration(
+                      labelText: 'Priority',
+                      border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(
-                          color: _isImportant
-                              ? CustomColors.maroon
-                              : Colors.grey[300]!,
-                          width: _isImportant ? 2 : 1,
-                        ),
+                        borderSide: const BorderSide(color: Colors.transparent),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            _isImportant ? Icons.star : Icons.star_border,
-                            color: _isImportant
-                                ? CustomColors.maroon
-                                : Colors.grey[600],
-                            size: 20.sp,
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'Important',
-                            style: CustomTextStyle.reportTitle.copyWith(
-                              fontSize: 13.sp,
-                              color: _isImportant
-                                  ? CustomColors.maroon
-                                  : Colors.grey[700],
-                              fontWeight: _isImportant
-                                  ? FontWeight.w600
-                                  : FontWeight.normal,
-                            ),
-                          ),
-                        ],
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        borderSide: BorderSide(color: Colors.grey.shade300),
                       ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                        borderSide:
+                            BorderSide(color: CustomColors.maroon, width: 2),
+                      ),
+                      contentPadding: EdgeInsets.symmetric(
+                          horizontal: 14.w, vertical: 12.h),
                     ),
+                    icon: const Icon(Icons.arrow_drop_down),
+                    dropdownColor: Colors.white,
+                    isExpanded: true,
+                    items: const [
+                      DropdownMenuItem(
+                        value: '1',
+                        child: Text('🔴 High', style: TextStyle(fontSize: 14)),
+                      ),
+                      DropdownMenuItem(
+                        value: '2',
+                        child:
+                            Text('🟠 Medium', style: TextStyle(fontSize: 14)),
+                      ),
+                      DropdownMenuItem(
+                        value: '3',
+                        child: Text('🟢 Low', style: TextStyle(fontSize: 14)),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) setState(() => _priority = val);
+                    },
                   ),
                 ),
-
                 SizedBox(width: 12.w),
-
-                // Due Date Picker
                 Expanded(
-                  child: InkWell(
-                    onTap: _selectDueDate,
-                    borderRadius: BorderRadius.circular(12.r),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12.w,
-                        vertical: 12.h,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _dueDate != null
-                            ? CustomColors.maroon.withOpacity(0.1)
-                            : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(
-                          color: _dueDate != null
-                              ? CustomColors.maroon
-                              : Colors.grey[300]!,
-                          width: _dueDate != null ? 2 : 1,
+                  child: Consumer<TasksProvider>(
+                    builder: (context, tasksProvider, _) {
+                      if (tasksProvider.isLoadingUsers &&
+                          tasksProvider.assignableUsers.isEmpty) {
+                        return Container(
+                          height: 56.h,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        );
+                      }
+
+                      return DropdownButtonFormField<int>(
+                        value: _selectedUserId,
+                        decoration: InputDecoration(
+                          labelText: 'Assign to',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                            borderSide:
+                                const BorderSide(color: Colors.transparent),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.r),
+                            borderSide: BorderSide(
+                                color: CustomColors.maroon, width: 2),
+                          ),
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 14.w, vertical: 12.h),
                         ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            color: _dueDate != null
-                                ? CustomColors.maroon
-                                : Colors.grey[600],
-                            size: 18.sp,
-                          ),
-                          SizedBox(width: 8.w),
-                          Flexible(
-                            child: Text(
-                              _dueDate != null
-                                  ? DateFormat('dd MMM').format(_dueDate!)
-                                  : 'Due Date',
-                              style: CustomTextStyle.reportTitle.copyWith(
-                                fontSize: 13.sp,
-                                color: _dueDate != null
-                                    ? CustomColors.maroon
-                                    : Colors.grey[700],
-                                fontWeight: _dueDate != null
-                                    ? FontWeight.w600
-                                    : FontWeight.normal,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                        icon: const Icon(Icons.arrow_drop_down),
+                        dropdownColor: Colors.white,
+                        isExpanded: true,
+                        items: tasksProvider.assignableUsers
+                            .map((u) => DropdownMenuItem(
+                                  value: u.id,
+                                  child: Text(
+                                    u.name,
+                                    style: const TextStyle(fontSize: 14),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ))
+                            .toList(),
+                        onChanged: (val) =>
+                            setState(() => _selectedUserId = val),
+                      );
+                    },
                   ),
                 ),
               ],
             ),
-
-            // Clear due date button
-            if (_dueDate != null)
-              Padding(
-                padding: EdgeInsets.only(top: 8.h),
-                child: TextButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      _dueDate = null;
-                    });
-                  },
-                  icon: Icon(Icons.clear, size: 16.sp),
-                  label: const Text('Clear due date'),
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.grey[600],
-                    padding: EdgeInsets.symmetric(horizontal: 12.w),
-                  ),
-                ),
-              ),
 
             SizedBox(height: 24.h),
 

@@ -1,37 +1,44 @@
 import 'dart:io';
+
+import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
 import 'package:el_race/report_module/core/utils/directory_operation.dart';
 import 'package:el_race/report_module/data/models/report_item_model.dart';
 import 'package:el_race/report_module/data/models/report_model.dart';
 import 'package:el_race/report_module/data/provider/reports_provider.dart';
 import 'package:el_race/report_module/data/repositories/company_repository.dart';
-import 'package:el_race/report_module/presentation/screens/report_detail/pdf_history_screen.dart';
-import 'package:el_race/report_module/core/constants/colors.dart';
+import 'package:el_race/report_module/data/services/pdf_service.dart';
+import 'package:el_race/report_module/presentation/bottom_sheets/create_task_from_report_sheet.dart';
 import 'package:el_race/report_module/presentation/bottom_sheets/show_option_sheet.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/add_cover_screen.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/add_new_item.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/camera_screen.dart';
+import 'package:el_race/report_module/presentation/screens/report_detail/pdf_history_screen.dart';
 import 'package:el_race/report_module/presentation/widgets/bottom_appbar.dart';
+import 'package:el_race/report_module/presentation/widgets/linked_tasks_list.dart';
 import 'package:el_race/report_module/presentation/widgets/report_item.dart';
 import 'package:el_race/report_module/presentation/widgets/square_button.dart';
-import 'package:el_race/report_module/presentation/bottom_sheets/create_task_from_report_sheet.dart';
-import 'package:el_race/report_module/presentation/widgets/linked_tasks_list.dart';
-import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
-import 'package:el_race/ui/presentation/todo_list/data/todo_model.dart';
+import 'package:el_race/ui/presentation/tasks/data/task_model.dart';
+import 'package:el_race/ui/presentation/tasks/logic/tasks_provider.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
+
 import '../../../data/models/report_detail_model.dart';
 import '../../widgets/cover_page.dart';
 
 class ReportDetailScreen extends StatefulWidget {
   final ReportModel report;
   final String folderName;
-  const ReportDetailScreen(
-      {super.key, required this.report, required this.folderName});
+  const ReportDetailScreen({
+    super.key,
+    required this.report,
+    required this.folderName,
+  });
 
   @override
   State<ReportDetailScreen> createState() => _ReportDetailScreenState();
@@ -40,40 +47,50 @@ class ReportDetailScreen extends StatefulWidget {
 class _ReportDetailScreenState extends State<ReportDetailScreen> {
   ReportDetailModel? reportDetail;
   int _linkedTasksCount = 0;
-  List<TodoModel> _linkedTasks = [];
+  List<TaskModel> _linkedTasks = [];
+  final Set<int> _submittingTaskIds = {};
 
   @override
   void initState() {
     super.initState();
-    _loadUpdatedRecord();
-    _loadTasksCount();
-    _loadLinkedTasks();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _loadUpdatedRecord();
+      await _loadLinkedTasks();
+    });
   }
 
   bool _loading = true;
   String loadingText = "";
 
-  Future<void> _loadTasksCount() async {
-    if (reportDetail != null) {
-      final todoProvider = Provider.of<TodoProvider>(context, listen: false);
-      final count =
-          await todoProvider.getTasksCountByReportId(reportDetail!.report.id);
-      if (mounted) {
-        setState(() {
-          _linkedTasksCount = count;
-        });
-      }
-    }
-  }
-
   Future<void> _loadLinkedTasks() async {
-    if (reportDetail != null) {
-      final todoProvider = Provider.of<TodoProvider>(context, listen: false);
-      final tasks =
-          await todoProvider.getTodosByReportId(reportDetail!.report.id);
+    if (reportDetail == null) return;
+
+    final tasksProvider = Provider.of<TasksProvider>(context, listen: false);
+
+    try {
+      if (tasksProvider.status == TasksStatus.initial ||
+          tasksProvider.status == TasksStatus.error) {
+        await tasksProvider.loadTasks();
+      } else if (tasksProvider.status == TasksStatus.empty) {
+        await tasksProvider.loadTasks(forceRefresh: true);
+      }
+
+      final reportId = reportDetail!.report.id;
+      final tasks = tasksProvider.tasks
+          .where((task) => task.reportIds.contains(reportId))
+          .toList();
+
       if (mounted) {
         setState(() {
           _linkedTasks = tasks;
+          _linkedTasksCount = tasks.length;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _linkedTasks = [];
+          _linkedTasksCount = 0;
         });
       }
     }
@@ -206,6 +223,8 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                     if (_linkedTasks.isNotEmpty)
                       LinkedTasksList(
                         tasks: _linkedTasks,
+                        onSubmit: _onSubmitTask,
+                        submittingTaskIds: _submittingTaskIds,
                       ),
 
                     if (reportDetail!.coverPage != null)
@@ -525,6 +544,98 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     }
   }
 
+  Future<void> _onSubmitTask(TaskModel task) async {
+    if (task.id == null) return;
+
+    final tasksProvider = Provider.of<TasksProvider>(context, listen: false);
+
+    setState(() {
+      _submittingTaskIds.add(task.id!);
+    });
+
+    try {
+      final message = await tasksProvider.completeTask(task.id!);
+
+      if (mounted) {
+        final feedback =
+            message ?? tasksProvider.errorMessage ?? 'Unable to submit task';
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(feedback)));
+      }
+
+      if ((task.projectId ?? '').isNotEmpty) {
+        await _regenerateReportForTask(task);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to submit task: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submittingTaskIds.remove(task.id!);
+        });
+      }
+      await _loadLinkedTasks();
+    }
+  }
+
+  Future<void> _regenerateReportForTask(TaskModel task) async {
+    if (reportDetail == null) return;
+
+    try {
+      await _loadUpdatedRecord();
+
+      setState(() {
+        _loading = true;
+        loadingText = 'Generating updated report...';
+      });
+
+      final pdfBytes = await PdfService().generateReportPdf(
+        report: reportDetail!,
+        projectName: task.projectId ?? widget.folderName,
+      );
+
+      final fileName =
+          '${reportDetail!.report.name}-${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}';
+
+      final success = await reportProvider.uploadReportPdf(
+        empId: ReportProvider.empID,
+        reportId: reportDetail!.report.id,
+        folderId: reportDetail!.report.folderId,
+        fileName: fileName,
+        pdfBytes: pdfBytes,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              success
+                  ? 'Report regenerated with the latest images'
+                  : 'Failed to upload regenerated report',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to regenerate report: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          loadingText = "";
+        });
+      }
+    }
+  }
+
   /// Show Create Task from Report bottom sheet
   Future<void> _showCreateTaskSheet() async {
     if (reportDetail == null) return;
@@ -540,7 +651,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
     // Refresh tasks count and list if task was created
     if (result == true) {
-      await _loadTasksCount();
       await _loadLinkedTasks();
     }
   }

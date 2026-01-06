@@ -455,13 +455,23 @@ class TaskDetailsScreen extends StatelessWidget {
   Widget _buildLinkedReports(BuildContext context) {
     return Consumer<ReportProvider>(
       builder: (context, reportProvider, _) {
+        final parsedReports = task.reportIds.map((e) {
+          if (e is Map && e['id'] != null) {
+            return (
+              id: e['id'].toString(),
+              name: e['name']?.toString(),
+            );
+          }
+          return (id: e.toString(), name: null);
+        }).toList();
+
         return Column(
-          children: task.reportIds.map((reportId) {
+          children: parsedReports.map((reportData) {
             final report = reportProvider.reports.firstWhere(
-              (r) => r.id == reportId,
+              (r) => r.id == reportData.id,
               orElse: () => ReportModel(
-                id: reportId,
-                name: 'Report $reportId',
+                id: reportData.id,
+                name: reportData.name ?? 'Report ${reportData.id}',
                 companyId: '',
                 folderId: '',
                 createdAt: DateTime.now(),
