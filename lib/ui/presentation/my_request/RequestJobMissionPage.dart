@@ -14,8 +14,7 @@ import '../../widgets/custom_slider_button.dart';
 class RequestJobMissionPage extends StatefulWidget {
   final loginResponseModel;
 
-  const RequestJobMissionPage({Key? key, required this.loginResponseModel})
-      : super(key: key);
+  const RequestJobMissionPage({super.key, required this.loginResponseModel});
 
   @override
   _RequestJobMissionPageState createState() => _RequestJobMissionPageState();

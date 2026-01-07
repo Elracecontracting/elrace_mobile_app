@@ -195,7 +195,7 @@ class MediaItemWidget extends StatelessWidget {
                     GestureDetector(
                       onTap: () async {
                         // Share media with other apps
-                        String shareText = '${media.displayName}';
+                        String shareText = media.displayName;
 
                         // Add client name if available
                         if (media.client != null && media.client!.isNotEmpty) {

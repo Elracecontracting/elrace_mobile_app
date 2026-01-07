@@ -9,9 +9,9 @@ class ListMediaScreen extends StatefulWidget {
   final List<dynamic> mediaList;
 
   const ListMediaScreen({
-    Key? key,
+    super.key,
     required this.mediaList,
-  }) : super(key: key);
+  });
 
   @override
   State<ListMediaScreen> createState() => _ListMediaScreenState();
@@ -146,9 +146,9 @@ class VideoPlayerScreen extends StatefulWidget {
   final QrMediaModel media;
 
   const VideoPlayerScreen({
-    Key? key,
+    super.key,
     required this.media,
-  }) : super(key: key);
+  });
 
   @override
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();

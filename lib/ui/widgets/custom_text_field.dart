@@ -10,12 +10,12 @@ class CustomTextField extends StatelessWidget {
   final String validatorText;
 
   const CustomTextField({
-    Key? key,
+    super.key,
     required this.formFieldKey,
     required this.controller,
     required this.hintText,
     required this.validatorText,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -45,7 +45,7 @@ class CustomTextField extends StatelessWidget {
             ),
           ),
             errorBorder: const OutlineInputBorder(
-              borderRadius: const BorderRadius.all(Radius.circular(16),),
+              borderRadius: BorderRadius.all(Radius.circular(16),),
               borderSide: BorderSide(color: AppColors.red),
             ),
             enabledBorder: const OutlineInputBorder(

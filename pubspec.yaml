@@ -31,10 +31,12 @@ dependencies:
   screen_protector: ^1.4.7
   adhan: ^2.0.0+1
   another_flushbar: ^1.12.30
+  bloc: ^8.1.4
   cached_network_image: ^3.3.1
   camera: ^0.11.2
   carousel_slider: null
   cookie_jar: null
+  collection: ^1.18.0
   cupertino_icons: ^1.0.6
   dartz: ^0.10.1
   device_info_plus: null
@@ -50,6 +52,8 @@ dependencies:
   firebase_ml_model_downloader: null
   fl_chart: ^1.1.0
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
   flutter_bloc: null
   google_mlkit_face_detection: ^0.10.0
@@ -79,6 +83,7 @@ dependencies:
   local_auth: ^2.3.0
   location: null
   lottie: null
+  path: ^1.9.0
   path_provider: null
   pdf: ^3.2.0
   permission_handler: null
@@ -104,10 +109,9 @@ dependencies:
 
 dev_dependencies:
   flutter_launcher_icons: ^0.13.1
-  flutter_localizations:
-    sdk: flutter
   flutter_test:
     sdk: flutter
+  flutter_lints: ^3.0.0
 dependency_overrides:
   flutter_screen_wake: ^1.0.2
 
@@ -116,13 +120,6 @@ flutter_launcher_icons:
   ios: true
   image_path: "assets/png/app-logo.png"
   remove_alpha_ios: true
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
-  flutter_lints: ^3.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

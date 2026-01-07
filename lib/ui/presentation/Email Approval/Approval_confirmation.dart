@@ -29,7 +29,7 @@ class ApprovalConfirmationScreen extends StatefulWidget {
 class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen> {
   bool isLoading = true;
   String error = '';
-  int _currentPage = 0;
+  final int _currentPage = 0;
   late PageController _pageController;
   Map<String, dynamic>? formData;
   List<dynamic> tableView = [];
@@ -493,7 +493,7 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              "$label",
+              label,
               style: GoogleFonts.koulen(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.bold,
@@ -512,7 +512,7 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
-                "$value",
+                value,
                 style: GoogleFonts.koulen(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
@@ -648,7 +648,7 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
       "Accept": "application/json",
       "Authorization": "Bearer $token",
     };
-    print('id: ${attachmentId}');
+    print('id: $attachmentId');
     final data = {
       "jsonrpc": "2.0",
       "params": {

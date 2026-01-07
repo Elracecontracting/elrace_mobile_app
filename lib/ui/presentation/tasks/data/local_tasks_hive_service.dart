@@ -3,17 +3,17 @@ import 'task_model.dart';
 
 class LocalTasksHiveService {
   static const String _boxName = 'local_tasks_box';
-  static Box<Map>? _box;
+  static Box<dynamic>? _box;
 
   static Future<void> init() async {
     try {
-      _box = await Hive.openBox<Map>(_boxName);
+      _box = await Hive.openBox<dynamic>(_boxName);
     } catch (e) {
       print('Error opening local tasks box: $e');
     }
   }
 
-  static Future<Box<Map>> _getBox() async {
+  static Future<Box<dynamic>> _getBox() async {
     if (_box == null || !_box!.isOpen) {
       await init();
     }

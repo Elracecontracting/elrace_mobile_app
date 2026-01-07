@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:el_race/ui/widgets/back_icon.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
@@ -36,7 +35,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
   // Search state
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
-  bool _showSearch = false;
+  final bool _showSearch = false;
   String _query = '';
 
   @override
@@ -117,9 +116,9 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
           String icon = 'assets/png/document_icon.png';
           final t = type.toLowerCase();
-          if (t.contains('emirates') || t.contains('id'))
+          if (t.contains('emirates') || t.contains('id')) {
             icon = 'assets/png/emitates_id.png';
-          else if (t.contains('passport'))
+          } else if (t.contains('passport'))
             icon = 'assets/png/passport.png';
           else if (t.contains('license') || t.contains('labor'))
             icon = 'assets/png/driving_license.png';
@@ -746,7 +745,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 }
 
 class DocumentDialog extends StatefulWidget {
-  const DocumentDialog({Key? key}) : super(key: key);
+  const DocumentDialog({super.key});
 
   @override
   State<DocumentDialog> createState() => _DocumentDialogState();
@@ -756,7 +755,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
   final TextEditingController _idController = TextEditingController();
   DateTime? _expiryDate;
   String? _selectedType;
-  List<String> _types = [
+  final List<String> _types = [
     'Passport',
     'Labor Card',
     'Medical Insurance',
@@ -1019,7 +1018,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
                   child: DropdownButton<String>(
                     isExpanded: true,
                     hint: const Center(
-                      child: const Text(
+                      child: Text(
                         'document type',
                         style: TextStyle(color: Colors.grey),
                       ),

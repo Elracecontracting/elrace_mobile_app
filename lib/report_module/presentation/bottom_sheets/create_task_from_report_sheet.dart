@@ -1,11 +1,16 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
 import 'package:el_race/report_module/data/models/report_detail_model.dart';
 import 'package:el_race/ui/presentation/tasks/logic/tasks_provider.dart';
-import 'package:el_race/ui/presentation/tasks/tasks_screen.dart';
+import 'package:el_race/ui/presentation/tasks/task_details_screen.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -27,9 +32,12 @@ class CreateTaskFromReportSheet extends StatefulWidget {
 class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
+  late TextEditingController _commentController;
   bool _isLoading = false;
   String _priority = '1';
   int? _selectedUserId;
+  String? _attachmentBase64;
+  String? _attachmentFilename;
 
   @override
   void initState() {
@@ -49,6 +57,8 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
     _descriptionController = TextEditingController(
       text: _generateDescriptionFromReport(),
     );
+
+    _commentController = TextEditingController();
   }
 
   String _generateDescriptionFromReport() {
@@ -96,10 +106,36 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
     }
   }
 
+  Future<void> _pickAttachment() async {
+    final result = await FilePicker.platform.pickFiles(
+      allowMultiple: false,
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'png', 'jpg', 'jpeg'],
+      withData: true,
+    );
+
+    if (result != null && result.files.isNotEmpty) {
+      final file = result.files.first;
+      final bytes = file.bytes ??
+          (file.path != null ? await File(file.path!).readAsBytes() : null);
+      if (bytes != null) {
+        setState(() {
+          _attachmentBase64 = base64Encode(bytes);
+          _attachmentFilename = file.name;
+        });
+      }
+    }
+  }
+
   Future<void> _createTask() async {
     if (_titleController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a task title')),
+      Fluttertoast.showToast(
+        msg: 'Please enter a task title',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
       );
       return;
     }
@@ -109,6 +145,10 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
     });
 
     final tasksProvider = Provider.of<TasksProvider>(context, listen: false);
+
+    final commentText = _commentController.text.trim().isEmpty
+        ? null
+        : _commentController.text.trim();
 
     // Default assignee to current user if none selected
     int? userId = _selectedUserId;
@@ -123,6 +163,9 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
       priority: _priority,
       reportId: widget.reportDetail.report.id,
       userId: userId,
+      comment: commentText,
+      attachmentBase64: _attachmentBase64,
+      attachmentFilename: _attachmentFilename,
     );
 
     setState(() {
@@ -130,29 +173,34 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
     });
 
     if (createdTask != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('✅ Task created successfully!'),
-          backgroundColor: Colors.green,
-          action: SnackBarAction(
-            label: 'VIEW',
-            textColor: Colors.white,
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const TasksScreen(),
-                ),
-              );
-            },
-          ),
+      Navigator.pop(context, true); // Close bottom sheet first
+
+      Fluttertoast.showToast(
+        msg: '✅ Task "${createdTask.name ?? ''}" created successfully!',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.green,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
+
+      // Navigate to task details
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => TaskDetailsScreen(task: createdTask),
         ),
       );
-      Navigator.pop(context, true); // Return true to indicate success
     } else if (mounted) {
       final error = tasksProvider.errorMessage ?? 'Failed to create task';
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error)));
+      Fluttertoast.showToast(
+        msg: error,
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
     }
   }
 
@@ -160,6 +208,7 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _commentController.dispose();
     super.dispose();
   }
 
@@ -280,12 +329,49 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
 
             SizedBox(height: 16.h),
 
+            // Comment Field
+            Text(
+              'Comment',
+              style: CustomTextStyle.reportTitle.copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: 14.sp,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            TextField(
+              controller: _commentController,
+              maxLines: 4,
+              decoration: InputDecoration(
+                hintText: 'Add a comment (optional)',
+                hintStyle: TextStyle(color: Colors.grey[400]),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: BorderSide(color: Colors.grey[300]!),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                  borderSide: BorderSide(color: CustomColors.maroon, width: 2),
+                ),
+                contentPadding: EdgeInsets.symmetric(
+                  horizontal: 16.w,
+                  vertical: 14.h,
+                ),
+              ),
+              style: CustomTextStyle.reportTitle.copyWith(fontSize: 13.sp),
+            ),
+
+            SizedBox(height: 16.h),
+
             // Priority & Assign
             Row(
               children: [
                 Expanded(
                   child: DropdownButtonFormField<String>(
-                    value: _priority,
+                    initialValue: _priority,
                     decoration: InputDecoration(
                       labelText: 'Priority',
                       border: OutlineInputBorder(
@@ -349,7 +435,7 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
                       }
 
                       return DropdownButtonFormField<int>(
-                        value: _selectedUserId,
+                        initialValue: _selectedUserId,
                         decoration: InputDecoration(
                           labelText: 'Assign to',
                           border: OutlineInputBorder(
@@ -388,6 +474,58 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
                     },
                   ),
                 ),
+              ],
+            ),
+
+            SizedBox(height: 16.h),
+
+            // Attachment Picker
+            Text(
+              'Attachment (optional)',
+              style: CustomTextStyle.reportTitle.copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: 14.sp,
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _pickAttachment,
+                    icon: const Icon(Icons.attach_file),
+                    label: Text(
+                      _attachmentFilename ?? 'Add file',
+                      overflow: TextOverflow.ellipsis,
+                      style: CustomTextStyle.reportTitle.copyWith(
+                        fontSize: 13.sp,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 12.h,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      side: BorderSide(color: Colors.grey[300]!),
+                    ),
+                  ),
+                ),
+                if (_attachmentFilename != null) ...[
+                  SizedBox(width: 8.w),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () {
+                      setState(() {
+                        _attachmentBase64 = null;
+                        _attachmentFilename = null;
+                      });
+                    },
+                  ),
+                ],
               ],
             ),
 

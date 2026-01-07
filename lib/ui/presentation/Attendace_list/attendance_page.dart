@@ -16,8 +16,8 @@ import 'bloc/attendance_bloc.dart';
 
 class AttendancePage extends StatefulWidget {
   const AttendancePage({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<AttendancePage> createState() => _AttendancePageState();
@@ -25,7 +25,7 @@ class AttendancePage extends StatefulWidget {
 
 class _AttendancePageState extends State<AttendancePage>
     with TickerProviderStateMixin {
-  String _imageBase64 = '';
+  final String _imageBase64 = '';
   late AttendanceBloc _attendanceBloc;
   var _selectedIndex = 0;
   Set<int> expandedItems = {};
@@ -74,8 +74,9 @@ class _AttendancePageState extends State<AttendancePage>
   }
 
   AnimationController _ensureController(int index) {
-    if (_bounceControllers.containsKey(index))
+    if (_bounceControllers.containsKey(index)) {
       return _bounceControllers[index]!;
+    }
     final controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 150),

@@ -32,6 +32,9 @@ class TasksRepository {
     String? description,
     String? priority,
     int? userId,
+    String? attachmentBase64,
+    String? attachmentFilename,
+    String? comment,
   }) async {
     final token = _getTokenOrThrow();
     return _api.createTask(
@@ -40,6 +43,9 @@ class TasksRepository {
       description: description,
       priority: priority,
       userId: userId,
+      attachmentBase64: attachmentBase64,
+      attachmentFilename: attachmentFilename,
+      comment: comment,
     );
   }
 
@@ -55,5 +61,26 @@ class TasksRepository {
     final token = _getTokenOrThrow();
     return _api.linkReportToTask(
         token: token, taskId: taskId, reportId: reportId);
+  }
+
+  Future<String> updateTask({
+    required int taskId,
+    String? name,
+    String? description,
+    String? priority,
+  }) async {
+    final token = _getTokenOrThrow();
+    return _api.updateTask(
+      token: token,
+      taskId: taskId,
+      name: name,
+      description: description,
+      priority: priority,
+    );
+  }
+
+  Future<String> deleteTask({required int taskId}) async {
+    final token = _getTokenOrThrow();
+    return _api.deleteTask(token: token, taskId: taskId);
   }
 }

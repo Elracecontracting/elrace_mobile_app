@@ -7,9 +7,9 @@ class ListDocumentsScreen extends StatelessWidget {
   final List<dynamic> documents;
 
   const ListDocumentsScreen({
-    Key? key,
+    super.key,
     required this.documents,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -86,10 +86,10 @@ class PdfViewerScreen extends StatelessWidget {
   final String title;
 
   const PdfViewerScreen({
-    Key? key,
+    super.key,
     required this.url,
     required this.title,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -14,11 +14,11 @@ class FaceRegistrationScreen extends StatefulWidget {
   final String subtitle;
 
   const FaceRegistrationScreen({
-    Key? key,
+    super.key,
     required this.userId,
     this.title = 'Register Your Face',
     this.subtitle = 'Look at the camera to register your identity',
-  }) : super(key: key);
+  });
 
   @override
   State<FaceRegistrationScreen> createState() => _FaceRegistrationScreenState();

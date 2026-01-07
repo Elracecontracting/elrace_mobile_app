@@ -82,7 +82,7 @@ class _MainScreenState extends State<MainScreen> {
 
 class CustomBottomNavBar extends StatelessWidget {
   final bool isMain;
-  const CustomBottomNavBar({this.isMain = true});
+  const CustomBottomNavBar({super.key, this.isMain = true});
 
   @override
   Widget build(BuildContext context) {

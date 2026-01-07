@@ -178,7 +178,7 @@ class FaceEmbeddingStorageService {
       return '$_keyPrefix$hashedUserId';
     }
 
-    return '${_keyPrefix}${hashedUserId}_$label';
+    return '$_keyPrefix${hashedUserId}_$label';
   }
 
   /// Hash user ID using SHA256 for additional privacy

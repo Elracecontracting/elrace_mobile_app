@@ -242,8 +242,9 @@ class _ProfileBoxWithSlideAnimationState
                                           fit: BoxFit.contain,
                                           loadingBuilder: (context, child,
                                               loadingProgress) {
-                                            if (loadingProgress == null)
+                                            if (loadingProgress == null) {
                                               return child;
+                                            }
                                             return Center(
                                               child: CircularProgressIndicator(
                                                 value: loadingProgress
@@ -293,7 +294,7 @@ class _ProfileBoxWithSlideAnimationState
                               child: IconButton(
                                 onPressed: () => Navigator.of(context).pop(),
                                 icon: Container(
-                                  decoration: BoxDecoration(
+                                  decoration: const BoxDecoration(
                                     color: Colors.black54,
                                     shape: BoxShape.circle,
                                   ),
@@ -484,7 +485,7 @@ class _ProfileBoxWithSlideAnimationState
                                   ),
                                 ),
                                 SizedBox(height: 8.h),
-                                Container(
+                                SizedBox(
                                   width: 220.w,
                                   child: Text(
                                     loginData.result?.data?.qr_status == true
@@ -500,7 +501,7 @@ class _ProfileBoxWithSlideAnimationState
                                                 : const Color(0xffF44336)),
                                   ),
                                 ),
-                                Container(
+                                SizedBox(
                                   width: 250.w,
                                   height: 250.h,
                                   child: Stack(

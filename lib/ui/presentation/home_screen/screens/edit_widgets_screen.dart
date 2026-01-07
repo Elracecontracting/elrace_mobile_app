@@ -694,7 +694,7 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
       backgroundImagePath: 'assets/png/notes_new_bg.png',
       onClick: null,
       topPadding: true,
-      childWidget: Container(
+      childWidget: SizedBox(
         width: SizeConfig().getWidth(200),
         height: SizeConfig().getHeight(67),
         child: Row(

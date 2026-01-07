@@ -15,14 +15,14 @@ class AndroidBiometricSheet extends StatefulWidget {
   final VoidCallback? onError;
 
   const AndroidBiometricSheet({
-    Key? key,
+    super.key,
     required this.title,
     required this.subtitle,
     required this.reason,
     this.onSuccess,
     this.onCancel,
     this.onError,
-  }) : super(key: key);
+  });
 
   @override
   State<AndroidBiometricSheet> createState() => _AndroidBiometricSheetState();

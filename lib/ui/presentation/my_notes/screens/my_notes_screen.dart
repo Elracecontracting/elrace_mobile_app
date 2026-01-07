@@ -112,11 +112,11 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
                               child: ListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                itemCount: searchlist.length != 0
+                                itemCount: searchlist.isNotEmpty
                                     ? searchlist.length
                                     : state.notes.length,
                                 itemBuilder: (context, index) {
-                                  final note = searchlist.length != 0
+                                  final note = searchlist.isNotEmpty
                                       ? searchlist[index]
                                       : state.notes[index];
                                   return NoteItemWidget(

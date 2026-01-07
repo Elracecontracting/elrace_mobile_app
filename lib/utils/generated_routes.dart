@@ -22,14 +22,14 @@ import '../ui/presentation/Attendace_list/attendance_page.dart';
 
 class OnGeneratedRoutes {
   Route<dynamic> generatedRoutes(RouteSettings settings) {
-    final _signInBloc = sl.get<SignInBloc>();
-    final _contactBloc = sl.get<ContactBloc>();
+    final signInBloc = sl.get<SignInBloc>();
+    final contactBloc = sl.get<ContactBloc>();
     switch (settings.name) {
       case '/':
         return CupertinoPageRoute(builder: (_) => const SplashScreen());
       case '/signIN':
         Future.delayed(const Duration(milliseconds: 500), () {
-          _signInBloc.add(CheckSignedIn());
+          signInBloc.add(CheckSignedIn());
         });
         return CupertinoPageRoute(builder: (_) => const SignInScreen());
       case '/landing':
@@ -43,7 +43,7 @@ class OnGeneratedRoutes {
         );
       case '/contact':
         Future.delayed(const Duration(milliseconds: 500), () {
-          _contactBloc.add(GetEmployeeLisET());
+          contactBloc.add(GetEmployeeLisET());
         });
         return CupertinoPageRoute(builder: (_) => const CallScreen());
       case '/qr_code':

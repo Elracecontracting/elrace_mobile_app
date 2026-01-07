@@ -58,9 +58,8 @@ class CustomPageRoute extends PageRouteBuilder {
 class SlideRightPageRoute extends PageRouteBuilder {
   final Widget child;
 
-  SlideRightPageRoute({required this.child, RouteSettings? settings})
+  SlideRightPageRoute({required this.child, super.settings})
       : super(
-          settings: settings,
           transitionDuration: const Duration(milliseconds: 400),
           reverseTransitionDuration: const Duration(milliseconds: 500),
           pageBuilder: (context, animation, secondaryAnimation) => child,

@@ -18,7 +18,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
 import '../presentation/home_screen/bloc/home_bloc.dart';
-import '../presentation/home_screen/screens/home_screen.dart';
 
 class HeaderWidget extends StatefulWidget implements PreferredSizeWidget {
   const HeaderWidget({super.key, this.hidden = true});
@@ -159,7 +158,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                                     );
                                   }
                                 },
-                                child: Container(
+                                child: SizedBox(
                                   width: 30,
                                   height: 30,
                                   child: Icon(
@@ -212,7 +211,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                           child: Stack(
                             alignment: Alignment.topRight,
                             children: [
-                              Container(
+                              SizedBox(
                                 width: 24,
                                 height: 24,
                                 child: Image.asset(
@@ -299,7 +298,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                           child: Stack(
                             alignment: Alignment.topRight,
                             children: [
-                              Container(
+                              SizedBox(
                                 width: 30,
                                 height: 30,
                                 child: Image.asset(

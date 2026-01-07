@@ -316,7 +316,7 @@ class _AddDocumentDialog extends StatefulWidget {
 class _AddDocumentDialogState extends State<_AddDocumentDialog>
     with SingleTickerProviderStateMixin {
   final TextEditingController _woNameController = TextEditingController();
-  List<PlatformFile> _selectedFiles = [];
+  final List<PlatformFile> _selectedFiles = [];
   bool _isUploading = false;
   List<FolderModel> _folders = [];
   FolderModel? _selectedFolder;
@@ -703,7 +703,7 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog>
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none,
                             ),
-                            value: _selectedFolder,
+                            initialValue: _selectedFolder,
                             hint: Text(
                               'Select folder',
                               style: GoogleFonts.inter(

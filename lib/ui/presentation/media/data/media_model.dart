@@ -12,10 +12,10 @@ String _encodeUrl(String url) {
     return Uri.encodeComponent(segment);
   }).toList();
 
-  String encodedPath = '/' + encodedSegments.join('/');
+  String encodedPath = '/${encodedSegments.join('/')}';
 
   // Reconstruct the full URL
-  String encodedUrl = '${uri.scheme}://${uri.host}${encodedPath}';
+  String encodedUrl = '${uri.scheme}://${uri.host}$encodedPath';
 
   // Add query parameters if they exist
   if (uri.query.isNotEmpty) {
@@ -148,8 +148,9 @@ class MediaModel {
 
   // Use the URL for streaming/preview (prefer thumbnail if available)
   String get previewUrl {
-    if (thumbnail != null && thumbnail!.isNotEmpty)
+    if (thumbnail != null && thumbnail!.isNotEmpty) {
       return _encodeUrl(thumbnail!);
+    }
     if (url.isNotEmpty) return _encodeUrl(url);
     if (xWebUrl != null && xWebUrl!.isNotEmpty) return _encodeUrl(xWebUrl!);
     return url;
@@ -184,7 +185,7 @@ class MediaModel {
     if (cleanUrl.contains('s3.amazonaws.com') && isVideo) {
       // For HLS streams, don't add content-type parameter as it can interfere
       if (!cleanUrl.contains('.m3u8')) {
-        cleanUrl += '?response-content-type=video/${fileExtension}';
+        cleanUrl += '?response-content-type=video/$fileExtension';
       }
     }
 

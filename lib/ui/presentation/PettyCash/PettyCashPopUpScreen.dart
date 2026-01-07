@@ -226,9 +226,9 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
 
   Future<void> _addGalleryImages() async {
     final ImagePicker picker = ImagePicker();
-    final List<XFile>? images = await picker.pickMultiImage();
+    final List<XFile> images = await picker.pickMultiImage();
 
-    if (images != null && images.isNotEmpty) {
+    if (images.isNotEmpty) {
       for (var image in images) {
         attachments.add(File(image.path));
       }
@@ -463,9 +463,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       }
 
       // Ensure company info is loaded
-      if (CompanyRepository.company == null) {
-        CompanyRepository.company = await CompanyRepository().getCompany();
-      }
+      CompanyRepository.company ??= await CompanyRepository().getCompany();
 
       final logoPath = CompanyRepository.company?.logo ?? '';
       try {
@@ -1078,7 +1076,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                               // Overlay state variables inside dialog
                               final headerKey = GlobalKey();
 
-                              OverlayEntry _createOverlay() {
+                              OverlayEntry createOverlay() {
                                 final renderBox = headerKey.currentContext!
                                     .findRenderObject() as RenderBox;
                                 final size = renderBox.size;
@@ -1211,7 +1209,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                       if (expenseOverlay == null) {
                                         // Create and insert overlay with opacity 0
                                         overlayVisible = false;
-                                        expenseOverlay = _createOverlay();
+                                        expenseOverlay = createOverlay();
                                         Overlay.of(ctx).insert(expenseOverlay!);
                                         // Trigger fade in animation
                                         await Future.delayed(
@@ -1936,9 +1934,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                 padding: const EdgeInsets.symmetric(
                                     vertical: 2.0, horizontal: 12.0),
                                 child: _buildTransactionItem_2(
-                                  state is String
-                                      ? capitalize(state)
-                                      : state.toString(),
+                                  capitalize(state),
                                   date is String ? date : 'Date not available',
                                   total != null ? total.toString() : '0',
                                 ),
@@ -2120,7 +2116,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
           fit: BoxFit.cover, // Ensures the image covers the circle
         ),
         boxShadow: const [
-          const BoxShadow(color: Colors.black26, blurRadius: 5)
+          BoxShadow(color: Colors.black26, blurRadius: 5)
         ],
       ),
       child: Column(

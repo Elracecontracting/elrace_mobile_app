@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:el_race/data/models/report_detail_model.dart';
 import 'package:el_race/data/models/report_model.dart';

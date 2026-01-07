@@ -153,7 +153,7 @@ class FaceDetectorService {
   /// Handles different image formats (YUV, BGRA, etc.) and rotations
   InputImage _convertCameraImage(CameraImage image) {
     // Get image rotation based on device orientation
-    final rotation = InputImageRotation.rotation0deg;
+    const rotation = InputImageRotation.rotation0deg;
 
     // Get image format
     final format = InputImageFormatValue.fromRawValue(image.format.raw) ??

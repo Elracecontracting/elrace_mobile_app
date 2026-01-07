@@ -6,7 +6,7 @@ import 'package:el_race/ui/presentation/home_screen/widgets/timer_controller.dar
 import 'package:el_race/utils/color_utils.dart';
 
 class TimeStatusWidget extends StatelessWidget {
-  const TimeStatusWidget({Key? key}) : super(key: key);
+  const TimeStatusWidget({super.key});
 
   @override
   Widget build(BuildContext context) {

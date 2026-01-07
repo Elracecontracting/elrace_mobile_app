@@ -21,9 +21,9 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
   FutureOr<void> getCurrentLocationMethod(
       GetCurrentLocationET event, Emitter<LocationState> emit) async {
     try {
-      Position _location = await _locationRepo.getCurrentLocation();
-      log('_location.latitude  ${_location.latitude}');
-      log('_location.longitude ${_location.longitude}');
+      Position location = await _locationRepo.getCurrentLocation();
+      log('_location.latitude  ${location.latitude}');
+      log('_location.longitude ${location.longitude}');
       // يمكنك هنا emit لحالة نجاح إذا كان عندك state لذلك
       // emit(LocationLoaded(_location));
     } catch (e) {

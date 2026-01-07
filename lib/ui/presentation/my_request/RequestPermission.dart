@@ -13,8 +13,7 @@ import '../../widgets/custom_slider_button.dart';
 class RequestPermission extends StatefulWidget {
   final dynamic loginResponseModel;
 
-  const RequestPermission({Key? key, required this.loginResponseModel})
-      : super(key: key);
+  const RequestPermission({super.key, required this.loginResponseModel});
 
   @override
   _RequestPermissionState createState() => _RequestPermissionState();

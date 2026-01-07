@@ -51,14 +51,14 @@ class _AnimatedListViewState extends State<AnimatedListView>
               // HeaderWidget(username: widget.userName),
               const SizedBox(height: 20),
               const Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
                     Icon(
                       CupertinoIcons.floppy_disk,
                       color: shadowBlueDark,
                     ),
-                    const SizedBox(width: 5),
+                    SizedBox(width: 5),
                     Text(
                       'Save',
                       style: TextStyle(color: shadowBlueDark),

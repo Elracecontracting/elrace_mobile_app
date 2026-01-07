@@ -16,8 +16,8 @@ import '../home_screen/screens/main_screens.dart';
 
 class ApprovalsScreen extends StatefulWidget {
   const ApprovalsScreen({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<ApprovalsScreen> createState() => _ApprovalsScreenState();

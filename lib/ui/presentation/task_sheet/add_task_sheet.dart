@@ -10,6 +10,8 @@ import 'package:intl/intl.dart';
 import '../../widgets/header_widget.dart';
 
 class AddTaskSheet extends StatefulWidget {
+  const AddTaskSheet({super.key});
+
   @override
   State<AddTaskSheet> createState() => _AddTaskSheetState();
 }
@@ -392,7 +394,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 20.0, vertical: 10.0),
                     child: DropdownButtonFormField<String>(
-                      value: selectedLeaveType,
+                      initialValue: selectedLeaveType,
                       decoration: InputDecoration(
                         labelText: 'Choose leave type',
                         labelStyle:

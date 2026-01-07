@@ -136,7 +136,7 @@ class LpoCardWidget extends StatelessWidget {
     if (raw == null || raw.isEmpty) return '-- AED';
     final cleaned = raw.replaceAll(RegExp(r'[^0-9.,]'), '');
     final value = double.tryParse(cleaned.replaceAll(',', ''));
-    if (value == null) return '${raw} AED';
+    if (value == null) return '$raw AED';
     return '${_amountFormat.format(value)} AED';
   }
 

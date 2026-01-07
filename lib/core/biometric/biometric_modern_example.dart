@@ -12,7 +12,7 @@ import 'package:el_race/core/biometric/biometric_auth_state.dart';
 /// - State-driven UI updates
 /// - Modern, elegant design patterns
 class BiometricModernExampleScreen extends StatefulWidget {
-  const BiometricModernExampleScreen({Key? key}) : super(key: key);
+  const BiometricModernExampleScreen({super.key});
 
   @override
   State<BiometricModernExampleScreen> createState() =>

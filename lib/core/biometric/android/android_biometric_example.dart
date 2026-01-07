@@ -4,7 +4,7 @@ import 'package:el_race/core/biometric/android/android_biometric_helper.dart';
 /// Example screen showing Android biometric authentication
 /// Demonstrates the fast Material 3 biometric experience
 class AndroidBiometricExampleScreen extends StatefulWidget {
-  const AndroidBiometricExampleScreen({Key? key}) : super(key: key);
+  const AndroidBiometricExampleScreen({super.key});
 
   @override
   State<AndroidBiometricExampleScreen> createState() =>

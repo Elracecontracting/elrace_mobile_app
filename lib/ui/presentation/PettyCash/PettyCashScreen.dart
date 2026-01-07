@@ -12,8 +12,8 @@ import '../../widgets/header_widget.dart';
 
 class PettyCashScreen extends StatefulWidget {
   const PettyCashScreen({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   _PettyCashScreenState createState() => _PettyCashScreenState();
@@ -258,7 +258,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
 
                   const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 66),
-                    child: const Divider(color: Colors.grey, thickness: 1.5),
+                    child: Divider(color: Colors.grey, thickness: 1.5),
                   ),
 
                   const SizedBox(height: 10),

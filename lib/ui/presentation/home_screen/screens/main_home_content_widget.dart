@@ -39,7 +39,7 @@ class MainHomeContentWidget extends StatelessWidget {
                       itemBuilder: (BuildContext context, int itemIndex,
                           int pageViewIndex) {
                         return GestureDetector(
-                          onTap: () => Util.pushPage(NewsPage(), context),
+                          onTap: () => Util.pushPage(const NewsPage(), context),
                           child: Padding(
                             padding: EdgeInsets.symmetric(
                                 horizontal: SizeConfig().getWidth(10)),

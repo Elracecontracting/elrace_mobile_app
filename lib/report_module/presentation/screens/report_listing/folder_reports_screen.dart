@@ -78,7 +78,7 @@ class _FolderReportScreenState extends State<FolderReportScreen> {
                 bool status = await showAddNewReport(context,
                     type: 1, folderID: widget.folder.id.toString());
 
-                if (status)
+                if (status) {
                   Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -86,6 +86,7 @@ class _FolderReportScreenState extends State<FolderReportScreen> {
                                 report: reportProviderListener.reports.first,
                                 folderName: widget.folder.name,
                               )));
+                }
 
                 setState(() {});
                 return;
@@ -98,7 +99,7 @@ class _FolderReportScreenState extends State<FolderReportScreen> {
       body: Column(
         children: [
           Expanded(
-            child: !_loading && reportProviderListener.reports.length == 0
+            child: !_loading && reportProviderListener.reports.isEmpty
                 ? Center(
                     child: CupertinoButton(
                       padding: EdgeInsets.zero,

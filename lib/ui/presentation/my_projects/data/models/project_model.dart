@@ -2,30 +2,18 @@ import 'package:el_race/ui/presentation/my_projects/domain/entities/project_enti
 
 class ProjectModel extends ProjectEntity {
   const ProjectModel({
-    required int projectId,
-    required String partnerId,
-    required String agreementId,
-    required String woRefNo,
-    required String name,
-    required double woAmount,
-    required String projectStatus,
-    required String date,
-    required String dateStart,
-    int? differenceDays,
-    String? projectManagerPhoto,
-  }) : super(
-          projectId: projectId,
-          partnerId: partnerId,
-          agreementId: agreementId,
-          woRefNo: woRefNo,
-          name: name,
-          woAmount: woAmount,
-          projectStatus: projectStatus,
-          date: date,
-          dateStart: dateStart,
-          differenceDays: differenceDays,
-          projectManagerPhoto: projectManagerPhoto,
-        );
+    required super.projectId,
+    required super.partnerId,
+    required super.agreementId,
+    required super.woRefNo,
+    required super.name,
+    required super.woAmount,
+    required super.projectStatus,
+    required super.date,
+    required super.dateStart,
+    super.differenceDays,
+    super.projectManagerPhoto,
+  });
 
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
     // Debug print to check the values

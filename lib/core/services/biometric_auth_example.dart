@@ -9,7 +9,7 @@ import 'package:el_race/core/services/biometric_auth_service.dart';
 /// - Displaying user-friendly error messages
 /// - Graceful fallback behavior
 class BiometricAuthExample extends StatefulWidget {
-  const BiometricAuthExample({Key? key}) : super(key: key);
+  const BiometricAuthExample({super.key});
 
   @override
   State<BiometricAuthExample> createState() => _BiometricAuthExampleState();

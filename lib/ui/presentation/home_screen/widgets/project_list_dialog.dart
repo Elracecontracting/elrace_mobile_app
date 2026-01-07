@@ -359,8 +359,9 @@ void _showProjectSelectionDialog({
 
                                 if (!branchLabel
                                     .toLowerCase()
-                                    .contains(searchQuery.toLowerCase()))
+                                    .contains(searchQuery.toLowerCase())) {
                                   return const SizedBox();
+                                }
 
                                 return ListTile(
                                   dense: true,

@@ -82,7 +82,7 @@ class SimpleDocumentScanner extends StatefulWidget {
 }
 
 class _SimpleDocumentScannerState extends State<SimpleDocumentScanner> {
-  List<ScannedPage> _scannedPages = [];
+  final List<ScannedPage> _scannedPages = [];
   bool _isProcessing = false;
   int _selectedIndex = 0;
   ImageFilter _currentFilter = ImageFilter.original;

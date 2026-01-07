@@ -102,7 +102,7 @@ class ApiQuery {
     // Options _cacheOptions = buildCacheOptions(const Duration(days: 1),
     //     forceRefresh: forceRefresh, primaryKey: apiName);
     var cookieJar = PersistCookieJar(
-        ignoreExpires: true, storage: FileStorage(appDocPath + "/.cookies/"));
+        ignoreExpires: true, storage: FileStorage("$appDocPath/.cookies/"));
     Response? response;
 
     try {
@@ -164,7 +164,7 @@ class ApiQuery {
     Directory appDocDir = await getApplicationDocumentsDirectory();
     String appDocPath = appDocDir.path;
     var cookieJar = PersistCookieJar(
-        ignoreExpires: true, storage: FileStorage(appDocPath + "/.cookies/"));
+        ignoreExpires: true, storage: FileStorage("$appDocPath/.cookies/"));
     Response response;
     try {
       dio.interceptors.add(CookieManager(cookieJar));
@@ -201,7 +201,7 @@ class ApiQuery {
     Directory appDocDir = await getApplicationDocumentsDirectory();
     String appDocPath = appDocDir.path;
     var cookieJar = PersistCookieJar(
-        ignoreExpires: true, storage: FileStorage(appDocPath + "/.cookies/"));
+        ignoreExpires: true, storage: FileStorage("$appDocPath/.cookies/"));
     cookieJar.deleteAll();
     Response response;
     try {

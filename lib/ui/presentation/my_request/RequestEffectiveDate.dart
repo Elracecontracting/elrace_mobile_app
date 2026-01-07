@@ -14,8 +14,7 @@ import '../../widgets/custom_slider_button.dart';
 class EffectiveDatePage extends StatefulWidget {
   final loginResponseModel;
 
-  const EffectiveDatePage({Key? key, required this.loginResponseModel})
-      : super(key: key);
+  const EffectiveDatePage({super.key, required this.loginResponseModel});
 
   @override
   _EffectiveDatePageState createState() => _EffectiveDatePageState();

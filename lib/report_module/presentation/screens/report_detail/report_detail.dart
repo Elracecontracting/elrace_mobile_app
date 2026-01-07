@@ -426,7 +426,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       setState(() {});
       for (XFile image in result) {
         loadingText = "images is uploading";
-        ReportItemModel _newItem = ReportItemModel(
+        ReportItemModel newItem = ReportItemModel(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             reportId: reportDetail!.report.id,
             type: "image",
@@ -441,11 +441,11 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
         await reportProvider.updateReportDetail(
           reportDetail!.copyWith(
-            reportItems: [...reportDetail!.reportItems, _newItem],
+            reportItems: [...reportDetail!.reportItems, newItem],
           ),
         );
         reportDetail = reportDetail!.copyWith(
-          reportItems: [...reportDetail!.reportItems, _newItem],
+          reportItems: [...reportDetail!.reportItems, newItem],
         );
         setState(() {});
       }
@@ -465,7 +465,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         loadingText =
             "${result.indexWhere((e) => image == e)} of ${result.length} images is uploading";
 
-        ReportItemModel _newItem = ReportItemModel(
+        ReportItemModel newItem = ReportItemModel(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
             reportId: reportDetail!.report.id,
             type: "image",
@@ -480,12 +480,12 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
         await reportProvider.updateReportDetail(
           reportDetail!.copyWith(
-            reportItems: [...reportDetail!.reportItems, _newItem],
+            reportItems: [...reportDetail!.reportItems, newItem],
           ),
         );
 
         reportDetail = reportDetail!.copyWith(
-          reportItems: [...reportDetail!.reportItems, _newItem],
+          reportItems: [...reportDetail!.reportItems, newItem],
         );
         setState(() {});
       }

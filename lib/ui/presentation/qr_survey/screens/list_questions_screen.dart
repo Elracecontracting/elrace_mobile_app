@@ -11,11 +11,11 @@ class ListQuestionsScreen extends StatefulWidget {
   final String title;
 
   const ListQuestionsScreen({
-    Key? key,
+    super.key,
     required this.questions,
     required this.surveyId,
     required this.title,
-  }) : super(key: key);
+  });
 
   @override
   State<ListQuestionsScreen> createState() => _ListQuestionsScreenState();

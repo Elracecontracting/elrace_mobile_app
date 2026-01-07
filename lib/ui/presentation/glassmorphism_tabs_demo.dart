@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class GlassmorphismTabsDemo extends StatefulWidget {
-  const GlassmorphismTabsDemo({Key? key}) : super(key: key);
+  const GlassmorphismTabsDemo({super.key});
 
   @override
   State<GlassmorphismTabsDemo> createState() => _GlassmorphismTabsDemoState();

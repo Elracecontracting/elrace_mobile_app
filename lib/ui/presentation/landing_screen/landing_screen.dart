@@ -20,7 +20,7 @@ class _LandingScreenState extends State<LandingScreen> {
   var _selectedIndex = 0;
   late List<Widget> _pages;
   final _userRepo = UserRepo();
-  String? _deviceId = '';
+  final String _deviceId = '';
   final _locationBloc = LocationBloc();
 
   void _onItemTapped(int index) {

@@ -13,14 +13,14 @@ class GlassTabWidget extends StatelessWidget {
   final Color? unselectedColor;
 
   const GlassTabWidget({
-    Key? key,
+    super.key,
     required this.icon,
     required this.title,
     required this.isSelected,
     required this.onTap,
     this.selectedColor,
     this.unselectedColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

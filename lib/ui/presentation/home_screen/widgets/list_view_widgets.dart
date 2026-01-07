@@ -377,10 +377,48 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
             GrayCardComponent(
               cardTitle: translate('home.todo_list'),
               backgroundImagePath: 'assets/png/blue_card.png',
-              onClick: () => Util.pushPage(const TasksScreen(), context),
+              onClick: () {
+                if (hasError) {
+                  // Show error message in a snackbar when tapped
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                          tasksProvider.errorMessage ?? 'Failed to load tasks'),
+                      action: SnackBarAction(
+                        label: 'Retry',
+                        onPressed: () => tasksProvider.loadTasks(),
+                      ),
+                      duration: const Duration(seconds: 5),
+                    ),
+                  );
+                } else {
+                  Util.pushPage(const TasksScreen(), context);
+                }
+              },
               childWidget: isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : const SizedBox.shrink(),
+                  : hasError
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                color: Colors.white.withOpacity(0.5),
+                                size: 40,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Tap to retry',
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.7),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : const SizedBox.shrink(),
             ),
             Positioned(
               right: 6.w,
@@ -403,7 +441,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               child: CountWidget(
                 count: todoCount,
                 countColor: Colors.black,
-                containerColor: Colors.white,
+                containerColor: hasError ? Colors.red.shade100 : Colors.white,
               ),
             ),
           ],
@@ -694,7 +732,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                     width: 2,
                   ),
                   Text(
-                    '${bloc.monthName}',
+                    bloc.monthName,
                     style: GoogleFonts.aBeeZee(
                       color: Colors.white,
                       fontSize: 17.sp,
@@ -803,7 +841,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                         ],
                       ),
                     );
-                  }).toList(),
+                  }),
 
                 // زر إغلاق وضع إعادة الترتيب
                 if (bloc.isReorderMode)

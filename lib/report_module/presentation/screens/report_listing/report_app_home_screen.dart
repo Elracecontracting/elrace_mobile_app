@@ -86,12 +86,13 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                   bool status = await showAddNewReport(context, type: 2);
                   if (!mounted) return;
 
-                  if (status)
+                  if (status) {
                     Navigator.push(
                         context,
                         MaterialPageRoute(
                             builder: (context) => FolderReportScreen(
                                 folder: reportProviderListener.folders.first)));
+                  }
                   setState(() {});
                   return;
                 }
@@ -117,7 +118,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                     CustomTextStyle.heading.copyWith(color: CustomColors.black),
               ),
             )
-          : !isLoading && reportProviderListener.folders.length == 0
+          : !isLoading && reportProviderListener.folders.isEmpty
               ? Center(
                   child: CupertinoButton(
                     padding: EdgeInsets.zero,

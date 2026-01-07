@@ -17,10 +17,9 @@ class GradientSliderWidget extends StatefulWidget {
   final dynamic loginResponseModel;
 
   const GradientSliderWidget(
-      {Key? key,
+      {super.key,
       required this.onValueChanged,
-      required this.loginResponseModel})
-      : super(key: key);
+      required this.loginResponseModel});
 
   @override
   GradientSliderState createState() => GradientSliderState();
@@ -418,8 +417,9 @@ class GradientSliderState extends State<GradientSliderWidget> {
 
                                   if (!branchLabel
                                       .toLowerCase()
-                                      .contains(searchQuery.toLowerCase()))
+                                      .contains(searchQuery.toLowerCase())) {
                                     return const SizedBox();
+                                  }
 
                                   return ListTile(
                                     dense: true,
@@ -886,8 +886,7 @@ class CameraWithOverlay extends StatefulWidget {
   final Function(File?) onCapture;
 
   const CameraWithOverlay(
-      {Key? key, required this.overlayImage, required this.onCapture})
-      : super(key: key);
+      {super.key, required this.overlayImage, required this.onCapture});
 
   @override
   State<CameraWithOverlay> createState() => _CameraWithOverlayState();

@@ -14,11 +14,11 @@ class FaceVerificationScreen extends StatefulWidget {
   final String subtitle;
 
   const FaceVerificationScreen({
-    Key? key,
+    super.key,
     required this.userId,
     this.title = 'Verify Your Identity',
     this.subtitle = 'Look at the camera to continue',
-  }) : super(key: key);
+  });
 
   @override
   State<FaceVerificationScreen> createState() => _FaceVerificationScreenState();

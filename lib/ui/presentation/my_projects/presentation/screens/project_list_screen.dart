@@ -177,7 +177,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                 return const SliverFillRemaining(
                   child: Center(child: CircularProgressIndicator()),
                 );
-              } else if (!(state is ProjectListLoading) &&
+              } else if (state is! ProjectListLoading &&
                   bloc.visibleProjects.isEmpty) {
                 return const SliverFillRemaining(
                   child: Center(child: Text('No data available')),

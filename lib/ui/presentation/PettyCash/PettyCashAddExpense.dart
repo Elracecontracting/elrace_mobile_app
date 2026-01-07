@@ -61,7 +61,7 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
 }
 
 class PettyCashAddExpense extends StatefulWidget {
-  const PettyCashAddExpense({Key? key}) : super(key: key);
+  const PettyCashAddExpense({super.key});
 
   @override
   _PettyCashAddExpenseState createState() => _PettyCashAddExpenseState();

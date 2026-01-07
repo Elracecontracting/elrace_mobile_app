@@ -23,7 +23,7 @@ class MediaListScreen extends StatefulWidget {
 class _MediaListScreenState extends State<MediaListScreen> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
-  bool _showSearch = false;
+  final bool _showSearch = false;
   @override
   void initState() {
     super.initState();

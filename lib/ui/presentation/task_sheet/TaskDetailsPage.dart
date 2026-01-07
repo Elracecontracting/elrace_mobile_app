@@ -18,11 +18,10 @@ class TaskDetailsPage extends StatefulWidget {
   final int project_id;
 
   const TaskDetailsPage(
-      {Key? key,
+      {super.key,
       required this.loginResponseModel,
       required this.taskId,
-      required this.project_id})
-      : super(key: key);
+      required this.project_id});
 
   @override
   State<TaskDetailsPage> createState() => _TaskDetailsPageState();

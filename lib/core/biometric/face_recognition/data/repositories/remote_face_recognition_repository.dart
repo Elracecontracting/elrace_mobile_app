@@ -11,7 +11,7 @@ import '../../domain/repositories/face_recognition_repository.dart';
 class RemoteFaceRecognitionRepository implements FaceRecognitionRepository {
   @override
   Future<Either<FaceRecognitionFailure, void>> initialize() async {
-    return Left(const ModelNotLoadedFailure());
+    return const Left(ModelNotLoadedFailure());
   }
 
   @override
@@ -22,7 +22,7 @@ class RemoteFaceRecognitionRepository implements FaceRecognitionRepository {
     CameraLensDirection? lensDirection,
     int? sensorOrientation,
   }) async {
-    return Left(const VerificationFailure(
+    return const Left(VerificationFailure(
       'Remote biometric enrollment not implemented. Wire this to the bank-grade SDK.',
     ));
   }
@@ -34,7 +34,7 @@ class RemoteFaceRecognitionRepository implements FaceRecognitionRepository {
     CameraLensDirection? lensDirection,
     int? sensorOrientation,
   }) async {
-    return Left(const VerificationFailure(
+    return const Left(VerificationFailure(
       'Remote biometric verification not implemented. Wire this to the bank-grade SDK.',
     ));
   }
@@ -42,7 +42,7 @@ class RemoteFaceRecognitionRepository implements FaceRecognitionRepository {
   @override
   Future<Either<FaceRecognitionFailure, List<FaceEmbedding>>>
       getStoredEmbeddings(String userId) async {
-    return Left(const VerificationFailure(
+    return const Left(VerificationFailure(
       'Remote biometric storage not implemented. Use server-side templates.',
     ));
   }
@@ -50,7 +50,7 @@ class RemoteFaceRecognitionRepository implements FaceRecognitionRepository {
   @override
   Future<Either<FaceRecognitionFailure, void>> deleteEmbeddings(
       String userId) async {
-    return Left(const VerificationFailure(
+    return const Left(VerificationFailure(
       'Remote biometric deletion not implemented. Add server call.',
     ));
   }
@@ -61,6 +61,6 @@ class RemoteFaceRecognitionRepository implements FaceRecognitionRepository {
     CameraLensDirection? lensDirection,
     int? sensorOrientation,
   }) async {
-    return Left(const LivenessCheckFailure());
+    return const Left(LivenessCheckFailure());
   }
 }

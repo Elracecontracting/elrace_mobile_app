@@ -6,7 +6,7 @@ import 'package:el_race/utils/Util.dart';
 import 'package:el_race/core/services/app_config_service.dart';
 
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();

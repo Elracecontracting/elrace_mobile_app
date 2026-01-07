@@ -8,10 +8,10 @@ class CustomSliderButton extends StatefulWidget {
   final dynamic loginResponseModel;
 
   const CustomSliderButton({
-    Key? key,
+    super.key,
     required this.onSlideComplete,
     required this.loginResponseModel,
-  }) : super(key: key);
+  });
 
   @override
   CustomSliderButtonState createState() => CustomSliderButtonState();

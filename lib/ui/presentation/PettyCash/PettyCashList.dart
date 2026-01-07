@@ -35,7 +35,7 @@ class _PettyCashListState extends State<PettyCashList> {
     });
     try {
       // يمكنك تعديل طريقة جلب التوكن حسب مشروعك
-      final token = await SharedPref.getLoginData().result?.token;
+      final token = SharedPref.getLoginData().result?.token;
       final headers = {
         "Content-Type": "application/json",
         "Accept": "application/json",

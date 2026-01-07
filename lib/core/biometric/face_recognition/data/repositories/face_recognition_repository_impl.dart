@@ -57,7 +57,7 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
 
       return const Right(null);
     } catch (e) {
-      return Left(ModelNotLoadedFailure());
+      return const Left(ModelNotLoadedFailure());
     }
   }
 
@@ -154,7 +154,7 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
       if (_enableLivenessCheck) {
         hasLiveness = _faceDetectorService.checkLiveness(face);
         if (!hasLiveness) {
-          return Right(
+          return const Right(
             FaceVerificationResult(
               isVerified: false,
               confidence: 0.0,

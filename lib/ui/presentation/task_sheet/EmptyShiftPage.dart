@@ -16,7 +16,7 @@ class EmptyShiftPage extends StatefulWidget {
   final int taskId; // <-- Task ID to send in API
   final int project_id;
 
-  const EmptyShiftPage({Key? key, required this.loginResponseModel, required this.selectedDate,required this.taskId, required this.project_id}) : super(key: key);
+  const EmptyShiftPage({super.key, required this.loginResponseModel, required this.selectedDate,required this.taskId, required this.project_id});
 
   @override
   State<EmptyShiftPage> createState() => _EmptyShiftPageState();

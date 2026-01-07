@@ -15,7 +15,7 @@ class ApprovalActionButtons extends StatelessWidget {
   final String? selectedAction;
   final List<String> userIds;
 
-  const ApprovalActionButtons({
+  const ApprovalActionButtons({super.key, 
     required this.requestId,
     required this.type,
     this.onResult,
@@ -69,7 +69,7 @@ class ApprovalActionButtons extends StatelessWidget {
               : () async {
                   final token = SharedPref.getLoginData().result?.token ?? '';
                   String? comment = await _showCommentDialog(context, label);
-                  if (comment == null) comment = '..';
+                  comment ??= '..';
                   if (label == "APPROVE") {
                     context.read<ApprovalBloc>().add(
                           ApproveRequest(

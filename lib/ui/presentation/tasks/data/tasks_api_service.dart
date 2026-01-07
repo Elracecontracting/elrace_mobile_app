@@ -46,53 +46,84 @@ class TasksApiService {
       throw TasksUnauthorizedException();
     }
     if (response.statusCode >= 500) {
-      throw TasksApiException('Server error', code: response.statusCode);
+      // Try to extract error details from response body
+      try {
+        final decoded = jsonDecode(response.body);
+        final errorMsg = decoded['error']?['message'] ??
+            decoded['message'] ??
+            'Server error (${response.statusCode})';
+        throw TasksApiException(errorMsg, code: response.statusCode);
+      } catch (e) {
+        throw TasksApiException('Server error (${response.statusCode})',
+            code: response.statusCode);
+      }
     }
   }
 
   dynamic _decodeResult(http.Response response) {
-    final decoded = jsonDecode(response.body);
-    final result = decoded['result'];
-    return result;
+    try {
+      final decoded = jsonDecode(response.body);
+      final result = decoded['result'];
+      return result;
+    } catch (e) {
+      print('Error decoding response: $e');
+      print('Response body: ${response.body}');
+      throw TasksApiException('Invalid response from server');
+    }
   }
 
   Future<List<TaskModel>> fetchTasks({required String token}) async {
-    final uri = Uri.parse('$baseUrl/api/get_user_tasks');
-    final response = await _getWithBody(
-      uri: uri,
-      headers: _headers(token),
-      body: {'jsonrpc': '2.0'},
-    );
+    try {
+      final uri = Uri.parse('$baseUrl/api/get_user_tasks');
+      final response = await _getWithBody(
+        uri: uri,
+        headers: _headers(token),
+        body: {'jsonrpc': '2.0'},
+      );
 
-    _guardStatus(response);
-    if (response.statusCode != 200) {
-      throw TasksApiException('Failed to fetch tasks',
-          code: response.statusCode);
-    }
+      print('====== GET USER TASKS REQUEST ======');
+      print('URL: $uri');
+      print('Status Code: ${response.statusCode}');
+      print('Response Body: ${response.body}');
+      print('====================================');
 
-    final result = _decodeResult(response);
-
-    // Print response for debugging
-    print('====== GET USER TASKS RESPONSE ======');
-    print('Result: $result');
-    print('=====================================');
-
-    if (result is Map && result['success'] == true) {
-      final data = result['data'];
-      print('Tasks data: $data');
-      if (data is List) {
-        return data
-            .map((e) => e is Map<String, dynamic>
-                ? TaskModel.fromJson(e)
-                : TaskModel.fromJson(Map<String, dynamic>.from(e as Map)))
-            .toList();
+      _guardStatus(response);
+      if (response.statusCode != 200) {
+        throw TasksApiException(
+            'Failed to fetch tasks (${response.statusCode})',
+            code: response.statusCode);
       }
-      return const [];
-    }
 
-    final message =
-        (result is Map ? result['message'] : null) ?? 'Unable to fetch tasks';
-    throw TasksApiException(message);
+      final result = _decodeResult(response);
+
+      // Print response for debugging
+      print('====== GET USER TASKS RESPONSE ======');
+      print('Result: $result');
+      print('=====================================');
+
+      if (result is Map && result['success'] == true) {
+        final data = result['data'];
+        print('Tasks data: $data');
+        if (data is List) {
+          return data
+              .map((e) => e is Map<String, dynamic>
+                  ? TaskModel.fromJson(e)
+                  : TaskModel.fromJson(Map<String, dynamic>.from(e as Map)))
+              .toList();
+        }
+        return const [];
+      }
+
+      final message =
+          (result is Map ? result['message'] : null) ?? 'Unable to fetch tasks';
+      throw TasksApiException(message);
+    } catch (e) {
+      print('Error in fetchTasks: $e');
+      if (e is TasksApiException) {
+        rethrow;
+      }
+      throw TasksApiException('Network error: ${e.toString()}');
+    }
   }
 
   Future<List<AssignableUser>> fetchAssignableUsers(
@@ -130,6 +161,9 @@ class TasksApiService {
     String? description,
     String? priority,
     int? userId,
+    String? attachmentBase64,
+    String? attachmentFilename,
+    String? comment,
   }) async {
     final uri = Uri.parse('$baseUrl/api/create_task');
     final params = <String, dynamic>{
@@ -137,6 +171,22 @@ class TasksApiService {
       'description': description ?? '',
       'priority': priority ?? '3',
     };
+
+    // Include comment if provided (fallback to description for backward compat)
+    final resolvedComment = comment ?? description;
+    if (resolvedComment != null && resolvedComment.isNotEmpty) {
+      params['comment'] = resolvedComment;
+    }
+
+    // Attach file payload only when both parts are available
+    final hasAttachmentData = attachmentBase64 != null &&
+        attachmentBase64.isNotEmpty &&
+        attachmentFilename != null &&
+        attachmentFilename.isNotEmpty;
+    if (hasAttachmentData) {
+      params['attachment'] = attachmentBase64;
+      params['attachment_filename'] = attachmentFilename;
+    }
     if (userId != null) {
       params['user_id'] = userId;
     }
@@ -171,28 +221,51 @@ class TasksApiService {
   Future<String> submitTask(
       {required String token, required int taskId}) async {
     final uri = Uri.parse('$baseUrl/api/submit_task');
+    final body = {
+      'jsonrpc': '2.0',
+      'params': {
+        'task_id': taskId,
+      },
+    };
+
+    print('═══════════════════════════════════════════════════');
+    print('🔵 SUBMIT TASK API CALL');
+    print('═══════════════════════════════════════════════════');
+    print('📍 URL: $uri');
+    print('🔑 Token: ${token.substring(0, 20)}...');
+    print('📦 Body: $body');
+    print('📋 Task ID: $taskId');
+    print('═══════════════════════════════════════════════════');
+
     final response = await _getWithBody(
       uri: uri,
       headers: _headers(token),
-      body: {
-        'jsonrpc': '2.0',
-        'params': {
-          'task_id': taskId,
-        },
-      },
+      body: body,
     );
+
+    print('📥 Response Status Code: ${response.statusCode}');
+    print('📥 Response Body: ${response.body}');
+    print('═══════════════════════════════════════════════════');
 
     _guardStatus(response);
     if (response.statusCode != 200) {
+      print('❌ Submit task failed with status: ${response.statusCode}');
       throw TasksApiException('Failed to submit task',
           code: response.statusCode);
     }
 
     final result = _decodeResult(response);
+    print('✅ Decoded Result: $result');
+
     if (result is Map && result['status'] == 'success') {
+      print('✅ Task submitted successfully: ${result['message']}');
+      print('═══════════════════════════════════════════════════\n');
       return (result['message'] as String?) ?? 'Task submitted';
     }
 
+    print(
+        '❌ Submit task failed: ${result is Map ? result['message'] : result}');
+    print('═══════════════════════════════════════════════════\n');
     throw TasksApiException(
         (result is Map ? result['message'] : null) ?? 'Unable to submit task');
   }
@@ -228,5 +301,83 @@ class TasksApiService {
 
     throw TasksApiException(
         (result is Map ? result['message'] : null) ?? 'Unable to link report');
+  }
+
+  Future<String> updateTask({
+    required String token,
+    required int taskId,
+    String? name,
+    String? description,
+    String? priority,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/update_task');
+
+    final params = <String, dynamic>{'task_id': taskId};
+    if (name != null && name.trim().isNotEmpty) {
+      params['name'] = name.trim();
+    }
+    if (description != null && description.trim().isNotEmpty) {
+      params['description'] = description.trim();
+    }
+    if (priority != null && priority.trim().isNotEmpty) {
+      params['priority'] = priority.trim();
+    }
+
+    if (params.keys.length == 1) {
+      throw TasksApiException('Nothing to update');
+    }
+
+    final response = await _getWithBody(
+      uri: uri,
+      headers: _headers(token),
+      body: {
+        'jsonrpc': '2.0',
+        'params': params,
+      },
+    );
+
+    _guardStatus(response);
+    if (response.statusCode != 200) {
+      throw TasksApiException('Failed to update task',
+          code: response.statusCode);
+    }
+
+    final result = _decodeResult(response);
+    if (result is Map && result['status'] == 'success') {
+      return (result['message'] as String?) ?? 'Task updated successfully';
+    }
+
+    throw TasksApiException(
+        (result is Map ? result['message'] : null) ?? 'Unable to update task');
+  }
+
+  Future<String> deleteTask({
+    required String token,
+    required int taskId,
+  }) async {
+    final uri = Uri.parse('$baseUrl/api/delete_task');
+
+    final response = await _getWithBody(
+      uri: uri,
+      headers: _headers(token),
+      body: {
+        'jsonrpc': '2.0',
+        'params': {'task_id': taskId},
+      },
+    );
+
+    _guardStatus(response);
+    if (response.statusCode != 200) {
+      throw TasksApiException('Failed to delete task',
+          code: response.statusCode);
+    }
+
+    final result = _decodeResult(response);
+    if (result is Map && result['status'] == 'success') {
+      return (result['message'] as String?) ?? 'Task deleted successfully';
+    }
+
+    throw TasksApiException(
+        (result is Map ? result['message'] : null) ?? 'Unable to delete task');
   }
 }

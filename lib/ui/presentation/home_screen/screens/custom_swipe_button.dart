@@ -475,7 +475,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
 
           // Timeline component below the button
           SizedBox(height: 24.h),
-          Container(
+          SizedBox(
             width: buttonWidth * 0.9, // Decreased width to 70% of button width
             child: Column(
               children: [
@@ -550,7 +550,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                         height: 15.w,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          image: const DecorationImage(
+                          image: DecorationImage(
                             image: AssetImage('assets/newapp/green_polit.png'),
                             fit: BoxFit.cover,
                           ),
@@ -580,7 +580,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                         height: 15.w,
                         decoration: const BoxDecoration(
                           shape: BoxShape.circle,
-                          image: const DecorationImage(
+                          image: DecorationImage(
                             image: AssetImage('assets/newapp/red_polit.png'),
                             fit: BoxFit.cover,
                           ),

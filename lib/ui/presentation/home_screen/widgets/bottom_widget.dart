@@ -28,7 +28,7 @@ class BottomWidget extends StatelessWidget {
                   boxShadow: const [
                     BoxShadow(
                         color: lightGrey,
-                        offset: const Offset(1, 4),
+                        offset: Offset(1, 4),
                         blurRadius: 10)
                   ]),
               child: Center(

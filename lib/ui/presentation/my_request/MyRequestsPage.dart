@@ -17,8 +17,8 @@ import '../../widgets/header_widget.dart';
 
 class MyRequestsPage extends StatefulWidget {
   const MyRequestsPage({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   _MyRequestsPageState createState() => _MyRequestsPageState();

@@ -13,6 +13,7 @@ import '../home_screen/screens/main_screens.dart';
 class ProjectAnnouncementPage extends StatelessWidget {
   final news;
   const ProjectAnnouncementPage({
+    super.key,
     required this.news,
   });
 
@@ -22,7 +23,7 @@ class ProjectAnnouncementPage extends StatelessWidget {
       backgroundColor: Colors.white,
       appBar: HeaderWidget(),
       extendBody: true,
-      bottomNavigationBar: const CustomBottomNavBar(
+      bottomNavigationBar: CustomBottomNavBar(
         isMain: false,
       ),
     );
@@ -30,7 +31,7 @@ class ProjectAnnouncementPage extends StatelessWidget {
 }
 
 class NewsPage extends StatelessWidget {
-  final sliderList = [
+  final List<Map<String, String>> sliderList = const [
     {
       "image": 'assets/jpeg/slide_1_c.jpg',
       "titles": "alain club ",
@@ -77,6 +78,8 @@ We extend our gratitude to our skilled team, trusted partners, and the community
           '''We are proud to announce the successful completion of a state-of-the-art healthcare facility, designed to elevate patient care and meet the growing healthcare needs of our community. This landmark project reflects our commitment to delivering excellence and innovation in the field of healthcare infrastructure.''',
     },
   ];
+
+  const NewsPage({super.key});
   @override
   Widget build(BuildContext context) {
     return Scaffold(

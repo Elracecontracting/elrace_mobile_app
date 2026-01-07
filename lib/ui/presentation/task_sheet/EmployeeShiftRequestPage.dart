@@ -17,7 +17,7 @@ class EmployeeShiftRequestPage extends StatefulWidget {
   final DateTime selectedDate;
 
 
-  const EmployeeShiftRequestPage({Key? key, required this.loginResponseModel,required this.taskId, required this.project_id,required this.selectedDate}) : super(key: key);
+  const EmployeeShiftRequestPage({super.key, required this.loginResponseModel,required this.taskId, required this.project_id,required this.selectedDate});
 
   @override
   State<EmployeeShiftRequestPage> createState() => _EmployeeShiftRequestPageState();
@@ -395,7 +395,7 @@ class _EmployeeShiftRequestPageState extends State<EmployeeShiftRequestPage> {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                     child: DropdownButtonFormField<String>(
-                      value: selectedLeaveType,
+                      initialValue: selectedLeaveType,
                       decoration: InputDecoration(
                         labelText: 'Choose leave type',
                         labelStyle: const TextStyle(fontSize: 13, color: Colors.black),

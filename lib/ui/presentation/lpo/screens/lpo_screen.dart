@@ -29,7 +29,7 @@ class _LpoListScreenState extends State<LpoListScreen> {
   // Search UI (match MediaListScreen)
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
-  bool _showSearch = false;
+  final bool _showSearch = false;
 
   @override
   void initState() {

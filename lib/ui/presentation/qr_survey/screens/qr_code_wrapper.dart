@@ -7,7 +7,7 @@ import 'list_media_screen.dart';
 
 /// Central wrapper that displays content based on the type from provider
 class QrCodeWrapper extends StatelessWidget {
-  const QrCodeWrapper({Key? key}) : super(key: key);
+  const QrCodeWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {

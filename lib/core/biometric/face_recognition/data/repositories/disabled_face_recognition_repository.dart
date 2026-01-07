@@ -11,7 +11,7 @@ class DisabledFaceRecognitionRepository implements FaceRecognitionRepository {
 
   @override
   Future<Either<FaceRecognitionFailure, void>> initialize() async {
-    return Left(const VerificationFailure(
+    return const Left(VerificationFailure(
       'Biometrics are disabled in this build. Enable ENABLE_LOCAL_BIOMETRICS to use the temporary local flow.',
     ));
   }
@@ -24,7 +24,7 @@ class DisabledFaceRecognitionRepository implements FaceRecognitionRepository {
     CameraLensDirection? lensDirection,
     int? sensorOrientation,
   }) async {
-    return Left(const VerificationFailure(
+    return const Left(VerificationFailure(
       'Local biometrics are disabled by feature flag.',
     ));
   }
@@ -36,7 +36,7 @@ class DisabledFaceRecognitionRepository implements FaceRecognitionRepository {
     CameraLensDirection? lensDirection,
     int? sensorOrientation,
   }) async {
-    return Left(const VerificationFailure(
+    return const Left(VerificationFailure(
       'Local biometrics are disabled by feature flag.',
     ));
   }
@@ -44,7 +44,7 @@ class DisabledFaceRecognitionRepository implements FaceRecognitionRepository {
   @override
   Future<Either<FaceRecognitionFailure, List<FaceEmbedding>>>
       getStoredEmbeddings(String userId) async {
-    return Left(const VerificationFailure(
+    return const Left(VerificationFailure(
       'Local biometrics are disabled by feature flag.',
     ));
   }
@@ -52,7 +52,7 @@ class DisabledFaceRecognitionRepository implements FaceRecognitionRepository {
   @override
   Future<Either<FaceRecognitionFailure, void>> deleteEmbeddings(
       String userId) async {
-    return Left(const VerificationFailure(
+    return const Left(VerificationFailure(
       'Local biometrics are disabled by feature flag.',
     ));
   }
@@ -63,7 +63,7 @@ class DisabledFaceRecognitionRepository implements FaceRecognitionRepository {
     CameraLensDirection? lensDirection,
     int? sensorOrientation,
   }) async {
-    return Left(const VerificationFailure(
+    return const Left(VerificationFailure(
       'Local biometrics are disabled by feature flag.',
     ));
   }

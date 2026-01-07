@@ -4,7 +4,7 @@ import 'package:el_race/core/biometric/ios/face_id_helper.dart';
 /// Example screen showing iOS Face ID authentication
 /// Demonstrates the premium Face ID experience
 class IosFaceIdExampleScreen extends StatefulWidget {
-  const IosFaceIdExampleScreen({Key? key}) : super(key: key);
+  const IosFaceIdExampleScreen({super.key});
 
   @override
   State<IosFaceIdExampleScreen> createState() => _IosFaceIdExampleScreenState();
@@ -156,7 +156,7 @@ class _IosFaceIdExampleScreenState extends State<IosFaceIdExampleScreen> {
                 : 'Face ID is not configured on this device',
             style: TextStyle(
               fontSize: 14,
-              color: CupertinoColors.systemGrey.withOpacity(0.8),
+              color: CupertinoColors.systemGrey.withValues(alpha: 0.8),
             ),
             textAlign: TextAlign.center,
           ),
@@ -194,7 +194,7 @@ class _IosFaceIdExampleScreenState extends State<IosFaceIdExampleScreen> {
         decoration: BoxDecoration(
           color: _hasFaceId
               ? CupertinoColors.systemGrey6
-              : CupertinoColors.systemGrey6.withOpacity(0.5),
+              : CupertinoColors.systemGrey6.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(
@@ -204,8 +204,8 @@ class _IosFaceIdExampleScreenState extends State<IosFaceIdExampleScreen> {
               height: 44,
               decoration: BoxDecoration(
                 color: _hasFaceId
-                    ? CupertinoColors.systemBlue.withOpacity(0.15)
-                    : CupertinoColors.systemGrey.withOpacity(0.15),
+                    ? CupertinoColors.systemBlue.withValues(alpha: 0.15)
+                    : CupertinoColors.systemGrey.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
@@ -236,7 +236,7 @@ class _IosFaceIdExampleScreenState extends State<IosFaceIdExampleScreen> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 13,
-                      color: CupertinoColors.systemGrey.withOpacity(0.8),
+                      color: CupertinoColors.systemGrey.withValues(alpha: 0.8),
                     ),
                   ),
                 ],
@@ -244,7 +244,7 @@ class _IosFaceIdExampleScreenState extends State<IosFaceIdExampleScreen> {
             ),
             Icon(
               CupertinoIcons.chevron_right,
-              color: CupertinoColors.systemGrey.withOpacity(0.5),
+              color: CupertinoColors.systemGrey.withValues(alpha: 0.5),
               size: 20,
             ),
           ],

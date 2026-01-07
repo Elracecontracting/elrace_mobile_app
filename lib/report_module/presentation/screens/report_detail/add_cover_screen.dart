@@ -97,18 +97,18 @@ class _AddCoverScreenState extends State<AddCoverScreen> {
             MaterialButton(
               onPressed: () async {
                 if (!form.currentState!.validate()) return;
-                ReportDetailModel? _updatedReportCover;
+                ReportDetailModel? updatedReportCover;
                 if (widget.reportDetail.coverPage != null) {
-                  _updatedReportCover = widget.reportDetail.copyWith(
+                  updatedReportCover = widget.reportDetail.copyWith(
                       coverPage: widget.reportDetail.coverPage!.copyWith(
                     title: titleController.text,
                     description: descriptionController.text,
                   ));
-                  await reportProvider.updateReportDetail(_updatedReportCover);
-                  Navigator.pop(context, _updatedReportCover);
+                  await reportProvider.updateReportDetail(updatedReportCover);
+                  Navigator.pop(context, updatedReportCover);
                   return;
                 } else {
-                  ReportDetailModel _updatedReportCover =
+                  ReportDetailModel updatedReportCover =
                       widget.reportDetail.copyWith(
                           coverPage: CoverPageModel(
                     empId: ReportProvider.empID,
@@ -118,8 +118,8 @@ class _AddCoverScreenState extends State<AddCoverScreen> {
                     updatedAt: DateTime.now(),
                   ));
 
-                  await reportProvider.updateReportDetail(_updatedReportCover);
-                  Navigator.pop(context, _updatedReportCover);
+                  await reportProvider.updateReportDetail(updatedReportCover);
+                  Navigator.pop(context, updatedReportCover);
                   return;
                 }
 

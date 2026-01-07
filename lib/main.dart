@@ -42,7 +42,6 @@ import 'firebase_service.dart';
 import 'report_module/data/provider/reports_provider.dart';
 import 'ui/presentation/Email Approval/bloc/approval_bloc.dart';
 import 'ui/presentation/home_screen/provider/slider_provider.dart';
-import 'package:screen_protector/screen_protector.dart';
 
 // Background message handler - يجب أن يكون خارج main()
 @pragma('vm:entry-point')
@@ -350,7 +349,7 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
 
         // Check if user is logged in
         print('🔐 Checking login status...');
-        final loginData = await SharedPref.getLoginData();
+        final loginData = SharedPref.getLoginData();
         final token = loginData.result?.token;
         final isLoggedIn = token != null && token.isNotEmpty;
         print(

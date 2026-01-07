@@ -59,11 +59,11 @@ class ModelNotLoadedFailure extends FaceRecognitionFailure {
 }
 
 class EmbeddingGenerationFailure extends FaceRecognitionFailure {
-  const EmbeddingGenerationFailure(String message) : super(message);
+  const EmbeddingGenerationFailure(super.message);
 }
 
 class StorageFailure extends FaceRecognitionFailure {
-  const StorageFailure(String message) : super(message);
+  const StorageFailure(super.message);
 }
 
 class LivenessCheckFailure extends FaceRecognitionFailure {
@@ -72,5 +72,5 @@ class LivenessCheckFailure extends FaceRecognitionFailure {
 }
 
 class VerificationFailure extends FaceRecognitionFailure {
-  const VerificationFailure(String message) : super(message);
+  const VerificationFailure(super.message);
 }

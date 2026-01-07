@@ -149,7 +149,9 @@ class _AddNewItemState extends State<AddNewItem> {
                                       onePicture: true,
                                     )));
                         if (result == null ||
-                            (result is List && result.isEmpty)) return;
+                            (result is List && result.isEmpty)) {
+                          return;
+                        }
 
                         String fileLocation = await saveImageToAppStorage(
                             File(result[0].path),

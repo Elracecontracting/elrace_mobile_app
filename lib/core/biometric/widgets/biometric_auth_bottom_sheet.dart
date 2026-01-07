@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:get/get.dart';
 import 'package:el_race/core/biometric/biometric_auth_controller.dart';
 import 'package:el_race/core/biometric/biometric_auth_state.dart';
@@ -17,14 +16,14 @@ class BiometricAuthBottomSheet extends StatefulWidget {
   final bool biometricOnly;
 
   const BiometricAuthBottomSheet({
-    Key? key,
+    super.key,
     required this.title,
     required this.subtitle,
     required this.reason,
     required this.onSuccess,
     this.onCancel,
     this.biometricOnly = true,
-  }) : super(key: key);
+  });
 
   /// Show the biometric authentication bottom sheet
   static Future<bool> show({

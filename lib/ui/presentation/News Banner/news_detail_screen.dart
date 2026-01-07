@@ -9,9 +9,9 @@ class NewsDetailScreen extends StatelessWidget {
   final Map<String, dynamic> newsItem;
 
   const NewsDetailScreen({
-    Key? key,
+    super.key,
     required this.newsItem,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

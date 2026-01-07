@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:el_race/core/biometric/face_recognition_helper.dart';
-import 'package:el_race/core/services/user_service.dart'; // Assuming you have user service
 
 /// Helper class for easy biometric authentication throughout the app
 /// UPDATED: Now uses Face Recognition instead of local_auth

@@ -5,17 +5,12 @@ class PartnerModel extends PartnerEntity {
   final List<ProjectModel> projects;
 
   const PartnerModel({
-    required int id,
-    required String name,
-    required String? icon,
-    required int workOrdersCount,
+    required super.id,
+    required super.name,
+    required super.icon,
+    required super.workOrdersCount,
     required this.projects,
-  }) : super(
-          id: id,
-          name: name,
-          icon: icon,
-          workOrdersCount: workOrdersCount,
-        );
+  });
 
   factory PartnerModel.fromJson(Map<String, dynamic> json) {
     final projectsList = json['projects'] as List<dynamic>? ?? [];

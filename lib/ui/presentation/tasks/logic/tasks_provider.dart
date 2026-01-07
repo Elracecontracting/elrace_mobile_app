@@ -20,6 +20,8 @@ class TasksProvider extends ChangeNotifier {
   bool isCreating = false;
   final Set<int> completingTaskIds = {};
   final Set<int> linkingTaskIds = {};
+  final Set<int> updatingTaskIds = {};
+  final Set<int> deletingTaskIds = {};
 
   TasksProvider(this._repository);
 
@@ -67,11 +69,14 @@ class TasksProvider extends ChangeNotifier {
     }
   }
 
-  Future<String?> createTask({
+  Future<TaskModel?> createTask({
     required String name,
     String? description,
     String? priority,
     int? userId,
+    String? attachmentBase64,
+    String? attachmentFilename,
+    String? comment,
   }) async {
     if (isCreating) return null;
     errorMessage = null;
@@ -83,6 +88,9 @@ class TasksProvider extends ChangeNotifier {
         description: description,
         priority: priority,
         userId: userId,
+        attachmentBase64: attachmentBase64,
+        attachmentFilename: attachmentFilename,
+        comment: comment ?? description,
       );
 
       // Ensure task has a creation date and priority
@@ -103,7 +111,7 @@ class TasksProvider extends ChangeNotifier {
       await Future.delayed(const Duration(milliseconds: 1500));
       await loadTasks(forceRefresh: true);
 
-      return 'Task "${taskWithData.name ?? ''}" created';
+      return taskWithData;
     } on TasksApiException catch (e) {
       errorMessage = e.message;
       return null;
@@ -119,6 +127,9 @@ class TasksProvider extends ChangeNotifier {
     String? priority,
     int? userId,
     required String reportId,
+    String? attachmentBase64,
+    String? attachmentFilename,
+    String? comment,
   }) async {
     if (isCreating) return null;
     errorMessage = null;
@@ -138,6 +149,9 @@ class TasksProvider extends ChangeNotifier {
         description: description,
         priority: priority,
         userId: resolvedUserId,
+        attachmentBase64: attachmentBase64,
+        attachmentFilename: attachmentFilename,
+        comment: comment ?? description,
       );
 
       if (created.createdAt == null) {
@@ -212,6 +226,73 @@ class TasksProvider extends ChangeNotifier {
       return null;
     } finally {
       linkingTaskIds.remove(taskId);
+      notifyListeners();
+    }
+  }
+
+  Future<String?> updateTask({
+    required int taskId,
+    String? name,
+    String? description,
+    String? priority,
+  }) async {
+    // Require at least one updatable field
+    if ((name == null || name.trim().isEmpty) &&
+        (description == null || description.trim().isEmpty) &&
+        (priority == null || priority.trim().isEmpty)) {
+      errorMessage = 'Please change a field before saving.';
+      return null;
+    }
+
+    errorMessage = null;
+    updatingTaskIds.add(taskId);
+    notifyListeners();
+
+    try {
+      final message = await _repository.updateTask(
+        taskId: taskId,
+        name: name?.trim(),
+        description: description?.trim(),
+        priority: priority?.trim(),
+      );
+
+      // Refresh tasks to reflect server state
+      await loadTasks(forceRefresh: true);
+
+      return message;
+    } on TasksApiException catch (e) {
+      errorMessage = e.message;
+      return null;
+    } finally {
+      updatingTaskIds.remove(taskId);
+      notifyListeners();
+    }
+  }
+
+  Future<String?> deleteTask(int taskId) async {
+    errorMessage = null;
+    deletingTaskIds.add(taskId);
+    notifyListeners();
+
+    try {
+      final message = await _repository.deleteTask(taskId: taskId);
+
+      // Remove locally immediately
+      tasks = tasks.where((t) => t.id != taskId).toList();
+      if (tasks.isEmpty) {
+        status = TasksStatus.empty;
+      }
+      notifyListeners();
+
+      // Refresh from server to stay in sync
+      await loadTasks(forceRefresh: true);
+
+      return message;
+    } on TasksApiException catch (e) {
+      errorMessage = e.message;
+      return null;
+    } finally {
+      deletingTaskIds.remove(taskId);
       notifyListeners();
     }
   }

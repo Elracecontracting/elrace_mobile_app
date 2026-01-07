@@ -15,8 +15,7 @@ import 'package:flutter_translate/flutter_translate.dart';
 class RequestDetailsPage extends StatefulWidget {
   final loginResponseModel;
 
-  const RequestDetailsPage({Key? key, required this.loginResponseModel})
-      : super(key: key);
+  const RequestDetailsPage({super.key, required this.loginResponseModel});
 
   @override
   _RequestDetailsPageState createState() => _RequestDetailsPageState();

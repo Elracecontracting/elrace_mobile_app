@@ -14,10 +14,10 @@ class UrlEncoder {
       }).toList();
       
       // Reconstruct the path
-      String encodedPath = '/' + encodedSegments.join('/');
+      String encodedPath = '/${encodedSegments.join('/')}';
       
       // Reconstruct the full URL
-      String encodedUrl = '${uri.scheme}://${uri.host}${encodedPath}';
+      String encodedUrl = '${uri.scheme}://${uri.host}$encodedPath';
       
       // Add query parameters if they exist
       if (uri.query.isNotEmpty) {

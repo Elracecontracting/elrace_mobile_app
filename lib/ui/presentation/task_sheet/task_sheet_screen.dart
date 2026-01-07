@@ -13,8 +13,8 @@ import '../../widgets/header_widget.dart';
 
 class TaskSheetPage extends StatefulWidget {
   const TaskSheetPage({
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<TaskSheetPage> createState() => _TaskSheetPageState();
@@ -122,7 +122,7 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => AddTaskSheet(),
+                              builder: (context) => const AddTaskSheet(),
                             ),
                           );
                         },

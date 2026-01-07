@@ -86,7 +86,7 @@ class AttendanceRepo {
         body: body,
       );
 
-      debugPrint('getAttendanceSummary: ${body} \nresponse:${response.body}');
+      debugPrint('getAttendanceSummary: $body \nresponse:${response.body}');
 
       final decoded = jsonDecode(response.body);
       // Handle error structure {result: {status: 'error', message: 'Invalid token'}}
