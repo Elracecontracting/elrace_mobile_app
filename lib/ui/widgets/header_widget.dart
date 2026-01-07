@@ -9,6 +9,7 @@ import 'package:el_race/ui/presentation/Email Approval/Approval.dart';
 import 'package:el_race/ui/presentation/Notification/notification_screen.dart';
 import 'package:el_race/ui/presentation/search/screens/widget_search_screen.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
+import 'package:el_race/ui/widgets/global_search_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/custom_navigate.dart';
@@ -144,7 +145,26 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                     ),
                     Row(
                       children: [
-                        // Search Icon (hidden by flag)
+                        // Global Search Icon (New)
+                        GestureDetector(
+                          onTap: () {
+                            if (SharedPref.isUserAuthenticated()) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const GlobalSearchScreen(),
+                                ),
+                              );
+                            }
+                          },
+                          child: Icon(
+                            Icons.search,
+                            size: 28,
+                            color: Colors.black.withOpacity(0.7),
+                          ),
+                        ),
+                        SizedBox(width: SizeConfig().getWidth(10)),
+                        // Old Search Icon (hidden by flag)
                         widget.hidden
                             ? const SizedBox.shrink()
                             : GestureDetector(
