@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/my_projects/data/datasources/project_remote_datasource.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/user_project_model.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/user_projects_response.dart';
@@ -127,7 +128,6 @@ class MyProject extends StatefulWidget {
 class _MyProjectState extends State<MyProject> {
   bool _isLoading = false;
   String? _error;
-  int? _employeeId;
   List<UserProjectModel> _projects = [];
 
   @override
@@ -144,10 +144,9 @@ class _MyProjectState extends State<MyProject> {
 
     try {
       final UserProjectsResponse response =
-          await ProjectRemoteDataSource().fetchUserProjects();
+          await ProjectRemoteDataSource().fetchClientsList();
 
       setState(() {
-        _employeeId = response.employeeId;
         _projects = response.projects;
         _isLoading = false;
       });
@@ -224,6 +223,9 @@ class _MyProjectState extends State<MyProject> {
 
                               final id = project.projectId;
                               final name = project.projectName;
+                              final totalProjects = project.totalProjects;
+                              final totalAmount = project.totalProjectsAmount;
+                              final photoUrl = project.photoUrl;
 
                               return GestureDetector(
                                 onTap: () {
@@ -250,7 +252,7 @@ class _MyProjectState extends State<MyProject> {
                                           bloc: bloc,
                                           partnerId: id,
                                           partnerName: name,
-                                          partnerPhoto: '',
+                                          partnerPhoto: photoUrl ?? '',
                                         ),
                                       ),
                                     ),
@@ -258,13 +260,13 @@ class _MyProjectState extends State<MyProject> {
                                 },
                                 child: buildProjectCard(
                                   name: name,
-                                  photoUrl: '',
-                                  wo: "#$id",
-                                  amount: _employeeId != null
-                                      ? "#$_employeeId"
-                                      : '-',
-                                  leftLabel: 'PROJECT ID',
-                                  rightLabel: 'EMPLOYEE',
+                                  photoUrl: photoUrl ?? '',
+                                  wo: '$totalProjects',
+                                  amount: totalAmount > 0
+                                      ? '${(totalAmount / 1000000).toStringAsFixed(2)}M'
+                                      : '0',
+                                  leftLabel: 'PROJECTS',
+                                  rightLabel: 'AMOUNT (AED)',
                                 ),
                               );
                             },
@@ -323,19 +325,47 @@ Widget buildProjectCard({
               border: Border.all(color: Colors.white, width: 3),
             ),
             child: ClipOval(
-              child: Image.network(
-                photoUrl,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => Center(
-                  child: Text(
-                    name.isNotEmpty ? name[0] : 'C',
-                    style: GoogleFonts.koulen(
-                      fontSize: 28.sp,
-                      color: appFontColor,
+              child: photoUrl.isNotEmpty
+                  ? Image.network(
+                      photoUrl,
+                      fit: BoxFit.cover,
+                      headers: {
+                        'Accept': 'image/*',
+                        'Authorization':
+                            'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: appFontColor,
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        );
+                      },
+                      errorBuilder: (_, __, ___) => Center(
+                        child: Text(
+                          name.isNotEmpty ? name[0] : 'C',
+                          style: GoogleFonts.koulen(
+                            fontSize: 28.sp,
+                            color: appFontColor,
+                          ),
+                        ),
+                      ),
+                    )
+                  : Center(
+                      child: Text(
+                        name.isNotEmpty ? name[0] : 'C',
+                        style: GoogleFonts.koulen(
+                          fontSize: 28.sp,
+                          color: appFontColor,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
             ),
           ),
 

@@ -17,11 +17,18 @@ class PartnerModel extends PartnerEntity {
     final projects =
         projectsList.map((project) => ProjectModel.fromJson(project)).toList();
 
+    // Fix malformed photo URL from API (erp.elrace.compublic -> erp.elrace.com/public)
+    String? iconUrl =
+        json['icon']?.toString() ?? json['partner_photo']?.toString();
+    if (iconUrl != null && iconUrl.contains('erp.elrace.compublic')) {
+      iconUrl =
+          iconUrl.replaceAll('erp.elrace.compublic', 'erp.elrace.com/public');
+    }
+
     return PartnerModel(
       id: json['partner_id'] ?? 0,
       name: json['partner_name'] ?? '',
-      icon:
-          json['icon'], 
+      icon: iconUrl,
       workOrdersCount: projects.length,
       projects: projects,
     );

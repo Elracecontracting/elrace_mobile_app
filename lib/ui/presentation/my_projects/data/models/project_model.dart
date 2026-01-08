@@ -16,10 +16,13 @@ class ProjectModel extends ProjectEntity {
   });
 
   factory ProjectModel.fromJson(Map<String, dynamic> json) {
-    // Debug print to check the values
-    print(
-        '🔍 difference_days: ${json['difference_days']} (${json['difference_days'].runtimeType})');
-    print('🔍 project_manager_photo: ${json['project_manager_photo']}');
+    // Fix malformed photo URL from API (erp.elrace.compublic -> erp.elrace.com/public)
+    String? projectManagerPhoto = json['project_manager_photo'] as String?;
+    if (projectManagerPhoto != null &&
+        projectManagerPhoto.contains('erp.elrace.compublic')) {
+      projectManagerPhoto = projectManagerPhoto.replaceAll(
+          'erp.elrace.compublic', 'erp.elrace.com/public');
+    }
 
     return ProjectModel(
       projectId: json['project_id'] ?? 0,
@@ -32,7 +35,7 @@ class ProjectModel extends ProjectEntity {
       date: json['date']?.toString() ?? '',
       dateStart: json['date_start']?.toString() ?? '',
       differenceDays: json['difference_days'] as int?,
-      projectManagerPhoto: json['project_manager_photo'] as String?,
+      projectManagerPhoto: projectManagerPhoto,
     );
   }
 

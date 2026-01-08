@@ -17,7 +17,7 @@ abstract class ProjectRemoteDataSourceImpl {
       {int? partnerId, String? keyword});
   Future<List<ProjectModel>> fetchProjectsByPartnerId(int partnerId);
   Future<List<FolderModel>> fetchProjectFolders();
-  Future<UserProjectsResponse> fetchUserProjects();
+  Future<UserProjectsResponse> fetchClientsList();
 }
 
 class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
@@ -242,7 +242,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
   }
 
   @override
-  Future<UserProjectsResponse> fetchUserProjects() async {
+  Future<UserProjectsResponse> fetchClientsList() async {
     final token = _getToken();
 
     final headers = {
@@ -251,14 +251,14 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       "Authorization": "Bearer $token",
     };
 
-    final url = Uri.parse("https://erp.elrace.com/api/user/projects");
+    final url = Uri.parse("https://erp.elrace.com/api/clients/list");
 
     final body = jsonEncode({
       "jsonrpc": "2.0",
       "params": {},
     });
 
-    debugPrint("=== fetchUserProjects REQUEST ===");
+    debugPrint("=== fetchClientsList REQUEST ===");
     debugPrint("URL: $url");
     debugPrint("Method: GET");
     debugPrint("Headers: $headers");
@@ -274,7 +274,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
     final streamedResponse = await _client.send(request);
     final response = await http.Response.fromStream(streamedResponse);
 
-    debugPrint("=== fetchUserProjects RESPONSE ===");
+    debugPrint("=== fetchClientsList RESPONSE ===");
     debugPrint("Status Code: ${response.statusCode}");
     debugPrint("Response Headers: ${response.headers}");
     debugPrint("Response Body: ${response.body}");
@@ -285,21 +285,21 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       final decoded = json.decode(response.body) as Map<String, dynamic>;
       final result = decoded['result'] as Map<String, dynamic>?;
 
-      if (result != null && result['success'] == true) {
-        final projectsJson = result['projects'] as List<dynamic>? ?? [];
+      if (result != null && result['status'] == 'success') {
+        final clientsJson = result['data'] as List<dynamic>? ?? [];
         final projects =
-            projectsJson.map((e) => UserProjectModel.fromJson(e)).toList();
+            clientsJson.map((e) => UserProjectModel.fromJson(e)).toList();
 
         return UserProjectsResponse(
           success: true,
-          employeeId: result['employee_id'] as int? ?? 0,
+          employeeId: 0,
           projects: projects,
         );
       }
 
       throw Exception('Invalid response format');
     } else {
-      throw Exception('Failed to load user projects: ${response.statusCode}');
+      throw Exception('Failed to load clients list: ${response.statusCode}');
     }
   }
 }

@@ -83,15 +83,22 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                     children: [
                       Builder(
                         builder: (context) {
-                          print(
-                              '🖼️ Partner Photo URL: ${widget.partnerPhoto}');
+                          // Fix malformed photo URL from API (erp.elrace.compublic -> erp.elrace.com/public)
+                          String? photoUrl = widget.partnerPhoto;
+                          if (photoUrl != null &&
+                              photoUrl.contains('erp.elrace.compublic')) {
+                            photoUrl = photoUrl.replaceAll(
+                                'erp.elrace.compublic',
+                                'erp.elrace.com/public');
+                          }
+
+                          print('🖼️ Partner Photo URL: $photoUrl');
                           print('📝 Partner Name: ${widget.partnerName}');
 
-                          if (widget.partnerPhoto != null &&
-                              widget.partnerPhoto!.isNotEmpty) {
+                          if (photoUrl != null && photoUrl.isNotEmpty) {
                             return ClipOval(
                               child: Image.network(
-                                widget.partnerPhoto!,
+                                photoUrl,
                                 height: 50.w,
                                 width: 50.w,
                                 fit: BoxFit.contain,

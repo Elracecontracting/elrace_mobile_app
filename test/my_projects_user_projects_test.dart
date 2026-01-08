@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  group('ProjectRemoteDataSource.fetchUserProjects', () {
+  group('ProjectRemoteDataSource.fetchClientsList', () {
     test('returns parsed response on success', () async {
       final mockClient = MockClient((request) async {
         // Detailed logging for mock request
@@ -19,18 +19,24 @@ void main() {
         print('====================');
 
         expect(
-            request.url.toString(), 'https://erp.elrace.com/api/user/projects');
+            request.url.toString(), 'https://erp.elrace.com/api/clients/list');
         expect(request.method, 'GET');
 
         final mockResponse = http.Response(
           jsonEncode({
+            'jsonrpc': '2.0',
+            'id': null,
             'result': {
-              'success': true,
-              'employee_id': 4255,
-              'projects': [
+              'status': 'success',
+              'message': 'Clients fetched successfully.',
+              'data': [
                 {
-                  'project_id': 13171,
-                  'project_name': 'Odoo Development',
+                  'id': 11380,
+                  'name': 'Abu Dhabi Police',
+                  'total_projects': 558,
+                  'total_projects_amount': 1431401691.12,
+                  'photo_url':
+                      'https://erp.elrace.compublic/partner/image/11380',
                 }
               ],
             }
@@ -52,13 +58,14 @@ void main() {
         getToken: () => 'mock_token',
       );
 
-      final result = await dataSource.fetchUserProjects();
+      final result = await dataSource.fetchClientsList();
 
       expect(result.success, isTrue);
-      expect(result.employeeId, 4255);
       expect(result.projects, hasLength(1));
-      expect(result.projects.first.projectId, 13171);
-      expect(result.projects.first.projectName, 'Odoo Development');
+      expect(result.projects.first.projectId, 11380);
+      expect(result.projects.first.projectName, 'Abu Dhabi Police');
+      expect(result.projects.first.totalProjects, 558);
+      expect(result.projects.first.totalProjectsAmount, 1431401691.12);
     });
 
     test('throws an exception on non-200 status', () async {
@@ -78,7 +85,7 @@ void main() {
         getToken: () => 'mock_token',
       );
 
-      expect(() => dataSource.fetchUserProjects(), throwsA(isA<Exception>()));
+      expect(() => dataSource.fetchClientsList(), throwsA(isA<Exception>()));
     });
   });
 }
