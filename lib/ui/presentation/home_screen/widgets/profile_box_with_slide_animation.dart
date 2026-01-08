@@ -181,7 +181,7 @@ class _ProfileBoxWithSlideAnimationState
         context: navContext,
         barrierDismissible: true,
         barrierLabel: 'Certificate',
-        barrierColor: Colors.black87,
+        barrierColor: Colors.black26,
         transitionDuration: const Duration(milliseconds: 200),
         pageBuilder: (context, animation, secondaryAnimation) {
           return Dialog(
@@ -400,7 +400,7 @@ class _ProfileBoxWithSlideAnimationState
                       child: GestureDetector(
                         onTap: () => profileBoxProvider.hideProfileBox(),
                         child: Container(
-                          color: Colors.black.withOpacity(0.9),
+                          color: Colors.black26,
                         ),
                       ),
                     ),

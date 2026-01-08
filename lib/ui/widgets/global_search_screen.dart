@@ -6,6 +6,7 @@ import 'package:el_race/data/models/global_search_item.dart';
 import 'package:el_race/providers/global_search_provider.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/global_search_navigation_helper.dart';
+import 'package:el_race/ui/widgets/header_widget.dart';
 
 /// Global Search Screen Widget
 ///
@@ -38,22 +39,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       create: (_) => GlobalSearchProvider(),
       child: Scaffold(
         backgroundColor: Colors.white,
-        appBar: AppBar(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: appFontColor),
-            onPressed: () => Navigator.pop(context),
-          ),
-          title: Text(
-            'Global Search',
-            style: GoogleFonts.koulen(
-              fontSize: 22.sp,
-              fontWeight: FontWeight.w500,
-              color: appFontColor,
-            ),
-          ),
-        ),
+        appBar: const HeaderWidget(),
         body: Column(
           children: [
             _buildSearchBar(),

@@ -129,7 +129,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
                       /// RCC LOGO
                       Image.asset(
-                        'assets/png/main logo 1.png',
+                        'assets/logo/rcc2.png',
                         height: 42.h,
                       ),
 

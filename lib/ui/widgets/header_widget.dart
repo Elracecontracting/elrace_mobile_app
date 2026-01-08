@@ -149,10 +149,22 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                         GestureDetector(
                           onTap: () {
                             if (SharedPref.isUserAuthenticated()) {
+                              // Check current route to prevent stacking search screens
+                              final currentRoute = ModalRoute.of(context);
+                              final currentRouteName =
+                                  currentRoute?.settings.name;
+
+                              // Don't navigate if already on Global Search screen
+                              if (currentRouteName == '/global_search') {
+                                return;
+                              }
+
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (_) => const GlobalSearchScreen(),
+                                SlideRightPageRoute(
+                                  child: const GlobalSearchScreen(),
+                                  settings: const RouteSettings(
+                                      name: '/global_search'),
                                 ),
                               );
                             }

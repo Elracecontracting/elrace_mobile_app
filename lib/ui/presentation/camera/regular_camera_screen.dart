@@ -149,7 +149,7 @@ class _RegularCameraScreenState extends State<RegularCameraScreen> {
               child: CircularProgressIndicator(color: Colors.white),
             ),
 
-          // Top Logo with RCC text
+          // Top Logo with RCC Image
           Positioned(
             top: 60.h,
             left: 0,
@@ -161,31 +161,9 @@ class _RegularCameraScreenState extends State<RegularCameraScreen> {
                   color: Colors.black.withOpacity(0.4),
                   borderRadius: BorderRadius.circular(8.r),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 24.sp,
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'RCC',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 20.sp,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 4,
-                      ),
-                    ),
-                    SizedBox(width: 8.w),
-                    Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 24.sp,
-                    ),
-                  ],
+                child: Image.asset(
+                  'assets/logo/rcc2.png',
+                  height: 42.h,
                 ),
               ),
             ),
