@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
+import 'package:el_race/utils/api_logger.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -102,13 +103,42 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
       final body = jsonEncode({'jsonrpc': '2.0', 'params': params});
 
+      // 📤 Log Request
+      ApiLogger.logRequest(
+        endpoint: url.toString(),
+        method: 'POST',
+        headers: headers,
+        body: body,
+      );
+
+      final startTime = DateTime.now();
       final response = await http.post(url, headers: headers, body: body);
+      final duration = DateTime.now().difference(startTime);
       final data = jsonDecode(response.body);
+
+      // 📥 Log Response
+      ApiLogger.logResponse(
+        endpoint: url.toString(),
+        statusCode: response.statusCode,
+        responseBody: data,
+        duration: duration,
+      );
+
+      // 🔍 Print full response for debugging
+      print('🔍 ====== FULL RESPONSE DATA ======');
+      print(jsonEncode(data));
+      print('🔍 ==================================');
 
       if (response.statusCode == 200 &&
           data['result'] != null &&
           data['result']['status'] == 'success') {
         final List list = (data['result']['data'] ?? []) as List;
+
+        // Print each document details
+        print('📄 Total documents: ${list.length}');
+        for (var i = 0; i < list.length; i++) {
+          print('📄 Document $i: ${jsonEncode(list[i])}');
+        }
         final mapped = list.map<Map<String, dynamic>>((raw) {
           final map = raw as Map<String, dynamic>;
           final type = (map['type'] ?? 'DOCUMENT').toString();
@@ -159,7 +189,13 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           _loading = false;
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // ❌ Log Error
+      ApiLogger.logError(
+        endpoint: 'https://erp.elrace.com/api/get_employee_documents',
+        error: e,
+        stackTrace: stackTrace,
+      );
       setState(() {
         _error = e.toString();
         _loading = false;
@@ -456,45 +492,50 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                           }
                         }
 
-                        return Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(30.18),
-                            border: Border.all(
-                              color: isExpired
-                                  ? const Color(0xFFBA1719)
-                                  : const Color(0xffD9D9D9),
-                              width: isExpired ? 2 : 1,
+                        return GestureDetector(
+                          onTap: () {
+                            _showDocumentDetailsDialog(context, item);
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(30.18),
+                              border: Border.all(
+                                color: isExpired
+                                    ? const Color(0xFFBA1719)
+                                    : const Color(0xffD9D9D9),
+                                width: isExpired ? 2 : 1,
+                              ),
                             ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Image.asset(item['icon']),
-                              SizedBox(height: 8.h),
-                              Text(
-                                item['title'],
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.koulen(
-                                  fontSize: 11.35,
-                                  fontWeight: FontWeight.w400,
-                                  letterSpacing: .10,
-                                  color: const Color(0xff949494),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Image.asset(item['icon']),
+                                SizedBox(height: 8.h),
+                                Text(
+                                  item['title'],
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.koulen(
+                                    fontSize: 11.35,
+                                    fontWeight: FontWeight.w400,
+                                    letterSpacing: .10,
+                                    color: const Color(0xff949494),
+                                  ),
                                 ),
-                              ),
-                              SizedBox(height: 4.h),
-                              Text(
-                                item['name'],
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.aBeeZee(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w400,
-                                  fontStyle: FontStyle.italic,
-                                  letterSpacing: .10,
-                                  color: Colors.black,
+                                SizedBox(height: 4.h),
+                                Text(
+                                  item['name'],
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.aBeeZee(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w400,
+                                    fontStyle: FontStyle.italic,
+                                    letterSpacing: .10,
+                                    color: Colors.black,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -534,6 +575,206 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     if (result == true) {
       print('🔄 Refreshing documents list...');
       _fetchMyDocuments();
+    }
+  }
+
+  void _showDocumentDetailsDialog(
+      BuildContext context, Map<String, dynamic> document) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          backgroundColor: Colors.white,
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Image.asset(
+                      document['icon'] ?? 'assets/png/document_icon.png',
+                      width: 40,
+                      height: 40,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        document['title'] ?? 'Document',
+                        style: GoogleFonts.koulen(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xff191F52),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Document Name
+                _buildInfoRow(
+                  icon: Icons.description,
+                  label: 'Name',
+                  value: document['name'] ?? 'N/A',
+                  color: Colors.blue,
+                ),
+                const SizedBox(height: 12),
+
+                // ID Number
+                if (document['id_number'] != null &&
+                    document['id_number'] != false)
+                  _buildInfoRow(
+                    icon: Icons.numbers,
+                    label: 'ID Number',
+                    value: document['id_number'].toString(),
+                    color: Colors.green,
+                  ),
+                if (document['id_number'] != null &&
+                    document['id_number'] != false)
+                  const SizedBox(height: 12),
+
+                // Issue Date
+                if (document['issue_date'] != null &&
+                    document['issue_date'] != false)
+                  _buildInfoRow(
+                    icon: Icons.calendar_today,
+                    label: 'Issue Date',
+                    value: _formatDate(document['issue_date'].toString()),
+                    color: Colors.purple,
+                  ),
+                if (document['issue_date'] != null &&
+                    document['issue_date'] != false)
+                  const SizedBox(height: 12),
+
+                // Expiry Date
+                if (document['expiry_date'] != null &&
+                    document['expiry_date'] != false)
+                  _buildInfoRow(
+                    icon: Icons.event,
+                    label: 'Expiry Date',
+                    value: _formatDate(document['expiry_date'].toString()),
+                    color: _isExpired(document['expiry_date'].toString())
+                        ? const Color(0xFFBA1719)
+                        : Colors.orange,
+                  ),
+                if (document['expiry_date'] != null &&
+                    document['expiry_date'] != false)
+                  const SizedBox(height: 20),
+
+                // View Attachment Button
+                if (document['attachment'] != null &&
+                    document['attachment'] != false)
+                  Center(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF191F52),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      ),
+                      onPressed: () {
+                        // TODO: Implement view attachment
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Opening attachment...'),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.attach_file, color: Colors.white),
+                      label: Text(
+                        'VIEW ATTACHMENT',
+                        style: GoogleFonts.koulen(
+                          fontSize: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                if (document['attachment'] == null ||
+                    document['attachment'] == false)
+                  const Center(
+                    child: Text(
+                      'No attachment available',
+                      style: TextStyle(
+                        color: Colors.grey,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, color: color, size: 20),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.koulen(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      return DateFormat('dd MMM yyyy').format(date);
+    } catch (e) {
+      return dateString;
+    }
+  }
+
+  bool _isExpired(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      return date.isBefore(DateTime.now());
+    } catch (e) {
+      return false;
     }
   }
 

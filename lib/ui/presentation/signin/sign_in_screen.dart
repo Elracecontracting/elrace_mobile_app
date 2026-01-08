@@ -28,6 +28,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final usernameController = TextEditingController();
   final passwordController = TextEditingController();
   bool isChecked = false;
+  bool isPasswordVisible = false;
   late SignInBloc signInBloc;
 
   @override
@@ -194,7 +195,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         Image.asset(
                           'assets/gif/el-race-logo.gif',
                           fit: BoxFit.cover,
-                          height: SizeConfig().getHeight(180),
+                          height: SizeConfig().getHeight(120),
                         ),
                         // const SizedBox(3
                         //   width: 600,
@@ -210,8 +211,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         textForms('Email ID', 'account.png', usernameController,
                             false),
                         SizedBox(height: SizeConfig().getHeight(40)),
-                        textForms(
-                            'Password', 'lock.png', passwordController, true),
+                        passwordField(),
                         SizedBox(height: SizeConfig().getHeight(6)),
                         Padding(
                           padding: const EdgeInsets.only(top: 5),
@@ -306,6 +306,47 @@ class _SignInScreenState extends State<SignInScreen> {
           ),
         );
       },
+    );
+  }
+
+  Widget passwordField() {
+    return Container(
+      height: SizeConfig().getHeight(55),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(52),
+        color: white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha((0.2 * 255).toInt()),
+            blurRadius: 12,
+          )
+        ],
+      ),
+      child: TextFormField(
+        obscureText: !isPasswordVisible,
+        controller: passwordController,
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          hintText: 'Password',
+          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+          hintStyle: const TextStyle(fontSize: 14, color: Color(0xFF545454)),
+          prefixIcon: Image.asset(
+            '$imagePrefixIcons/lock.png',
+            color: const Color(0xFF545454),
+          ),
+          suffixIcon: IconButton(
+            icon: Icon(
+              isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+              color: const Color(0xFF545454),
+            ),
+            onPressed: () {
+              setState(() {
+                isPasswordVisible = !isPasswordVisible;
+              });
+            },
+          ),
+        ),
+      ),
     );
   }
 }

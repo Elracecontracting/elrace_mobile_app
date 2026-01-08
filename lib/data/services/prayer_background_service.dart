@@ -3,6 +3,7 @@ import 'package:adhan/adhan.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:el_race/core/constants/hive_constants.dart';
 import 'package:el_race/data/services/hive_service.dart';
+import 'package:el_race/data/services/prayer_notification_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -69,7 +70,9 @@ void callbackDispatcher() {
           if (!alreadyPlayed) {
             // تحديد إشارة أن الأذان قيد التشغيل
             await HiveService.markPrayerPlayed(playedKey);
-            await _showAdhanNotificationInBackground(prayerName, ms);
+            // ألغِ الإشعار المجدول لتجنب التكرار ثم شغّل الأذان
+            await PrayerNotificationService()
+                .cancelScheduledAdhan(prayerName, ms);
             // debugPrint('Playing adhan at prayer time!');
             await _playAdhanInBackground(prayerName, ms);
           } else {
@@ -202,6 +205,9 @@ class PrayerBackgroundService {
       await Workmanager().cancelAll();
       // debugPrint('🗑️ Cancelled all old tasks');
 
+      final notificationService = PrayerNotificationService();
+      await notificationService.initialize();
+
       // حساب أوقات الصلاة
       // Try to use device last-known location for accurate local Adhan times
       Position? last;
@@ -238,6 +244,13 @@ class PrayerBackgroundService {
           final delay = prayerTime.difference(now);
 
           final ms = prayerTime.millisecondsSinceEpoch;
+
+          // جدولة إشعار محلي يشتغل حتى لو التطبيق مغلق
+          await notificationService.scheduleAdhanNotification(
+            prayerName,
+            prayerTime,
+          );
+
           await Workmanager().registerOneOffTask(
             'prayer-$prayerName-$ms',
             prayerCheckTaskName,

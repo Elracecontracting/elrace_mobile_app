@@ -2,6 +2,7 @@ import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/data/services/prayer_background_service.dart';
+import 'package:el_race/providers/announcements_provider.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:el_race/ui/presentation/call_screen/bloc/contact_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
@@ -172,6 +173,7 @@ class MyApp extends StatelessWidget {
           ChangeNotifierProvider(create: (_) => ReportProvider()),
           ChangeNotifierProvider(create: (_) => TodoProvider()..initialize()),
           ChangeNotifierProvider(create: (_) => QrSurveyDataProvider()),
+          ChangeNotifierProvider(create: (_) => AnnouncementsProvider()),
           ChangeNotifierProvider(
             create: (_) =>
                 TasksProvider(TasksRepository(api: TasksApiService()))

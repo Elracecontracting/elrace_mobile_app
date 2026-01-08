@@ -1,4 +1,6 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 
 class PrayerNotificationService {
   static final PrayerNotificationService _instance =
@@ -8,8 +10,14 @@ class PrayerNotificationService {
 
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
+  bool _initialized = false;
 
   Future<void> initialize() async {
+    if (_initialized) return;
+
+    // تهيئة منطقة التوقيت لـ zonedSchedule
+    tz.initializeTimeZones();
+
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -26,6 +34,7 @@ class PrayerNotificationService {
     );
 
     await _notificationsPlugin.initialize(settings);
+    _initialized = true;
     // debugPrint('🔔 Prayer notification service initialized');
   }
 
@@ -66,5 +75,58 @@ class PrayerNotificationService {
     );
 
     // debugPrint('🔔 Adhan notification shown for $prayerName');
+  }
+
+  Future<void> scheduleAdhanNotification(
+    String prayerName,
+    DateTime scheduledTime,
+  ) async {
+    await initialize();
+
+    // استخدم وقت محلي مباشر مع exactAllowWhileIdle لضمان العمل حتى في وضع Doze
+    final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
+
+    await _notificationsPlugin.zonedSchedule(
+      _buildId(prayerName, scheduledTime),
+      '🕌 حان وقت الصلاة',
+      '🔔 حان الآن وقت صلاة $prayerName',
+      tzTime,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'prayer_adhan_channel',
+          'Prayer Adhan',
+          channelDescription: 'Notifications for prayer adhan times',
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+          playSound: false,
+          enableVibration: true,
+          visibility: NotificationVisibility.public,
+          autoCancel: false,
+          ongoing: false,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: false,
+          interruptionLevel: InterruptionLevel.timeSensitive,
+        ),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      payload: 'prayer:$prayerName:${scheduledTime.millisecondsSinceEpoch}',
+    );
+  }
+
+  Future<void> cancelScheduledAdhan(String prayerName, int ms) async {
+    await initialize();
+    final id = _buildId(prayerName, DateTime.fromMillisecondsSinceEpoch(ms));
+    await _notificationsPlugin.cancel(id);
+  }
+
+  int _buildId(String prayerName, DateTime time) {
+    // توليد معرف ثابت لكل صلاة/وقت لتجنب تكرار غير ضروري
+    final base = prayerName.hashCode & 0x7fffffff;
+    final t = time.millisecondsSinceEpoch ~/ 1000;
+    return (base ^ t) & 0x7fffffff;
   }
 }

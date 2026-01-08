@@ -19,6 +19,7 @@ import '../ui/presentation/my_notes/screens/my_notes_screen.dart';
 import '../ui/presentation/my_request/MyRequestsPage.dart';
 import '../ui/presentation/task_sheet/task_sheet_screen.dart';
 import '../ui/presentation/Attendace_list/attendance_page.dart';
+import '../ui/presentation/News Banner/news_screen.dart';
 
 class OnGeneratedRoutes {
   Route<dynamic> generatedRoutes(RouteSettings settings) {
@@ -64,6 +65,8 @@ class OnGeneratedRoutes {
         return CupertinoPageRoute(builder: (_) => const TaskSheetPage());
       case '/attendance':
         return CupertinoPageRoute(builder: (_) => const AttendancePage());
+      case '/news':
+        return CupertinoPageRoute(builder: (_) => const NewsScreen());
     }
     return MaterialPageRoute(
         builder: (_) => Scaffold(

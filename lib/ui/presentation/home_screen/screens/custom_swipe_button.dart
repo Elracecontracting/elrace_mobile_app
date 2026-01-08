@@ -175,18 +175,26 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   }
 
   /// Perform check-in or check-out action
+  ///
+  /// Note: Check-in/Check-out is global and unified
+  /// - Timer applies to all projects (8 hours fixed)
+  /// - Project selection is for display/reference only
+  /// - Detailed time management handled via job missions
+  ///
+  /// NOTE: The 8 working hours are global and shared across all projects.
+  ///       Switching projects does NOT reset or create a new timer.
   void _performCheckInOut() {
     if (!isCheckedIn) {
-      // Perform check-in
+      // Perform global check-in
       sl.get<CheckInBloc>().add(CheckInET());
       Get.find<TimerController>().startTimer();
     } else {
-      // Perform check-out
+      // Perform global check-out
       final checkInRecordId = SharedPref().getPreferenceInt('checkInRecordId');
       if (checkInRecordId != 0) {
         sl.get<CheckOutBloc>().add(CheckOutET(checkInRecordId));
         Get.find<TimerController>().stopTimer();
-        // Clear saved check-in project after successful check-out
+        // Clear saved check-in project (used for display only)
         SharedPref().removePreference('checkInProjectId');
         SharedPref().removePreference('checkInBranchId');
         SharedPref().removePreference('checkInAuthMethod');

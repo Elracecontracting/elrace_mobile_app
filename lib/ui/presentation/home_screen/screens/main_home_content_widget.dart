@@ -1,5 +1,6 @@
 import 'package:carousel_slider/carousel_slider.dart';
-import 'package:el_race/ui/presentation/News%20Banner/banner.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:el_race/ui/presentation/News%20Banner/news_screen.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/widget_container.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -10,8 +11,22 @@ import 'package:provider/provider.dart';
 
 import '../provider/slider_provider.dart';
 
-class MainHomeContentWidget extends StatelessWidget {
+class MainHomeContentWidget extends StatefulWidget {
   const MainHomeContentWidget({super.key});
+
+  @override
+  State<MainHomeContentWidget> createState() => _MainHomeContentWidgetState();
+}
+
+class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch banner announcements on init
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<SliderProvider>().fetchAnnouncementsForBanner();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +34,10 @@ class MainHomeContentWidget extends StatelessWidget {
     final bottomPadding = MediaQuery.of(context).padding.bottom + 80.h;
 
     return RefreshIndicator(
-      onRefresh: () async => await Util.fetchHomeScreenData(context),
+      onRefresh: () async {
+        await Util.fetchHomeScreenData(context);
+        await sliderProvider.refresh();
+      },
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         padding: EdgeInsets.only(
@@ -34,102 +52,167 @@ class MainHomeContentWidget extends StatelessWidget {
                 Stack(
                   alignment: Alignment.center,
                   children: [
-                    CarouselSlider.builder(
-                      itemCount: sliderProvider.sliderImages.length,
-                      itemBuilder: (BuildContext context, int itemIndex,
-                          int pageViewIndex) {
-                        return GestureDetector(
-                          onTap: () => Util.pushPage(const NewsPage(), context),
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                                horizontal: SizeConfig().getWidth(10)),
-                            child: Container(
-                              height: 160.w,
-                              width: double.infinity,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(23.r),
-                                  topRight: Radius.circular(23.r),
-                                  bottomRight: Radius.circular(23.r),
-                                  bottomLeft: const Radius.circular(0),
+                    // Loading State
+                    if (sliderProvider.isLoading)
+                      Container(
+                        height: 190.h,
+                        width: double.infinity,
+                        margin: EdgeInsets.symmetric(
+                            horizontal: SizeConfig().getWidth(10)),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(23.r),
+                            topRight: Radius.circular(23.r),
+                            bottomRight: Radius.circular(23.r),
+                            bottomLeft: const Radius.circular(0),
+                          ),
+                          color: lightGrey,
+                        ),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: buttonDark,
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      )
+                    // Error or Loaded State
+                    else
+                      CarouselSlider.builder(
+                        itemCount: sliderProvider.sliderImages.length,
+                        itemBuilder: (BuildContext context, int itemIndex,
+                            int pageViewIndex) {
+                          final isApiData = sliderProvider.hasApiData;
+                          final imageUrl =
+                              sliderProvider.sliderImages[itemIndex];
+                          final isNetworkImage =
+                              imageUrl.startsWith('http') && isApiData;
+
+                          return GestureDetector(
+                            onTap: () =>
+                                Util.pushPage(const NewsScreen(), context),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: SizeConfig().getWidth(10)),
+                              child: Container(
+                                height: 160.w,
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(23.r),
+                                    topRight: Radius.circular(23.r),
+                                    bottomRight: Radius.circular(23.r),
+                                    bottomLeft: const Radius.circular(0),
+                                  ),
+                                  gradient: LinearGradient(
+                                    colors: itemIndex.isEven
+                                        ? [
+                                            buttonLight,
+                                            Colors.white,
+                                            buttonDark
+                                          ]
+                                        : [lightGrey, darkGrey],
+                                  ),
                                 ),
-                                gradient: LinearGradient(
-                                  colors: itemIndex.isEven
-                                      ? [buttonLight, Colors.white, buttonDark]
-                                      : [lightGrey, darkGrey],
-                                ),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.only(
-                                  topLeft: Radius.circular(23.r),
-                                  topRight: Radius.circular(23.r),
-                                  bottomRight: Radius.circular(23.r),
-                                  bottomLeft: const Radius.circular(0),
-                                ),
-                                child: Stack(
-                                  children: [
-                                    Image.asset(
-                                      sliderProvider.sliderImages[itemIndex],
-                                      fit: BoxFit.cover,
-                                      height: 190.h,
-                                      width: double.infinity,
-                                    ),
-                                    Positioned(
-                                      bottom: 30.h,
-                                      left: 0,
-                                      right: 0,
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          image: const DecorationImage(
-                                            image: AssetImage(
-                                                'assets/png/news-liner-bg.png'),
-                                            fit: BoxFit.fitWidth,
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(2.r),
-                                        ),
-                                        padding: EdgeInsets.symmetric(
-                                            vertical: 8.h, horizontal: 4.w),
-                                        child: Text(
-                                          sliderProvider.titles[itemIndex %
-                                                  sliderProvider.titles.length]
-                                              .toUpperCase(),
-                                          style: TextStyle(
-                                            color: appFontColor,
-                                            fontSize: 9.sp,
-                                            fontWeight: FontWeight.w600,
-                                            letterSpacing: 0.5,
-                                            shadows: [
-                                              Shadow(
-                                                offset: const Offset(0, 1),
-                                                blurRadius: 6,
-                                                color: Colors.black.withAlpha(
-                                                    (0.4 * 255).toInt()),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(23.r),
+                                    topRight: Radius.circular(23.r),
+                                    bottomRight: Radius.circular(23.r),
+                                    bottomLeft: const Radius.circular(0),
+                                  ),
+                                  child: Stack(
+                                    children: [
+                                      // Background Image
+                                      if (isNetworkImage)
+                                        CachedNetworkImage(
+                                          imageUrl: imageUrl,
+                                          fit: BoxFit.cover,
+                                          height: 190.h,
+                                          width: double.infinity,
+                                          placeholder: (context, url) =>
+                                              Container(
+                                            color: lightGrey,
+                                            child: Center(
+                                              child: CircularProgressIndicator(
+                                                color: buttonDark,
+                                                strokeWidth: 2,
                                               ),
-                                            ],
+                                            ),
                                           ),
-                                          textAlign: TextAlign.center,
+                                          errorWidget: (context, url, error) =>
+                                              Image.asset(
+                                            'assets/jpeg/slide_1_c.jpg',
+                                            fit: BoxFit.cover,
+                                            height: 190.h,
+                                            width: double.infinity,
+                                          ),
+                                        )
+                                      else
+                                        Image.asset(
+                                          imageUrl,
+                                          fit: BoxFit.cover,
+                                          height: 190.h,
+                                          width: double.infinity,
+                                        ),
+                                      Positioned(
+                                        bottom: 30.h,
+                                        left: 0,
+                                        right: 0,
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            image: const DecorationImage(
+                                              image: AssetImage(
+                                                  'assets/png/news-liner-bg.png'),
+                                              fit: BoxFit.fitWidth,
+                                            ),
+                                            borderRadius:
+                                                BorderRadius.circular(2.r),
+                                          ),
+                                          padding: EdgeInsets.symmetric(
+                                              vertical: 8.h, horizontal: 12.w),
+                                          child: Text(
+                                            sliderProvider.titles[itemIndex %
+                                                    sliderProvider
+                                                        .titles.length]
+                                                .toUpperCase(),
+                                            style: TextStyle(
+                                              color: appFontColor,
+                                              fontSize: 9.sp,
+                                              fontWeight: FontWeight.w600,
+                                              letterSpacing: 0.5,
+                                              shadows: [
+                                                Shadow(
+                                                  offset: const Offset(0, 1),
+                                                  blurRadius: 3,
+                                                  color: Colors.black
+                                                      .withOpacity(0.3),
+                                                ),
+                                              ],
+                                            ),
+                                            textAlign: TextAlign.center,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                      options: CarouselOptions(
-                        height: 190.h,
-                        autoPlay: true,
-                        aspectRatio: 16 / 9,
-                        viewportFraction: 1.0,
-                        onPageChanged: (index, reason) {
-                          sliderProvider.setCurrentIndex(index);
+                          );
                         },
-                        initialPage: sliderProvider.currentIndex,
+                        options: CarouselOptions(
+                          height: 190.h,
+                          autoPlay: true,
+                          aspectRatio: 16 / 9,
+                          viewportFraction: 1.0,
+                          onPageChanged: (index, reason) {
+                            sliderProvider.setCurrentIndex(index);
+                          },
+                          initialPage: sliderProvider.currentIndex,
+                        ),
                       ),
-                    ),
 
                     // Dots Indicator
                     Positioned(

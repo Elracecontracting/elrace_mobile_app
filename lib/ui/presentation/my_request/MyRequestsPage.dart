@@ -6,6 +6,7 @@ import 'package:el_race/ui/presentation/my_request/RequestEffectiveDate.dart';
 import 'package:el_race/ui/presentation/my_request/RequestJobMissionPage.dart';
 import 'package:el_race/ui/presentation/my_request/RequestLeavePage.dart';
 import 'package:el_race/ui/presentation/my_request/RequestPermission.dart';
+import 'package:el_race/utils/api_logger.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -93,15 +94,37 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
       });
 
       final url = Uri.parse("https://erp.elrace.com/api/my_requests");
+
+      // 📤 Log Request
+      ApiLogger.logRequest(
+        endpoint: url.toString(),
+        method: 'GET',
+        headers: headers,
+        body: body,
+      );
+
       final request = http.Request('GET', url)
         ..headers.addAll(headers)
         ..body = body;
 
+      final startTime = DateTime.now();
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
+      final duration = DateTime.now().difference(startTime);
+
       debugPrint("response: ${response.body}");
+
+      final responseData = jsonDecode(response.body);
+
+      // 📥 Log Response
+      ApiLogger.logResponse(
+        endpoint: url.toString(),
+        statusCode: response.statusCode,
+        responseBody: responseData,
+        duration: duration,
+      );
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = responseData;
         final List<dynamic> items = data['result']['data'];
 
         if (!mounted) return; // ✅ Check again after async call
@@ -119,7 +142,13 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
         throw Exception(
             "Failed to load requests: ${response.statusCode}\n${response.body}");
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // ❌ Log Error
+      ApiLogger.logError(
+        endpoint: 'https://erp.elrace.com/api/my_requests',
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (!mounted) return;
       setState(() {
         isLoading = false;

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:el_race/ui/presentation/tasks/data/assignable_user_model.dart';
 import 'package:el_race/ui/presentation/tasks/data/task_model.dart';
+import 'package:el_race/utils/api_logger.dart';
 import 'package:http/http.dart' as http;
 
 class TasksApiException implements Exception {
@@ -75,11 +76,22 @@ class TasksApiService {
   Future<List<TaskModel>> fetchTasks({required String token}) async {
     try {
       final uri = Uri.parse('$baseUrl/api/get_user_tasks');
+
+      // 📤 Log Request
+      ApiLogger.logRequest(
+        endpoint: uri.toString(),
+        method: 'GET',
+        headers: _headers(token),
+        body: {'jsonrpc': '2.0'},
+      );
+
+      final startTime = DateTime.now();
       final response = await _getWithBody(
         uri: uri,
         headers: _headers(token),
         body: {'jsonrpc': '2.0'},
       );
+      final duration = DateTime.now().difference(startTime);
 
       print('====== GET USER TASKS REQUEST ======');
       print('URL: $uri');
@@ -95,6 +107,14 @@ class TasksApiService {
       }
 
       final result = _decodeResult(response);
+
+      // 📥 Log Response
+      ApiLogger.logResponse(
+        endpoint: uri.toString(),
+        statusCode: response.statusCode,
+        responseBody: result,
+        duration: duration,
+      );
 
       // Print response for debugging
       print('====== GET USER TASKS RESPONSE ======');

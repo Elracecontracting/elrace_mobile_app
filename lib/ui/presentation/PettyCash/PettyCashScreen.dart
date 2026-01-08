@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashPopUpScreen.dart';
+import 'package:el_race/utils/api_logger.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
@@ -55,15 +56,35 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
         "params": {},
       });
 
+      // 📤 Log Request
+      ApiLogger.logRequest(
+        endpoint: url.toString(),
+        method: 'GET',
+        headers: headers,
+        body: body,
+      );
+
       final request = http.Request('GET', url)
         ..headers.addAll(headers)
         ..body = body;
 
+      final startTime = DateTime.now();
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
+      final duration = DateTime.now().difference(startTime);
+
+      final responseData = jsonDecode(response.body);
+
+      // 📥 Log Response
+      ApiLogger.logResponse(
+        endpoint: url.toString(),
+        statusCode: response.statusCode,
+        responseBody: responseData,
+        duration: duration,
+      );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
+        final data = responseData;
         final result = data['result']['data'];
 
         setState(() {
@@ -74,7 +95,13 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
         throw Exception(
             "Failed to fetch draft summary: ${response.statusCode}");
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // ❌ Log Error
+      ApiLogger.logError(
+        endpoint: 'https://erp.elrace.com/api/draft_summary',
+        error: e,
+        stackTrace: stackTrace,
+      );
       if (!mounted) return;
     }
   }
@@ -88,7 +115,15 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
     });
 
     try {
-      final token = SharedPref.getLoginData().result?.token;
+      print('\n========== PETTY CASH API START ==========');
+
+      final loginData = SharedPref.getLoginData();
+      final token = loginData.result?.token;
+      final empId = loginData.result?.data?.emp_id;
+
+      print('Employee ID: $empId');
+      print(
+          'Token: ${token != null && token.isNotEmpty ? "${token.substring(0, 20)}..." : "NULL"}');
 
       final headers = {
         "Content-Type": "application/json",
@@ -97,13 +132,30 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
       };
 
       final url = Uri.parse("https://erp.elrace.com/api/petty_cash_home");
-      final body = jsonEncode({
+
+      // Get current date dynamically
+      final now = DateTime.now();
+      final currentDate =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      // Use current balance if available, otherwise default to 0
+      final lastLimit = balance > 0 ? balance.toInt() : 0;
+
+      final bodyData = {
         "jsonrpc": "2.0",
         "params": {
-          "last_limit": 6400,
-          "last_limit_date": "2025-04-28",
+          "last_limit": lastLimit,
+          "last_limit_date": currentDate,
         },
-      });
+      };
+      final body = jsonEncode(bodyData);
+
+      print('API URL: $url');
+      print('Request Method: GET');
+      print('Request Body: $body');
+      print('Last Limit (Dynamic): $lastLimit');
+      print('Last Limit Date (Dynamic): $currentDate');
+      print('Sending request...\n');
 
       final request = http.Request('GET', url)
         ..headers.addAll(headers)
@@ -112,18 +164,27 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
+      print('Response Status Code: ${response.statusCode}');
+      print('Response Body Length: ${response.body.length} characters');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('🔍 Full Response: $data');
+        print('Full Response JSON:');
+        print(JsonEncoder.withIndent('  ').convert(data));
+
+        print('\nAPI Call Successful!');
+        print('Parsing Response Data...\n');
 
         final result = data['result']['data'];
-        print('🔍 Result Data: $result');
-        print('🔍 Balance: ${result['balance']}');
-        print('🔍 Incoming: ${result['incoming']}');
-        print('🔍 Spent: ${result['spent']}');
-        print('🔍 Draft Count: ${result['draft_expenses_count']}');
-        print('🔍 Draft Total: ${result['draft_expenses_total']}');
-        print('🔍 Expense Sheets: ${result['expense_sheets']}');
+        print('PETTY CASH DATA:');
+        print('  Employee ID: ${result['employee_id']}');
+        print('  Balance: ${result['balance']} AED');
+        print('  Incoming: ${result['incoming']} AED');
+        print('  Spent: ${result['spent']} AED');
+        print('  Draft Expenses Count: ${result['draft_expenses_count']}');
+        print('  Draft Expenses Total: ${result['draft_expenses_total']} AED');
+        print('  Expense Sheets: ${result['expense_sheets']}');
+        print('  Expense Sheets Type: ${result['expense_sheets'].runtimeType}');
 
         setState(() {
           balance = result['balance'].toDouble();
@@ -131,20 +192,40 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
           spent = result['spent'].toDouble();
           draftExpensesCount = result['draft_expenses_count'] ?? 0;
           draftExpensesTotal = (result['draft_expenses_total'] ?? 0).toDouble();
-          expenseSheets =
-              List<Map<String, dynamic>>.from(result['expense_sheets']);
+
+          // Handle expense_sheets - can be String or List
+          if (result['expense_sheets'] is List) {
+            expenseSheets =
+                List<Map<String, dynamic>>.from(result['expense_sheets']);
+            print('✅ Expense sheets loaded: ${expenseSheets.length} items');
+          } else {
+            expenseSheets = [];
+            print('ℹ️ Expense sheets is String: ${result['expense_sheets']}');
+          }
+
           isLoading = false;
         });
 
-        print(
-            '🔍 After setState - Balance: $balance, Incoming: $incoming, Spent: $spent');
-        print(
-            '🔍 After setState - Draft Count: $draftExpensesCount, Draft Total: $draftExpensesTotal');
+        print('\nState Updated Successfully:');
+        print('  Balance: $balance');
+        print('  Incoming: $incoming');
+        print('  Spent: $spent');
+        print('  Draft Count: $draftExpensesCount');
+        print('  Draft Total: $draftExpensesTotal');
+        print('========== PETTY CASH API SUCCESS ==========\n');
       } else {
+        print('API Call Failed!');
+        print('Status Code: ${response.statusCode}');
+        print('Response Body: ${response.body}');
+        print('========== PETTY CASH API FAILED ==========\n');
         throw Exception(
             "Failed to load petty cash data: ${response.statusCode}\n${response.body}");
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('EXCEPTION: $e');
+      print(
+          'Stack Trace: ${stackTrace.toString().split('\n').take(5).join('\n')}');
+      print('========== PETTY CASH API ERROR ==========\n');
       if (!mounted) return;
       setState(() {
         isLoading = false;

@@ -36,6 +36,8 @@ class _ProfileBoxWithSlideAnimationState
   @override
   void initState() {
     super.initState();
+    print('🎬 Profile Box: initState called');
+
     _loadQrCode();
 
     // Initialize animation controller for moving numbers
@@ -59,29 +61,59 @@ class _ProfileBoxWithSlideAnimationState
 
   @override
   void dispose() {
+    print('🛑 Profile Box: dispose called');
     _numbersAnimationController.dispose();
     super.dispose();
   }
 
   Future<void> _loadQrCode() async {
     try {
-      print('🔄 Starting QR code load...');
-      final qrData = await _qrCodeRepository.getQrCodeImageDirect();
-      print(
-          '✅ QR code loaded: ${qrData != null ? "${qrData.length} bytes" : "null"}');
+      print('🔄 Profile Box: Starting QR code load...');
+      print('📍 Profile Box: Repository instance = $_qrCodeRepository');
+
       if (mounted) {
         setState(() {
-          _qrCodeData = qrData;
-          _isLoadingQr = false;
-          _qrErrorMessage = qrData == null ? 'Failed to load QR code' : null;
+          _isLoadingQr = true;
+          _qrErrorMessage = null;
         });
       }
-    } catch (e) {
-      print('❌ Error loading QR code: $e');
+
+      print('⏳ Profile Box: About to call getQrCodeImageDirect()...');
+      final qrData = await _qrCodeRepository.getQrCodeImageDirect();
+      print('🎉 Profile Box: getQrCodeImageDirect() returned!');
+
+      print(
+          '📦 Profile Box: QR data received: ${qrData != null ? "${qrData.length} bytes" : "NULL"}');
+
+      if (mounted) {
+        if (qrData != null && qrData.isNotEmpty) {
+          print('✅ Profile Box: QR code loaded successfully!');
+          setState(() {
+            _qrCodeData = qrData;
+            _isLoadingQr = false;
+            _qrErrorMessage = null;
+          });
+        } else {
+          print('❌ Profile Box: QR code data is NULL or empty');
+          setState(() {
+            _qrCodeData = null;
+            _isLoadingQr = false;
+            _qrErrorMessage =
+                'QR code not available. Please check your network connection.';
+          });
+        }
+      }
+    } catch (e, stackTrace) {
+      print('❌ Profile Box: Exception loading QR code: $e');
+      print(
+          '📍 Profile Box: Stack trace: ${stackTrace.toString().split('\n').take(3).join('\n')}');
+
       if (mounted) {
         setState(() {
           _isLoadingQr = false;
-          _qrErrorMessage = 'Error: $e';
+          _qrCodeData = null;
+          _qrErrorMessage =
+              'Network error: Unable to load QR code. Check your internet connection.';
         });
       }
     }
@@ -566,14 +598,30 @@ class _ProfileBoxWithSlideAnimationState
                                             ],
                                           ),
                                           child: _isLoadingQr
-                                              ? const CircularProgressIndicator(
-                                                  color: Colors.white,
-                                                  strokeWidth: 2,
+                                              ? const Center(
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    color: Colors.white,
+                                                    strokeWidth: 2,
+                                                  ),
                                                 )
                                               : _qrCodeData != null
                                                   ? Image.memory(
                                                       _qrCodeData!,
-                                                      fit: BoxFit.cover,
+                                                      fit: BoxFit
+                                                          .contain, // Changed from cover to contain
+                                                      errorBuilder: (context,
+                                                          error, stackTrace) {
+                                                        print(
+                                                            '❌ Image.memory error: $error');
+                                                        return const Center(
+                                                          child: Icon(
+                                                            Icons.broken_image,
+                                                            color: Colors.white,
+                                                            size: 40,
+                                                          ),
+                                                        );
+                                                      },
                                                     )
                                                   : Column(
                                                       mainAxisAlignment:
@@ -581,44 +629,66 @@ class _ProfileBoxWithSlideAnimationState
                                                               .center,
                                                       children: [
                                                         const Icon(
-                                                          Icons.error_outline,
+                                                          Icons.qr_code_2,
                                                           color: Colors.white,
-                                                          size: 30,
+                                                          size: 40,
                                                         ),
+                                                        const SizedBox(
+                                                            height: 8),
                                                         if (_qrErrorMessage !=
                                                             null)
                                                           Padding(
                                                             padding:
                                                                 const EdgeInsets
-                                                                    .all(8.0),
+                                                                    .symmetric(
+                                                                    horizontal:
+                                                                        12,
+                                                                    vertical:
+                                                                        4),
                                                             child: Text(
                                                               _qrErrorMessage!,
                                                               style:
                                                                   const TextStyle(
                                                                 color: Colors
                                                                     .white,
-                                                                fontSize: 10,
+                                                                fontSize: 9,
                                                               ),
                                                               textAlign:
                                                                   TextAlign
                                                                       .center,
+                                                              maxLines: 3,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
                                                             ),
                                                           ),
-                                                        TextButton(
+                                                        const SizedBox(
+                                                            height: 4),
+                                                        ElevatedButton(
                                                           onPressed: () {
-                                                            setState(() {
-                                                              _isLoadingQr =
-                                                                  true;
-                                                              _qrErrorMessage =
-                                                                  null;
-                                                            });
+                                                            print(
+                                                                '🔄 Retry button pressed');
                                                             _loadQrCode();
                                                           },
+                                                          style: ElevatedButton
+                                                              .styleFrom(
+                                                            backgroundColor:
+                                                                Colors.white
+                                                                    .withOpacity(
+                                                                        0.2),
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                              horizontal: 16,
+                                                              vertical: 6,
+                                                            ),
+                                                          ),
                                                           child: const Text(
                                                             'Retry',
                                                             style: TextStyle(
                                                                 color: Colors
-                                                                    .white),
+                                                                    .white,
+                                                                fontSize: 12),
                                                           ),
                                                         ),
                                                       ],

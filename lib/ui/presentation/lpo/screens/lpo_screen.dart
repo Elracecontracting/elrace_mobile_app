@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/lpo/widgets/lpo_card_widget.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
+import 'package:el_race/utils/api_logger.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -87,8 +88,26 @@ class _LpoListScreenState extends State<LpoListScreen> {
         'params': params,
       });
 
+      // 📤 Log Request
+      ApiLogger.logRequest(
+        endpoint: url.toString(),
+        method: 'POST',
+        headers: headers,
+        body: body,
+      );
+
+      final startTime = DateTime.now();
       final response = await http.post(url, headers: headers, body: body);
+      final duration = DateTime.now().difference(startTime);
       final data = jsonDecode(response.body);
+
+      // 📥 Log Response
+      ApiLogger.logResponse(
+        endpoint: url.toString(),
+        statusCode: response.statusCode,
+        responseBody: data,
+        duration: duration,
+      );
 
       if (response.statusCode == 200 && data['result'] != null) {
         final List list = (data['result']['data'] ?? []) as List;
@@ -102,7 +121,13 @@ class _LpoListScreenState extends State<LpoListScreen> {
           _isLoading = false;
         });
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      // ❌ Log Error
+      ApiLogger.logError(
+        endpoint: 'https://erp.elrace.com/api/get_lpos',
+        error: e,
+        stackTrace: stackTrace,
+      );
       setState(() {
         _error = e.toString();
         _isLoading = false;

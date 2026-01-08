@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:camera/camera.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../bloc/face_recognition_bloc.dart';
 import '../bloc/face_recognition_event.dart';
 import '../bloc/face_recognition_state.dart';
@@ -28,6 +29,7 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen> {
   CameraController? _cameraController;
   bool _isProcessing = false;
   bool _isMandatory = false; // Track if registration is mandatory
+  bool _permissionDenied = false;
 
   @override
   void initState() {
@@ -43,6 +45,18 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen> {
   }
 
   Future<void> _initializeCamera() async {
+    final status = await Permission.camera.request();
+    if (!status.isGranted) {
+      setState(() {
+        _permissionDenied = true;
+        _isProcessing = false;
+      });
+      _showError('Camera permission is required to continue');
+      return;
+    }
+
+    setState(() => _permissionDenied = false);
+
     // Get available cameras
     final cameras = await availableCameras();
     final frontCamera = cameras.firstWhere(
@@ -226,6 +240,26 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen> {
   }
 
   Widget _buildCameraPreview(FaceRecognitionState state) {
+    if (_permissionDenied) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.camera_alt_outlined, color: Colors.white, size: 48),
+          const SizedBox(height: 12),
+          const Text(
+            'Camera permission is required',
+            style: TextStyle(color: Colors.white, fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          ElevatedButton(
+            onPressed: _initializeCamera,
+            child: const Text('Grant permission'),
+          ),
+        ],
+      );
+    }
+
     if (_cameraController == null || !_cameraController!.value.isInitialized) {
       return const Center(
         child: CircularProgressIndicator(color: Colors.blue),

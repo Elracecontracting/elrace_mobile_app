@@ -16,6 +16,16 @@ String formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
 
 ApiQuery _apiQuery = ApiQuery();
 
+/// Check-In Repository
+///
+/// Time Tracking Rules:
+/// • Check-in is global and unified across all projects
+/// • Does not send project-specific information in the API call
+/// • Timer starts with fixed 8-hour duration regardless of project
+/// • Detailed project-based time tracking is handled via job missions
+///
+/// NOTE: The 8 working hours are global and shared across all projects.
+///       Switching projects does NOT reset or create a new timer.
 class CheckInREpo {
   Future<Response?> checkInUser(String lat, String long) async {
     final loginResponse = await _userRepo.getLoginResponse();
@@ -48,7 +58,6 @@ class CheckInREpo {
       log(UrlUtil.checkInApi);
       log(data.toString());
       log('checkInUser: ${response.toString()}');
-
 
       return response!;
     } catch (e) {
