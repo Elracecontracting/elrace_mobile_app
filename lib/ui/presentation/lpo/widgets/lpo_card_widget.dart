@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -196,6 +197,11 @@ class LpoCardWidget extends StatelessWidget {
                           child: Image.network(
                             clientPhoto!,
                             fit: BoxFit.contain,
+                            headers: {
+                              'Accept': 'image/*',
+                              'Authorization':
+                                  'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
+                            },
                             errorBuilder: (_, __, ___) =>
                                 _buildInitialsAvatar(),
                           ),
@@ -287,6 +293,11 @@ class LpoCardWidget extends StatelessWidget {
                               fit: BoxFit.contain,
                               width: 40.w,
                               height: 40.w,
+                              headers: {
+                                'Accept': 'image/*',
+                                'Authorization':
+                                    'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
+                              },
                               errorBuilder: (_, __, ___) => Icon(
                                 Icons.person,
                                 size: 34.w,

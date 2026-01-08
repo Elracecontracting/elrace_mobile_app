@@ -89,7 +89,7 @@ class _CallScreenState extends State<CallScreen> {
                             image: emp.profilePhotoUrl.toString(),
                             name: emp.name!,
                             job: emp.jobId.toString(),
-                            emp: emp.id.toString(),
+                            emp: emp.empId ?? emp.id.toString(),
                             num: emp.mobilePhone.toString(),
                             isExpanded: isExpanded,
                             onTapExpand: () {

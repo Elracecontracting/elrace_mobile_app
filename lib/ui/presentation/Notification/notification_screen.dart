@@ -1,5 +1,4 @@
 import 'package:el_race/core/services/notification_storage_service.dart';
-import 'package:el_race/ui/widgets/back_icon.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -153,21 +152,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const BackIcon(),
-                  // Stack(
-                  //   alignment: Alignment.center,
-                  //   children: [
-
-                  //     // Text(
-                  //     //   translate('notification_screen.center'),
-                  //     //   style: GoogleFonts.koulen(
-                  //     //     fontSize: 26.sp,
-                  //     //     fontWeight: FontWeight.w600,
-                  //     //     color: appFontColor
-                  //     //   ),
-                  //     // ),
-                  //   ],
-                  // ),
                   const SizedBox(height: 10),
                   Expanded(
                     child: SingleChildScrollView(

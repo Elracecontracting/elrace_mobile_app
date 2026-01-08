@@ -24,7 +24,16 @@ class ContactBloc extends Bloc<ContactEvent, ContactState> {
   List<Employee> filteredEmpList = [];
   FutureOr<void> getEmpMethod(
       GetEmployeeLisET event, Emitter<ContactState> emit) async {
-    if (empList.isNotEmpty) return;
+    print('\n🟢 ========== FETCHING CONTACTS ==========');
+    print('📊 Current empList size: ${empList.length}');
+
+    if (empList.isNotEmpty) {
+      print('✅ Using cached data');
+      print('🟢 ========== END FETCHING CONTACTS ==========\n');
+      return;
+    }
+
+    print('⏳ Loading contacts from API...');
     emit(const ContactLoadingState(isLoading: true));
 
     log('empModel.result!.employees! 1');
@@ -33,17 +42,39 @@ class ContactBloc extends Bloc<ContactEvent, ContactState> {
     log('empModel.result!.employees! 2');
 
     if (response.statusCode == 200) {
+      print('✅ API Response Success (200)');
       final empModel = employeeModelFromJson(response.body);
 
       // Guard against error payloads and nulls
       final employees = empModel.result?.employees ?? [];
+      print('📊 Parsed ${employees.length} employees');
+
       emit(const ContactLoadingState(isLoading: false));
       if (employees.isNotEmpty) {
         empList = employees;
         filteredEmpList = employees;
+
+        // Print first 3 employees for verification
+        print('\n📋 First 3 Employees:');
+        for (var i = 0;
+            i < (employees.length > 3 ? 3 : employees.length);
+            i++) {
+          final emp = employees[i];
+          print('  ${i + 1}. ${emp.name}');
+          print('     - Database ID: ${emp.id}');
+          print('     - Employee ID: ${emp.empId ?? "NULL"} ⚠️');
+          print('     - Job ID: ${emp.jobId}');
+          print('     - Mobile: ${emp.mobilePhone}');
+        }
+
         emit(EmployeeListLoaded(List<Employee>.from(filteredEmpList)));
+        print('✅ Emitted ${employees.length} employees to UI');
+        print('🟢 ========== END FETCHING CONTACTS ==========\n');
       }
       return;
+    } else {
+      print('❌ API Response Failed: ${response.statusCode}');
+      print('🟢 ========== END FETCHING CONTACTS ==========\n');
     }
 
     log(response.body);

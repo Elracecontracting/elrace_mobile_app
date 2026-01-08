@@ -170,24 +170,8 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
       canvas.drawImage(baseImage, Offset.zero, paint);
 
       final double padding = baseImage.width * 0.04;
-      final double topBarHeight = baseImage.height * 0.20;
-      final double bottomBarHeight = baseImage.height * 0.28;
 
-      // Glass-like overlays to match live UI
-      canvas.drawRect(
-        Rect.fromLTWH(0, 0, baseImage.width.toDouble(), topBarHeight),
-        Paint()..color = Colors.black.withOpacity(0.35),
-      );
-
-      canvas.drawRect(
-        Rect.fromLTWH(
-          0,
-          baseImage.height - bottomBarHeight,
-          baseImage.width.toDouble(),
-          bottomBarHeight,
-        ),
-        Paint()..color = Colors.black.withOpacity(0.5),
-      );
+      // NO BLACK OVERLAYS - Just add logo and time directly on the photo
 
       // Draw logo top-left
       if (_logoImage != null) {
@@ -196,10 +180,10 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
         final double logoHeight = logoWidth * logo.height / logo.width;
         final Rect dst = Rect.fromLTWH(padding, padding, logoWidth, logoHeight);
 
-        // Soft shadow behind logo
+        // Soft shadow behind logo for visibility
         final shadowPaint = Paint()
-          ..color = Colors.black.withOpacity(0.25)
-          ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 8);
+          ..color = Colors.black.withOpacity(0.3)
+          ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 10);
         canvas.drawRRect(
           RRect.fromRectAndRadius(dst.inflate(6), const Radius.circular(8)),
           shadowPaint,
@@ -219,11 +203,14 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
           text: '$_currentDate\n$_currentTime',
           style: TextStyle(
             color: Colors.white,
-            fontSize: baseImage.width * 0.04,
-            fontWeight: FontWeight.w600,
+            fontSize: baseImage.width * 0.045,
+            fontWeight: FontWeight.w700,
             shadows: const [
               Shadow(
-                  offset: Offset(0, 1.5), blurRadius: 2, color: Colors.black54),
+                offset: Offset(0, 2),
+                blurRadius: 4,
+                color: Colors.black87,
+              ),
             ],
           ),
         ),
@@ -233,7 +220,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
 
       final Offset textOffset = Offset(
         baseImage.width - padding - textPainter.width,
-        baseImage.height - bottomBarHeight + padding,
+        baseImage.height - padding - textPainter.height,
       );
       textPainter.paint(canvas, textOffset);
 

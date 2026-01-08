@@ -31,7 +31,7 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
   @override
   Widget build(BuildContext context) {
     final sliderProvider = Provider.of<SliderProvider>(context);
-    final bottomPadding = MediaQuery.of(context).padding.bottom + 80.h;
+    final bottomPadding = MediaQuery.of(context).padding.bottom + 20.h;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -275,12 +275,6 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
             ),
             SizedBox(height: 25.w),
             const WidgetContainer(),
-            Builder(
-              builder: (context) {
-                final bottomPadding = MediaQuery.of(context).viewPadding.bottom;
-                return SizedBox(height: 80.h + bottomPadding);
-              },
-            ),
           ],
         ),
       ),

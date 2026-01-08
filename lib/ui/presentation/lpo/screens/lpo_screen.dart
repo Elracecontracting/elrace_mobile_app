@@ -99,6 +99,28 @@ class _LpoListScreenState extends State<LpoListScreen> {
       final startTime = DateTime.now();
       final response = await http.post(url, headers: headers, body: body);
       final duration = DateTime.now().difference(startTime);
+
+      // Check status code first before parsing JSON
+      if (response.statusCode != 200) {
+        ApiLogger.logResponse(
+          endpoint: url.toString(),
+          statusCode: response.statusCode,
+          responseBody: {
+            'error': 'HTTP ${response.statusCode}',
+            'body': response.body.substring(
+                0, response.body.length > 200 ? 200 : response.body.length)
+          },
+          duration: duration,
+        );
+
+        setState(() {
+          _error =
+              'Failed to load LPOs: HTTP ${response.statusCode}\n${response.statusCode == 401 ? 'Authentication failed. Please login again.' : response.statusCode == 403 ? 'Access denied.' : 'Server error.'}';
+          _isLoading = false;
+        });
+        return;
+      }
+
       final data = jsonDecode(response.body);
 
       // 📥 Log Response
@@ -109,7 +131,7 @@ class _LpoListScreenState extends State<LpoListScreen> {
         duration: duration,
       );
 
-      if (response.statusCode == 200 && data['result'] != null) {
+      if (data['result'] != null) {
         final List list = (data['result']['data'] ?? []) as List;
         setState(() {
           _items = list.cast<Map<String, dynamic>>();
