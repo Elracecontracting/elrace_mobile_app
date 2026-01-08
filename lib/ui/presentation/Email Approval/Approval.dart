@@ -144,7 +144,28 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
       final actualKey = responseKeys[groupType] ?? groupType;
 
-      return data['result']['data'][actualKey] ?? [];
+      // Get the list and filter out items with errors
+      List<dynamic> items = data['result']['data'][actualKey] ?? [];
+
+      // Filter out items that contain error messages
+      items = items.where((item) {
+        // Check if item is a string error message
+        if (item is String) {
+          return false; // Skip error messages
+        }
+        // Check if item has error fields
+        if (item is Map) {
+          final itemStr = item.toString().toLowerCase();
+          if (itemStr.contains('not found') ||
+              itemStr.contains('error') ||
+              item['error'] != null) {
+            return false; // Skip items with errors
+          }
+        }
+        return true; // Keep valid items
+      }).toList();
+
+      return items;
     } else {
       throw Exception("Failed to fetch $groupType: ${response.statusCode}");
     }
@@ -391,13 +412,25 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     if (selectedCategory.toLowerCase() == "MY ACTION".toLowerCase()) {
       return MyActionCard(approvalItems: approvalItems);
     } else if (selectedCategory.toLowerCase() == "HR".toLowerCase()) {
-      return HrAndPettycashCard(approvalItems: approvalItems);
+      return HrAndPettycashCard(
+        approvalItems: approvalItems,
+        onRefresh: _fetchApprovalData,
+      );
     } else if (selectedCategory.toLowerCase() == "Petty Cash".toLowerCase()) {
-      return HrAndPettycashCard(approvalItems: approvalItems);
+      return HrAndPettycashCard(
+        approvalItems: approvalItems,
+        onRefresh: _fetchApprovalData,
+      );
     } else if (selectedCategory.toLowerCase() == "RFQ".toLowerCase()) {
-      return InvoiceAndRfqCard(approvalItems: approvalItems);
+      return InvoiceAndRfqCard(
+        approvalItems: approvalItems,
+        onRefresh: _fetchApprovalData,
+      );
     } else if (selectedCategory.toLowerCase() == "INVOICE".toLowerCase()) {
-      return InvoiceAndRfqCard(approvalItems: approvalItems);
+      return InvoiceAndRfqCard(
+        approvalItems: approvalItems,
+        onRefresh: _fetchApprovalData,
+      );
     } else {
       return const SizedBox.shrink();
     }

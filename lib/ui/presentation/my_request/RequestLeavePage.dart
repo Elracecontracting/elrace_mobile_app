@@ -1,8 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/signin/data/repository.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -28,10 +26,9 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   LoginResponseModel? _loginResponse;
   DateTime? endDate;
   String selectedLeaveType = "SHORT";
-  String? base64Attachment;
   String? leaveBalance;
   static String empID = "";
-  String? fileName;
+  String certificateNo = ''; // Certificate number for sick leave
   final GlobalKey<CustomSliderButtonState> _sliderKey =
       GlobalKey<CustomSliderButtonState>();
   final UserRepo userRepo = UserRepo();
@@ -65,17 +62,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     }
   }
 
-  Future<void> _pickAttachment() async {
-    final result = await FilePicker.platform.pickFiles();
-    if (result != null && result.files.single.path != null) {
-      final fileBytes = await File(result.files.single.path!).readAsBytes();
-      setState(() {
-        base64Attachment = base64Encode(fileBytes);
-        fileName = result.files.single.name;
-      });
-    }
-  }
-
   Future<void> _submitRequest() async {
     // Validations
     if (startDate == null ||
@@ -86,9 +72,9 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
       _showErrorDialog("Please fill in all required fields.");
       return;
     }
-    if (selectedLeaveType == "SICK" && base64Attachment == null) {
+    if (selectedLeaveType == "SICK" && certificateNo.isEmpty) {
       _sliderKey.currentState?.resetSlider(); // ⬅️ Reset on validation failure
-      _showErrorDialog("Please attach a file for sick leave.");
+      _showErrorDialog("Please enter certificate number for sick leave.");
       return;
     }
 
@@ -112,7 +98,8 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
         "e_reason": null,
         "join_date": null,
         "late_days": null,
-        "attachment": base64Attachment,
+        "attachment": null,
+        "certificate_no": selectedLeaveType == "SICK" ? certificateNo : null,
         "client_details": null,
         "project_details": null,
         "duration_type": "days",
@@ -495,38 +482,57 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
 
                             const SizedBox(height: 20),
 
-                            // Attach Button
-// Show attachment only if leave type is "SICK"
+                            // Certificate Number for Sick Leave
                             if (selectedLeaveType == "SICK")
-                              Center(
-                                child: ElevatedButton(
-                                  onPressed: _pickAttachment,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.transparent,
-                                    elevation: 0,
-                                    padding: EdgeInsets.zero,
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Image.asset(
-                                          'assets/png/attachment_icon.png',
-                                          width: 30,
-                                          height: 30),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        fileName == null
-                                            ? 'ATTACH YOUR FILE'
-                                            : 'FILE: $fileName',
-                                        style: GoogleFonts.koulen(
-                                          color: appFontColor,
-                                          fontWeight: FontWeight.w500,
-                                          fontSize: 12,
-                                          letterSpacing: 1.6,
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 50.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'CERTIFICATE NO  :',
+                                      style: GoogleFonts.koulen(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: appFontColor,
+                                        letterSpacing: 2.2,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 10),
+                                    TextField(
+                                      keyboardType: TextInputType.text,
+                                      style: _infoTextStyle(),
+                                      decoration: InputDecoration(
+                                        hintText: 'Enter certificate number',
+                                        hintStyle: TextStyle(
+                                            color: Colors.grey.shade500,
+                                            fontSize: 14),
+                                        contentPadding:
+                                            const EdgeInsets.symmetric(
+                                                horizontal: 12, vertical: 14),
+                                        filled: true,
+                                        fillColor: Colors.grey.shade100,
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          borderSide: const BorderSide(
+                                              color: Colors.grey),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12),
+                                          borderSide: const BorderSide(
+                                              color: Colors.blue, width: 2),
                                         ),
                                       ),
-                                    ],
-                                  ),
+                                      onChanged: (val) {
+                                        setState(() {
+                                          certificateNo = val;
+                                        });
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ),
 

@@ -15,7 +15,8 @@ class ApprovalActionButtons extends StatelessWidget {
   final String? selectedAction;
   final List<String> userIds;
 
-  const ApprovalActionButtons({super.key, 
+  const ApprovalActionButtons({
+    super.key,
     required this.requestId,
     required this.type,
     this.onResult,
@@ -53,6 +54,12 @@ class ApprovalActionButtons extends StatelessWidget {
           if (onResult != null) {
             onResult!(state.message);
           }
+          // Close the screen after successful approval/rejection
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (Navigator.of(ctx).canPop()) {
+              Navigator.of(ctx).pop(true); // Return true to indicate success
+            }
+          });
         } else if (state is ApprovalFailure) {
           ScaffoldMessenger.of(ctx).showSnackBar(
             SnackBar(content: Text(state.error)),

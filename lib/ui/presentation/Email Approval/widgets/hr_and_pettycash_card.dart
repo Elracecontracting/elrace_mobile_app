@@ -9,7 +9,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 class HrAndPettycashCard extends StatelessWidget {
   final List<dynamic> approvalItems;
-  const HrAndPettycashCard({super.key, required this.approvalItems});
+  final VoidCallback? onRefresh;
+  const HrAndPettycashCard(
+      {super.key, required this.approvalItems, this.onRefresh});
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +57,7 @@ class HrAndPettycashCard extends StatelessWidget {
               );
 
               if (context.mounted) {
-                await showDialog(
+                final result = await showDialog(
                   context: context,
                   builder: (BuildContext context) {
                     return ApprovalConfirmationScreen(
@@ -64,10 +66,9 @@ class HrAndPettycashCard extends StatelessWidget {
                     );
                   },
                 );
-                // Trigger a rebuild to update any badge counts
-                if (context.mounted) {
-                  // Force parent to reload by calling setState if available
-                  (context as Element).markNeedsBuild();
+                // Trigger a rebuild to update the list after dialog closes
+                if (result == true) {
+                  onRefresh?.call();
                 }
               }
             },

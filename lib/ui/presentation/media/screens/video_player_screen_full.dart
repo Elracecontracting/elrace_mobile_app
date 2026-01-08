@@ -99,12 +99,12 @@ class _VideoPlayerScreenFullState extends State<VideoPlayerScreenFull> {
             child: _buildTitleOverlay(),
           ),
 
-          // Download button
-          Positioned(
-            top: 20.h,
-            right: 16.w,
-            child: _buildDownloadButton(),
-          ),
+          // Download button - Hidden
+          // Positioned(
+          //   top: 20.h,
+          //   right: 16.w,
+          //   child: _buildDownloadButton(),
+          // ),
         ],
       ),
     );

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Attendace_list/attendance_widgets/colleasped_card.dart';
 import 'package:el_race/ui/presentation/Attendace_list/attendance_widgets/expand_card.dart';
 import 'package:el_race/ui/presentation/Attendace_list/attendance_widgets/report_dialog.dart';
@@ -25,7 +26,7 @@ class AttendancePage extends StatefulWidget {
 
 class _AttendancePageState extends State<AttendancePage>
     with TickerProviderStateMixin {
-  final String _imageBase64 = '';
+  String _imageBase64 = '';
   late AttendanceBloc _attendanceBloc;
   var _selectedIndex = 0;
   Set<int> expandedItems = {};
@@ -49,6 +50,9 @@ class _AttendancePageState extends State<AttendancePage>
   void initState() {
     super.initState();
     // controllers are created lazily per list item
+
+    // Load user profile image
+    _imageBase64 = SharedPref().getUserBase64Image();
 
     // Set date range to 7 days prior to today
     selectedEndDate = DateTime.now();
