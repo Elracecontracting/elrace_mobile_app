@@ -28,6 +28,7 @@ import 'package:el_race/utils/screen_size_util.dart';
 import 'package:el_race/core/biometric/ios/face_id_helper.dart';
 import 'package:el_race/core/biometric/android/android_biometric_helper.dart';
 import 'package:el_race/core/biometric/face_recognition/face_recognition_di.dart';
+import 'package:el_race/data/services/auto_checkout_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -131,6 +132,16 @@ void main() async {
 
   // تهيئة خدمة الأذان في الخلفية
   await PrayerBackgroundService.initialize();
+
+  // تهيئة خدمة Auto Check-out التلقائي في الساعة 5 مساءً
+  await AutoCheckoutService.initialize();
+
+  // جدولة Auto Check-out اليومي
+  final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
+  if (isCheckedIn) {
+    await AutoCheckoutService.scheduleAutoCheckout();
+    debugPrint('✅ Auto checkout scheduled for 5:00 PM');
+  }
 
   // debugPrint = (String? message, {int? wrapWidth}) {};
   // Get saved language from SharedPref

@@ -530,7 +530,7 @@ class _ProfileBoxWithSlideAnimationState
                                             loginData.result?.data?.qr_status ==
                                                     true
                                                 ? const Color(0xff4CAF50)
-                                                : const Color(0xffF44336)),
+                                                : const Color(0xff9E9E9E)),
                                   ),
                                 ),
                                 SizedBox(
@@ -556,7 +556,11 @@ class _ProfileBoxWithSlideAnimationState
                                           borderRadius:
                                               BorderRadius.circular(28),
                                           border: Border.all(
-                                            color: HexColor("#009859"),
+                                            color: loginData.result?.data
+                                                        ?.qr_status ==
+                                                    true
+                                                ? HexColor("#009859")
+                                                : Colors.grey.shade400,
                                             width: 1.5,
                                           ),
                                           boxShadow: [
@@ -584,14 +588,21 @@ class _ProfileBoxWithSlideAnimationState
                                           decoration: BoxDecoration(
                                             color: Colors.black,
                                             border: Border.all(
-                                              color: HexColor(
-                                                  "#009859"), // ✅ outer green border
+                                              color: loginData.result?.data
+                                                          ?.qr_status ==
+                                                      true
+                                                  ? HexColor("#009859")
+                                                  : Colors.grey.shade400,
                                               width: 1.5,
                                             ),
                                             //borderRadius: BorderRadius.circular(8),
                                             boxShadow: [
                                               BoxShadow(
-                                                color: HexColor("#009859"),
+                                                color: loginData.result?.data
+                                                            ?.qr_status ==
+                                                        true
+                                                    ? HexColor("#009859")
+                                                    : Colors.grey.shade400,
                                                 blurRadius: 5,
                                                 offset: const Offset(1, 1),
                                               ),

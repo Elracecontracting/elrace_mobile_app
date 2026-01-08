@@ -132,6 +132,11 @@
     "swipe_to_check_out": "اسحب لتسجيل الخروج",
     "swipe_to_check_in": "اسحب لتسجيل الدخول"
   },
+  "check_in": {
+    "no_projects_available": "لا توجد مشاريع أو فروع متاحة",
+    "proceed_without_project": "يمكنك المتابعة بدون اختيار مشروع",
+    "please_select_project": "الرجاء اختيار مشروع أو فرع"
+  },
   "news_banner": {
     "announcements": "الإعلانات",
     "project_completion": "تم الانتهاء رسميًا من المشروع المنتظر بشدة",

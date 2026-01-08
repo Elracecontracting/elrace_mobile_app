@@ -286,13 +286,17 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: EdgeInsets.only(top: 50.h),
+                padding: EdgeInsets.only(top: 40.h),
                 child: SizedBox(
                   width: SizeConfig()
-                      .getWidth(MediaQuery.of(context).size.width - 100),
-                  height: SizeConfig().getHeight(50),
+                      .getWidth(MediaQuery.of(context).size.width - 80),
+                  height: SizeConfig().getHeight(80),
                   child: Center(
-                      child: Image.asset('assets/newapp/simple_cards.png')),
+                      child: Image.asset(
+                    'assets/newapp/simple_cards.png',
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                  )),
                 ),
               ),
             ],
@@ -583,13 +587,6 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                     textColor: Colors.black,
                     countColor: Colors.black,
                     count: mediaCount,
-                    containerColor: Colors.white,
-                  ),
-                  CustomBulletPoint(
-                    text: translate('home.photos'),
-                    textColor: Colors.black,
-                    countColor: Colors.black,
-                    count: filesCount,
                     containerColor: Colors.white,
                   ),
                 ],

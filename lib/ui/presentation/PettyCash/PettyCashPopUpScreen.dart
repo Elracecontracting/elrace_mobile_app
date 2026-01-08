@@ -1724,46 +1724,54 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      GestureDetector(
-                        onTap: _showImageSourceDialog,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Image.asset('assets/png/document_icon.png',
-                                    width: 40, height: 40),
-                                Positioned(
-                                  top: -10,
-                                  left: -3,
-                                  child: CircleAvatar(
-                                    radius: 8,
-                                    backgroundColor: Colors.red,
-                                    child: Text(
-                                      attachments.length.toString(),
-                                      style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold),
-                                    ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // أيقونة المستند - غير قابلة للضغط
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Image.asset('assets/png/document_icon.png',
+                                  width: 40, height: 40),
+                              Positioned(
+                                top: -10,
+                                left: -3,
+                                child: CircleAvatar(
+                                  radius: 8,
+                                  backgroundColor: Colors.red,
+                                  child: Text(
+                                    attachments.length.toString(),
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold),
                                   ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 5),
+                          // أيقونة الدبوس والنص - قابلة للضغط
+                          GestureDetector(
+                            onTap: _showImageSourceDialog,
+                            behavior: HitTestBehavior.opaque,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Image.asset('assets/png/Attached_icon.png',
+                                    width: 25, height: 25),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  "Attachment",
+                                  style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: appFontColor),
                                 ),
                               ],
                             ),
-                            const SizedBox(width: 5),
-                            Image.asset('assets/png/Attached_icon.png',
-                                width: 25, height: 25),
-                            const SizedBox(width: 8),
-                            const Text(
-                              "Attachment",
-                              style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: appFontColor),
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                       const SizedBox(width: 8),
                     ],
@@ -2115,9 +2123,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
           image: AssetImage(bgImage), // Background image for the circle
           fit: BoxFit.cover, // Ensures the image covers the circle
         ),
-        boxShadow: const [
-          BoxShadow(color: Colors.black26, blurRadius: 5)
-        ],
+        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 5)],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center, // Centers content

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:el_race/data/models/global_search_item.dart';
 import 'package:el_race/ui/presentation/tasks/task_details_screen.dart';
 import 'package:el_race/ui/presentation/tasks/data/task_model.dart';
+import 'package:el_race/ui/presentation/lpo/screens/lpo_screen.dart';
 
 /// Helper class for navigating to detail screens from search results
 ///
@@ -119,20 +120,12 @@ class GlobalSearchNavigationHelper {
     BuildContext context,
     GlobalSearchItem item,
   ) {
-    // TODO: Implement navigation to LPO details screen
-    // Once you have the detail screen ready, uncomment and modify:
-    /*
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => LpoDetailScreen(
-          lpoId: item.id,
-        ),
+        builder: (_) => const LpoListScreen(),
       ),
     );
-    */
-
-    _showNotImplemented(context, item);
   }
 
   /// Navigate to Note Details

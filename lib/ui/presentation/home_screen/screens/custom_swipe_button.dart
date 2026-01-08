@@ -1,4 +1,5 @@
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/data/services/auto_checkout_service.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/project_list_dialog.dart';
 import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_in_bloc/check_in_bloc.dart';
 import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_out_bloc/check_out_bloc.dart';
@@ -183,17 +184,28 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   ///
   /// NOTE: The 8 working hours are global and shared across all projects.
   ///       Switching projects does NOT reset or create a new timer.
-  void _performCheckInOut() {
+  void _performCheckInOut() async {
     if (!isCheckedIn) {
       // Perform global check-in
       sl.get<CheckInBloc>().add(CheckInET());
       Get.find<TimerController>().startTimer();
+
+      // جدولة Auto Check-out في الساعة 5 مساءً
+      await AutoCheckoutService.scheduleAutoCheckout();
+      debugPrint('✅ Auto checkout scheduled for 5:00 PM after check-in');
     } else {
-      // Perform global check-out
+      // Perform global check-out (manual)
       final checkInRecordId = SharedPref().getPreferenceInt('checkInRecordId');
       if (checkInRecordId != 0) {
-        sl.get<CheckOutBloc>().add(CheckOutET(checkInRecordId));
+        sl
+            .get<CheckOutBloc>()
+            .add(CheckOutET(checkInRecordId, isAutoCheckout: false));
         Get.find<TimerController>().stopTimer();
+
+        // إلغاء جدولة Auto Check-out عند Check-out اليدوي
+        await AutoCheckoutService.cancelAutoCheckout();
+        debugPrint('✅ Auto checkout cancelled after manual check-out');
+
         // Clear saved check-in project (used for display only)
         SharedPref().removePreference('checkInProjectId');
         SharedPref().removePreference('checkInBranchId');

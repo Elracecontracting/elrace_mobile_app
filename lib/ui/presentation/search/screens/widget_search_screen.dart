@@ -5,10 +5,19 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashScreen.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/main_screens.dart';
 import 'package:el_race/ui/presentation/lpo/screens/lpo_screen.dart';
+import 'package:el_race/ui/presentation/lpo/widgets/lpo_card_widget.dart';
 import 'package:el_race/ui/presentation/my_documents/screens/my_documents_screen.dart';
 import 'package:el_race/ui/presentation/my_notes/screens/my_notes_screen.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/screens/my_project.dart';
+import 'package:el_race/ui/presentation/my_projects/domain/entities/project_entity.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/widgets/project_card_widget.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_bloc.dart';
+import 'package:el_race/ui/presentation/my_projects/data/repositories/project_repository_impl.dart';
+import 'package:el_race/ui/presentation/my_projects/data/datasources/project_remote_datasource.dart';
+import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_usecase.dart';
+import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_by_partner_usecase.dart';
 import 'package:el_race/ui/presentation/todo_list/screens/todo_list_screen.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -17,6 +26,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 /// Enum for search categories
 enum SearchCategory {
@@ -390,48 +400,61 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: const HeaderWidget(),
-      extendBody: true,
-      bottomNavigationBar: const CustomBottomNavBar(isMain: false),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-              child: Row(
-                children: [
-                  BackButton(onPressed: () {
-                    if (_selectedCategory != null) {
-                      _clearCategory();
-                    } else {
-                      Navigator.of(context).pop();
-                    }
-                  }),
-                  SizedBox(width: 12.w),
-                  Expanded(
-                    child: Text(
-                      translate('search.title'),
-                      style: GoogleFonts.koulen(
-                        fontSize: 22.sp,
-                        fontWeight: FontWeight.w400,
-                        color: appFontColor,
+    return BlocProvider(
+      create: (context) {
+        final remoteDataSource = ProjectRemoteDataSource();
+        final repository = ProjectRepositoryImpl(remoteDataSource);
+        return ProjectListBloc(
+          getProjectsUseCase: GetProjectsUseCase(repository: repository),
+          getProjectAttachmentsUseCase:
+              GetProjectAttachmentsUseCase(repository: repository),
+          getProjectsByPartnerUseCase:
+              GetProjectsByPartnerUseCase(repository: repository),
+        );
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: const HeaderWidget(),
+        extendBody: true,
+        bottomNavigationBar: const CustomBottomNavBar(isMain: false),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Header
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                child: Row(
+                  children: [
+                    BackButton(onPressed: () {
+                      if (_selectedCategory != null) {
+                        _clearCategory();
+                      } else {
+                        Navigator.of(context).pop();
+                      }
+                    }),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: Text(
+                        translate('search.title'),
+                        style: GoogleFonts.koulen(
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.w400,
+                          color: appFontColor,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
 
-            // Category Selection or Search
-            Expanded(
-              child: _selectedCategory == null
-                  ? _buildCategorySelection()
-                  : _buildSearchInterface(),
-            ),
-          ],
+              // Category Selection or Search
+              Expanded(
+                child: _selectedCategory == null
+                    ? _buildCategorySelection()
+                    : _buildSearchInterface(),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -760,6 +783,16 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
   }
 
   Widget _buildResultCard(SearchResultItem item) {
+    // Use category-specific widgets
+    if (_selectedCategory == SearchCategory.lpo) {
+      return _buildLpoCard(item);
+    } else if (_selectedCategory == SearchCategory.myProjects) {
+      return _buildProjectCard(item);
+    } else if (_selectedCategory == SearchCategory.pettyCash) {
+      return _buildPettyCashCard(item);
+    }
+
+    // Fallback for other categories (documents, notes, todo)
     final selectedOption = _categories.firstWhere(
       (c) => c.category == _selectedCategory,
     );
@@ -911,6 +944,211 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
       return Colors.red;
     }
     return Colors.blue;
+  }
+
+  // Build LPO Card using the original LpoCardWidget
+  Widget _buildLpoCard(SearchResultItem item) {
+    final data = item.rawData;
+    return LpoCardWidget(
+      name: data['name'] ?? item.title,
+      vendorName: data['vendor_name'] ?? data['partner_name'],
+      projectName: data['project_name'] ?? data['x_project_id']?[1],
+      date: data['date_order'] ?? data['date'] ?? item.date,
+      amount: data['amount_total']?.toString() ?? item.amount,
+      attachments: data['attachments'],
+      lpoCount: data['lpo_count'],
+      clientPhoto: data['partner_photo'],
+      requestedByUserPhoto: data['requested_by_user_photo'],
+      requestedBy: data['requested_by'],
+      requesterManager: data['requester_manager'],
+      state: data['state'] ?? item.status,
+    );
+  }
+
+  // Build Project Card using ProjectCardWidget
+  Widget _buildProjectCard(SearchResultItem item) {
+    final data = item.rawData;
+
+    print('🔍 Building Project Card for: ${item.title}');
+    print('📦 Raw data: $data');
+
+    // Create a ProjectEntity from the raw data
+    final project = ProjectEntity(
+      projectId: int.tryParse(data['id']?.toString() ?? '0') ?? 0,
+      partnerId: data['partner_id']?[0]?.toString() ??
+          data['partner_id']?.toString() ??
+          '',
+      name: data['name'] ?? item.title,
+      agreementId: data['agreement_id'] ??
+          data['analytic_account_id']?[1] ??
+          data['analytic_account_id']?.toString() ??
+          '',
+      woRefNo: data['wo_ref_no'] ?? data['name'] ?? '',
+      woAmount: double.tryParse(data['wo_amount']?.toString() ??
+              data['amount']?.toString() ??
+              '0') ??
+          0.0,
+      projectStatus: data['project_status'] ?? data['stage_id']?[1] ?? 'Active',
+      date: data['date'] ??
+          data['date_start'] ??
+          item.date ??
+          DateTime.now().toString(),
+      dateStart: data['date_start'] ??
+          data['date'] ??
+          item.date ??
+          DateTime.now().toString(),
+      projectManagerPhoto: data['project_manager_photo'],
+      differenceDays:
+          int.tryParse(data['difference_days']?.toString() ?? '0') ?? 0,
+    );
+
+    print('✅ Project Entity created: ${project.name}');
+
+    // Get or create a ProjectListBloc instance
+    final bloc = context.read<ProjectListBloc>();
+
+    return ProjectCardWidget(
+      item: project,
+      bloc: bloc,
+    );
+  }
+
+  // Build Petty Cash Card
+  Widget _buildPettyCashCard(SearchResultItem item) {
+    final data = item.rawData;
+    final status = data['state'] ?? data['status'] ?? item.status ?? 'PENDING';
+    final date = _formatPettyCashDate(data['date'] ?? item.date ?? '');
+    final amount = _formatPettyCashAmount(
+        data['amount']?.toString() ?? item.amount ?? '0');
+
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 5.h, horizontal: 5.w),
+      decoration: BoxDecoration(
+        image: const DecorationImage(
+          image: AssetImage('assets/png/item_bg_green.png'),
+          fit: BoxFit.cover,
+        ),
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha((0.1 * 255).toInt()),
+            blurRadius: 4,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(30, 8, 15, 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  status.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: appFontColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(width: 15),
+            const SizedBox(
+              height: 30,
+              child: VerticalDivider(
+                color: Colors.grey,
+                thickness: 2,
+              ),
+            ),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    'Date',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: const Color(0xff151544),
+                    ),
+                  ),
+                  Text(
+                    date,
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(
+              height: 30,
+              child: VerticalDivider(
+                color: Colors.grey,
+                thickness: 2,
+              ),
+            ),
+            const SizedBox(width: 5),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    'Amount',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: appFontColor,
+                    ),
+                  ),
+                  Text(
+                    amount,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 0),
+            const CircleAvatar(
+              radius: 10,
+              backgroundImage: AssetImage('assets/png/tick-petty.png'),
+            ),
+            const SizedBox(width: 5),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatPettyCashDate(String date) {
+    if (date.isEmpty) return '--';
+    try {
+      final dt = DateTime.parse(date);
+      return DateFormat('dd/MM/yy').format(dt);
+    } catch (_) {
+      return date;
+    }
+  }
+
+  String _formatPettyCashAmount(String amount) {
+    if (amount.isEmpty) return '0.00';
+    try {
+      final value = double.parse(amount);
+      return value.toStringAsFixed(2);
+    } catch (_) {
+      return amount;
+    }
   }
 }
 

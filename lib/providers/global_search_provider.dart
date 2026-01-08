@@ -129,6 +129,11 @@ class GlobalSearchProvider extends ChangeNotifier {
         limit: limit,
       );
 
+      if (kDebugMode && results.isNotEmpty && category == 'lpo') {
+        debugPrint(
+            '[GlobalSearch] LPO sample item: ${results.first.additionalData}');
+      }
+
       if (_isDisposed) return;
 
       _results = results;

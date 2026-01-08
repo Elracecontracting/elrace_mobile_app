@@ -194,49 +194,8 @@ class MediaItemWidget extends StatelessWidget {
                     SizedBox(width: 15.w),
                     GestureDetector(
                       onTap: () async {
-                        // Share media with other apps
-                        String shareText = media.displayName;
-
-                        // Add client name if available
-                        if (media.client != null && media.client!.isNotEmpty) {
-                          shareText += '\n${media.client}';
-                        }
-
-                        // Add URL
-                        shareText += '\n${media.url}';
-
-                        // Print to console for debugging
-                        print('📤 Sharing media:');
-                        print('Name: ${media.displayName}');
-                        print('Client: ${media.client}');
-                        print('URL: ${media.url}');
-                        print('Thumbnail: ${media.thumbnail}');
-                        print('Full text: $shareText');
-
-                        // Share with thumbnail if available
-                        if (media.thumbnail != null &&
-                            media.thumbnail!.isNotEmpty) {
-                          try {
-                            // Try to share with image
-                            await Share.share(
-                              shareText,
-                              subject: media.displayName,
-                            );
-                          } catch (e) {
-                            print('❌ Error sharing with thumbnail: $e');
-                            // Fallback to text only
-                            Share.share(
-                              shareText,
-                              subject: media.displayName,
-                            );
-                          }
-                        } else {
-                          // Share text only
-                          Share.share(
-                            shareText,
-                            subject: media.displayName,
-                          );
-                        }
+                        // Always share as link directly
+                        await _shareMediaAsLink(context);
                       },
                       child: SizedBox(
                         width: 26.w,
@@ -256,6 +215,28 @@ class MediaItemWidget extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  // Share media as link (text)
+  Future<void> _shareMediaAsLink(BuildContext context) async {
+    // Use the encoded streaming URL to avoid issues with spaces
+    final shareUrl = media.streamingUrl;
+
+    // Print to console for debugging
+    print('📤 Sharing media link:');
+    print('Original URL: ${media.url}');
+    print('Encoded URL: $shareUrl');
+
+    try {
+      await Share.share(shareUrl);
+    } catch (e) {
+      print('❌ Error sharing link: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to share link')),
+        );
+      }
+    }
   }
 
   // removed unused _buildMediaIcon to avoid unused declaration warnings

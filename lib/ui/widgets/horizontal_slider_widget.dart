@@ -29,7 +29,6 @@ class GradientSliderState extends State<GradientSliderWidget> {
   double _sliderValue = 0.0;
   Duration _remainingTime = const Duration(hours: 8);
   bool _isTimerRunning = false;
-  late SharedPreferences _prefs;
   DateTime? _startTime;
   String? errorMessage;
   bool isSubmitting = false;
@@ -45,15 +44,15 @@ class GradientSliderState extends State<GradientSliderWidget> {
   }
 
   Future<void> _initializeTimerState() async {
-    _prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
-      _sliderValue = _prefs.getDouble('sliderValue') ?? 0.0;
+      _sliderValue = prefs.getDouble('sliderValue') ?? 0.0;
       _isTimerRunning = SharedPref().getPreferenceBoolean('isTimerRunning');
-      int seconds = _prefs.getInt('remainingTimeInSeconds') ?? 8 * 3600;
+      int seconds = prefs.getInt('remainingTimeInSeconds') ?? 8 * 3600;
       _remainingTime = Duration(seconds: seconds);
 
       // Restore start time
-      String? startTimeStr = _prefs.getString('startTime');
+      String? startTimeStr = prefs.getString('startTime');
       if (startTimeStr != null) {
         _startTime = DateTime.parse(startTimeStr);
         _syncTimerWithBackground();
@@ -172,7 +171,8 @@ class GradientSliderState extends State<GradientSliderWidget> {
                 if (isLeftToRight) {
                   _checkInBloc.add(CheckInET()); // Trigger check-in API
                 } else {
-                  final checkInRecordId = _prefs.getInt('checkInRecordId') ?? 0;
+                  final checkInRecordId =
+                      SharedPref().getPreferenceInt('checkInRecordId');
 
                   if (checkInRecordId != 0) {
                     _checkOutBloc.add(
@@ -211,6 +211,9 @@ class GradientSliderState extends State<GradientSliderWidget> {
       final loginResponse = widget.loginResponseModel;
       final token = loginResponse.result.token;
 
+      debugPrint(
+          '🔍 Fetching projects with token: ${token.substring(0, 20)}...');
+
       // Headers
       Map<String, String> headers = {
         "Content-Type": "application/json",
@@ -233,20 +236,20 @@ class GradientSliderState extends State<GradientSliderWidget> {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      // Debug log (optional)
-      // print('Response status: ${response.statusCode}');
-      // print('Response body: ${response.body}');
+      debugPrint('📡 Response status: ${response.statusCode}');
+      debugPrint('📦 Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List projectsData = data['result']['data'];
+        debugPrint('✅ Successfully fetched ${projectsData.length} projects');
         return projectsData.map((json) => Project.fromJson(json)).toList();
       } else {
+        debugPrint('❌ Failed to load projects: ${response.statusCode}');
         throw Exception("Failed to load projects: ${response.statusCode}");
       }
     } catch (e) {
-      // Optional: log or handle error
-      print('Error in _fetchProjects: $e');
+      debugPrint('❌ Error in _fetchProjects: $e');
       rethrow;
     }
   }
@@ -270,7 +273,10 @@ class GradientSliderState extends State<GradientSliderWidget> {
                   projects = result;
                   isLoading = false;
                 });
+                debugPrint(
+                    '✅ Projects loaded in dialog: ${projects.length} projects');
               }).catchError((e) {
+                debugPrint('❌ Error loading projects: $e');
                 Navigator.of(context).pop();
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text("Failed to fetch projects: $e")),
@@ -287,6 +293,10 @@ class GradientSliderState extends State<GradientSliderWidget> {
             final List<dynamic> branchIds = widget.loginResponseModel.result
                     ?.data?.userBranches?.allowedBranch ??
                 [];
+
+            debugPrint('📊 Projects count: ${projects.length}');
+            debugPrint('📊 Branches count: ${branchIds.length}');
+            debugPrint('📊 Is Loading: $isLoading');
 
             return Dialog(
               shape: RoundedRectangleBorder(
@@ -345,9 +355,33 @@ class GradientSliderState extends State<GradientSliderWidget> {
                       else if (projects.isEmpty && branchIds.isEmpty)
                         const Padding(
                           padding: EdgeInsets.symmetric(vertical: 20),
-                          child: Text(
-                            "No projects or branches found.",
-                            style: TextStyle(color: Colors.red, fontSize: 13),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 48,
+                                color: Color(0xFF6C757D),
+                              ),
+                              SizedBox(height: 12),
+                              Text(
+                                'No projects or branches available',
+                                style: TextStyle(
+                                  color: Color(0xFF6C757D),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'You can proceed without selecting a project',
+                                style: TextStyle(
+                                  color: Color(0xFF9E9E9E),
+                                  fontSize: 12,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                           ),
                         )
                       else if (projects.isNotEmpty)
@@ -495,17 +529,30 @@ class GradientSliderState extends State<GradientSliderWidget> {
                             ),
                           ),
 
-                          // OK Button (Updated)
+                          // OK Button (Updated to allow proceed without project/branch)
                           SizedBox(
                             width: 100,
                             height: 45,
                             child: ElevatedButton(
-                              onPressed: ((selectedProject != null ||
-                                          selectedBranch != null) &&
-                                      (projects.isNotEmpty ||
-                                          branchIds.isNotEmpty) &&
-                                      !isSubmitting)
+                              onPressed: !isSubmitting
                                   ? () async {
+                                      // Allow proceeding if:
+                                      // 1. A project or branch is selected
+                                      // 2. OR no projects/branches exist (proceed with default)
+                                      final canProceed =
+                                          (selectedProject != null ||
+                                                  selectedBranch != null) ||
+                                              (projects.isEmpty &&
+                                                  branchIds.isEmpty);
+
+                                      if (!canProceed) {
+                                        setState(() {
+                                          errorMessage =
+                                              'Please select a project or branch';
+                                        });
+                                        return;
+                                      }
+
                                       setState(() {
                                         isSubmitting = true;
                                         errorMessage = null;
@@ -523,6 +570,31 @@ class GradientSliderState extends State<GradientSliderWidget> {
 
                                         int selectedProjectId =
                                             selectedProject?.agreementId ?? 0;
+
+                                        // If no project selected but user can proceed (no projects available)
+                                        if (selectedProjectId == 0 &&
+                                            projects.isEmpty &&
+                                            branchIds.isEmpty) {
+                                          // Proceed without project validation
+                                          Navigator.of(context).pop();
+
+                                          // Save empty project data
+                                          SharedPref().setPreferenceInt(
+                                              'checkInProjectId', 0);
+                                          SharedPref().setPreferencesString(
+                                              'checkInProjectName',
+                                              'No Project');
+                                          SharedPref().setPreferenceInt(
+                                              'checkInBranchId', 0);
+
+                                          // Trigger the callback to complete check-in
+                                          widget.onValueChanged.call(1.0);
+
+                                          setState(() {
+                                            isSubmitting = false;
+                                          });
+                                          return;
+                                        }
 
                                         if (selectedProjectId == 0) {
                                           setState(() {
@@ -675,11 +747,12 @@ class GradientSliderState extends State<GradientSliderWidget> {
   }
 
   Future<void> _saveTimerState() async {
-    await _prefs.setDouble('sliderValue', _sliderValue);
-    await _prefs.setInt('remainingTimeInSeconds', _remainingTime.inSeconds);
-    await _prefs.setBool('isTimerRunning', _isTimerRunning);
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble('sliderValue', _sliderValue);
+    await prefs.setInt('remainingTimeInSeconds', _remainingTime.inSeconds);
+    await prefs.setBool('isTimerRunning', _isTimerRunning);
     if (_startTime != null) {
-      await _prefs.setString('startTime', _startTime!.toIso8601String());
+      await prefs.setString('startTime', _startTime!.toIso8601String());
     }
   }
 
@@ -808,7 +881,8 @@ class GradientSliderState extends State<GradientSliderWidget> {
                   });
                 },
               );
-              _prefs.setInt('checkInRecordId', state.checkInRecordId);
+              SharedPref()
+                  .setPreferenceInt('checkInRecordId', state.checkInRecordId);
             }
           },
           builder: (context, state) {
@@ -896,18 +970,12 @@ class _CameraWithOverlayState extends State<CameraWithOverlay> {
   CameraController? _cameraController;
   late List<CameraDescription> _cameras;
   bool _isCameraInitialized = false;
-  late SharedPreferences _prefs;
   int _selectedCameraIndex = 0; // Default to front camera
 
   @override
   void initState() {
     super.initState();
     initializeCamera();
-    _initializePreferences();
-  }
-
-  Future<void> _initializePreferences() async {
-    _prefs = await SharedPreferences.getInstance();
   }
 
   Future<void> initializeCamera() async {

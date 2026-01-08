@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Attendace_list/attendance_widgets/colleasped_card.dart';
 import 'package:el_race/ui/presentation/Attendace_list/attendance_widgets/expand_card.dart';
 import 'package:el_race/ui/presentation/Attendace_list/attendance_widgets/report_dialog.dart';
@@ -24,35 +22,16 @@ class AttendancePage extends StatefulWidget {
   State<AttendancePage> createState() => _AttendancePageState();
 }
 
-class _AttendancePageState extends State<AttendancePage>
-    with TickerProviderStateMixin {
-  String _imageBase64 = '';
+class _AttendancePageState extends State<AttendancePage> {
   late AttendanceBloc _attendanceBloc;
   var _selectedIndex = 0;
   Set<int> expandedItems = {};
   late DateTime selectedStartDate;
   late DateTime selectedEndDate;
 
-  final Map<int, AnimationController> _bounceControllers = {};
-  final Map<int, Alignment> avatarAlignments = {};
-
-  bool _isValidBase64(String str) {
-    try {
-      if (str.trim().isEmpty || str.length % 4 != 0) return false;
-      base64Decode(str);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
   @override
   void initState() {
     super.initState();
-    // controllers are created lazily per list item
-
-    // Load user profile image
-    _imageBase64 = SharedPref().getUserBase64Image();
 
     // Set date range to 7 days prior to today
     selectedEndDate = DateTime.now();
@@ -65,54 +44,6 @@ class _AttendancePageState extends State<AttendancePage>
       startDate: DateFormat('yyyy-MM-dd').format(selectedStartDate),
       endDate: DateFormat('yyyy-MM-dd').format(selectedEndDate),
     ));
-  }
-
-  @override
-  void dispose() {
-    for (final c in _bounceControllers.values) {
-      try {
-        c.dispose();
-      } catch (_) {}
-    }
-    super.dispose();
-  }
-
-  AnimationController _ensureController(int index) {
-    if (_bounceControllers.containsKey(index)) {
-      return _bounceControllers[index]!;
-    }
-    final controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 150),
-      lowerBound: 0.0,
-      upperBound: 0.15,
-    );
-    _bounceControllers[index] = controller;
-    avatarAlignments[index] = Alignment.centerRight;
-    return controller;
-  }
-
-  Future<void> animateAvatar(int index, bool expand) async {
-    final controller = _ensureController(index);
-    if (expand) {
-      await controller.forward();
-      await controller.reverse();
-
-      setState(() => avatarAlignments[index] = Alignment.centerLeft);
-      await Future.delayed(const Duration(milliseconds: 150));
-
-      await controller.forward();
-      await controller.reverse();
-    } else {
-      await controller.forward();
-      await controller.reverse();
-
-      setState(() => avatarAlignments[index] = Alignment.centerRight);
-      await Future.delayed(const Duration(milliseconds: 150));
-
-      await controller.forward();
-      await controller.reverse();
-    }
   }
 
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
@@ -226,8 +157,6 @@ class _AttendancePageState extends State<AttendancePage>
                 final itemIndex = index - 1;
                 final AttendanceData item = state.attendanceList[itemIndex];
                 final bool isExpanded = expandedItems.contains(itemIndex);
-                // ensure controller and alignment exist for this item
-                _ensureController(itemIndex);
 
                 final checkInTime = DateTime.parse(item.checkIn);
                 DateTime? checkOutTime;
@@ -279,16 +208,13 @@ class _AttendancePageState extends State<AttendancePage>
                     top: itemIndex == 0 ? 0 : 0,
                   ),
                   child: GestureDetector(
-                    onTap: () async {
+                    onTap: () {
                       if (!isExpanded) {
                         expandedItems.add(itemIndex);
-                        setState(() {});
-                        animateAvatar(itemIndex, true);
                       } else {
                         expandedItems.remove(itemIndex);
-                        setState(() {});
-                        animateAvatar(itemIndex, false);
                       }
+                      setState(() {});
                     },
                     child: Stack(
                       alignment: Alignment.center,
@@ -318,52 +244,6 @@ class _AttendancePageState extends State<AttendancePage>
                                   checkInTime: checkInTime,
                                   checkOutTime: checkOutTime,
                                   backgroundImage: backgroundImage),
-                        ),
-                        AnimatedAlign(
-                          alignment: avatarAlignments[itemIndex] ??
-                              Alignment.centerRight,
-                          duration: const Duration(milliseconds: 250),
-                          curve: Curves.easeInOut,
-                          child: AnimatedBuilder(
-                            animation: _bounceControllers[itemIndex]!,
-                            builder: (context, child) {
-                              return Transform.translate(
-                                offset: Offset(
-                                  (avatarAlignments[itemIndex] ==
-                                              Alignment.centerLeft
-                                          ? -1
-                                          : 1) *
-                                      (30 *
-                                          (_bounceControllers[itemIndex]
-                                                  ?.value ??
-                                              0)), // bounce translation
-                                  0,
-                                ),
-                                child: child,
-                              );
-                            },
-                            child: Container(
-                              margin: EdgeInsets.symmetric(horizontal: 10.w),
-                              width: 45.w,
-                              height: 45.h,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: const Color(0xffD9D9D9), width: 2),
-                              ),
-                              child: ClipOval(
-                                child: _isValidBase64(_imageBase64)
-                                    ? Image.memory(
-                                        base64Decode(_imageBase64),
-                                        fit: BoxFit.cover,
-                                      )
-                                    : Image.asset(
-                                        'assets/png/profile_1.png',
-                                        fit: BoxFit.cover,
-                                      ),
-                              ),
-                            ),
-                          ),
                         ),
                       ],
                     ),

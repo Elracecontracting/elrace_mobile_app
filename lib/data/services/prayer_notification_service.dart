@@ -50,7 +50,7 @@ class PrayerNotificationService {
       playSound: false, // الصوت بيشتغل من AudioPlayer
       enableVibration: true,
       visibility: NotificationVisibility.public,
-      autoCancel: false, // لا تختفي تلقائياً
+      autoCancel: true, // تختفي تلقائياً عند الضغط عليها
       ongoing: false,
       fullScreenIntent: false,
     );
@@ -102,7 +102,7 @@ class PrayerNotificationService {
           playSound: false,
           enableVibration: true,
           visibility: NotificationVisibility.public,
-          autoCancel: false,
+          autoCancel: true,
           ongoing: false,
         ),
         iOS: DarwinNotificationDetails(

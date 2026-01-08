@@ -132,6 +132,11 @@
     "swipe_to_check_out": "SWIPE TO CHECK OUT",
     "swipe_to_check_in": "SWIPE TO CHECK IN"
   },
+  "check_in": {
+    "no_projects_available": "No projects or branches available",
+    "proceed_without_project": "You can proceed without selecting a project",
+    "please_select_project": "Please select a project or branch"
+  },
   "news_banner": {
     "announcements": "ANNOUNCEMENTS",
     "project_completion": "THE MUCH-ANTICIPATED PROJECT HAS OFFICIALLY REACHED COMPLETION",

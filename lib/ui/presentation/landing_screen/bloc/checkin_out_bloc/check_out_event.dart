@@ -9,9 +9,11 @@ sealed class CheckOutEvent extends Equatable {
 
 final class CheckOutET extends CheckOutEvent {
   final int checkInRecordId;
+  final bool
+      isAutoCheckout; // true = auto checkout (no Face ID), false = manual (requires Face ID)
 
-  const CheckOutET(this.checkInRecordId);
+  const CheckOutET(this.checkInRecordId, {this.isAutoCheckout = false});
 
   @override
-  List<Object> get props => [checkInRecordId];
+  List<Object> get props => [checkInRecordId, isAutoCheckout];
 }

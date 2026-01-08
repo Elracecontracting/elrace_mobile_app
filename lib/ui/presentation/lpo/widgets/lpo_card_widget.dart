@@ -133,16 +133,16 @@ class LpoCardWidget extends StatelessWidget {
 
   static final _amountFormat = NumberFormat('#,##0.00', 'en');
 
-  String _formatAmount(String? raw) {
-    if (raw == null || raw.isEmpty) return '-- AED';
+  String? _formatAmount(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
     final cleaned = raw.replaceAll(RegExp(r'[^0-9.,]'), '');
     final value = double.tryParse(cleaned.replaceAll(',', ''));
     if (value == null) return '$raw AED';
     return '${_amountFormat.format(value)} AED';
   }
 
-  String _formatDate(String? raw) {
-    if (raw == null || raw.isEmpty) return '';
+  String? _formatDate(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
     try {
       return DateFormat('dd/MM/yyyy').format(DateTime.parse(raw));
     } catch (_) {
@@ -154,6 +154,12 @@ class LpoCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final formattedAmount = _formatAmount(amount);
     final formattedDate = _formatDate(date);
+    final hasVendor = vendorName != null && vendorName!.trim().isNotEmpty;
+    final hasProject = projectName != null && projectName!.trim().isNotEmpty;
+    final hasAmount = formattedAmount != null;
+    final hasDate = formattedDate != null && formattedDate.isNotEmpty;
+    final hasRequesterPhoto =
+        requestedByUserPhoto != null && requestedByUserPhoto!.isNotEmpty;
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
@@ -224,10 +230,10 @@ class LpoCardWidget extends StatelessWidget {
                         ),
                         textAlign: TextAlign.center,
                       ),
-                      SizedBox(height: 8.h),
-                      _braceChip(vendorName ?? 'VENDOR NAME'),
-                      SizedBox(height: 6.h),
-                      _braceChip(projectName ?? 'PROJECT NAME'),
+                      if (hasVendor || hasProject) SizedBox(height: 8.h),
+                      if (hasVendor) _braceChip(vendorName!),
+                      if (hasVendor && hasProject) SizedBox(height: 6.h),
+                      if (hasProject) _braceChip(projectName!),
                     ],
                   ),
                 ),
@@ -236,109 +242,107 @@ class LpoCardWidget extends StatelessWidget {
               ],
             ),
             SizedBox(height: 14.h),
-            // Bottom row: Amount + Avatar + Date (all aligned)
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8.w),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // LEFT: Amount with icon
-                  Row(
-                    children: [
-                      Image.asset(
-                        'assets/png/icons/Coin.png',
-                        width: 24.w,
-                        height: 24.w,
-                        color: const Color(0xFF151544),
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.attach_money,
-                          size: 24.w,
-                          color: const Color(0xFF151544),
-                        ),
+            // Bottom row: only render if any detail exists
+            if (hasAmount || hasDate || hasRequesterPhoto)
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8.w),
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 18.w,
+                  runSpacing: 10.h,
+                  children: [
+                    if (hasAmount)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(
+                            'assets/png/icons/Coin.png',
+                            width: 24.w,
+                            height: 24.w,
+                            color: const Color(0xFF151544),
+                            errorBuilder: (_, __, ___) => Icon(
+                              Icons.attach_money,
+                              size: 24.w,
+                              color: const Color(0xFF151544),
+                            ),
+                          ),
+                          SizedBox(width: 6.w),
+                          Text(
+                            formattedAmount,
+                            style: GoogleFonts.koulen(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 6.w),
-                      Text(
-                        formattedAmount,
-                        style: GoogleFonts.koulen(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                          letterSpacing: 0.3,
+                    if (hasRequesterPhoto)
+                      Container(
+                        width: 40.w,
+                        height: 40.w,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1),
+                          color: Colors.white,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
-                  ),
-                  // CENTER: User Avatar
-                  Container(
-                    width: 40.w,
-                    height: 40.w,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1),
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: requestedByUserPhoto != null &&
-                              requestedByUserPhoto!.isNotEmpty
-                          ? Image.network(
-                              requestedByUserPhoto!,
-                              fit: BoxFit.contain,
-                              width: 40.w,
-                              height: 40.w,
-                              headers: {
-                                'Accept': 'image/*',
-                                'Authorization':
-                                    'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
-                              },
-                              errorBuilder: (_, __, ___) => Icon(
-                                Icons.person,
-                                size: 34.w,
-                                color: appFontColor,
-                              ),
-                            )
-                          : Icon(
+                        child: ClipOval(
+                          child: Image.network(
+                            requestedByUserPhoto!,
+                            fit: BoxFit.contain,
+                            width: 40.w,
+                            height: 40.w,
+                            headers: {
+                              'Accept': 'image/*',
+                              'Authorization':
+                                  'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
+                            },
+                            errorBuilder: (_, __, ___) => Icon(
                               Icons.person,
                               size: 34.w,
                               color: appFontColor,
                             ),
-                    ),
-                  ),
-                  // RIGHT: Date with icon
-                  Row(
-                    children: [
-                      Image.asset(
-                        'assets/png/calender.png',
-                        width: 24.w,
-                        height: 24.w,
-                        color: const Color(0xFF151544),
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.calendar_month,
-                          size: 24.w,
-                          color: const Color(0xFF151544),
+                          ),
                         ),
                       ),
-                      SizedBox(width: 6.w),
-                      Text(
-                        formattedDate,
-                        style: GoogleFonts.inter(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black87,
-                        ),
+                    if (hasDate)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(
+                            'assets/png/calender.png',
+                            width: 24.w,
+                            height: 24.w,
+                            color: const Color(0xFF151544),
+                            errorBuilder: (_, __, ___) => Icon(
+                              Icons.calendar_month,
+                              size: 24.w,
+                              color: const Color(0xFF151544),
+                            ),
+                          ),
+                          SizedBox(width: 6.w),
+                          Text(
+                            formattedDate,
+                            style: GoogleFonts.inter(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -349,7 +353,9 @@ class LpoCardWidget extends StatelessWidget {
     return Text(
       (vendorName != null && vendorName!.isNotEmpty)
           ? vendorName!.characters.take(2).toString().toUpperCase()
-          : 'V',
+          : (name != null && name!.isNotEmpty)
+              ? name!.characters.take(2).toString().toUpperCase()
+              : 'V',
       style: GoogleFonts.koulen(
         fontSize: 22.sp,
         fontWeight: FontWeight.w700,
