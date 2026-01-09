@@ -338,10 +338,12 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
   print('🔗 Query Parameters: ${uri.queryParameters}');
 
   // Check if it's a QR code survey link
-  // Format: https://elrace.com/RCC4/Requirements/qrcodeapp
+  // Format: https://elrace.com/RCC4/Requirements/qrcodeapp or qrcodeapp.php
   if (uri.host == 'elrace.com' &&
-      uri.path.contains('/RCC4/Requirements/qrcodeapp')) {
+      (uri.path.contains('/RCC4/Requirements/qrcodeapp.php') ||
+          uri.path.contains('/RCC4/Requirements/qrcodeapp'))) {
     print('📱 QR Survey link detected!');
+    print('📱 Path matched: ${uri.path}');
     print('📱 Starting API call to fetch content...');
 
     // Fetch content from API
@@ -352,6 +354,17 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
 
       if (content != null && context.mounted) {
         print('📦 Content Data: $content');
+
+        // Validate content structure
+        if (content['type'] == null || content['data'] == null) {
+          print('❌ Invalid content structure - missing type or data');
+          _showErrorDialog(
+            navKey.currentContext ?? context,
+            'Invalid Content',
+            'The QR code content is not properly formatted. Please try again.',
+          );
+          return;
+        }
 
         // Store in provider
         final effectiveContext = navKey.currentContext ?? context;
@@ -365,20 +378,85 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
         final loginData = SharedPref.getLoginData();
         final token = loginData.result?.token;
         final isLoggedIn = token != null && token.isNotEmpty;
+        final qrStatus = loginData.result?.data?.qr_status;
+
         print(
             '🔐 Token: ${token != null ? "Found (${token.substring(0, 10)}...)" : "Not Found"}');
         print('🔐 Is Logged In: $isLoggedIn');
+        print('🔐 QR Status: $qrStatus');
 
-        // Navigate based on login status
+        // Navigate based on login status and QR permissions
         if (isLoggedIn) {
-          // Logged in user - show with AppBar and BottomBar
-          print(
-              '✅ User logged in - showing authenticated screen with AppBar/BottomBar');
-          navKey.currentState?.push(
-            MaterialPageRoute(
-              builder: (context) => const QrSurveyAuthenticatedScreen(),
-            ),
-          );
+          // Check if user has QR access permission
+          if (qrStatus == 1) {
+            // Logged in user with QR permission - show with AppBar and BottomBar
+            print(
+                '✅ User logged in with QR permission - showing authenticated screen');
+            navKey.currentState?.push(
+              MaterialPageRoute(
+                builder: (context) => const QrSurveyAuthenticatedScreen(),
+              ),
+            );
+          } else {
+            // Logged in but no QR permission - show error dialog
+            print(
+                '❌ User logged in but NO QR permission (qr_status = $qrStatus)');
+            navKey.currentState?.push(
+              MaterialPageRoute(
+                builder: (context) => Scaffold(
+                  appBar: AppBar(
+                    title: const Text('Access Denied'),
+                    backgroundColor: Colors.red,
+                  ),
+                  body: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.block,
+                            size: 80,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(height: 24),
+                          const Text(
+                            'No QR Access Permission',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Your account does not have permission to access QR survey content. Please contact your administrator.',
+                            style: TextStyle(fontSize: 16),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 32),
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 32,
+                                vertical: 16,
+                              ),
+                            ),
+                            child: const Text('Go Back'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
         } else {
           // Guest user - show without AppBar and BottomBar
           print('👤 Guest user - showing guest screen (no AppBar/BottomBar)');
@@ -392,43 +470,51 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
             '🔗 ==================== NAVIGATION COMPLETE ====================');
       } else {
         print(
-            '❌ Content is null or context not mounted - using guest fallback');
-        final effectiveContext = navKey.currentContext ?? context;
-        try {
-          final provider = Provider.of<QrSurveyDataProvider>(effectiveContext,
-              listen: false);
-          provider.clearData();
-        } catch (_) {
-          print('⚠️ Provider<QrSurveyDataProvider> not found during fallback');
+            '❌ Content is null or context not mounted - showing error message');
+        if (context.mounted) {
+          _showErrorDialog(
+            navKey.currentContext ?? context,
+            'No Content Available',
+            'The QR code did not return any content. Please try scanning again or contact support.',
+          );
         }
-        navKey.currentState?.push(
-          MaterialPageRoute(
-            builder: (context) => const QrCodeWrapper(),
-          ),
-        );
+        print(
+            '🔗 ==================== NAVIGATION FAILED (NO CONTENT) ====================');
       }
     } catch (e, stackTrace) {
       print('❌ Error handling QR deep link: $e');
       print('❌ Stack trace: $stackTrace');
-      // In case of error, still route to guest flow so user sees something
-      final effectiveContext = navKey.currentContext ?? context;
-      try {
-        final provider =
-            Provider.of<QrSurveyDataProvider>(effectiveContext, listen: false);
-        provider.clearData();
-      } catch (_) {
-        print(
-            '⚠️ Provider<QrSurveyDataProvider> not found during error fallback');
+
+      // Show error to user
+      if (context.mounted) {
+        _showErrorDialog(
+          navKey.currentContext ?? context,
+          'Error Loading Content',
+          'An error occurred while loading the QR content. Please try again later.\n\nError: $e',
+        );
       }
-      navKey.currentState?.push(
-        MaterialPageRoute(
-          builder: (context) => const QrCodeWrapper(),
-        ),
-      );
+      print('🔗 ==================== ERROR OCCURRED ====================');
     }
   } else {
     print('⚠️ URI does not match expected pattern');
-    print('⚠️ Expected: https://elrace.com/RCC4/Requirements/qrcodeapp');
+    print('⚠️ Expected: https://elrace.com/RCC4/Requirements/qrcodeapp[.php]');
   }
   print('🔗 ==================== END DEEP LINK HANDLER ====================');
+}
+
+/// Helper function to show error dialog
+void _showErrorDialog(BuildContext context, String title, String message) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text(title),
+      content: Text(message),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('OK'),
+        ),
+      ],
+    ),
+  );
 }

@@ -6,6 +6,7 @@ import '../bloc/approval_bloc.dart';
 import '../bloc/approval_event.dart';
 import '../bloc/approval_state.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/core/services/approval_count_service.dart';
 
 class ApprovalActionButtons extends StatelessWidget {
   final String requestId;
@@ -51,6 +52,10 @@ class ApprovalActionButtons extends StatelessWidget {
           ScaffoldMessenger.of(ctx).showSnackBar(
             SnackBar(content: Text(state.message)),
           );
+
+          // Trigger approval count update
+          ApprovalCountService.onCountChanged?.call();
+
           if (onResult != null) {
             onResult!(state.message);
           }

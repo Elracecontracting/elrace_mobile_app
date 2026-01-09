@@ -152,30 +152,18 @@ class MyActionCard extends StatelessWidget {
                                   thickness: 2,
                                 ),
                               ),
-                              SizedBox(
-                                width: 150.w,
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      translate('home.REQ_NO'),
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                        color: appFontColor,
-                                      ),
-                                    ),
-                                    Text(
-                                      reqNo,
-                                      textAlign: TextAlign.center,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 12.sp,
-                                        fontWeight: FontWeight.w500,
-                                        color: Colors.black,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
+                              Expanded(
+                                flex: 2,
+                                child: Text(
+                                  title,
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: appFontColor,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
                                 ),
                               ),
                               const SizedBox(
@@ -186,15 +174,29 @@ class MyActionCard extends StatelessWidget {
                                 ),
                               ),
                               Expanded(
-                                child: Text(
-                                  title,
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: appFontColor,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                                flex: 1,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      translate('home.REQ_NO'),
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: appFontColor,
+                                      ),
+                                    ),
+                                    Text(
+                                      reqNo,
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11.sp,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.black,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],

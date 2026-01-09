@@ -50,12 +50,20 @@ class _HeaderWidgetState extends State<HeaderWidget> {
         _loadApprovalCount();
       }
     });
+
+    // Register callback for approval count changes (approve/reject actions)
+    ApprovalCountService.onCountChanged = () {
+      if (mounted) {
+        _loadApprovalCount();
+      }
+    };
   }
 
   @override
   void dispose() {
-    // Unregister callback
+    // Unregister callbacks
     ApprovalViewedService.setOnCountChangedCallback(null);
+    ApprovalCountService.onCountChanged = null;
     super.dispose();
   }
 
@@ -251,29 +259,34 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                                   fit: BoxFit.contain,
                                 ),
                               ),
-                              // Badge temporarily hidden
-                              // if (_approvalCount > 0)
-                              //   Positioned(
-                              //     right: 0,
-                              //     top: -5,
-                              //     child: Container(
-                              //       padding: const EdgeInsets.all(3),
-                              //       decoration: const BoxDecoration(
-                              //         color: red,
-                              //         shape: BoxShape.circle,
-                              //       ),
-                              //       child: Text(
-                              //         _approvalCount > 99
-                              //             ? '99+'
-                              //             : _approvalCount.toString(),
-                              //         style: const TextStyle(
-                              //           color: Colors.white,
-                              //           fontSize: 10,
-                              //           fontWeight: FontWeight.bold,
-                              //         ),
-                              //       ),
-                              //     ),
-                              //   ),
+                              // Badge for approval count
+                              if (_approvalCount > 0)
+                                Positioned(
+                                  right: 0,
+                                  top: -2,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(3),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 16,
+                                      minHeight: 16,
+                                    ),
+                                    decoration: const BoxDecoration(
+                                      color: red,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      _approvalCount > 99
+                                          ? '99+'
+                                          : _approvalCount.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
                             ],
                           ),
                         ),

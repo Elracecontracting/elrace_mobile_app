@@ -15,7 +15,7 @@ class QrSurveyApiService {
     try {
       final token = SharedPref.getLoginData().result?.token;
 
-      // Backend expects JSON; use POST with minimal JSON body
+      // Backend expects JSON-RPC format
       final headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -24,17 +24,25 @@ class QrSurveyApiService {
 
       final url = Uri.parse('$baseUrl/survey/any_published');
 
+      // JSON-RPC 2.0 format required by Odoo
       final body = jsonEncode({
         'jsonrpc': '2.0',
+        'method': 'call',
         'params': {},
+        'id': DateTime.now().millisecondsSinceEpoch,
       });
+
+      print('🌐 QR API Request:');
+      print('  - URL: $url');
+      print('  - Method: POST (JSON-RPC)');
+      print('  - Has Auth: ${token != null}');
+      print('  - Body: $body');
 
       final response = await http.post(url, headers: headers, body: body);
 
-      print(
-          '🌐 QR API call -> ${response.statusCode} ${response.reasonPhrase}');
-      print('🌐 Headers sent: hasAuth=${token != null}');
-      print('🌐 Request body: $body');
+      print('🌐 QR API Response:');
+      print('  - Status: ${response.statusCode} ${response.reasonPhrase}');
+      print('  - Body Length: ${response.body.length}');
 
       if (response.statusCode == 200) {
         final bodyText = response.body;
