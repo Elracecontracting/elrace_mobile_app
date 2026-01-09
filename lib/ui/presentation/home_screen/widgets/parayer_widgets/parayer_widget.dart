@@ -208,101 +208,65 @@ class _ParayerWidgetState extends State<ParayerWidget>
                                       fit: BoxFit.fill,
                                     ),
                                   ),
-                                  if (nextPrayer != Prayer.fajr)
-                                    Positioned(
-                                        bottom: 40.h,
-                                        left: -1.w,
-                                        child: LabelWidget(
-                                            name: translate('home.Fajr'),
-                                            time: _fmt(aladhanTimes?['fajr'] ??
-                                                pt?.fajr ??
-                                                DateTime.now()),
-                                            textColor: Colors.white)),
-                                  if (nextPrayer != Prayer.dhuhr)
-                                    Positioned(
-                                        bottom: 85.w,
-                                        left: 60.w,
-                                        child: LabelWidget(
-                                            name: translate('home.Dhuhr'),
-                                            time: _fmt(aladhanTimes?['dhuhr'] ??
-                                                pt?.dhuhr ??
-                                                DateTime.now()),
-                                            textColor: Colors.white)),
-                                  if (nextPrayer != Prayer.asr)
-                                    Positioned(
-                                        bottom: 95.w,
-                                        left: 0,
-                                        right: 0,
-                                        child: Center(
-                                          child: LabelWidget(
-                                              name: translate('home.Asr'),
-                                              time: _fmt(aladhanTimes?['asr'] ??
-                                                  pt?.asr ??
-                                                  DateTime.now()),
-                                              textColor: Colors.white),
-                                        )),
-                                  if (nextPrayer != Prayer.maghrib)
-                                    Positioned(
-                                        bottom: 85.w,
-                                        right: 50.w,
-                                        child: LabelWidget(
-                                            name: translate('home.Maghrib'),
-                                            time: _fmt(
-                                                aladhanTimes?['maghrib'] ??
-                                                    pt?.maghrib ??
-                                                    DateTime.now()),
-                                            textColor: Colors.white)),
-                                  if (nextPrayer != Prayer.isha)
-                                    Positioned(
-                                        bottom: 35.h,
-                                        right: 0.w,
-                                        child: LabelWidget(
-                                            name: translate('home.Isha'),
-                                            time: _fmt(aladhanTimes?['isha'] ??
-                                                pt?.isha ??
-                                                DateTime.now()),
-                                            textColor: Colors.white)),
                                   Positioned(
-                                    top: 1.h,
-                                    left: 0,
-                                    right: 0,
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        Container(
-                                          decoration: BoxDecoration(
-                                            borderRadius:
-                                                BorderRadius.circular(6.3),
-                                            border: Border.all(
-                                                color: const Color(0xFFFFD700)),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 6.3),
-                                            child: Text(
-                                              translate(_prayerKey(
-                                                  nextPrayer ?? Prayer.fajr)),
-                                              style: GoogleFonts.kanit(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.w400,
-                                                color: const Color(0xFFFFD700),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          _fmt(nextTime ?? DateTime.now()),
-                                          style: GoogleFonts.kanit(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w400,
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                                      bottom: 40.h,
+                                      left: -1.w,
+                                      child: LabelWidget(
+                                          name: translate('home.Fajr'),
+                                          time: _fmt(aladhanTimes?['fajr'] ??
+                                              pt?.fajr ??
+                                              DateTime.now()),
+                                          textColor: nextPrayer == Prayer.fajr
+                                              ? const Color(0xFFFFD700)
+                                              : Colors.white)),
+                                  Positioned(
+                                      bottom: 85.w,
+                                      left: 60.w,
+                                      child: LabelWidget(
+                                          name: translate('home.Dhuhr'),
+                                          time: _fmt(aladhanTimes?['dhuhr'] ??
+                                              pt?.dhuhr ??
+                                              DateTime.now()),
+                                          textColor: nextPrayer == Prayer.dhuhr
+                                              ? const Color(0xFFFFD700)
+                                              : Colors.white)),
+                                  Positioned(
+                                      bottom: 95.w,
+                                      left: 0,
+                                      right: 0,
+                                      child: Center(
+                                        child: LabelWidget(
+                                            name: translate('home.Asr'),
+                                            time: _fmt(aladhanTimes?['asr'] ??
+                                                pt?.asr ??
+                                                DateTime.now()),
+                                            textColor: nextPrayer == Prayer.asr
+                                                ? const Color(0xFFFFD700)
+                                                : Colors.white),
+                                      )),
+                                  Positioned(
+                                      bottom: 85.w,
+                                      right: 50.w,
+                                      child: LabelWidget(
+                                          name: translate('home.Maghrib'),
+                                          time: _fmt(aladhanTimes?['maghrib'] ??
+                                              pt?.maghrib ??
+                                              DateTime.now()),
+                                          textColor:
+                                              nextPrayer == Prayer.maghrib
+                                                  ? const Color(0xFFFFD700)
+                                                  : Colors.white)),
+                                  Positioned(
+                                      bottom: 35.h,
+                                      right: 0.w,
+                                      child: LabelWidget(
+                                          name: translate('home.Isha'),
+                                          time: _fmt(aladhanTimes?['isha'] ??
+                                              pt?.isha ??
+                                              DateTime.now()),
+                                          textColor: nextPrayer == Prayer.isha
+                                              ? const Color(0xFFFFD700)
+                                              : Colors.white)),
                                   Positioned(
                                     bottom: 18.h,
                                     right: 0,
