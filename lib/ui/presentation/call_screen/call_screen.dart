@@ -118,9 +118,15 @@ class _CallScreenState extends State<CallScreen> {
             SliverToBoxAdapter(
               child: Builder(
                 builder: (context) {
-                  final bottomPadding =
-                      MediaQuery.of(context).viewPadding.bottom;
-                  return SizedBox(height: 100.h + bottomPadding);
+                  final bottomPadding = MediaQuery.of(context).padding.bottom;
+                  final viewPadding = MediaQuery.of(context).viewPadding.bottom;
+                  // Use the larger value to ensure enough space
+                  final safePadding =
+                      bottomPadding > viewPadding ? bottomPadding : viewPadding;
+                  // Ensure minimum 150.h padding for devices without system navigation
+                  final totalPadding =
+                      safePadding > 0 ? safePadding + 20.h : 150.h;
+                  return SizedBox(height: totalPadding);
                 },
               ),
             ),

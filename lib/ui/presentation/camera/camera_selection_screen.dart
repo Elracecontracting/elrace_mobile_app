@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
+import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -31,7 +32,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
   String _currentDate = '';
   String _currentTime = '';
   bool _isCapturing = false;
-  ui.Image? _logoImage;
+  Uint8List? _logoBytes;
 
   // Inline scan/filter state
   final ImageProcessingService _imageProcessingService =
@@ -55,12 +56,15 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
 
   Future<void> _loadLogo() async {
     try {
-      final data = await rootBundle.load('assets/png/main logo 1.png');
-      final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
-      final frame = await codec.getNextFrame();
-      _logoImage = frame.image;
+      final data = await rootBundle.load('assets/logo/rcc2.jpg');
+      if (mounted) {
+        setState(() {
+          _logoBytes = data.buffer.asUint8List();
+        });
+      }
+      debugPrint('✓ Logo rcc2.jpg loaded: ${data.lengthInBytes} bytes');
     } catch (e) {
-      debugPrint('Error loading logo: $e');
+      debugPrint('✗ Error loading logo: $e');
     }
   }
 
@@ -159,80 +163,53 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
 
   Future<String?> _composeWithOverlay(String imagePath) async {
     try {
+      // Read base image
       final bytes = await File(imagePath).readAsBytes();
-      final baseImage = await _decodeImage(bytes);
+      img.Image? baseImage = img.decodeImage(bytes);
+      if (baseImage == null) return imagePath;
 
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-      final paint = Paint();
+      final int padding = (baseImage.width * 0.04).toInt();
 
-      // Draw captured photo
-      canvas.drawImage(baseImage, Offset.zero, paint);
+      // Add logo if available
+      if (_logoBytes != null) {
+        img.Image? logo = img.decodeImage(_logoBytes!);
+        if (logo != null) {
+          // Resize logo
+          final int logoWidth = (baseImage.width * 0.28).toInt();
+          final int logoHeight = (logoWidth * logo.height / logo.width).toInt();
+          logo = img.copyResize(logo, width: logoWidth, height: logoHeight);
 
-      final double padding = baseImage.width * 0.04;
-
-      // NO BLACK OVERLAYS - Just add logo and time directly on the photo
-
-      // Draw logo top-left
-      if (_logoImage != null) {
-        final logo = _logoImage!;
-        final double logoWidth = baseImage.width * 0.28;
-        final double logoHeight = logoWidth * logo.height / logo.width;
-        final Rect dst = Rect.fromLTWH(padding, padding, logoWidth, logoHeight);
-
-        // Soft shadow behind logo for visibility
-        final shadowPaint = Paint()
-          ..color = Colors.black.withOpacity(0.3)
-          ..maskFilter = const ui.MaskFilter.blur(ui.BlurStyle.normal, 10);
-        canvas.drawRRect(
-          RRect.fromRectAndRadius(dst.inflate(6), const Radius.circular(8)),
-          shadowPaint,
-        );
-
-        canvas.drawImageRect(
-          logo,
-          Rect.fromLTWH(0, 0, logo.width.toDouble(), logo.height.toDouble()),
-          dst,
-          paint,
-        );
+          // Composite logo onto base image
+          img.compositeImage(baseImage, logo, dstX: padding, dstY: padding);
+        }
       }
 
-      // Draw date + time bottom-right
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: '$_currentDate\n$_currentTime',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: baseImage.width * 0.045,
-            fontWeight: FontWeight.w700,
-            shadows: const [
-              Shadow(
-                offset: Offset(0, 2),
-                blurRadius: 4,
-                color: Colors.black87,
-              ),
-            ],
-          ),
-        ),
-        textDirection: ui.TextDirection.ltr,
-        textAlign: TextAlign.right,
-      )..layout(maxWidth: baseImage.width.toDouble());
+      // Draw date and time text
+      final int fontSize = (baseImage.width * 0.045).toInt();
 
-      final Offset textOffset = Offset(
-        baseImage.width - padding - textPainter.width,
-        baseImage.height - padding - textPainter.height,
+      // Time on the left
+      img.drawString(
+        baseImage,
+        _currentTime,
+        font: img.arial48,
+        x: padding,
+        y: baseImage.height - padding - fontSize * 2,
+        color: img.ColorRgb8(255, 255, 255),
       );
-      textPainter.paint(canvas, textOffset);
 
-      final ui.Image composed = await recorder.endRecording().toImage(
-            baseImage.width,
-            baseImage.height,
-          );
+      // Date on the right
+      img.drawString(
+        baseImage,
+        _currentDate,
+        font: img.arial48,
+        x: baseImage.width - padding - (_currentDate.length * fontSize ~/ 2),
+        y: baseImage.height - padding - fontSize * 2,
+        color: img.ColorRgb8(255, 255, 255),
+      );
 
-      final ByteData? pngBytes =
-          await composed.toByteData(format: ui.ImageByteFormat.png);
-      if (pngBytes == null) return imagePath;
-      await File(imagePath).writeAsBytes(pngBytes.buffer.asUint8List());
+      // Save the result
+      final outputBytes = img.encodeJpg(baseImage, quality: 95);
+      await File(imagePath).writeAsBytes(outputBytes);
       return imagePath;
     } catch (e) {
       debugPrint('Error composing overlay: $e');
@@ -515,29 +492,26 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       /// ——— DATE + TIME ———
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              _currentDate,
-                              style: GoogleFonts.inter(
-                                fontSize: 14.sp,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            _currentTime,
+                            style: GoogleFonts.inter(
+                              fontSize: 14.sp,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
                             ),
-                            Text(
-                              _currentTime,
-                              style: GoogleFonts.inter(
-                                fontSize: 14.sp,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
+                          ),
+                          Text(
+                            _currentDate,
+                            style: GoogleFonts.inter(
+                              fontSize: 14.sp,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
 
                       /// ——— SHOOT BUTTON ———

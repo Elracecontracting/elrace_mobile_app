@@ -23,11 +23,18 @@ class HrAndPettycashCard extends StatelessWidget {
       );
     }
 
+    // Calculate safe bottom padding for devices with navigation bars
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final viewPadding = MediaQuery.of(context).viewPadding.bottom;
+    final safePadding =
+        bottomPadding > viewPadding ? bottomPadding : viewPadding;
+    final totalBottomPadding = safePadding > 0 ? safePadding + 20.h : 150.h;
+
     return Expanded(
       child: ListView.separated(
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 5) +
-            EdgeInsets.only(bottom: 100.w, top: 100.w),
+            EdgeInsets.only(bottom: totalBottomPadding, top: 100.w),
         itemCount: approvalItems.length,
         separatorBuilder: (context, index) => const SizedBox(height: 1),
         itemBuilder: (context, index) {

@@ -391,7 +391,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       final url = Uri.parse("https://erp.elrace.com/api/draft_summary");
       final body = jsonEncode({
         "jsonrpc": "2.0",
-        "params": {"last_limit": 6400, "last_limit_date": "2025-04-28"},
+        "params": {},
       });
 
       final request = http.Request('GET', url)

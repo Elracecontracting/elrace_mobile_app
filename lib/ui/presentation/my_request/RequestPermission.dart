@@ -34,6 +34,11 @@ class _RequestPermissionState extends State<RequestPermission> {
   String startTimeFormatted = 'Select Time';
   String endTimeFormatted = 'Select Time';
 
+  // New variables for the updated design
+  int selectedHour = 8;
+  String selectedPeriod = 'AM'; // AM or PM
+  String selectedDuration = '2H'; // 1H, 2H, or 3H
+
   Future<void> _selectDate(BuildContext context, bool isJoinedDate) async {
     DateTime initialDate = isJoinedDate ? joinedDate : leaveEndDate;
     final DateTime? picked = await showDatePicker(
@@ -139,10 +144,10 @@ class _RequestPermissionState extends State<RequestPermission> {
                                 children: [
                                   const SizedBox(height: 10),
 
-                                  // Date row
+                                  // SELECT DAY
                                   const SizedBox(height: 10),
                                   Text(
-                                    "SELECT DATE",
+                                    "SELECT DAY",
                                     style: GoogleFonts.koulen(
                                       fontSize: 17,
                                       fontWeight: FontWeight.w500,
@@ -172,6 +177,7 @@ class _RequestPermissionState extends State<RequestPermission> {
                                           color: Colors.black,
                                         ),
                                       ),
+                                      const SizedBox(width: 20),
                                       Radio(
                                         value: 'Tomorrow',
                                         groupValue: selectedDay,
@@ -183,8 +189,7 @@ class _RequestPermissionState extends State<RequestPermission> {
                                         },
                                       ),
                                       Text(
-                                        translate(
-                                            'request_permission.tomorrow'),
+                                        'Tomorrow',
                                         style: GoogleFonts.inter(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w500,
@@ -194,32 +199,146 @@ class _RequestPermissionState extends State<RequestPermission> {
                                     ],
                                   ),
 
+                                  const SizedBox(height: 25),
+
+                                  // START HOUR
+                                  Text(
+                                    "START HOUR",
+                                    style: GoogleFonts.koulen(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 1.9,
+                                      color: appFontColor,
+                                    ),
+                                  ),
+
                                   const SizedBox(height: 10),
+
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Text(
-                                        translate('request_permission.date'),
-                                        style: GoogleFonts.koulen(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w500,
-                                          letterSpacing: 1.9,
-                                        ),
+                                      // Minus button
+                                      IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            if (selectedHour > 1) {
+                                              selectedHour--;
+                                            }
+                                          });
+                                        },
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        icon: const Icon(
+                                            Icons.remove_circle_outline,
+                                            size: 26),
                                       ),
+
+                                      const SizedBox(width: 6),
+
+                                      // Hour display
                                       Container(
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 16, vertical: 6),
+                                            horizontal: 14, vertical: 8),
                                         decoration: BoxDecoration(
-                                          color: Colors.grey.shade300,
+                                          border:
+                                              Border.all(color: Colors.grey),
                                           borderRadius:
-                                              BorderRadius.circular(20),
+                                              BorderRadius.circular(8),
                                         ),
                                         child: Text(
-                                          DateFormat('dd/MM/yyyy')
-                                              .format(joinedDate),
+                                          selectedHour
+                                                  .toString()
+                                                  .padLeft(2, '0') +
+                                              ':00',
                                           style: GoogleFonts.inter(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+
+                                      const SizedBox(width: 6),
+
+                                      // Plus button
+                                      IconButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            if (selectedHour < 12) {
+                                              selectedHour++;
+                                            }
+                                          });
+                                        },
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        icon: const Icon(
+                                            Icons.add_circle_outline,
+                                            size: 26),
+                                      ),
+
+                                      const SizedBox(width: 10),
+
+                                      // AM Button
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            selectedPeriod = 'AM';
+                                          });
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 14, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: selectedPeriod == 'AM'
+                                                ? Colors.grey.shade800
+                                                : Colors.white,
+                                            border:
+                                                Border.all(color: Colors.grey),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            'AM',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: selectedPeriod == 'AM'
+                                                  ? Colors.white
+                                                  : Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+
+                                      const SizedBox(width: 6),
+
+                                      // PM Button
+                                      GestureDetector(
+                                        onTap: () {
+                                          setState(() {
+                                            selectedPeriod = 'PM';
+                                          });
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 14, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: selectedPeriod == 'PM'
+                                                ? Colors.grey.shade800
+                                                : Colors.white,
+                                            border:
+                                                Border.all(color: Colors.grey),
+                                            borderRadius:
+                                                BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            'PM',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: selectedPeriod == 'PM'
+                                                  ? Colors.white
+                                                  : Colors.black,
+                                            ),
                                           ),
                                         ),
                                       ),
@@ -228,26 +347,105 @@ class _RequestPermissionState extends State<RequestPermission> {
 
                                   const SizedBox(height: 25),
 
-                                  // Balance Leave
+                                  // DURATION TYPE
+                                  Text(
+                                    "DURATION TYPE",
+                                    style: GoogleFonts.koulen(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 1.9,
+                                      color: appFontColor,
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 10),
+
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Text(
-                                        translate('common.balance_leave'),
-                                        style: GoogleFonts.koulen(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w500,
-                                          letterSpacing: 1.9,
-                                        ),
+                                      // 1H Checkbox
+                                      Row(
+                                        children: [
+                                          Checkbox(
+                                            value: selectedDuration == '1H',
+                                            onChanged: (value) {
+                                              setState(() {
+                                                selectedDuration = '1H';
+                                              });
+                                            },
+                                          ),
+                                          Text(
+                                            '1H',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
                                       ),
+
+                                      const SizedBox(width: 10),
+
+                                      // 2H Checkbox
+                                      Row(
+                                        children: [
+                                          Checkbox(
+                                            value: selectedDuration == '2H',
+                                            onChanged: (value) {
+                                              setState(() {
+                                                selectedDuration = '2H';
+                                              });
+                                            },
+                                          ),
+                                          Text(
+                                            '2H',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(width: 10),
+
+                                      // 3H Checkbox
+                                      Row(
+                                        children: [
+                                          Checkbox(
+                                            value: selectedDuration == '3H',
+                                            onChanged: (value) {
+                                              setState(() {
+                                                selectedDuration = '3H';
+                                              });
+                                            },
+                                          ),
+                                          Text(
+                                            '3H',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+
+                                  const SizedBox(height: 10),
+
+                                  // Maximum Hours notice
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Image.asset('assets/png/notice_icon.png',
+                                          width: 20, height: 20),
                                       const SizedBox(width: 5),
                                       Text(
-                                        "20",
-                                        style: GoogleFonts.koulen(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w300,
-                                          letterSpacing: 1.9,
-                                          color: Colors.black,
+                                        'Maximum Hours per month is 6 Hours',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
                                     ],
@@ -255,19 +453,14 @@ class _RequestPermissionState extends State<RequestPermission> {
 
                                   const SizedBox(height: 30),
 
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 10),
-                                    child: Align(
-                                      alignment: Alignment.centerLeft,
-                                      child: Text(
-                                        translate('common.description'),
-                                        style: GoogleFonts.koulen(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.w500,
-                                          color: const Color(0xFFB0B0B0),
-                                          letterSpacing: 2.2,
-                                        ),
-                                      ),
+                                  // REASON Label
+                                  Text(
+                                    "REASON",
+                                    style: GoogleFonts.koulen(
+                                      fontSize: 17,
+                                      fontWeight: FontWeight.w500,
+                                      letterSpacing: 1.9,
+                                      color: appFontColor,
                                     ),
                                   ),
 
@@ -441,17 +634,22 @@ class _RequestPermissionState extends State<RequestPermission> {
     try {
       final token = SharedPref.getLoginData().result?.token;
 
-      // Extract hour in 24-hour format
-      String parseTime(String time) {
-        try {
-          final format = DateFormat.jm(); // e.g., 1:00 PM
-          final dateTime = format.parse(time);
-          return DateFormat.H()
-              .format(dateTime); // returns hour in 24-hour format as string
-        } catch (e) {
-          return ""; // fallback if time is "Select Time" or invalid
+      // Convert hour to 24-hour format
+      int get24Hour() {
+        if (selectedPeriod == 'AM') {
+          return selectedHour == 12 ? 0 : selectedHour;
+        } else {
+          return selectedHour == 12 ? 12 : selectedHour + 12;
         }
       }
+
+      // Get duration in hours
+      int getDurationHours() {
+        return int.parse(selectedDuration.replaceAll('H', ''));
+      }
+
+      int startHour = get24Hour();
+      int endHour = startHour + getDurationHours();
 
       final response = await http.post(
         Uri.parse('https://erp.elrace.com/api/submit_request'),
@@ -480,8 +678,8 @@ class _RequestPermissionState extends State<RequestPermission> {
             "client_details": null,
             "project_details": null,
             "duration_type": "custom_hours",
-            "hour_from": parseTime(startTimeFormatted),
-            "hour_to": parseTime(endTimeFormatted),
+            "hour_from": startHour.toString(),
+            "hour_to": endHour.toString(),
           }
         }),
       );
