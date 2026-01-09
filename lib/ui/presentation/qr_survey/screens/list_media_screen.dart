@@ -19,125 +19,98 @@ class ListMediaScreen extends StatefulWidget {
 
 class _ListMediaScreenState extends State<ListMediaScreen> {
   late List<QrMediaModel> _mediaList;
-  late List<QrMediaModel> _filteredList;
-  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    print('📱 ListMediaScreen - Received ${widget.mediaList.length} media items');
     _mediaList = widget.mediaList.cast<QrMediaModel>();
-    _filteredList = _mediaList;
+    print('📱 ListMediaScreen - Casted to ${_mediaList.length} QrMediaModel items');
+    for (var media in _mediaList) {
+      print('📱 Media: ${media.name} - ${media.url}');
+    }
   }
 
-  void _filterMedia(String query) {
-    setState(() {
-      if (query.isEmpty) {
-        _filteredList = _mediaList;
-      } else {
-        _filteredList = _mediaList
-            .where((media) =>
-                media.name.toLowerCase().contains(query.toLowerCase()))
-            .toList();
-      }
-    });
+  Widget _buildMediaItem(QrMediaModel media) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.all(16),
+        leading: Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: media.isVideo ? Colors.blue.shade50 : Colors.purple.shade50,
+            borderRadius: BorderRadius.circular(8),
+            image: media.thumbnailUrl != null
+                ? DecorationImage(
+                    image: NetworkImage(media.thumbnailUrl!),
+                    fit: BoxFit.cover,
+                  )
+                : null,
+          ),
+          child: media.thumbnailUrl == null
+              ? Icon(
+                  media.isVideo ? Icons.videocam : Icons.image,
+                  color: media.isVideo ? Colors.blue : Colors.purple,
+                  size: 30,
+                )
+              : null,
+        ),
+        title: Text(
+          media.name,
+          style: GoogleFonts.inter(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: media.description != null
+            ? Text(
+                media.description!,
+                style: GoogleFonts.inter(fontSize: 14),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              )
+            : null,
+        trailing: const Icon(Icons.play_circle, size: 32),
+        onTap: () {
+          if (media.isVideo) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => VideoPlayerScreen(
+                  media: media,
+                ),
+              ),
+            );
+          }
+        },
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Media'),
-        backgroundColor: Colors.blue,
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              onChanged: _filterMedia,
-              decoration: InputDecoration(
-                hintText: 'Search media...',
-                prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+    return Container(
+      color: Colors.grey[100],
+      child: _mediaList.isEmpty
+          ? const Center(
+              child: Text(
+                'No media found',
+                style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              itemCount: _filteredList.length,
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _mediaList.length,
               itemBuilder: (context, index) {
-                final media = _filteredList[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  elevation: 2,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.all(16),
-                    leading: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: media.isVideo
-                            ? Colors.blue.shade50
-                            : Colors.purple.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        image: media.thumbnailUrl != null
-                            ? DecorationImage(
-                                image: NetworkImage(media.thumbnailUrl!),
-                                fit: BoxFit.cover,
-                              )
-                            : null,
-                      ),
-                      child: media.thumbnailUrl == null
-                          ? Icon(
-                              media.isVideo ? Icons.videocam : Icons.image,
-                              color:
-                                  media.isVideo ? Colors.blue : Colors.purple,
-                              size: 30,
-                            )
-                          : null,
-                    ),
-                    title: Text(
-                      media.name,
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    subtitle: media.description != null
-                        ? Text(
-                            media.description!,
-                            style: GoogleFonts.inter(fontSize: 14),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          )
-                        : null,
-                    trailing: const Icon(Icons.play_circle, size: 32),
-                    onTap: () {
-                      if (media.isVideo) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => VideoPlayerScreen(
-                              media: media,
-                            ),
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                );
+                return _buildMediaItem(_mediaList[index]);
               },
             ),
-          ),
-        ],
-      ),
     );
   }
 }

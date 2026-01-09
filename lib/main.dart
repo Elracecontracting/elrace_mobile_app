@@ -388,15 +388,22 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
         // Navigate based on login status and QR permissions
         if (isLoggedIn) {
           // Check if user has QR access permission
-          if (qrStatus == 1) {
-            // Logged in user with QR permission - show with AppBar and BottomBar
+          // Support: qr_status = 1 (int), true (bool), "1" (string)
+          final hasQrPermission = qrStatus == 1 ||
+              qrStatus == true ||
+              qrStatus == '1' ||
+              qrStatus?.toString() == '1';
+
+          if (hasQrPermission) {
+            // Logged in user with QR permission - switch to QR Survey screen
             print(
-                '✅ User logged in with QR permission - showing authenticated screen');
-            navKey.currentState?.push(
-              MaterialPageRoute(
-                builder: (context) => const QrSurveyAuthenticatedScreen(),
-              ),
-            );
+                '✅ User logged in with QR permission - switching to QR Survey');
+            
+            final context = navKey.currentContext;
+            if (context != null) {
+              final homeBloc = HomeBloc.get(context);
+              homeBloc.add(ChangeCurrentIndex(index: 3)); // Show QR Survey screen
+            }
           } else {
             // Logged in but no QR permission - show error dialog
             print(

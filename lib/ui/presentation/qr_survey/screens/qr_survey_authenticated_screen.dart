@@ -73,7 +73,7 @@ class _QrSurveyAuthenticatedScreenState
         },
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2, // Always highlight QR Survey tab
+        currentIndex: 1, // Highlight Home tab
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
         selectedItemColor: const Color(0xFF1E3A5F),
@@ -81,27 +81,21 @@ class _QrSurveyAuthenticatedScreenState
         showSelectedLabels: true,
         showUnselectedLabels: true,
         onTap: (index) {
-          if (index != 2) {
-            // Navigate back if user taps other tabs
-            Navigator.pop(context);
-          }
+          // Navigate back to main screen when any tab is tapped
+          Navigator.pop(context);
         },
         items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.call),
+            label: 'Call',
+          ),
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.task),
-            label: 'Tasks',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.qr_code_scanner),
-            label: 'QR Survey',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
+            icon: Icon(Icons.camera_alt),
+            label: 'Camera',
           ),
         ],
       ),

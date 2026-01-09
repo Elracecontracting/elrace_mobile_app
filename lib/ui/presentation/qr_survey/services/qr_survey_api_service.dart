@@ -15,20 +15,33 @@ class QrSurveyApiService {
     try {
       final token = SharedPref.getLoginData().result?.token;
 
-      // Try GET request
+      // GET with body (non-standard but trying as requested)
       final headers = {
+        'Content-Type': 'application/json',
         'Accept': 'application/json',
         if (token != null) 'Authorization': 'Bearer $token',
       };
 
       final url = Uri.parse('$baseUrl/survey/any_published');
 
+      final body = jsonEncode({
+        'jsonrpc': '2.0',
+        'params': {},
+      });
+
       print('🌐 QR API Request:');
       print('  - URL: $url');
-      print('  - Method: GET');
+      print('  - Method: GET with body');
       print('  - Has Auth: ${token != null}');
+      print('  - Body: $body');
 
-      final response = await http.get(url, headers: headers);
+      // Using http.Request to send GET with body
+      final request = http.Request('GET', url);
+      request.headers.addAll(headers);
+      request.body = body;
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
       print('🌐 QR API Response:');
       print('  - Status: ${response.statusCode} ${response.reasonPhrase}');
@@ -36,45 +49,53 @@ class QrSurveyApiService {
 
       if (response.statusCode == 200) {
         final bodyText = response.body;
-        print(
-            '🌐 QR API body lق وعملت سكان بياخدني ع ستور ength: ${bodyText.length}');
+        print('🌐 QR API Response Body: $bodyText');
         final data = jsonDecode(bodyText);
 
-        if (data['result'] != null && data['result']['data'] != null) {
-          final result = data['result']['data'];
+        // Response format: { "jsonrpc": "2.0", "id": null, "result": { "type": "media", "data": [...] } }
+        if (data['result'] != null) {
+          final result = data['result'];
+          final type = result['type'];
+          final contentData = result['data'];
 
-          // Check what type of content is available
-          if (result['survey'] != null) {
-            print('🌐 QR API payload: survey found');
+          if (type == null || contentData == null) {
+            print('⚠️ QR API: Missing type or data in result');
+            return null;
+          }
+
+          print(
+              '🌐 QR API: type=$type, data count=${(contentData as List).length}');
+
+          // Return based on type
+          if (type == 'survey') {
             return {
               'type': 'survey',
-              'survey_id': result['survey']['id'],
-              'title': result['survey']['title'],
-              'data': (result['survey']['questions'] as List)
+              'survey_id': result['survey_id'],
+              'title': result['title'],
+              'data': (contentData as List)
                   .map((q) => QrQuestionModel.fromJson(q))
                   .toList(),
             };
-          } else if (result['documents'] != null) {
-            print('🌐 QR API payload: documents found');
+          } else if (type == 'documents') {
             return {
               'type': 'documents',
-              'data': (result['documents'] as List)
+              'data': (contentData as List)
                   .map((d) => QrDocumentModel.fromJson(d))
                   .toList(),
             };
-          } else if (result['media'] != null) {
-            print('🌐 QR API payload: media found');
+          } else if (type == 'media') {
             return {
               'type': 'media',
-              'data': (result['media'] as List)
+              'data': (contentData as List)
                   .map((m) => QrMediaModel.fromJson(m))
                   .toList(),
             };
           } else {
-            print('⚠️ QR API payload: no survey/documents/media in result');
+            print('⚠️ QR API: Unknown type=$type');
+            return null;
           }
         } else {
-          print('⚠️ QR API payload: result.data missing');
+          print('⚠️ QR API: result is missing');
         }
       } else {
         print('❌ QR API non-200: body=${response.body}');

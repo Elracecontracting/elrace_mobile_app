@@ -22,11 +22,11 @@ class QrMediaModel {
   factory QrMediaModel.fromJson(Map<String, dynamic> json) {
     return QrMediaModel(
       id: json['id'] ?? 0,
-      name: json['name'] ?? '',
-      url: json['url'] ?? json['file_url'] ?? '',
+      name: json['media_name'] ?? json['name'] ?? '',
+      url: json['file_link'] ?? json['url'] ?? json['file_url'] ?? '',
       thumbnailUrl: json['thumbnail_url'] ?? json['thumbnail'],
       mediaType: json['media_type'] ?? json['type'] ?? 'video',
-      description: json['description'],
+      description: json['project_name'] ?? json['description'],
       duration:
           json['duration'] != null ? Duration(seconds: json['duration']) : null,
       uploadDate: json['upload_date'] != null

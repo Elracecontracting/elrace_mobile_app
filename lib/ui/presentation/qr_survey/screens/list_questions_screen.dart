@@ -95,57 +95,51 @@ class _ListQuestionsScreenState extends State<ListQuestionsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        backgroundColor: Colors.blue,
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: _questions.length,
-              itemBuilder: (context, index) {
-                return _buildQuestionCard(_questions[index], index);
-              },
-            ),
-          ),
-          Container(
+    return Column(
+      children: [
+        Expanded(
+          child: ListView.builder(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 4,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: ElevatedButton(
-              onPressed: _isSubmitting ? null : _submitAnswers,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: _isSubmitting
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : Text(
-                      translate('common.submit'),
-                      style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-            ),
+            itemCount: _questions.length,
+            itemBuilder: (context, index) {
+              return _buildQuestionCard(_questions[index], index);
+            },
           ),
-        ],
-      ),
+        ),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: ElevatedButton(
+            onPressed: _isSubmitting ? null : _submitAnswers,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: _isSubmitting
+                ? const CircularProgressIndicator(color: Colors.white)
+                : Text(
+                    translate('common.submit'),
+                    style: GoogleFonts.inter(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+          ),
+        ),
+      ],
     );
   }
 

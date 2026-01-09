@@ -5,6 +5,7 @@ import 'package:el_race/ui/presentation/call_screen/call_screen.dart';
 import 'package:el_race/ui/presentation/camera/camera_selection_screen.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
+import 'package:el_race/ui/presentation/qr_survey/screens/qr_survey_content_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -26,6 +27,7 @@ class _MainScreenState extends State<MainScreen> {
     CallScreen(),
     HomeScreenPage(),
     SizedBox(),
+    QrSurveyContentWrapper(), // QR Survey screen (no icon in bottom nav)
   ];
 
   Future<bool> _onWillPop() async {
@@ -146,7 +148,10 @@ class CustomBottomNavBar extends StatelessWidget {
   }
 
   Widget _buildNavItem(BuildContext context,
-      {required int index, required String icon, required bool isMain}) {
+      {required int index,
+      dynamic icon,
+      required bool isMain,
+      bool isIconData = false}) {
     final bloc = HomeBloc.get(context);
     return IconButton(
       padding: EdgeInsets.zero,
@@ -183,10 +188,16 @@ class CustomBottomNavBar extends StatelessWidget {
       icon: SizedBox(
         height: 60.h,
         child: Center(
-          child: Image.asset(
-            icon,
-            width: 30.w,
-          ),
+          child: isIconData
+              ? Icon(icon as IconData,
+                  size: 30,
+                  color: bloc.currentIndex == index
+                      ? Colors.white
+                      : Colors.white.withOpacity(0.6))
+              : Image.asset(
+                  icon as String,
+                  width: 30.w,
+                ),
         ),
       ),
     );
