@@ -175,6 +175,19 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
             nextPrayer: _nextPrayer,
             nextTime: _nextPrayerTime,
             isSoundMuted: _isSoundMuted,
+            aladhanTimes: _aladhanFajr != null &&
+                    _aladhanDhuhr != null &&
+                    _aladhanAsr != null &&
+                    _aladhanMaghrib != null &&
+                    _aladhanIsha != null
+                ? {
+                    'fajr': _aladhanFajr!,
+                    'dhuhr': _aladhanDhuhr!,
+                    'asr': _aladhanAsr!,
+                    'maghrib': _aladhanMaghrib!,
+                    'isha': _aladhanIsha!,
+                  }
+                : null,
           ));
 
           _startPrayerTicker();

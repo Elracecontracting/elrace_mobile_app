@@ -99,8 +99,8 @@ class _PrayerCountdownTimerState extends State<PrayerCountdownTimer> {
     return Text(
       _timeLeft,
       style: const TextStyle(
-        fontSize: 10,
-        fontWeight: FontWeight.w400,
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
         color: Colors.white,
         fontFamily: 'monospace',
       ),

@@ -47,6 +47,7 @@ class PrayerTimesLoaded extends HomeState {
   final DateTime? nextTime;
   final String? error;
   final bool isSoundMuted;
+  final Map<String, DateTime>? aladhanTimes; // أوقات Aladhan API
 
   const PrayerTimesLoaded({
     required this.prayerTimes,
@@ -54,6 +55,7 @@ class PrayerTimesLoaded extends HomeState {
     required this.nextTime,
     this.error,
     required this.isSoundMuted,
+    this.aladhanTimes,
   });
 
   PrayerTimesLoaded copyWith({
@@ -62,6 +64,7 @@ class PrayerTimesLoaded extends HomeState {
     DateTime? nextTime,
     String? error,
     bool? isSoundMuted,
+    Map<String, DateTime>? aladhanTimes,
   }) {
     return PrayerTimesLoaded(
       prayerTimes: prayerTimes ?? this.prayerTimes,
@@ -69,6 +72,7 @@ class PrayerTimesLoaded extends HomeState {
       nextTime: nextTime ?? this.nextTime,
       error: error ?? this.error,
       isSoundMuted: isSoundMuted ?? this.isSoundMuted,
+      aladhanTimes: aladhanTimes ?? this.aladhanTimes,
     );
   }
 }
