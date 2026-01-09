@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../models/qr_question_model.dart';
 import '../services/qr_survey_api_service.dart';
+import '../providers/qr_survey_data_provider.dart';
 
 class ListQuestionsScreen extends StatefulWidget {
   final List<dynamic> questions;
@@ -95,6 +97,47 @@ class _ListQuestionsScreenState extends State<ListQuestionsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Verify this screen was accessed via QR code
+    final provider = Provider.of<QrSurveyDataProvider>(context, listen: false);
+    if (!provider.isFromQrCode) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Access Denied'),
+          backgroundColor: Colors.red,
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.qr_code_scanner,
+                  size: 80,
+                  color: Colors.red,
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'QR Code Required',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'This content is only accessible by scanning a QR code.',
+                  style: TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Column(
       children: [
         Expanded(

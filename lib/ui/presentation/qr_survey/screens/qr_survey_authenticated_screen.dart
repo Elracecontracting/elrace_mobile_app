@@ -32,6 +32,40 @@ class _QrSurveyAuthenticatedScreenState
       ),
       body: Consumer<QrSurveyDataProvider>(
         builder: (context, provider, child) {
+          // Check if content is from QR code
+          if (!provider.isFromQrCode) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.qr_code_scanner,
+                      size: 80,
+                      color: Colors.red,
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'QR Code Required',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'This content is only accessible by scanning a QR code.',
+                      style: TextStyle(fontSize: 16),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           // Get content from provider
           final contentType = provider.contentType;
           final dynamic data = provider.contentData;

@@ -47,7 +47,8 @@ class FaceRecognitionDI {
         faceDetectorService: _getIt<FaceDetectorService>(),
         faceNetService: _getIt<FaceNetService>(),
         storageService: _getIt<FaceEmbeddingStorageService>(),
-        verificationThreshold: 0.7, // Adjust based on your needs
+        verificationThreshold:
+            0.6, // Stricter matching for check-in/out (lower = more strict)
         useCosineSimilarity: false, // true for cosine, false for Euclidean
         enableLivenessCheck:
             false, // Disabled for easier first-time registration

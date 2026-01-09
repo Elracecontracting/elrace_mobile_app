@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 /// Stores the content type (survey/documents/media) and data
 class QrSurveyDataProvider with ChangeNotifier {
   Map<String, dynamic>? _contentData;
+  bool _isFromQrCode = false; // Track if accessed via QR code
 
   Map<String, dynamic>? get contentData => _contentData;
 
@@ -23,13 +24,18 @@ class QrSurveyDataProvider with ChangeNotifier {
 
   bool get isMedia => contentType == 'media';
 
-  void setContentData(Map<String, dynamic>? data) {
+  /// Check if content was loaded from QR code
+  bool get isFromQrCode => _isFromQrCode;
+
+  void setContentData(Map<String, dynamic>? data, {bool fromQrCode = false}) {
     _contentData = data;
+    _isFromQrCode = fromQrCode;
     notifyListeners();
   }
 
   void clearData() {
     _contentData = null;
+    _isFromQrCode = false;
     notifyListeners();
   }
 }

@@ -9,54 +9,107 @@ import 'list_questions_screen.dart';
 
 /// Wrapper widget that displays QR Survey content within HomeScreen structure
 /// This widget is shown as part of the MainScreen bottom navigation
-class QrSurveyContentWrapper extends StatelessWidget {
+class QrSurveyContentWrapper extends StatefulWidget {
   const QrSurveyContentWrapper({super.key});
+
+  @override
+  State<QrSurveyContentWrapper> createState() => _QrSurveyContentWrapperState();
+}
+
+class _QrSurveyContentWrapperState extends State<QrSurveyContentWrapper> {
+  @override
+  void deactivate() {
+    // Clear QR data when leaving this screen/tab
+    print('🧹 QrSurveyContentWrapper - deactivate - Clearing QR data');
+    final provider = Provider.of<QrSurveyDataProvider>(context, listen: false);
+    provider.clearData();
+    super.deactivate();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<QrSurveyDataProvider>(
       builder: (context, provider, child) {
+        print('🔍 QrSurveyContentWrapper - Building');
+        print('🔍 Content Type: ${provider.contentType}');
+        print('🔍 Content Data: ${provider.contentData}');
+        print('🔍 Data Array: ${provider.data}');
+        print('🔍 Is From QR Code: ${provider.isFromQrCode}');
+
+        // Check if content is from QR code
+        if (!provider.isFromQrCode) {
+          // Not accessed via QR code - show access denied
+          return Scaffold(
+            appBar: const HeaderWidget(),
+            backgroundColor: lightGrey,
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.qr_code_scanner,
+                      size: 100,
+                      color: Colors.grey,
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Scan QR Code to Access Content',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'This section is only accessible by scanning a valid QR code. Please scan a QR code to view the content.',
+                      style: TextStyle(fontSize: 16, color: Colors.grey),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        }
+
         // Get content from provider
         final contentType = provider.contentType;
-        final dynamic data = provider.contentData;
+        final List<dynamic>? dataArray = provider.data;
 
         // Show QR Survey content based on type
         Widget qrSurveyContent;
-        if (contentType == 'survey' && data is Map<String, dynamic>) {
+        if (contentType == 'survey') {
+          final surveyData = provider.contentData;
           qrSurveyContent = ListQuestionsScreen(
-            questions: data['questions'] ?? [],
-            surveyId: data['id'] ?? 0,
-            title: data['title'] ?? 'Survey',
+            questions: surveyData?['questions'] ?? [],
+            surveyId: surveyData?['id'] ?? 0,
+            title: surveyData?['title'] ?? 'Survey',
           );
         } else if (contentType == 'documents') {
-          // documents might be in data['documents'] if data is Map, or data itself if List
-          List<dynamic> documents = [];
-          if (data is List<dynamic>) {
-            documents = data;
-          } else if (data is Map<String, dynamic> &&
-              data['documents'] is List) {
-            documents = data['documents'] as List<dynamic>;
-          }
-          qrSurveyContent = ListDocumentsScreen(documents: documents);
+          qrSurveyContent = ListDocumentsScreen(documents: dataArray ?? []);
         } else if (contentType == 'media') {
-          // media might be in data['media'] if data is Map, or data itself if List
-          List<dynamic> media = [];
-          if (data is List<dynamic>) {
-            media = data;
-          } else if (data is Map<String, dynamic> && data['media'] is List) {
-            media = data['media'] as List<dynamic>;
-          }
-          qrSurveyContent = ListMediaScreen(mediaList: media);
+          print(
+              '📱 Creating ListMediaScreen with ${dataArray?.length ?? 0} items');
+          qrSurveyContent = ListMediaScreen(mediaList: dataArray ?? []);
         } else {
-          qrSurveyContent = const Center(
+          qrSurveyContent = Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.qr_code_scanner, size: 80, color: Colors.grey),
-                SizedBox(height: 16),
-                Text(
+                const Icon(Icons.qr_code_scanner, size: 80, color: Colors.grey),
+                const SizedBox(height: 16),
+                const Text(
                   'Scan a QR code to view content',
                   style: TextStyle(fontSize: 16, color: Colors.grey),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Type: ${contentType ?? "null"}',
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
               ],
             ),

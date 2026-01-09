@@ -17,7 +17,6 @@ import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
 import 'package:el_race/ui/presentation/qr_survey/providers/qr_survey_data_provider.dart';
 import 'package:el_race/ui/presentation/qr_survey/services/qr_survey_api_service.dart';
 import 'package:el_race/ui/presentation/qr_survey/screens/qr_code_wrapper.dart';
-import 'package:el_race/ui/presentation/qr_survey/screens/qr_survey_authenticated_screen.dart';
 import 'package:el_race/ui/presentation/tasks/data/tasks_api_service.dart';
 import 'package:el_race/ui/presentation/tasks/data/tasks_repository.dart';
 import 'package:el_race/ui/presentation/tasks/logic/tasks_provider.dart';
@@ -280,6 +279,7 @@ final GlobalKey<OverlayState> appOverlayKey = GlobalKey<OverlayState>();
 bool _deepLinkingInitialized = false;
 Uri? _lastHandledDeepLink;
 DateTime? _lastHandledAt;
+bool _initialDeepLinkProcessed = false; // Track if initial link was handled
 const Duration _deepLinkDedupWindow = Duration(seconds: 2);
 
 // Deep Linking Handler
@@ -303,16 +303,9 @@ void _initDeepLinking(BuildContext context) {
     print('❌ Deep link stream error: $err');
   });
 
-  // Handle initial link - the app was started via a link
-  print('🔍 Checking for initial deep link...');
-  appLinks.getInitialLink().then((uri) {
-    if (uri != null) {
-      print('🔗 Initial deep link found: $uri');
-      _handleDeepLink(uri, context);
-    } else {
-      print('ℹ️ No initial deep link found (app opened normally)');
-    }
-  });
+  // DO NOT handle initial link - this causes old links to reopen on app restart
+  // Only handle NEW deep links via uriLinkStream above
+  print('ℹ️ Initial deep link check DISABLED - only NEW QR scans will work');
   print(
       '🚀 ==================== DEEP LINKING INITIALIZED ====================');
 }
@@ -366,12 +359,12 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
           return;
         }
 
-        // Store in provider
+        // Store in provider with QR code flag
         final effectiveContext = navKey.currentContext ?? context;
         final provider =
             Provider.of<QrSurveyDataProvider>(effectiveContext, listen: false);
-        provider.setContentData(content);
-        print('✅ Content stored in provider');
+        provider.setContentData(content, fromQrCode: true);
+        print('✅ Content stored in provider (from QR code)');
 
         // Check if user is logged in
         print('🔐 Checking login status...');
@@ -398,11 +391,12 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
             // Logged in user with QR permission - switch to QR Survey screen
             print(
                 '✅ User logged in with QR permission - switching to QR Survey');
-            
+
             final context = navKey.currentContext;
             if (context != null) {
               final homeBloc = HomeBloc.get(context);
-              homeBloc.add(ChangeCurrentIndex(index: 3)); // Show QR Survey screen
+              homeBloc
+                  .add(ChangeCurrentIndex(index: 3)); // Show QR Survey screen
             }
           } else {
             // Logged in but no QR permission - show error dialog

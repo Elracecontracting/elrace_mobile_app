@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/core/services/app_config_service.dart';
+import 'package:provider/provider.dart';
+import 'package:el_race/ui/presentation/qr_survey/providers/qr_survey_data_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -13,6 +15,18 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Clear any QR data from previous sessions
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider =
+          Provider.of<QrSurveyDataProvider>(context, listen: false);
+      provider.clearData();
+      print('🧹 SplashScreen - Cleared QR data on app start');
+    });
+  }
+
   @override
   void didChangeDependencies() {
     Future.delayed(const Duration(seconds: 6), () {
