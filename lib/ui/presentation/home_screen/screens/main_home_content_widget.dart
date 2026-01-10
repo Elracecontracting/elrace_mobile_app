@@ -1,5 +1,6 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:el_race/ui/presentation/News%20Banner/news_screen.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/widget_container.dart';
 import 'package:el_race/utils/Util.dart';
@@ -22,9 +23,11 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
   @override
   void initState() {
     super.initState();
-    // Fetch banner announcements on init
+    // Fetch banner announcements on init only
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SliderProvider>().fetchAnnouncementsForBanner();
+      if (mounted) {
+        context.read<SliderProvider>().fetchAnnouncementsForBanner();
+      }
     });
   }
 
@@ -35,6 +38,10 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
 
     return RefreshIndicator(
       onRefresh: () async {
+        // Clear all cached images
+        await DefaultCacheManager().emptyCache();
+
+        // Fetch new data
         await Util.fetchHomeScreenData(context);
         await sliderProvider.refresh();
       },
@@ -82,10 +89,17 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
                         itemBuilder: (BuildContext context, int itemIndex,
                             int pageViewIndex) {
                           final isApiData = sliderProvider.hasApiData;
-                          final imageUrl =
-                              sliderProvider.sliderImages[itemIndex];
+                          var imageUrl = sliderProvider.sliderImages[itemIndex];
                           final isNetworkImage =
                               imageUrl.startsWith('http') && isApiData;
+
+                          // Add timestamp to URL to break cache
+                          if (isNetworkImage) {
+                            final separator =
+                                imageUrl.contains('?') ? '&' : '?';
+                            imageUrl =
+                                '$imageUrl${separator}t=${sliderProvider.lastFetchTimestamp}';
+                          }
 
                           return GestureDetector(
                             onTap: () =>
@@ -125,10 +139,14 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
                                       // Background Image
                                       if (isNetworkImage)
                                         CachedNetworkImage(
+                                          key: Key(
+                                              '${imageUrl}_${sliderProvider.lastFetchTimestamp}'),
                                           imageUrl: imageUrl,
                                           fit: BoxFit.cover,
                                           height: 190.h,
                                           width: double.infinity,
+                                          memCacheHeight: null,
+                                          memCacheWidth: null,
                                           placeholder: (context, url) =>
                                               Container(
                                             color: lightGrey,

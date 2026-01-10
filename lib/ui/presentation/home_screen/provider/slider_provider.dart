@@ -31,6 +31,10 @@ class SliderProvider extends ChangeNotifier {
   bool _hasError = false;
   String? _errorMessage;
 
+  // Timestamp to force image cache refresh
+  int _lastFetchTimestamp = DateTime.now().millisecondsSinceEpoch;
+  int get lastFetchTimestamp => _lastFetchTimestamp;
+
   int _currentIndex = 0;
   int get currentIndex => _currentIndex;
 
@@ -141,6 +145,9 @@ class SliderProvider extends ChangeNotifier {
 
       _bannerDetails = details;
       print('✅ Total banner details loaded: ${_bannerDetails.length}');
+
+      // Update timestamp to force cache refresh
+      _lastFetchTimestamp = DateTime.now().millisecondsSinceEpoch;
 
       if (_bannerDetails.isNotEmpty) {
         print('📸 Images URLs:');
