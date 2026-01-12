@@ -23,9 +23,15 @@ class LpoListScreen extends StatefulWidget {
 class _LpoListScreenState extends State<LpoListScreen> {
   final _scrollController = ScrollController();
   bool _isLoading = false;
+  bool _isLoadingMore = false;
   String? _error;
   List<Map<String, dynamic>> _items = [];
   String _keyword = '';
+
+  // Pagination
+  int _currentPage = 1;
+  final int _limit = 10;
+  bool _hasMore = false;
 
   // Search UI (match MediaListScreen)
   final TextEditingController _searchController = TextEditingController();
@@ -59,7 +65,14 @@ class _LpoListScreenState extends State<LpoListScreen> {
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 100) {}
+        _scrollController.position.maxScrollExtent - 100) {
+      print(
+          '📜 Scroll: Reached bottom - hasMore: $_hasMore, isLoadingMore: $_isLoadingMore, isLoading: $_isLoading');
+      if (_hasMore && !_isLoadingMore && !_isLoading) {
+        print('📜 Scroll: Calling _loadMoreLpos()');
+        _loadMoreLpos();
+      }
+    }
   }
 
   Future<void> _fetchLpos({String? keyword}) async {
@@ -78,7 +91,10 @@ class _LpoListScreenState extends State<LpoListScreen> {
       };
 
       final effectiveKeyword = (keyword ?? _keyword).trim();
-      final Map<String, dynamic> params = {};
+      final Map<String, dynamic> params = {
+        'page': 1,
+        'limit': _limit,
+      };
       if (effectiveKeyword.isNotEmpty) {
         params['keyword'] = effectiveKeyword;
       }
@@ -131,10 +147,17 @@ class _LpoListScreenState extends State<LpoListScreen> {
         duration: duration,
       );
 
+      print('========== LPO API RESPONSE ==========');
+      print(jsonEncode(data));
+      print('======================================');
+
       if (data['result'] != null) {
         final List list = (data['result']['data'] ?? []) as List;
+        final bool hasMore = data['result']['has_more'] ?? false;
         setState(() {
           _items = list.cast<Map<String, dynamic>>();
+          _currentPage = 1;
+          _hasMore = hasMore;
           _isLoading = false;
         });
       } else {
@@ -153,6 +176,101 @@ class _LpoListScreenState extends State<LpoListScreen> {
       setState(() {
         _error = e.toString();
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadMoreLpos() async {
+    if (_isLoadingMore || !_hasMore) return;
+
+    print(
+        '🔄 Load More: Current page: $_currentPage, Next page: ${_currentPage + 1}');
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      final token = SharedPref.getLoginData().result?.token ?? '';
+      final url = Uri.parse('https://erp.elrace.com/api/get_lpos');
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final effectiveKeyword = _keyword.trim();
+      final Map<String, dynamic> params = {
+        'page': _currentPage + 1,
+        'limit': _limit,
+      };
+      if (effectiveKeyword.isNotEmpty) {
+        params['keyword'] = effectiveKeyword;
+      }
+
+      final body = jsonEncode({
+        'jsonrpc': '2.0',
+        'params': params,
+      });
+
+      ApiLogger.logRequest(
+        endpoint: url.toString(),
+        method: 'POST',
+        headers: headers,
+        body: body,
+      );
+
+      final startTime = DateTime.now();
+      final response = await http.post(url, headers: headers, body: body);
+      final duration = DateTime.now().difference(startTime);
+
+      if (response.statusCode != 200) {
+        ApiLogger.logResponse(
+          endpoint: url.toString(),
+          statusCode: response.statusCode,
+          responseBody: {'error': 'HTTP ${response.statusCode}'},
+          duration: duration,
+        );
+        setState(() {
+          _isLoadingMore = false;
+        });
+        return;
+      }
+
+      final data = jsonDecode(response.body);
+
+      ApiLogger.logResponse(
+        endpoint: url.toString(),
+        statusCode: response.statusCode,
+        responseBody: data,
+        duration: duration,
+      );
+
+      if (data['result'] != null) {
+        final List list = (data['result']['data'] ?? []) as List;
+        final bool hasMore = data['result']['has_more'] ?? false;
+        print('✅ Load More: Got ${list.length} items, has_more: $hasMore');
+        setState(() {
+          _items.addAll(list.cast<Map<String, dynamic>>());
+          _currentPage += 1;
+          _hasMore = hasMore;
+          _isLoadingMore = false;
+        });
+        print(
+            '✅ Load More: Updated to page $_currentPage, total items: ${_items.length}');
+      } else {
+        setState(() {
+          _isLoadingMore = false;
+        });
+      }
+    } catch (e, stackTrace) {
+      ApiLogger.logError(
+        endpoint: 'https://erp.elrace.com/api/get_lpos',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      setState(() {
+        _isLoadingMore = false;
       });
     }
   }
@@ -300,6 +418,17 @@ class _LpoListScreenState extends State<LpoListScreen> {
                         childCount: _items.length,
                       ),
                     ),
+
+          // 🔹 Loading More Indicator
+          if (_isLoadingMore)
+            const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            ),
         ],
       ),
     );

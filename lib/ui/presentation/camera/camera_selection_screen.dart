@@ -56,13 +56,13 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
 
   Future<void> _loadLogo() async {
     try {
-      final data = await rootBundle.load('assets/logo/rcc2.jpg');
+      final data = await rootBundle.load('assets/logo/rcc2.png');
       if (mounted) {
         setState(() {
           _logoBytes = data.buffer.asUint8List();
         });
       }
-      debugPrint('✓ Logo rcc2.jpg loaded: ${data.lengthInBytes} bytes');
+      debugPrint('✓ Logo rcc2.png loaded: ${data.lengthInBytes} bytes');
     } catch (e) {
       debugPrint('✗ Error loading logo: $e');
     }
@@ -174,13 +174,23 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
       if (_logoBytes != null) {
         img.Image? logo = img.decodeImage(_logoBytes!);
         if (logo != null) {
-          // Resize logo
+          // Resize logo with high quality interpolation
           final int logoWidth = (baseImage.width * 0.28).toInt();
           final int logoHeight = (logoWidth * logo.height / logo.width).toInt();
-          logo = img.copyResize(logo, width: logoWidth, height: logoHeight);
+          logo = img.copyResize(
+            logo,
+            width: logoWidth,
+            height: logoHeight,
+            interpolation: img.Interpolation.cubic,
+          );
 
           // Composite logo onto base image
-          img.compositeImage(baseImage, logo, dstX: padding, dstY: padding);
+          img.compositeImage(
+            baseImage,
+            logo,
+            dstX: padding,
+            dstY: padding,
+          );
         }
       }
 
@@ -207,8 +217,8 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
         color: img.ColorRgb8(255, 255, 255),
       );
 
-      // Save the result
-      final outputBytes = img.encodeJpg(baseImage, quality: 95);
+      // Save the result with high quality
+      final outputBytes = img.encodeJpg(baseImage, quality: 100);
       await File(imagePath).writeAsBytes(outputBytes);
       return imagePath;
     } catch (e) {
@@ -439,8 +449,8 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
               right: 0,
               child: Container(
                 height: 175.h,
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.35), // ← سواد نصف شفاف
+                decoration: const BoxDecoration(
+                  color: Colors.transparent, // ← بدون سواد
                 ),
                 child: Padding(
                   padding:
@@ -482,9 +492,9 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
                 borderRadius: BorderRadius.circular(0),
                 child: Container(
                   width: double.infinity,
-                  height: H * 0.28, // ربع الشاشة مثل الهيدر بالضبط
+                  height: H * 0.20, // ارتفاع مناسب مع هامش أمان
                   padding:
-                      EdgeInsets.symmetric(horizontal: 30.w, vertical: 20.h),
+                      EdgeInsets.symmetric(horizontal: 30.w, vertical: 8.h),
                   decoration: BoxDecoration(
                     color: Colors.black.withOpacity(0.5), // نفس الهيدر
                   ),
@@ -541,7 +551,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
                               : null,
                         ),
                       ),
-                      SizedBox(height: 20.h),
+                      SizedBox(height: 10.h),
 
                       /// ——— SCAN / PHOTO BUTTONS ———
                       Row(

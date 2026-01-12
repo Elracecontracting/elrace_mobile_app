@@ -220,7 +220,11 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
     final url = Uri.parse('https://erp.elrace.com/api/get_lpos');
     final body = jsonEncode({
       'jsonrpc': '2.0',
-      'params': {'keyword': query},
+      'params': {
+        'keyword': query,
+        'page': 1,
+        'limit': 20,
+      },
     });
 
     final response = await http.post(url, headers: headers, body: body);

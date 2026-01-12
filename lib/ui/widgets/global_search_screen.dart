@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:el_race/data/models/global_search_item.dart';
+import 'package:el_race/data/models/lpo_search_model.dart';
 import 'package:el_race/providers/global_search_provider.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/global_search_navigation_helper.dart';
@@ -308,13 +309,16 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     return Container(
       margin: EdgeInsets.symmetric(vertical: 5.h, horizontal: 5.w),
       padding: EdgeInsets.all(12.w),
-      height: 120.h,
+      constraints: BoxConstraints(
+        minHeight: 100.h,
+      ),
       decoration: BoxDecoration(
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(12.r),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
@@ -327,7 +331,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           _buildShimmerBox(width: 150.w, height: 15.h),
           SizedBox(height: 4.h),
           _buildShimmerBox(width: 200.w, height: 15.h),
-          const Spacer(),
+          SizedBox(height: 8.h),
           Row(
             children: [
               _buildShimmerBox(width: 80.w, height: 15.h),
@@ -691,6 +695,41 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   Widget _buildLpoCard(GlobalSearchItem item) {
     final data = item.additionalData ?? {};
 
+    // Parse the data into LpoSearchModel
+    LpoSearchModel? lpoModel;
+    try {
+      lpoModel = LpoSearchModel.fromJson(data);
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error parsing LPO model: $e');
+      }
+    }
+
+    // Use model data if available, otherwise fallback to manual parsing
+    if (lpoModel != null) {
+      return LpoCardWidget(
+        name: lpoModel.name,
+        vendorName: lpoModel.partnerId,
+        projectName: lpoModel.project,
+        date: lpoModel.dateOrder,
+        amount: lpoModel.amountTotal.toString(),
+        attachments: lpoModel.attachments
+            .map((a) => {
+                  'id': a.id,
+                  'name': a.name,
+                  'url': a.url,
+                })
+            .toList(),
+        lpoCount: null,
+        clientPhoto: lpoModel.clientPhoto,
+        requestedByUserPhoto: lpoModel.requestedByUserPhoto,
+        requestedBy: lpoModel.requestedBy,
+        requesterManager: lpoModel.requesterManager,
+        state: lpoModel.state,
+      );
+    }
+
+    // Fallback to manual parsing
     String? _pickVendor() {
       final partner = data['partner_id'];
       if (partner is List && partner.length > 1) return partner[1]?.toString();
