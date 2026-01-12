@@ -389,10 +389,43 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       };
 
       final url = Uri.parse("https://erp.elrace.com/api/draft_summary");
+
+      // Get current date dynamically
+      final now = DateTime.now();
+      final currentDate =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
+      // Use balance from state, or 0 if not available
+      final lastLimit = balance > 0 ? balance.toInt() : 0;
+
       final body = jsonEncode({
         "jsonrpc": "2.0",
-        "params": {},
+        "params": {
+          "last_limit": lastLimit,
+          "last_limit_date": currentDate,
+        },
       });
+
+      print(
+          "\n╔═══════════════════════════════════════════════════════════════");
+      print("║ 📡 PETTY CASH API: DRAFT SUMMARY");
+      print("╠═══════════════════════════════════════════════════════════════");
+      print("║ 🌐 URL: $url");
+      print("║ 📤 METHOD: GET");
+      print("║ 📋 HEADERS:");
+      headers.forEach((key, value) {
+        if (key == 'Authorization') {
+          print("║    $key: Bearer ${value.toString().substring(7, 27)}...");
+        } else {
+          print("║    $key: $value");
+        }
+      });
+      print("║ 📦 BODY:");
+      print("║    last_limit: $lastLimit");
+      print("║    last_limit_date: $currentDate");
+      print("║    Full: $body");
+      print(
+          "╚═══════════════════════════════════════════════════════════════\n");
 
       final request = http.Request('GET', url)
         ..headers.addAll(headers)
@@ -401,7 +434,15 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      print("Draft summary response: ${response.body}");
+      print(
+          "\n╔═══════════════════════════════════════════════════════════════");
+      print("║ 📥 PETTY CASH API RESPONSE: DRAFT SUMMARY");
+      print("╠═══════════════════════════════════════════════════════════════");
+      print("║ ✅ STATUS CODE: ${response.statusCode}");
+      print("║ 📄 RESPONSE BODY:");
+      print("║ ${response.body}");
+      print(
+          "╚═══════════════════════════════════════════════════════════════\n");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -412,6 +453,12 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
         }
 
         final newItems = result['draft_expenses'] ?? [];
+
+        print("📊 Draft Expenses from API: ${newItems.length} items");
+        if (newItems.isNotEmpty) {
+          print("📋 Sample expense: ${newItems[0]}");
+        }
+
         expenseSheets.clear();
         draftExpenseIds.clear();
         setState(() {
@@ -422,6 +469,8 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
           draftExpenseIds =
               newItems.map<int>((item) => item['id'] as int).toList();
         });
+
+        print("✅ Loaded: Balance=$balance, Draft Amount=$draftAmount");
       } else {
         throw Exception(
             "Failed to fetch draft summary: ${response.statusCode}");
@@ -553,6 +602,26 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
         "Authorization": "Bearer $token",
       };
 
+      print(
+          "\n╔═══════════════════════════════════════════════════════════════");
+      print("║ 📡 PETTY CASH API: SUBMIT EXPENSE");
+      print("╠═══════════════════════════════════════════════════════════════");
+      print("║ 🌐 URL: https://erp.elrace.com/api/submit_expense");
+      print("║ 📤 METHOD: POST");
+      print("║ 📋 HEADERS:");
+      headers.forEach((key, value) {
+        if (key == 'Authorization') {
+          print("║    $key: Bearer ${value.toString().substring(7, 27)}...");
+        } else {
+          print("║    $key: $value");
+        }
+      });
+      print("║ 📦 BODY:");
+      print("║    expense_line_ids: $draftExpenseIds");
+      print("║    attachment_data: [PDF Base64 - ${base64Pdf.length} chars]");
+      print(
+          "╚═══════════════════════════════════════════════════════════════\n");
+
       // Show loading dialog
       showDialog(
         context: context,
@@ -568,6 +637,16 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       );
 
       Navigator.pop(context); // ⬅️ Dismiss loading dialog
+
+      print(
+          "\n╔═══════════════════════════════════════════════════════════════");
+      print("║ 📥 PETTY CASH API RESPONSE: SUBMIT EXPENSE");
+      print("╠═══════════════════════════════════════════════════════════════");
+      print("║ ✅ STATUS CODE: ${response.statusCode}");
+      print("║ 📄 RESPONSE BODY:");
+      print("║ ${response.body}");
+      print(
+          "╚═══════════════════════════════════════════════════════════════\n");
 
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 &&
@@ -747,6 +826,26 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                     "https://erp.elrace.com/api/get_petty_cash_records");
                 final body = jsonEncode({"jsonrpc": "2.0", "params": {}});
 
+                print(
+                    "\n╔═══════════════════════════════════════════════════════════════");
+                print("║ 📡 PETTY CASH API: GET PETTY CASH RECORDS");
+                print(
+                    "╠═══════════════════════════════════════════════════════════════");
+                print("║ 🌐 URL: $url");
+                print("║ 📤 METHOD: POST");
+                print("║ 📋 HEADERS:");
+                headers.forEach((key, value) {
+                  if (key == 'Authorization') {
+                    print(
+                        "║    $key: Bearer ${value.toString().substring(7, 27)}...");
+                  } else {
+                    print("║    $key: $value");
+                  }
+                });
+                print("║ 📦 BODY: $body");
+                print(
+                    "╚═══════════════════════════════════════════════════════════════\n");
+
                 final request = http.Request('POST', url)
                   ..headers.addAll(headers)
                   ..body = body;
@@ -754,6 +853,17 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                 final streamedResponse = await request.send();
                 final response =
                     await http.Response.fromStream(streamedResponse);
+
+                print(
+                    "\n╔═══════════════════════════════════════════════════════════════");
+                print("║ 📥 PETTY CASH API RESPONSE: GET PETTY CASH RECORDS");
+                print(
+                    "╠═══════════════════════════════════════════════════════════════");
+                print("║ ✅ STATUS CODE: ${response.statusCode}");
+                print("║ 📄 RESPONSE BODY:");
+                print("║ ${response.body}");
+                print(
+                    "╚═══════════════════════════════════════════════════════════════\n");
 
                 if (response.statusCode == 200) {
                   final data = jsonDecode(response.body);
@@ -990,16 +1100,43 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                   }
                 });
 
+                print(
+                    "\n╔═══════════════════════════════════════════════════════════════");
+                print("║ 📡 PETTY CASH API: CREATE HR EXPENSE");
+                print(
+                    "╠═══════════════════════════════════════════════════════════════");
+                print("║ 🌐 URL: ${baseUrl}create_hr_expense");
+                print("║ 📤 METHOD: POST");
+                print("║ 📋 HEADERS:");
+                headers.forEach((key, value) {
+                  if (key == 'Authorization') {
+                    print(
+                        "║    $key: Bearer ${value.toString().substring(7, 27)}...");
+                  } else {
+                    print("║    $key: $value");
+                  }
+                });
+                print("║ 📦 BODY:");
+                print("║ $body");
+                print(
+                    "╚═══════════════════════════════════════════════════════════════\n");
+
                 final response = await http.post(
                   Uri.parse('${baseUrl}create_hr_expense'),
                   headers: headers,
                   body: body,
                 );
 
-                print("===== Add Expense Response =====");
-                print("Status Code: ${response.statusCode}");
-                print("Response Body: ${response.body}");
-                print("================================");
+                print(
+                    "\n╔═══════════════════════════════════════════════════════════════");
+                print("║ 📥 PETTY CASH API RESPONSE: CREATE HR EXPENSE");
+                print(
+                    "╠═══════════════════════════════════════════════════════════════");
+                print("║ ✅ STATUS CODE: ${response.statusCode}");
+                print("║ 📄 RESPONSE BODY:");
+                print("║ ${response.body}");
+                print(
+                    "╚═══════════════════════════════════════════════════════════════\n");
 
                 final decoded = jsonDecode(response.body);
 
@@ -1924,33 +2061,49 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                           child: CircularProgressIndicator(),
                         ),
                       )
-                    : Column(
-                        children: [
-                          ListView.builder(
-                            shrinkWrap: true,
-                            controller: _scrollController,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: expenseSheets.length,
-                            itemBuilder: (context, index) {
-                              var expense = expenseSheets[index];
-                              const state = "DRAFT";
-                              final date = expense['date'];
-                              final total = expense['amount'];
-                              // final id = expense['id'];
-
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(
-                                    vertical: 2.0, horizontal: 12.0),
-                                child: _buildTransactionItem_2(
-                                  capitalize(state),
-                                  date is String ? date : 'Date not available',
-                                  total != null ? total.toString() : '0',
+                    : expenseSheets.isEmpty
+                        ? const Padding(
+                            padding: EdgeInsets.all(20.0),
+                            child: Center(
+                              child: Text(
+                                'No draft expenses found',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 14,
+                                  fontStyle: FontStyle.italic,
                                 ),
-                              );
-                            },
+                              ),
+                            ),
+                          )
+                        : Column(
+                            children: [
+                              ListView.builder(
+                                shrinkWrap: true,
+                                controller: _scrollController,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: expenseSheets.length,
+                                itemBuilder: (context, index) {
+                                  var expense = expenseSheets[index];
+                                  const state = "DRAFT";
+
+                                  // API returns: id, date, amount, project_name, remarks
+                                  final date =
+                                      expense['date']?.toString() ?? 'N/A';
+                                  final amount = expense['amount'] ?? 0;
+
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 2.0, horizontal: 12.0),
+                                    child: _buildTransactionItem_2(
+                                      capitalize(state),
+                                      date,
+                                      amount.toString(),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
 
                 const SizedBox(height: 10),
 

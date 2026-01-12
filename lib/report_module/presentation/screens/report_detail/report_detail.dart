@@ -193,26 +193,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           const SizedBox(width: 10),
         ],
       ),
-      floatingActionButton: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Create Task FAB
-          FloatingActionButton(
-            heroTag: 'create_task_fab',
-            backgroundColor: CustomColors.maroon,
-            onPressed: _showCreateTaskSheet,
-            child: const Icon(Icons.task_alt, color: Colors.white),
-          ),
-          const SizedBox(height: 12),
-          // Add Items FAB
-          FloatingActionButton(
-            heroTag: 'add_items_fab',
-            backgroundColor: CustomColors.maroon,
-            onPressed: _showAddOptions,
-            child: const Icon(Icons.add, color: Colors.white),
-          ),
-        ],
-      ),
       body: reportDetail != null
           ? Stack(
               children: [

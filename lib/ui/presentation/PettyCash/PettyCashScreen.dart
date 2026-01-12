@@ -115,15 +115,9 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
     });
 
     try {
-      print('\n========== PETTY CASH API START ==========');
-
       final loginData = SharedPref.getLoginData();
       final token = loginData.result?.token;
       final empId = loginData.result?.data?.emp_id;
-
-      print('Employee ID: $empId');
-      print(
-          'Token: ${token != null && token.isNotEmpty ? "${token.substring(0, 20)}..." : "NULL"}');
 
       final headers = {
         "Content-Type": "application/json",
@@ -150,12 +144,27 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
       };
       final body = jsonEncode(bodyData);
 
-      print('API URL: $url');
-      print('Request Method: GET');
-      print('Request Body: $body');
-      print('Last Limit (Dynamic): $lastLimit');
-      print('Last Limit Date (Dynamic): $currentDate');
-      print('Sending request...\n');
+      print(
+          '\n╔═══════════════════════════════════════════════════════════════');
+      print('║ 📡 PETTY CASH API: PETTY CASH HOME');
+      print('╠═══════════════════════════════════════════════════════════════');
+      print('║ 🌐 URL: $url');
+      print('║ 📤 METHOD: GET');
+      print('║ 👤 Employee ID: $empId');
+      print('║ 📋 HEADERS:');
+      headers.forEach((key, value) {
+        if (key == 'Authorization') {
+          print('║    $key: Bearer ${value.toString().substring(7, 27)}...');
+        } else {
+          print('║    $key: $value');
+        }
+      });
+      print('║ 📦 BODY:');
+      print('║    last_limit: $lastLimit');
+      print('║    last_limit_date: $currentDate');
+      print('║    Full: $body');
+      print(
+          '╚═══════════════════════════════════════════════════════════════\n');
 
       final request = http.Request('GET', url)
         ..headers.addAll(headers)
@@ -164,27 +173,35 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      print('Response Status Code: ${response.statusCode}');
-      print('Response Body Length: ${response.body.length} characters');
+      print(
+          '\n╔═══════════════════════════════════════════════════════════════');
+      print('║ 📥 PETTY CASH API RESPONSE: PETTY CASH HOME');
+      print('╠═══════════════════════════════════════════════════════════════');
+      print('║ ✅ STATUS CODE: ${response.statusCode}');
+      print('║ 📄 RESPONSE BODY:');
+      print('║ ${response.body}');
+      print(
+          '╚═══════════════════════════════════════════════════════════════\n');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('Full Response JSON:');
-        print(JsonEncoder.withIndent('  ').convert(data));
-
-        print('\nAPI Call Successful!');
-        print('Parsing Response Data...\n');
-
         final result = data['result']['data'];
-        print('PETTY CASH DATA:');
-        print('  Employee ID: ${result['employee_id']}');
-        print('  Balance: ${result['balance']} AED');
-        print('  Incoming: ${result['incoming']} AED');
-        print('  Spent: ${result['spent']} AED');
-        print('  Draft Expenses Count: ${result['draft_expenses_count']}');
-        print('  Draft Expenses Total: ${result['draft_expenses_total']} AED');
-        print('  Expense Sheets: ${result['expense_sheets']}');
-        print('  Expense Sheets Type: ${result['expense_sheets'].runtimeType}');
+
+        print(
+            '╔═══════════════════════════════════════════════════════════════');
+        print('║ 📊 PARSED PETTY CASH DATA');
+        print(
+            '╠═══════════════════════════════════════════════════════════════');
+        print('║ 👤 Employee ID: ${result['employee_id']}');
+        print('║ 💰 Balance: ${result['balance']} AED');
+        print('║ 📈 Incoming: ${result['incoming']} AED');
+        print('║ 📉 Spent: ${result['spent']} AED');
+        print('║ 📝 Draft Expenses Count: ${result['draft_expenses_count']}');
+        print(
+            '║ 💵 Draft Expenses Total: ${result['draft_expenses_total']} AED');
+        print('║ 📋 Expense Sheets: ${result['expense_sheets']}');
+        print(
+            '╚═══════════════════════════════════════════════════════════════\n');
 
         setState(() {
           balance = result['balance'].toDouble();
@@ -206,26 +223,33 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
           isLoading = false;
         });
 
-        print('\nState Updated Successfully:');
-        print('  Balance: $balance');
-        print('  Incoming: $incoming');
-        print('  Spent: $spent');
-        print('  Draft Count: $draftExpensesCount');
-        print('  Draft Total: $draftExpensesTotal');
-        print('========== PETTY CASH API SUCCESS ==========\n');
+        print('✅ State updated successfully');
+        print('   Balance: $balance | Incoming: $incoming | Spent: $spent');
+        print(
+            '   Draft Count: $draftExpensesCount | Draft Total: $draftExpensesTotal\n');
       } else {
-        print('API Call Failed!');
-        print('Status Code: ${response.statusCode}');
-        print('Response Body: ${response.body}');
-        print('========== PETTY CASH API FAILED ==========\n');
+        print(
+            '\n╔═══════════════════════════════════════════════════════════════');
+        print('║ ❌ PETTY CASH API FAILED');
+        print(
+            '╠═══════════════════════════════════════════════════════════════');
+        print('║ Status Code: ${response.statusCode}');
+        print('║ Response Body: ${response.body}');
+        print(
+            '╚═══════════════════════════════════════════════════════════════\n');
         throw Exception(
             "Failed to load petty cash data: ${response.statusCode}\n${response.body}");
       }
     } catch (e, stackTrace) {
-      print('EXCEPTION: $e');
       print(
-          'Stack Trace: ${stackTrace.toString().split('\n').take(5).join('\n')}');
-      print('========== PETTY CASH API ERROR ==========\n');
+          '\n╔═══════════════════════════════════════════════════════════════');
+      print('║ ⚠️ PETTY CASH API ERROR');
+      print('╠═══════════════════════════════════════════════════════════════');
+      print('║ Error: $e');
+      print(
+          '║ Stack Trace: ${stackTrace.toString().split('\n').take(3).join('\n║ ')}');
+      print(
+          '╚═══════════════════════════════════════════════════════════════\n');
       if (!mounted) return;
       setState(() {
         isLoading = false;
