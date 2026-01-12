@@ -61,6 +61,7 @@ class Employee {
   final dynamic jobId;
   final String? profilePhotoUrl;
   final String? empId;
+  final String? department;
 
   Employee({
     this.id,
@@ -69,6 +70,7 @@ class Employee {
     this.jobId,
     this.profilePhotoUrl,
     this.empId,
+    this.department,
   });
 
   factory Employee.fromJson(Map<String, dynamic> json) {
@@ -93,6 +95,7 @@ class Employee {
       jobId: json["job_id"],
       profilePhotoUrl: json["profile_photo_url"],
       empId: json["emp_id"]?.toString() ?? extractedEmpId,
+      department: json["department_id"] ?? json["department"],
     );
   }
 
@@ -103,5 +106,6 @@ class Employee {
         "job_id": jobId,
         "emp_id": empId,
         "profile_photo_url": profilePhotoUrl,
+        "department": department,
       };
 }

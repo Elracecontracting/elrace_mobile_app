@@ -96,6 +96,8 @@ class ContactBloc extends Bloc<ContactEvent, ContactState> {
               employee.empId?.toString().toLowerCase().contains(keyword) ==
                   true ||
               employee.id?.toString().toLowerCase().contains(keyword) == true ||
+              employee.department?.toString().toLowerCase().contains(keyword) ==
+                  true ||
               employee.mobilePhone
                       ?.toString()
                       .toLowerCase()

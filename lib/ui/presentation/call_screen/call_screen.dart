@@ -166,6 +166,7 @@ class _CallScreenState extends State<CallScreen> {
                             name: emp.name!,
                             job: emp.jobId.toString(),
                             emp: emp.empId ?? emp.id.toString(),
+                            department: emp.department ?? '',
                             num: emp.mobilePhone.toString(),
                             isExpanded: isExpanded,
                             onTapExpand: () {
@@ -353,6 +354,7 @@ class ContactTile extends StatefulWidget {
   final String name;
   final String job;
   final String emp;
+  final String department;
   final String num;
   final bool isExpanded;
   final VoidCallback onTapExpand;
@@ -371,6 +373,7 @@ class ContactTile extends StatefulWidget {
     required this.name,
     required this.job,
     required this.emp,
+    required this.department,
     required this.num,
     required this.isExpanded,
     required this.onTapExpand,
@@ -496,8 +499,8 @@ class _ContactTileState extends State<ContactTile> {
                       crossFadeState: widget.isExpanded
                           ? CrossFadeState.showSecond
                           : CrossFadeState.showFirst,
-                      firstChild:
-                          _buildInfoSection(nameParts, widget.job, widget.emp),
+                      firstChild: _buildInfoSection(
+                          nameParts, widget.job, widget.emp, widget.department),
                       secondChild: const SizedBox.shrink(),
                       sizeCurve: Curves.easeInOut,
                     ),
@@ -550,14 +553,19 @@ class _ContactTileState extends State<ContactTile> {
   }
 }
 
-Widget _buildInfoSection(List<String> nameParts, String job, String emp) {
+Widget _buildInfoSection(
+    List<String> nameParts, String job, String emp, String department) {
+  // Extract full name (remove ID prefix if exists)
+  String fullName =
+      nameParts.length > 1 ? nameParts.sublist(1).join(' ') : nameParts[0];
+
   return Padding(
     padding: const EdgeInsets.only(left: 8.0, top: 10, bottom: 10),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          nameParts.length > 1 ? nameParts[1] : nameParts[0],
+          fullName,
           overflow: TextOverflow.ellipsis,
           maxLines: 1,
           style: GoogleFonts.nunito(
@@ -565,6 +573,20 @@ Widget _buildInfoSection(List<String> nameParts, String job, String emp) {
             fontWeight: FontWeight.w600,
           ),
         ),
+        if (department.isNotEmpty)
+          SizedBox(
+            width: 150,
+            child: Text(
+              department,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.nunito(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: const Color.fromRGBO(65, 65, 65, 0.50),
+              ),
+            ),
+          ),
         SizedBox(
           width: 150,
           child: Text(
