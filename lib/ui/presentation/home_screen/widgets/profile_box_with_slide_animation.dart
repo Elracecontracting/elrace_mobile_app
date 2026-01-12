@@ -384,12 +384,35 @@ class _ProfileBoxWithSlideAnimationState
 
               final loginData = SharedPref.getLoginData();
 
-              // Debug: print qr_status to the log so we can inspect it
+              // Debug: print FULL user data to the log so we can inspect it
               try {
+                print('DEBUG: ===== FULL USER DATA FROM STORAGE =====');
+                print('DEBUG: Full stored JSON:');
+                final storedJson =
+                    SharedPref().getPreferenceString('loginResponse');
+                if (storedJson.isNotEmpty) {
+                  print(JsonEncoder.withIndent('  ')
+                      .convert(jsonDecode(storedJson)));
+                } else {
+                  print('DEBUG: No stored login data found!');
+                }
+                print('DEBUG: ==========================================');
+                print('DEBUG: Parsed fields from model:');
+                print('DEBUG: name = ${loginData.result?.data?.name}');
+                print('DEBUG: emp_name = ${loginData.result?.data?.emp_name}');
+                print('DEBUG: username = ${loginData.result?.data?.username}');
+                print(
+                    'DEBUG: partnerDisplayName = ${loginData.result?.data?.partnerDisplayName}');
+                print('DEBUG: job_id = ${loginData.result?.data?.job_id}');
+                print('DEBUG: emp_id = ${loginData.result?.data?.emp_id}');
+                print('DEBUG: uid = ${loginData.result?.data?.uid}');
                 print(
                     'DEBUG: qr_status = ${loginData.result?.data?.qr_status}');
+                print(
+                    'DEBUG: image_url length = ${loginData.result?.data?.image_url?.length ?? 0}');
+                print('DEBUG: ==========================================');
               } catch (e) {
-                print('DEBUG: qr_status read error: $e');
+                print('DEBUG: user data read error: $e');
               }
 
               return Stack(
@@ -466,31 +489,74 @@ class _ProfileBoxWithSlideAnimationState
                                 ),
                                 const SizedBox(height: 1),
                                 Text(
-                                  loginData.result?.data?.name
-                                          ?.split(' ')
+                                  () {
+                                    // Try multiple sources for name
+                                    String? displayName =
+                                        loginData.result?.data?.name;
+                                    if (displayName == null ||
+                                        displayName.isEmpty ||
+                                        displayName == 'false') {
+                                      displayName = loginData
+                                          .result?.data?.partnerDisplayName;
+                                    }
+                                    if (displayName == null ||
+                                        displayName.isEmpty ||
+                                        displayName == 'false') {
+                                      displayName =
+                                          loginData.result?.data?.username;
+                                    }
+                                    if (displayName != null &&
+                                        displayName.isNotEmpty &&
+                                        displayName != 'false') {
+                                      return displayName
+                                          .split(' ')
                                           .take(2)
-                                          .join(' ') ??
-                                      translate('profile.name_not_available'),
+                                          .join(' ');
+                                    }
+                                    return translate(
+                                        'profile.name_not_available');
+                                  }(),
                                   style: GoogleFonts.inter(
                                       fontWeight: FontWeight.w700,
                                       fontSize: 11.26),
                                 ),
                                 const SizedBox(height: 1),
                                 Text(
-                                  loginData.result?.data?.job_id ??
-                                      translate('profile.job_id_not_available'),
+                                  () {
+                                    final jobId =
+                                        loginData.result?.data?.job_id;
+                                    if (jobId != null &&
+                                        jobId.isNotEmpty &&
+                                        jobId != 'null' &&
+                                        jobId != 'false') {
+                                      return jobId;
+                                    }
+                                    return translate(
+                                        'profile.job_id_not_available');
+                                  }(),
                                   style: GoogleFonts.inter(
                                       fontSize: 11.26,
                                       fontWeight: FontWeight.w400),
                                 ),
                                 const SizedBox(height: 1),
                                 Text(
-                                  loginData.result?.data?.emp_id?.toString() ??
-                                      translate('profile.id_not_available'),
+                                  () {
+                                    final empId =
+                                        loginData.result?.data?.emp_id;
+                                    if (empId != null &&
+                                        empId.isNotEmpty &&
+                                        empId != 'null' &&
+                                        empId != 'false') {
+                                      return empId;
+                                    }
+                                    return translate(
+                                        'profile.id_not_available');
+                                  }(),
                                   style: GoogleFonts.inter(
                                       fontSize: 11.26,
                                       fontWeight: FontWeight.w400),
                                 ),
+                                const SizedBox(height: 1),
                                 const SizedBox(height: 8),
                                 InkWell(
                                   onTap: () {

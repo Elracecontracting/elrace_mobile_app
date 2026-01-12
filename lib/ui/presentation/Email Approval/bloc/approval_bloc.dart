@@ -19,7 +19,8 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
     required String action,
     required String? comment,
   }) async {
-    final url = Uri.parse('https://erp.elrace.com/api/approve_reject_hr_request');
+    final url =
+        Uri.parse('https://erp.elrace.com/api/approve_reject_hr_request');
     final headers = {
       "Content-Type": "application/json",
       "Accept": "application/json",
@@ -37,7 +38,8 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
     return await http.post(url, headers: headers, body: body);
   }
 
-  Future<void> _onApproveRequest(ApproveRequest event, Emitter<ApprovalState> emit) async {
+  Future<void> _onApproveRequest(
+      ApproveRequest event, Emitter<ApprovalState> emit) async {
     final currentExpandedItems = state.expandedItems;
     emit(ApprovalLoading(expandedItems: currentExpandedItems));
     try {
@@ -55,17 +57,20 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
         if (data["result"] != null && data["result"]["message"] != null) {
           messages.add(data["result"]["message"]);
         } else {
-          emit(ApprovalFailure("Unknown response from server.", expandedItems: currentExpandedItems));
+          emit(ApprovalFailure("Unknown response from server.",
+              expandedItems: currentExpandedItems));
           return;
         }
       }
-      emit(ApprovalSuccess(messages.join("\n"), expandedItems: currentExpandedItems));
+      emit(ApprovalSuccess(messages.join("\n"),
+          expandedItems: currentExpandedItems));
     } catch (e) {
       emit(ApprovalFailure(e.toString(), expandedItems: currentExpandedItems));
     }
   }
 
-  Future<void> _onRejectRequest(RejectRequest event, Emitter<ApprovalState> emit) async {
+  Future<void> _onRejectRequest(
+      RejectRequest event, Emitter<ApprovalState> emit) async {
     final currentExpandedItems = state.expandedItems;
     emit(ApprovalLoading(expandedItems: currentExpandedItems));
     try {
@@ -83,19 +88,22 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
         if (data["result"] != null && data["result"]["message"] != null) {
           messages.add(data["result"]["message"]);
         } else {
-          emit(ApprovalFailure("Unknown response from server.", expandedItems: currentExpandedItems));
+          emit(ApprovalFailure("Unknown response from server.",
+              expandedItems: currentExpandedItems));
           return;
         }
       }
-      emit(ApprovalSuccess(messages.join("\n"), expandedItems: currentExpandedItems));
+      emit(ApprovalSuccess(messages.join("\n"),
+          expandedItems: currentExpandedItems));
     } catch (e) {
       emit(ApprovalFailure(e.toString(), expandedItems: currentExpandedItems));
     }
   }
 
-  void _onToggleItemExpansion(ToggleItemExpansion event, Emitter<ApprovalState> emit) {
+  void _onToggleItemExpansion(
+      ToggleItemExpansion event, Emitter<ApprovalState> emit) {
     final currentExpandedItems = Set<int>.from(state.expandedItems);
-    
+
     if (currentExpandedItems.contains(event.index)) {
       currentExpandedItems.remove(event.index);
     } else {
@@ -105,7 +113,7 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
         add(CollapseItem(event.index));
       });
     }
-    
+
     emit(ApprovalItemsExpanded(expandedItems: currentExpandedItems));
   }
 
@@ -114,4 +122,4 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
     currentExpandedItems.remove(event.index);
     emit(ApprovalItemsExpanded(expandedItems: currentExpandedItems));
   }
-} 
+}

@@ -888,9 +888,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                      translate(
-                                          'pettycash.select_petty_cash_holder'),
+                                  Text(translate('pettycash.select_holder'),
                                       style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   const SizedBox(height: 16),
@@ -1466,7 +1464,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
 
                           const SizedBox(height: 20),
 
-                          // Supplier Field
+                          // Holder Field
                           Row(
                             children: [
                               Image.asset('assets/png/supplier_icon.png',
@@ -1476,11 +1474,11 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    const Padding(
-                                      padding: EdgeInsets.only(left: 12),
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 12),
                                       child: Text(
-                                        'Supplier',
-                                        style: TextStyle(
+                                        translate('pettycash.holder'),
+                                        style: const TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w600,
                                           color: Colors.black,
@@ -1513,7 +1511,8 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                         ),
                                         child: Text(
                                           userController.text.isEmpty
-                                              ? 'Select Supplier'
+                                              ? translate(
+                                                  'pettycash.select_user')
                                               : userController.text,
                                           style: const TextStyle(
                                             fontSize: 14,

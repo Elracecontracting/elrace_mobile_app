@@ -25,11 +25,18 @@ class _CallScreenState extends State<CallScreen> {
   int? expandedIndex;
   final ScrollController _scrollController = ScrollController();
   final GlobalKey _headerKey = GlobalKey();
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     _contactBloc.add(GetEmployeeLisET());
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -68,6 +75,75 @@ class _CallScreenState extends State<CallScreen> {
                 minHeight: 40.h,
                 maxHeight: 45.h,
                 headerKey: _headerKey,
+              ),
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                child: Container(
+                  height: 45.h,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (value) {
+                      setState(() {}); // Update UI for suffix icon
+                      _contactBloc.add(SearchContactsEvent(value));
+                    },
+                    style: TextStyle(
+                      color: const Color(0xFF1A1A53),
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    decoration: InputDecoration(
+                      border: InputBorder.none,
+                      hintText: translate('home.search_by_name_or_id'),
+                      contentPadding: EdgeInsets.symmetric(
+                        vertical: 12.h,
+                        horizontal: 20.w,
+                      ),
+                      hintStyle: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.grey.shade500,
+                      ),
+                      prefixIcon: Padding(
+                        padding: EdgeInsets.all(12.w),
+                        child: Image.asset(
+                          'assets/png/search_icon.png',
+                          width: 18.w,
+                          height: 18.w,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.clear,
+                                color: Colors.grey.shade600,
+                                size: 20.w,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _searchController.clear();
+                                });
+                                _contactBloc.add(const SearchContactsEvent(''));
+                              },
+                            )
+                          : null,
+                    ),
+                  ),
+                ),
               ),
             ),
             BlocBuilder<ContactBloc, ContactState>(

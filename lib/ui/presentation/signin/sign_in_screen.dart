@@ -131,6 +131,25 @@ class _SignInScreenState extends State<SignInScreen> {
         if (state is InitialSignedInST) {
           Util.fetchHomeScreenData(context);
 
+          // Debug: Log the FULL login response before saving
+          print('DEBUG: ===== FULL LOGIN RESPONSE =====');
+          final responseJson = state.loginResponse.toJson();
+          print('DEBUG: Full JSON:');
+          print(JsonEncoder.withIndent('  ').convert(responseJson));
+          print('DEBUG: ===================================');
+          print('DEBUG: Specific fields:');
+          print('DEBUG: name = ${state.loginResponse.result?.data?.name}');
+          print(
+              'DEBUG: emp_name = ${state.loginResponse.result?.data?.emp_name}');
+          print(
+              'DEBUG: username = ${state.loginResponse.result?.data?.username}');
+          print(
+              'DEBUG: partnerDisplayName = ${state.loginResponse.result?.data?.partnerDisplayName}');
+          print('DEBUG: job_id = ${state.loginResponse.result?.data?.job_id}');
+          print('DEBUG: emp_id = ${state.loginResponse.result?.data?.emp_id}');
+          print('DEBUG: uid = ${state.loginResponse.result?.data?.uid}');
+          print('DEBUG: ===================================');
+
           SharedPref().setPreferencesString(
               'loginResponse', jsonEncode(state.loginResponse.toJson()));
           SharedPref().setPreferencesBoolean('isRegistered', true);

@@ -77,6 +77,7 @@ class Data {
   final String? job_id;
   final String? emp_id;
   final String? emp_profile_id;
+  final String? emp_name;
   final String? partnerDisplayName;
   final int? companyId;
   final bool? branchId;
@@ -110,6 +111,7 @@ class Data {
     this.job_id,
     this.emp_id,
     this.emp_profile_id,
+    this.emp_name,
     this.partnerDisplayName,
     this.companyId,
     this.branchId,
@@ -142,12 +144,33 @@ class Data {
         serverVersionInfo: json["server_version_info"] == null
             ? []
             : List<dynamic>.from(json["server_version_info"]!.map((x) => x)),
-        name: json["name"],
-        image_url: json["image_url"].toString(),
-        username: json["username"].toString(),
-        job_id: json["job_id"].toString(),
-        emp_id: json["emp_id"].toString(),
-        emp_profile_id: json["emp_profile_id"]?.toString(),
+        name: (json["emp_name"] is String &&
+                json["emp_name"].toString().isNotEmpty)
+            ? json["emp_name"]
+            : (json["name"] is String
+                ? json["name"]
+                : (json["partner_display_name"] is String
+                    ? json["partner_display_name"]
+                    : json["username"])),
+        image_url: (json["image_url"] != null && json["image_url"] != false)
+            ? json["image_url"].toString()
+            : '',
+        username: (json["username"] != null && json["username"] != false)
+            ? json["username"].toString()
+            : '',
+        job_id: (json["job_id"] != null && json["job_id"] != false)
+            ? json["job_id"].toString()
+            : null,
+        emp_id: (json["emp_id"] != null && json["emp_id"] != false)
+            ? json["emp_id"].toString()
+            : null,
+        emp_profile_id:
+            (json["emp_profile_id"] != null && json["emp_profile_id"] != false)
+                ? json["emp_profile_id"].toString()
+                : null,
+        emp_name: (json["emp_name"] != null && json["emp_name"] != false)
+            ? json["emp_name"].toString()
+            : null,
         partnerDisplayName: json["partner_display_name"],
         companyId: json["company_id"],
         branchId: json["branch_id"],
@@ -203,6 +226,7 @@ class Data {
         "job_id": job_id,
         "emp_id": emp_id,
         "emp_profile_id": emp_profile_id,
+        "emp_name": emp_name,
         "partner_display_name": partnerDisplayName,
         "company_id": companyId,
         "branch_id": branchId,

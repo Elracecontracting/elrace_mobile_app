@@ -93,6 +93,9 @@ class ContactBloc extends Bloc<ContactEvent, ContactState> {
       filteredEmpList = empList
           .where((employee) =>
               employee.name?.toLowerCase().contains(keyword) == true ||
+              employee.empId?.toString().toLowerCase().contains(keyword) ==
+                  true ||
+              employee.id?.toString().toLowerCase().contains(keyword) == true ||
               employee.mobilePhone
                       ?.toString()
                       .toLowerCase()
