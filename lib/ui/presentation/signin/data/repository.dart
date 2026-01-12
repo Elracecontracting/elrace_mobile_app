@@ -99,7 +99,7 @@ class UserRepo {
       SharedPreferences sharedPreferences =
           await SharedPreferences.getInstance();
       String userData = json.encode(loginResponse.toJson());
-      await sharedPreferences.setString(loginResponseString, userData);
+      await sharedPreferences.setString('loginResponse', userData);
 
       print('✅ Login response saved to SharedPreferences');
       print('📦 Saved Data:');
@@ -112,7 +112,7 @@ class UserRepo {
 
   Future<LoginResponseModel?> getLoginResponse() async {
     SharedPreferences sharedPreferences = await SharedPreferences.getInstance();
-    String? userData = sharedPreferences.getString(loginResponseString);
+    String? userData = sharedPreferences.getString('loginResponse');
 
     if (userData == null) {
       print('⚠️ No login data found in SharedPreferences');

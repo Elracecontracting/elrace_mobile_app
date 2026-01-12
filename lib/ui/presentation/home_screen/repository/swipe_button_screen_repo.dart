@@ -4,20 +4,20 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:el_race/ui/widgets/horizontal_slider_widget.dart';
 
-class CustomSwipeButtonRepo{
+class CustomSwipeButtonRepo {
   static Future<List<Project>> fetchProjects() async {
     String? token = SharedPref.getLoginData().result?.token;
 
     // 🔁 Fallback if token is missing
     if (token == null || token.isEmpty) {
-      final storedData = SharedPref().getPreferenceString('LOGIN_RESPONSE');
+      final storedData = SharedPref().getPreferenceString('loginResponse');
 
       final jsonData = jsonDecode(storedData);
       final storedLoginResponse = LoginResponseModel.fromJson(jsonData);
       print(storedLoginResponse);
       token = storedLoginResponse.result?.token;
       print("🔁 Fallback token loaded from SharedPreferences: $token");
-        }
+    }
 
     // 🚫 Still missing token?
     if (token == null || token.isEmpty) {
@@ -64,8 +64,8 @@ class CustomSwipeButtonRepo{
     }
   }
 
-
-  static Future<Map<String, dynamic>> validateUserLocation(int projectId, double latitude, double longitude) async {
+  static Future<Map<String, dynamic>> validateUserLocation(
+      int projectId, double latitude, double longitude) async {
     final token = SharedPref.getLoginData().result?.token;
 
     final url = Uri.parse("https://erp.elrace.com/api/validate_user_location");
@@ -93,5 +93,4 @@ class CustomSwipeButtonRepo{
       return {"status": "error", "message": "Failed to validate location: $e"};
     }
   }
-
 }

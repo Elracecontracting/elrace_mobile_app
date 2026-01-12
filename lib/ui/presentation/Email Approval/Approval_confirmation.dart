@@ -16,17 +16,19 @@ class ApprovalConfirmationScreen extends StatefulWidget {
   final String requestId;
   final String type;
 
-    const ApprovalConfirmationScreen({
+  const ApprovalConfirmationScreen({
     super.key,
     required this.requestId,
     required this.type,
   });
 
   @override
-  State<ApprovalConfirmationScreen> createState() => _ApprovalConfirmationScreenState();
+  State<ApprovalConfirmationScreen> createState() =>
+      _ApprovalConfirmationScreenState();
 }
 
-class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen> {
+class _ApprovalConfirmationScreenState
+    extends State<ApprovalConfirmationScreen> {
   bool isLoading = true;
   String error = '';
   final int _currentPage = 0;
@@ -48,6 +50,7 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
     _pageController = PageController();
     _fetchRequestDetails();
   }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -76,6 +79,7 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
           throw Exception("Invalid request type: ${widget.type}");
       }
     }
+
     String getParamKey(String type) {
       switch (type.toUpperCase()) {
         case 'HR':
@@ -90,6 +94,7 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
           throw Exception("Invalid request type: ${widget.type}");
       }
     }
+
     final url = Uri.parse(getApiUrl(widget.type));
     final paramKey = getParamKey(widget.type);
     final body = jsonEncode({
@@ -104,26 +109,47 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
     try {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-      debugPrint("request_details: ${response.body}");
-     
-      
+
+      // Print full response
+      debugPrint("=========== FULL API RESPONSE START ===========");
+      debugPrint(response.body);
+      debugPrint("=========== FULL API RESPONSE END ===========");
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final result = data['result']['data'];
-        debugPrint('approvals: ${result['approvals'] ?? []}');
+
+        // Print result structure
+        debugPrint('=========== RESULT DATA START ===========');
+        debugPrint('Result Keys: ${result?.keys?.toList()}');
+        debugPrint('Result Data: $result');
+        debugPrint('=========== RESULT DATA END ===========');
+
         setState(() {
           formData = result['form_view'] ?? {};
           approvals = result['approvals'] ?? [];
           tableView = result['table_view'] ?? [];
           attachmentIds = result['attachment_ids'] ?? [];
         });
-      
+
+        // Print formData to see available fields
+        debugPrint('=========== FORM DATA START ===========');
+        debugPrint('🔍 Form Data Keys: ${formData?.keys.toList()}');
+        debugPrint('🔍 Full Form Data: $formData');
+        debugPrint('📱 Mobile Phone: ${formData?["mobile_phone"]}');
+        debugPrint('📱 Mobile: ${formData?["mobile"]}');
+        debugPrint('📱 Phone: ${formData?["phone"]}');
+        debugPrint('📧 Work Email: ${formData?["work_email"]}');
+        debugPrint('📧 Email: ${formData?["email"]}');
+        debugPrint('=========== FORM DATA END ===========');
+
         await Future.delayed(const Duration(seconds: 1));
         setState(() {
           isLoading = false;
         });
       } else {
-        throw Exception("Failed to load request details: ${response.statusCode}");
+        throw Exception(
+            "Failed to load request details: ${response.statusCode}");
       }
     } catch (e) {
       setState(() {
@@ -134,13 +160,15 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
   }
 
   List<Map<String, String>> get projects {
-    return tableView.map<Map<String, String>>((item) => {
-      "product": item["product"]?.toString() ?? "",
-      "qty": item["qty"]?.toString() ?? "",
-      "uom": item["uom"]?.toString() ?? "",
-      "unit_price": item["unit_price"]?.toString() ?? "",
-      "total": item["total"]?.toString() ?? "",
-    }).toList();
+    return tableView
+        .map<Map<String, String>>((item) => {
+              "product": item["product"]?.toString() ?? "",
+              "qty": item["qty"]?.toString() ?? "",
+              "uom": item["uom"]?.toString() ?? "",
+              "unit_price": item["unit_price"]?.toString() ?? "",
+              "total": item["total"]?.toString() ?? "",
+            })
+        .toList();
   }
 
   void _showEmployeeDetailsDialog() {
@@ -179,20 +207,45 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
                   ],
                 ),
                 const SizedBox(height: 16),
-                const CircleAvatar(
-                  radius: 28,
-                  backgroundImage: AssetImage('assets/png/profile_1.png'),
-                ),
+                isLoading
+                    ? Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[300],
+                          shape: BoxShape.circle,
+                        ),
+                      )
+                    : (formData?["image_emp"] != null &&
+                            formData?["image_emp"] is String &&
+                            (formData?["image_emp"] as String).isNotEmpty &&
+                            (formData?["image_emp"] as String).toLowerCase() !=
+                                "false")
+                        ? CircleAvatar(
+                            radius: 28,
+                            backgroundImage: MemoryImage(
+                                base64Decode(formData!["image_emp"] as String)),
+                          )
+                        : const SizedBox(width: 56, height: 56),
                 const SizedBox(height: 8),
-                Text(formData?["employee_name"] ?? "",
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(formData?["emp_code"]?.toString() ?? "",
-                    style: const TextStyle(color: Colors.grey)),
+                Center(
+                  child: Text(formData?["employee_name"] ?? "",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+                Center(
+                  child: Text(formData?["emp_code"]?.toString() ?? "",
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.grey)),
+                ),
                 const SizedBox(height: 12),
-                _buildIconText(Icons.work_outline, formData?["job_id"]),
-                _buildIconText(Icons.phone_android, formData?["mobile"]),
-                _buildIconText(Icons.business, formData?["department"]),
-                _buildIconText(Icons.email, formData?["work_email"]),
+                _buildIconText(Icons.work_outline,
+                    formData?["job_id"] ?? formData?["job_title"]),
+                _buildIconText(Icons.phone_android, formData?["phone"]),
+                _buildIconText(Icons.business,
+                    formData?["department_id"] ?? formData?["department"]),
+                _buildIconText(Icons.email, formData?["email"]),
                 const SizedBox(height: 16),
               ],
             ),
@@ -220,7 +273,6 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
           crossAxisAlignment: CrossAxisAlignment.center,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -229,48 +281,68 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
                   InkWell(
                     onTap: _showEmployeeDetailsDialog,
                     child: Container(
-                      width: 280.w,
-                      padding: EdgeInsets.symmetric(horizontal: 13.w,vertical: 5.w),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
+                        width: 280.w,
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 13.w, vertical: 5.w),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 25.w,
-                            backgroundImage: const AssetImage('assets/png/profile_1.png'),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Employee Details',
-                            style: GoogleFonts.koulen(
-                              fontSize: 19.sp,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.0,
+                        child: Row(
+                          children: [
+                            isLoading
+                                ? Container(
+                                    width: 50.w,
+                                    height: 50.w,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[300],
+                                      shape: BoxShape.circle,
+                                    ),
+                                  )
+                                : (formData?["image_emp"] != null &&
+                                        formData?["image_emp"] is String &&
+                                        (formData?["image_emp"] as String)
+                                            .isNotEmpty &&
+                                        (formData?["image_emp"] as String)
+                                                .toLowerCase() !=
+                                            "false")
+                                    ? CircleAvatar(
+                                        radius: 25.w,
+                                        backgroundImage: MemoryImage(
+                                            base64Decode(formData!["image_emp"]
+                                                as String)),
+                                      )
+                                    : SizedBox(width: 50.w, height: 50.w),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Employee Details',
+                              style: GoogleFonts.koulen(
+                                fontSize: 19.sp,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.0,
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 5),
-                          Image.asset(
-                            'assets/png/tap.png',
+                            const SizedBox(width: 5),
+                            Image.asset(
+                              'assets/png/tap.png',
                               width: 40.w,
                               height: 40.w,
-                          ),
-                        ],
-                      )
-                    ),
+                            ),
+                          ],
+                        )),
                   ),
-                ]else...[
+                ] else ...[
                   const SizedBox.shrink(),
                 ],
                 InkWell(
                   onTap: () => Navigator.of(context).pop(),
                   child: Container(
-                    margin: EdgeInsets.only(bottom: widget.type.toUpperCase() == 'HR'?60.w:0),
+                    margin: EdgeInsets.only(
+                        bottom: widget.type.toUpperCase() == 'HR' ? 60.w : 0),
                     padding: EdgeInsets.all(3.w),
                     decoration: const BoxDecoration(
                       color: red,
@@ -309,22 +381,47 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
                               child: Column(
                                 children: [
                                   if (widget.type.toUpperCase() == 'HR') ...[
-                                    _buildDetailRow("REQ NO", formData?["request_no"] ?? ""),
-                                    _buildDetailRow("REQ TYPE", formData?["request_type"] ?? ""),
-                                    _buildDetailRow("STATUS", formData?["status"]?.toString() ?? ""),
-                                    _buildDetailRow("REQ DATE", formData?["request_date"] ?? ""),
-                                    _buildDetailRow("START DATE", formData?["start_date"]?.toString() ?? ""),
-                                    _buildDetailRow("DURATION", formData?["duration"]?.toString() ?? ""),
-                                    _buildDetailRow("BALANCE LEAVE", formData?["balance_leave"]?.toString() ?? ""),
+                                    _buildDetailRow("REQ NO",
+                                        formData?["request_no"] ?? ""),
+                                    _buildDetailRow("REQ TYPE",
+                                        formData?["request_type"] ?? ""),
+                                    _buildDetailRow("STATUS",
+                                        formData?["status"]?.toString() ?? ""),
+                                    _buildDetailRow("REQ DATE",
+                                        formData?["request_date"] ?? ""),
+                                    _buildDetailRow(
+                                        "START DATE",
+                                        formData?["start_date"]?.toString() ??
+                                            ""),
+                                    _buildDetailRow(
+                                        "DURATION",
+                                        formData?["duration"]?.toString() ??
+                                            ""),
+                                    _buildDetailRow(
+                                        "BALANCE LEAVE",
+                                        formData?["balance_leave"]
+                                                ?.toString() ??
+                                            ""),
                                   ],
                                   if (widget.type.toUpperCase() == 'RFQ') ...[
-                                    _buildDetailRow("Request Type", formData?["request_type"] ?? "RFQ"),
-                                    _buildDetailRow("Ref No", formData?["title"] ?? ""),
-                                    _buildDetailRow("Vendor", formData?["vendor"] ?? ""),
+                                    _buildDetailRow("Request Type",
+                                        formData?["request_type"] ?? "RFQ"),
+                                    _buildDetailRow(
+                                        "Ref No", formData?["title"] ?? ""),
+                                    _buildDetailRow(
+                                        "Vendor", formData?["vendor"] ?? ""),
                                     // _buildDetailRow("Client", formData?["client"] ?? ""),
                                     // _buildDetailRow("WO", formData?["wo"] ?? ""),
-                                    _buildDetailRow("Material Type", formData?["material_type"] ?? ""),
-                                    _buildDetailRow("Total Amount", formData?["amount_total"] != null ? double.parse(formData!["amount_total"].toString()).toStringAsFixed(2) : "0.00"),
+                                    _buildDetailRow("Material Type",
+                                        formData?["material_type"] ?? ""),
+                                    _buildDetailRow(
+                                        "Total Amount",
+                                        formData?["amount_total"] != null
+                                            ? double.parse(
+                                                    formData!["amount_total"]
+                                                        .toString())
+                                                .toStringAsFixed(2)
+                                            : "0.00"),
                                   ],
                                 ],
                               ),
@@ -383,27 +480,35 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
                                         itemBuilder: (context, index) {
                                           final item = projects[index];
                                           return Container(
-                                            margin: const EdgeInsets.symmetric(vertical: 5),
+                                            margin: const EdgeInsets.symmetric(
+                                                vertical: 5),
                                             padding: EdgeInsets.all(5.w),
                                             decoration: BoxDecoration(
                                               color: AppColors.separatorColor,
-                                              borderRadius: BorderRadius.circular(20),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
                                             ),
                                             child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
                                               children: [
                                                 InfoContainer(
                                                   text: "13/08/2025",
                                                   fontSize: 9.sp,
                                                   width: 75.w,
-                                                  icon: Icon(Icons.date_range, size: 14.w, color: const Color(0xFF1A1A53)),
+                                                  icon: Icon(Icons.date_range,
+                                                      size: 14.w,
+                                                      color: const Color(
+                                                          0xFF1A1A53)),
                                                 ),
                                                 SizedBox(
                                                   width: 65.w,
                                                   child: Text(
                                                     "${item["product"]}",
                                                     style: GoogleFonts.koulen(
-                                                      fontWeight: FontWeight.w500, 
+                                                      fontWeight:
+                                                          FontWeight.w500,
                                                       letterSpacing: 1.0,
                                                       fontSize: 12.sp,
                                                     ),
@@ -431,13 +536,20 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
                                 onPressed: () async {
                                   if (attachmentIds.isEmpty) {
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('No attachment found.')),
+                                      const SnackBar(
+                                          content:
+                                              Text('No attachment found.')),
                                     );
                                     return;
                                   }
                                   await _viewAttachement();
                                 },
-                                icon: Image.asset('assets/png/attachment.png', width: 20.w, height: 20.w,color: Colors.white,),
+                                icon: Image.asset(
+                                  'assets/png/attachment.png',
+                                  width: 20.w,
+                                  height: 20.w,
+                                  color: Colors.white,
+                                ),
                                 label: Text(
                                   "VIEW ATTACHMENT",
                                   style: GoogleFonts.koulen(
@@ -447,8 +559,10 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
                                 ),
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF1A1A53),
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20, vertical: 10),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30)),
                                 ),
                               ),
                             ),
@@ -457,7 +571,7 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
                                 GestureDetector(
-                                  onTap: (){},
+                                  onTap: () {},
                                   child: AbsorbPointer(
                                     absorbing: isCurrentUserInApprovals,
                                     child: ApprovalActionButtons(
@@ -467,7 +581,9 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
                                         _fetchRequestDetails();
                                       },
                                       disabled: isCurrentUserInApprovals,
-                                      userIds: approvals.map((a) => a['id'].toString()).toList(),
+                                      userIds: approvals
+                                          .map((a) => a['id'].toString())
+                                          .toList(),
                                     ),
                                   ),
                                 ),
@@ -486,45 +602,50 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3.0),
-      child: Row(
-        children: [
-          Text("●",style: GoogleFonts.koulen(fontSize: 12, fontWeight: FontWeight.w500, letterSpacing: 1.0),),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              label,
+        padding: const EdgeInsets.symmetric(vertical: 3.0),
+        child: Row(
+          children: [
+            Text(
+              "●",
               style: GoogleFonts.koulen(
-                fontSize: 15.sp,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.0,
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 2,
-            child: Container(
-              width: 150.w,
-              padding: EdgeInsets.symmetric(horizontal: 10.w,vertical: 5.w),
-              decoration: BoxDecoration(
-                color: AppColors.separatorColor,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                value,
-                style: GoogleFonts.koulen(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
+                  letterSpacing: 1.0),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.koulen(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.bold,
                   letterSpacing: 1.0,
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
-          )
-        ],
-      )
-    );
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 2,
+              child: Container(
+                width: 150.w,
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.w),
+                decoration: BoxDecoration(
+                  color: AppColors.separatorColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  value,
+                  style: GoogleFonts.koulen(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 1.0,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          ],
+        ));
   }
 
   Widget _buildStatusBar() {
@@ -532,7 +653,8 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
       return const SizedBox();
     }
 
-    final approvedCount = approvals.where((a) => a['validation_status'] == true).length;
+    final approvedCount =
+        approvals.where((a) => a['validation_status'] == true).length;
     final totalCount = approvals.length;
     final progress = approvedCount / totalCount;
 
@@ -568,9 +690,10 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
             SizedBox(
               width: 40.w,
               child: Text(
-                approver['name']??'',
+                approver['name'] ?? '',
                 style: TextStyle(fontSize: 10.sp),
-                overflow: TextOverflow.ellipsis,),
+                overflow: TextOverflow.ellipsis,
+              ),
             )
           ],
         );
@@ -618,7 +741,8 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
           _buildHrField("Request date :", formData?["request_date"]),
           _buildHrField("Start Date :", formData?["start_date"]?.toString()),
           _buildHrField("Duration :", formData?["duration"]?.toString()),
-          _buildHrField("Balance Leave :", formData?["balance_leave"]?.toString()),
+          _buildHrField(
+              "Balance Leave :", formData?["balance_leave"]?.toString()),
         ],
       ),
     );
@@ -636,12 +760,12 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
           letterSpacing: 1.0,
         ),
       ),
-
     );
   }
 
-  _viewAttachement()async{
-    final attachmentId = attachmentIds.first['attachment_id'] ?? attachmentIds.first;
+  _viewAttachement() async {
+    final attachmentId =
+        attachmentIds.first['attachment_id'] ?? attachmentIds.first;
     final token = SharedPref.getLoginData().result?.token;
     final headers = {
       "Content-Type": "application/json",
@@ -672,8 +796,9 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
       );
       Navigator.of(context).pop();
       final resData = response.data;
-      final binaryBase64 = resData['result']['data']['attachment_binary_data']??'';
-      final fileName = resData['result']['data']['attachment_name']??'';
+      final binaryBase64 =
+          resData['result']['data']['attachment_binary_data'] ?? '';
+      final fileName = resData['result']['data']['attachment_name'] ?? '';
       if (binaryBase64 == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('No binary data found.')),
@@ -681,7 +806,12 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
         return;
       }
       final pdfBytes = base64Decode(binaryBase64);
-      Util.pushPage(AttachmentPdfViewer(pdfBytes: pdfBytes,attchmentName: fileName,), context);
+      Util.pushPage(
+          AttachmentPdfViewer(
+            pdfBytes: pdfBytes,
+            attchmentName: fileName,
+          ),
+          context);
     } catch (e) {
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -690,7 +820,3 @@ class _ApprovalConfirmationScreenState extends State<ApprovalConfirmationScreen>
     }
   }
 }
-
-
-
-

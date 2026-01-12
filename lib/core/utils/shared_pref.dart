@@ -121,7 +121,18 @@ class SharedPref {
   static Map<String, dynamic> checkLoginAndRegistration() {
     final isRegistered = sharedPreferences.getBool('isRegistered') ?? false;
 
-    final loginJson = sharedPreferences.getString('loginResponse');
+    // Try 'loginResponse' key first (new/correct key)
+    String? loginJson = sharedPreferences.getString('loginResponse');
+
+    // Fallback to 'LOGIN_RESPONSE' key if not found (old key for migration)
+    if (loginJson == null || loginJson.isEmpty) {
+      loginJson = sharedPreferences.getString('LOGIN_RESPONSE');
+      // If found in old key, migrate it to new key
+      if (loginJson != null && loginJson.isNotEmpty) {
+        sharedPreferences.setString('loginResponse', loginJson);
+      }
+    }
+
     LoginResponseModel? loginResponse;
     if (loginJson != null) {
       loginResponse = LoginResponseModel.fromJson(jsonDecode(loginJson));
