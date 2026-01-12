@@ -74,14 +74,19 @@ void _handleCheckOutWithSavedProject({
 
     Navigator.pop(context); // Close loading dialog
 
-    if (result['status'] != 'success') {
+    if (result['status'] == 'success') {
+      // Location validation succeeded for checkout
       // Force face recognition only - no other options
       // Set flag and proceed with face recognition
       SharedPref().setPreferencesBoolean('wasCheckedInBeforeFaceAuth', true);
       onConfirmed(); // This will trigger face verification in custom_swipe_button
     } else {
+      // Location validation failed
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? 'Validation failed.')),
+        const SnackBar(
+          content: Text(
+              'You are not within the designated area for this project. You cannot check out.'),
+        ),
       );
       onCancelled();
     }
@@ -446,7 +451,8 @@ void _showProjectSelectionDialog({
                                       locationData.longitude ?? 0,
                                     );
 
-                                    if (result['status'] != 'success') {
+                                    if (result['status'] == 'success') {
+                                      // Location validation succeeded
                                       // Force face recognition only - no other options
                                       // Save selected project/branch with face recognition method
                                       _saveSelectedProject(
@@ -458,9 +464,9 @@ void _showProjectSelectionDialog({
                                           isCheckedIn);
                                       onConfirmed();
                                     } else {
+                                      // Location validation failed
                                       setState(() => errorMessage =
-                                          result['message'] ??
-                                              'Validation failed.');
+                                          'You are not within the designated area for this project. You cannot check in.');
                                     }
                                   } catch (e) {
                                     setState(() => errorMessage =

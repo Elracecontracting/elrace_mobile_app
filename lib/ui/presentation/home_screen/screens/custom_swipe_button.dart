@@ -1,5 +1,6 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/auto_checkout_service.dart';
+import 'package:el_race/data/services/checkin_reminder_notification_service.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/project_list_dialog.dart';
 import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_in_bloc/check_in_bloc.dart';
 import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_out_bloc/check_out_bloc.dart';
@@ -86,6 +87,43 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
 
   _loadCheckInState() {
     final storedState = SharedPref().getPreferenceBoolean('isCheckedIn');
+
+    // التحقق من نظام reset 16 ساعة
+    if (storedState) {
+      final checkInTime = SharedPref().getPreferenceInt('checkInTime');
+      if (checkInTime != 0) {
+        final checkInDateTime =
+            DateTime.fromMillisecondsSinceEpoch(checkInTime);
+        final now = DateTime.now();
+        final difference = now.difference(checkInDateTime);
+
+        // إذا مر أكثر من 16 ساعة، reset الحالة
+        if (difference.inHours >= 16) {
+          debugPrint('⏰ 16 hours passed since check-in. Resetting state...');
+
+          // Reset check in/out state
+          SharedPref().setPreferencesBoolean('isCheckedIn', false);
+          SharedPref().setPreferenceInt('checkInRecordId', 0);
+          SharedPref().setPreferencesString('checkInDisplayTime', '--:--');
+          SharedPref().setPreferencesString('checkOutDisplayTime', '--:--');
+          SharedPref().removePreference('checkInProjectId');
+          SharedPref().removePreference('checkInBranchId');
+          SharedPref().removePreference('checkInAuthMethod');
+          SharedPref().setPreferenceInt('checkInTime', 0);
+
+          // Update notifications
+          CheckInReminderNotificationService().updateReminders();
+
+          setState(() {
+            isCheckedIn = false;
+            _isVisualCheckedIn = false;
+            dragOffset = 0;
+          });
+          return;
+        }
+      }
+    }
+
     setState(() {
       isCheckedIn = storedState;
       _isVisualCheckedIn = storedState; // Sync visual state with actual state
@@ -193,6 +231,10 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
       // جدولة Auto Check-out في الساعة 5 مساءً
       await AutoCheckoutService.scheduleAutoCheckout();
       debugPrint('✅ Auto checkout scheduled for 5:00 PM after check-in');
+
+      // جدولة إشعارات التذكير بـ check out (من 4 مساءً - 5 مساءً)
+      await CheckInReminderNotificationService().updateReminders();
+      debugPrint('✅ Check-out reminder notifications scheduled');
     } else {
       // Perform global check-out (manual)
       final checkInRecordId = SharedPref().getPreferenceInt('checkInRecordId');
@@ -210,6 +252,10 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
         SharedPref().removePreference('checkInProjectId');
         SharedPref().removePreference('checkInBranchId');
         SharedPref().removePreference('checkInAuthMethod');
+
+        // تحديث الإشعارات لجدولة تذكيرات check in (من 8 صباحاً - 9 صباحاً)
+        await CheckInReminderNotificationService().updateReminders();
+        debugPrint('✅ Check-in reminder notifications scheduled');
       }
     }
 
@@ -503,35 +549,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Left time label - shows remaining time from TimerController
-                    Obx(() {
-                      final timer = Get.find<TimerController>().timeLeft.value;
-                      final formatted =
-                          timer.toString().split('.').first.padLeft(8, "0");
-
-                      return Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 8.w, vertical: 2.h),
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color(0xFF1E1E50),
-                            width: 1,
-                          ),
-                        ),
-                        child: Text(
-                          formatted,
-                          style: GoogleFonts.inter(
-                            color: const Color(0xFF1E1E50),
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      );
-                    }),
-
-                    // Right time label - shows 00:00:00 when checked out
+                    // Left time label - shows check-in time
                     Container(
                       padding:
                           EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
@@ -544,7 +562,39 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                         ),
                       ),
                       child: Text(
-                        '00:00:00',
+                        SharedPref()
+                                .getPreferenceString('checkInDisplayTime')
+                                .isEmpty
+                            ? '00:00:00'
+                            : SharedPref()
+                                .getPreferenceString('checkInDisplayTime'),
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF1E1E50),
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+
+                    // Right time label - shows check-out time
+                    Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+                      decoration: BoxDecoration(
+                        color: Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: const Color(0xFF1E1E50),
+                          width: 1,
+                        ),
+                      ),
+                      child: Text(
+                        SharedPref()
+                                .getPreferenceString('checkOutDisplayTime')
+                                .isEmpty
+                            ? '00:00:00'
+                            : SharedPref()
+                                .getPreferenceString('checkOutDisplayTime'),
                         style: GoogleFonts.inter(
                           color: const Color(0xFF1E1E50),
                           fontSize: 10.sp,

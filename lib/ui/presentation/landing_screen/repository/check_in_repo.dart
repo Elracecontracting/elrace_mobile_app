@@ -40,6 +40,8 @@ class CheckInREpo {
         'Accept': 'application/json',
         "Authorization": "Bearer $token"
       };
+      var officeId = userResponse!.result!.data!.default_operating_unit_id;
+
       Map<String, dynamic> data = {
         "jsonrpc": "2.0",
         "params": {
@@ -48,6 +50,7 @@ class CheckInREpo {
           "checkin_date_time": formattedDate,
           "check_in_long": long,
           "check_in_lat": lat,
+          "office": officeId,
         }
       };
 

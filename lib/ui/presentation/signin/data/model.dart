@@ -96,6 +96,7 @@ class Data {
   final bool? qr_status;
   final Map<String, dynamic>? certificate;
   final DefaultWidgets? defaultWidgets;
+  final int? default_operating_unit_id;
 
   Data({
     this.uid,
@@ -130,6 +131,7 @@ class Data {
     this.qr_status,
     this.certificate,
     this.defaultWidgets,
+    this.default_operating_unit_id,
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
@@ -208,6 +210,7 @@ class Data {
         defaultWidgets: json["default_widgets"] == null
             ? null
             : DefaultWidgets.fromJson(json["default_widgets"]),
+        default_operating_unit_id: json["default_operating_unit_id"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -250,6 +253,7 @@ class Data {
         "qr_status": qr_status,
         "certificate": certificate,
         "default_widgets": defaultWidgets?.toJson(),
+        "default_operating_unit_id": default_operating_unit_id,
       };
 }
 

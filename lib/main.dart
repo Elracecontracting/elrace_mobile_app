@@ -28,6 +28,7 @@ import 'package:el_race/core/biometric/ios/face_id_helper.dart';
 import 'package:el_race/core/biometric/android/android_biometric_helper.dart';
 import 'package:el_race/core/biometric/face_recognition/face_recognition_di.dart';
 import 'package:el_race/data/services/auto_checkout_service.dart';
+import 'package:el_race/data/services/checkin_reminder_notification_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -135,11 +136,21 @@ void main() async {
   // تهيئة خدمة Auto Check-out التلقائي في الساعة 5 مساءً
   await AutoCheckoutService.initialize();
 
+  // تهيئة خدمة إشعارات التذكير بـ Check In/Out
+  await CheckInReminderNotificationService().initialize();
+
   // جدولة Auto Check-out اليومي
   final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
   if (isCheckedIn) {
     await AutoCheckoutService.scheduleAutoCheckout();
     debugPrint('✅ Auto checkout scheduled for 5:00 PM');
+
+    // جدولة إشعارات التذكير حسب حالة check in/out
+    await CheckInReminderNotificationService().scheduleCheckOutReminders();
+    debugPrint('✅ Check-out reminder notifications scheduled');
+  } else {
+    await CheckInReminderNotificationService().scheduleCheckInReminders();
+    debugPrint('✅ Check-in reminder notifications scheduled');
   }
 
   // debugPrint = (String? message, {int? wrapWidth}) {};

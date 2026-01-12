@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:bloc/bloc.dart';
 import 'package:dio/dio.dart';
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/landing_screen/repository/check_out_repo.dart';
 import 'package:equatable/equatable.dart';
 import 'package:geolocator/geolocator.dart';
@@ -19,7 +20,8 @@ class CheckOutBloc extends Bloc<CheckOutEvent, CheckOutState> {
     on<CheckOutET>(checkOutMethod);
   }
 
-  Future<void> checkOutMethod(CheckOutET event, Emitter<CheckOutState> emit) async {
+  Future<void> checkOutMethod(
+      CheckOutET event, Emitter<CheckOutState> emit) async {
     try {
       // Emit loading state
       emit(const CheckOutLoadingST(isLoading: true));
@@ -38,9 +40,21 @@ class CheckOutBloc extends Bloc<CheckOutEvent, CheckOutState> {
       if (response != null && response.data != null) {
         final responseData = response.data['result'];
         if (responseData['status'] == 'success') {
+          // Save check-out time in UAE timezone (GMT+4) for display
+          final uaeTime = DateTime.now().toUtc().add(const Duration(hours: 4));
+          final displayTime =
+              '${uaeTime.hour.toString().padLeft(2, '0')}:${uaeTime.minute.toString().padLeft(2, '0')}';
+          SharedPref().setPreferencesString('checkOutDisplayTime', displayTime);
+
           // Emit success state with the message
           emit(CheckedOutST(responseData['message']));
         } else if (responseData['status'] == 'warning') {
+          // Save check-out time even on warning
+          final uaeTime = DateTime.now().toUtc().add(const Duration(hours: 4));
+          final displayTime =
+              '${uaeTime.hour.toString().padLeft(2, '0')}:${uaeTime.minute.toString().padLeft(2, '0')}';
+          SharedPref().setPreferencesString('checkOutDisplayTime', displayTime);
+
           // Emit warning state with the warning message
           emit(CheckOutWarningST(responseData['message']));
         } else {

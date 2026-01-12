@@ -17,7 +17,8 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     on<CheckInET>(checkInMethod);
   }
 
-  Future<void> checkInMethod(CheckInET event, Emitter<CheckInState> emit) async {
+  Future<void> checkInMethod(
+      CheckInET event, Emitter<CheckInState> emit) async {
     try {
       // Emit loading state
       emit(const CheckInLoadingST(isLoading: true));
@@ -38,10 +39,38 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
           final checkInRecordId = responseData['check_in_record_id'];
           print('checkInRecordIdBloc: $checkInRecordId');
           SharedPref().setPreferenceInt('checkInRecordId', checkInRecordId);
+
+          // Save check-in time in UAE timezone (GMT+4) for display
+          final uaeTime = DateTime.now().toUtc().add(const Duration(hours: 4));
+          final displayTime =
+              '${uaeTime.hour.toString().padLeft(2, '0')}:${uaeTime.minute.toString().padLeft(2, '0')}';
+          SharedPref().setPreferencesString('checkInDisplayTime', displayTime);
+
+          // Save check-in timestamp for 16-hour reset logic
+          SharedPref().setPreferenceInt(
+              'checkInTime', DateTime.now().millisecondsSinceEpoch);
+
+          // Reset check-out time
+          SharedPref().setPreferencesString('checkOutDisplayTime', '00:00:00');
+
           emit(CheckedInST(responseData['message'], checkInRecordId));
         } else if (responseData['status'] == 'warning') {
           final checkInRecordId = responseData['check_in_record_id'];
           SharedPref().setPreferenceInt('checkInRecordId', checkInRecordId);
+
+          // Save check-in time in UAE timezone (GMT+4) for display
+          final uaeTime = DateTime.now().toUtc().add(const Duration(hours: 4));
+          final displayTime =
+              '${uaeTime.hour.toString().padLeft(2, '0')}:${uaeTime.minute.toString().padLeft(2, '0')}';
+          SharedPref().setPreferencesString('checkInDisplayTime', displayTime);
+
+          // Save check-in timestamp for 16-hour reset logic
+          SharedPref().setPreferenceInt(
+              'checkInTime', DateTime.now().millisecondsSinceEpoch);
+
+          // Reset check-out time
+          SharedPref().setPreferencesString('checkOutDisplayTime', '00:00:00');
+
           emit(CheckInWarningST(responseData['message'], checkInRecordId));
         } else {
           emit(CheckInErrorST(responseData['message'] ?? 'Check-in failed.'));
@@ -57,4 +86,3 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     }
   }
 }
-
