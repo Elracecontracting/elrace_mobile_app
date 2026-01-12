@@ -219,7 +219,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
         // Results
         return ListView.builder(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+          padding: EdgeInsets.symmetric(horizontal: 2.w, vertical: 8.h),
           itemCount: provider.results.length,
           itemBuilder: (context, index) {
             return _buildResultItem(
@@ -398,8 +398,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       BuildContext context, GlobalSearchItem item, String keyword) {
     // Use specific widgets for each category
     if (item.category == 'lpo') {
-      return InkWell(
-        onTap: () => _navigateToDetail(item),
+      return Container(
+        width: double.infinity,
         child: _buildLpoCard(item),
       );
     } else if (item.category == 'projects') {
@@ -408,10 +408,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         child: _buildProjectCard(context, item),
       );
     } else if (item.category == 'petty_cash') {
-      return InkWell(
-        onTap: () => _navigateToDetail(item),
-        child: _buildPettyCashCard(item),
-      );
+      return _buildPettyCashCard(item);
     }
 
     // Fallback to generic card for other categories
@@ -835,92 +832,130 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   // Build Petty Cash Card
   Widget _buildPettyCashCard(GlobalSearchItem item) {
     final data = item.additionalData ?? {};
-    final status = (data['state'] ?? data['status'])?.toString().toUpperCase();
+    final status =
+        (data['state'] ?? data['status'])?.toString().toUpperCase() ??
+            'SUBMITTED';
+    final date = data['date'] == false || data['date'] == null
+        ? 'N/A'
+        : _formatPettyCashDate(data['date'].toString());
+    final rawAmount = data['total_amount'] ?? data['amount'];
+    final amount = rawAmount != null
+        ? (rawAmount is num
+            ? rawAmount.toStringAsFixed(2)
+            : (double.tryParse(rawAmount.toString()) ?? 0.0).toStringAsFixed(2))
+        : '0.00';
 
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: 5.h, horizontal: 5.w),
-      decoration: BoxDecoration(
-        image: const DecorationImage(
-          image: AssetImage('assets/png/item_bg_green.png'),
-          fit: BoxFit.cover,
-        ),
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha((0.1 * 255).toInt()),
-            blurRadius: 4,
-            spreadRadius: 2,
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 5.0),
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 60),
+        decoration: BoxDecoration(
+          image: const DecorationImage(
+            image: AssetImage('assets/png/item_bg_green.png'),
+            fit: BoxFit.cover,
           ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
-        child: Row(
-          children: [
-            // Title/Name section
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    item.title.isNotEmpty ? item.title : 'N/A',
-                    style: GoogleFonts.inter(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: appFontColor,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (status != null && status.isNotEmpty) ...[
-                    SizedBox(height: 6.h),
-                    Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(status).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(6.r),
-                      ),
-                      child: Text(
-                        status,
-                        style: GoogleFonts.inter(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: _getStatusColor(status),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            SizedBox(width: 12.w),
-            // Check mark icon
-            const CircleAvatar(
-              radius: 12,
-              backgroundImage: AssetImage('assets/png/tick-petty.png'),
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withAlpha((0.1 * 255).toInt()),
+              blurRadius: 4,
+              spreadRadius: 2,
             ),
           ],
         ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(30, 8, 15, 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    status,
+                    style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: appFontColor,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 15),
+              const SizedBox(
+                height: 30,
+                child: VerticalDivider(
+                  color: Colors.grey,
+                  thickness: 2,
+                ),
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Date',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: const Color(0xff151544),
+                      ),
+                    ),
+                    Text(
+                      date,
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(
+                height: 30,
+                child: VerticalDivider(
+                  color: Colors.grey,
+                  thickness: 2,
+                ),
+              ),
+              const SizedBox(width: 5),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Amount',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: appFontColor,
+                      ),
+                    ),
+                    Text(
+                      amount,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 0),
+              const CircleAvatar(
+                radius: 10,
+                backgroundImage: AssetImage('assets/png/tick-petty.png'),
+              ),
+              const SizedBox(width: 5),
+            ],
+          ),
+        ),
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'draft':
-        return Colors.orange;
-      case 'approved':
-      case 'done':
-        return Colors.green;
-      case 'rejected':
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return appFontColor;
-    }
   }
 
   String _formatPettyCashDate(String date) {

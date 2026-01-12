@@ -20,12 +20,18 @@ class GlobalSearchItem {
     Map<String, dynamic> json,
     String category,
   ) {
+    // Remove image_emp from additionalData for petty_cash
+    final Map<String, dynamic> cleanedData = Map.from(json);
+    if (category == 'petty_cash' && cleanedData.containsKey('image_emp')) {
+      cleanedData.remove('image_emp');
+    }
+
     return GlobalSearchItem(
       id: _parseId(json['id']),
       title: _parseTitle(json, category),
       subtitle: _parseSubtitle(json, category),
       category: category,
-      additionalData: json,
+      additionalData: cleanedData,
     );
   }
 
@@ -62,6 +68,7 @@ class GlobalSearchItem {
   static String? _parseSubtitle(Map<String, dynamic> json, String category) {
     switch (category) {
       case 'petty_cash':
+        // Note: image_emp field is excluded from the data
         final amount = json['total_amount'] ?? json['amount'];
         final state = json['state'] ?? json['status'];
         return '${amount != null ? '$amount AED' : ''} ${state != null ? '• $state' : ''}'

@@ -3,6 +3,7 @@ import 'package:el_race/data/models/global_search_item.dart';
 import 'package:el_race/ui/presentation/tasks/task_details_screen.dart';
 import 'package:el_race/ui/presentation/tasks/data/task_model.dart';
 import 'package:el_race/ui/presentation/lpo/screens/lpo_screen.dart';
+import 'package:el_race/ui/presentation/PettyCash/PettyCashScreen.dart';
 
 /// Helper class for navigating to detail screens from search results
 ///
@@ -77,21 +78,13 @@ class GlobalSearchNavigationHelper {
     BuildContext context,
     GlobalSearchItem item,
   ) {
-    // TODO: Implement navigation to PettyCash details screen
-    // Once you have the detail screen ready, uncomment and modify:
-    /*
+    // Navigate to PettyCash main screen
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => PettyCashDetailScreen(
-          expenseId: item.id,
-          expenseName: item.title,
-        ),
+        builder: (_) => const PettyCashScreen(),
       ),
     );
-    */
-
-    _showNotImplemented(context, item);
   }
 
   /// Navigate to Project Details
