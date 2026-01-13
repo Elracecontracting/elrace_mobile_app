@@ -9,6 +9,8 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 
+import '../../../utils/safe_insets.dart';
+
 import '../../../core/constants/colors.dart';
 
 /// Image filter options
@@ -585,7 +587,7 @@ class _SimpleDocumentScannerState extends State<SimpleDocumentScanner> {
                 _shareAllImages();
               },
             ),
-            SizedBox(height: MediaQuery.of(context).padding.bottom + 16),
+            SizedBox(height: context.systemBottomInset + 16),
           ],
         ),
       ),

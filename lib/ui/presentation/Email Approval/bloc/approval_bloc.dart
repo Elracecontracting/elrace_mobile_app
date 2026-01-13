@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'approval_event.dart';
 import 'approval_state.dart';
 import 'package:http/http.dart' as http;
@@ -18,23 +19,64 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
     required String requestId,
     required String action,
     required String? comment,
+    required String type,
   }) async {
-    final url =
-        Uri.parse('https://erp.elrace.com/api/approve_reject_hr_request');
-    final headers = {
-      "Content-Type": "application/json",
-      "Accept": "application/json",
-    };
-    final body = jsonEncode({
-      "jsonrpc": "2.0",
-      "params": {
+    final token = SharedPref.getLoginData().result?.token;
+
+    // Determine the correct API endpoint based on type
+    String apiUrl;
+    Map<String, dynamic> params;
+
+    if (type.toUpperCase() == 'HR') {
+      // HR requests use the existing endpoint
+      apiUrl = 'https://erp.elrace.com/api/approve_reject_hr_request';
+      params = {
         "user_id": userId,
         "emp_request_id": int.tryParse(requestId),
         "action": action,
         "comment": comment,
-      },
+      };
+    } else {
+      // RFQ, Invoice, Petty Cash, LPO use tier review endpoint
+      apiUrl = 'https://erp.elrace.com/api/record/tier_review';
+
+      // Map type to model_name
+      String modelName;
+      switch (type.toUpperCase()) {
+        case 'PETTYCASH':
+        case 'PETTY_CASH':
+          modelName = 'hr.expense.sheet';
+          break;
+        case 'RFQ':
+          modelName = 'purchase.order';
+          break;
+        case 'INVOICE':
+          modelName = 'account.move';
+          break;
+        default:
+          modelName = type.toLowerCase();
+      }
+
+      params = {
+        "model_name": modelName,
+        "record_id": int.tryParse(requestId),
+        "action": action,
+        "user_id": userId,
+        "comment": comment ?? "",
+      };
+    }
+
+    final url = Uri.parse(apiUrl);
+    final headers = {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Authorization": "Bearer $token",
+    };
+    final body = jsonEncode({
+      "jsonrpc": "2.0",
+      "params": params,
     });
-    debugPrint('data: \n$body');
+    debugPrint('Approval API: $apiUrl\nType: $type\nData: \n$body');
     return await http.post(url, headers: headers, body: body);
   }
 
@@ -51,6 +93,7 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
           requestId: event.requestId,
           action: "accept",
           comment: event.comment ?? "Request approved.",
+          type: event.type,
         );
         final data = jsonDecode(response.body);
         debugPrint('_onApproveRequest:  \n${response.body}');
@@ -82,6 +125,7 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
           requestId: event.requestId,
           action: "reject",
           comment: event.comment ?? "Request rejected.",
+          type: event.type,
         );
         final data = jsonDecode(response.body);
         debugPrint('_onRejectRequest: ${response.body}');

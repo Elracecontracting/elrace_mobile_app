@@ -86,31 +86,84 @@ void main() async {
   // منع Screenshot و Screen Recording
   //await ScreenProtector.protectDataLeakageOn();
 
-  await Future.wait([
-    SharedPref().instantiatePreferences(),
-    initDI(),
-    HiveService.setupHive(),
-    Firebase.initializeApp(),
-  ]);
+  try {
+    // Initialize with timeout to prevent hanging
+    await Future.wait([
+      SharedPref().instantiatePreferences(),
+      initDI(),
+      HiveService.setupHive(),
+      Firebase.initializeApp(),
+    ]).timeout(
+      const Duration(seconds: 30),
+      onTimeout: () {
+        print('⚠️ Initialization timeout - continuing with defaults');
+        return [];
+      },
+    );
+  } catch (e) {
+    print('❌ Error during initialization: $e');
+    print('⚠️ Continuing with partial initialization...');
+  }
 
   // Load remote app configuration (e.g., Test Mode)
-  await AppConfigService.instance.load();
+  try {
+    await AppConfigService.instance.load().timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        print('⚠️ AppConfig load timeout - using defaults');
+      },
+    );
+  } catch (e) {
+    print('❌ Error loading app config: $e');
+  }
 
   // Initialize platform-specific biometric authentication
-  FaceIdHelper.initialize(); // iOS only
-  AndroidBiometricHelper.initialize(); // Android only
+  try {
+    FaceIdHelper.initialize(); // iOS only
+    AndroidBiometricHelper.initialize(); // Android only
+  } catch (e) {
+    print('❌ Error initializing biometric: $e');
+  }
 
   // Initialize Face Recognition System
-  await FaceRecognitionDI.init();
+  try {
+    await FaceRecognitionDI.init().timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        print('⚠️ Face Recognition init timeout');
+      },
+    );
+  } catch (e) {
+    print('❌ Error initializing Face Recognition: $e');
+  }
 
   // Register background message handler قبل FirebaseService.initialize()
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  try {
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  } catch (e) {
+    print('❌ Error registering background handler: $e');
+  }
 
-  await FirebaseService.initialize();
+  try {
+    await FirebaseService.initialize().timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        print('⚠️ Firebase service init timeout');
+      },
+    );
+  } catch (e) {
+    print('❌ Error initializing Firebase service: $e');
+  }
 
   // طباعة FCM Token عند بدء التطبيق
   try {
-    String? fcmToken = await FirebaseMessaging.instance.getToken();
+    String? fcmToken = await FirebaseMessaging.instance.getToken().timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        print('⚠️ FCM token timeout');
+        return null;
+      },
+    );
     if (fcmToken != null) {
       print('');
       print('═══════════════════════════════════════════════════════════');
@@ -131,26 +184,57 @@ void main() async {
   }
 
   // تهيئة خدمة الأذان في الخلفية
-  await PrayerBackgroundService.initialize();
+  try {
+    await PrayerBackgroundService.initialize().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        print('⚠️ Prayer service timeout');
+      },
+    );
+  } catch (e) {
+    print('❌ Error initializing Prayer service: $e');
+  }
 
   // تهيئة خدمة Auto Check-out التلقائي في الساعة 5 مساءً
-  await AutoCheckoutService.initialize();
+  try {
+    await AutoCheckoutService.initialize().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        print('⚠️ Auto checkout init timeout');
+      },
+    );
+  } catch (e) {
+    print('❌ Error initializing auto checkout: $e');
+  }
 
   // تهيئة خدمة إشعارات التذكير بـ Check In/Out
-  await CheckInReminderNotificationService().initialize();
+  try {
+    await CheckInReminderNotificationService().initialize().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        print('⚠️ Check-in reminder init timeout');
+      },
+    );
+  } catch (e) {
+    print('❌ Error initializing check-in reminder: $e');
+  }
 
   // جدولة Auto Check-out اليومي
-  final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
-  if (isCheckedIn) {
-    await AutoCheckoutService.scheduleAutoCheckout();
-    debugPrint('✅ Auto checkout scheduled for 5:00 PM');
+  try {
+    final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
+    if (isCheckedIn) {
+      await AutoCheckoutService.scheduleAutoCheckout();
+      debugPrint('✅ Auto checkout scheduled for 5:00 PM');
 
-    // جدولة إشعارات التذكير حسب حالة check in/out
-    await CheckInReminderNotificationService().scheduleCheckOutReminders();
-    debugPrint('✅ Check-out reminder notifications scheduled');
-  } else {
-    await CheckInReminderNotificationService().scheduleCheckInReminders();
-    debugPrint('✅ Check-in reminder notifications scheduled');
+      // جدولة إشعارات التذكير حسب حالة check in/out
+      await CheckInReminderNotificationService().scheduleCheckOutReminders();
+      debugPrint('✅ Check-out reminder notifications scheduled');
+    } else {
+      await CheckInReminderNotificationService().scheduleCheckInReminders();
+      debugPrint('✅ Check-in reminder notifications scheduled');
+    }
+  } catch (e) {
+    print('❌ Error scheduling notifications: $e');
   }
 
   // debugPrint = (String? message, {int? wrapWidth}) {};

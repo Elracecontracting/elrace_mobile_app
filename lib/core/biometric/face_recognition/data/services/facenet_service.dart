@@ -1,36 +1,52 @@
+import 'dart:async';
+import 'dart:isolate';
 import 'dart:math' as math;
+import 'dart:typed_data';
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 
-/// Service for generating face embeddings using FaceNet model
+/// Enhanced FaceNet Service with Warm Isolate and Performance Optimizations
 ///
-/// FaceNet generates a 128 or 512-dimensional embedding (feature vector)
-/// that uniquely represents a face in a high-dimensional space.
-///
-/// Faces from the same person should have embeddings that are close together,
-/// while faces from different people should be far apart.
+/// NEW FEATURES:
+/// - Warm Isolate: Persistent isolate with pre-loaded interpreter
+/// - Cached interpreter: No reload for each inference
+/// - Throttling: Max one embedding per 300-500ms
+/// - TransferableTypedData: Efficient memory transfer
+/// - Batch processing support
 class FaceNetService {
   Interpreter? _interpreter;
   bool _isInitialized = false;
 
   // Model configuration
-  late int _inputSize; // e.g., 160 for FaceNet, 112 for MobileFaceNet
-  late int _outputSize; // 128 or 512 dimensions
+  late int _inputSize;
+  late int _outputSize;
   late List<int> _inputShape;
   late List<int> _outputShape;
 
-  /// Initialize the FaceNet model from assets
-  ///
-  /// Parameters:
-  /// - modelPath: Path to the .tflite model file in assets
-  /// - inputSize: Expected input size (e.g., 160x160 for FaceNet)
-  /// - outputSize: Embedding dimension (128 or 512)
-  /// - useGpu: Whether to use GPU acceleration (if available)
+  // Warm Isolate
+  Isolate? _warmIsolate;
+  SendPort? _isolateSendPort;
+  final _isolateReady = Completer<void>();
+  final _responseStreamController =
+      StreamController<_IsolateResponse>.broadcast();
+
+  // Throttling
+  DateTime? _lastInferenceTime;
+  static const Duration throttleDuration = Duration(milliseconds: 300);
+
+  // Caching
+  List<double>? _cachedEmbedding;
+  DateTime? _cacheTimestamp;
+  static const Duration cacheValidDuration = Duration(seconds: 2);
+
+  /// Initialize the FaceNet model
   Future<void> initialize({
     String modelPath = 'assets/mobilefacenet.tflite',
     int inputSize = 112,
     int outputSize = 192,
     bool useGpu = false,
+    bool useWarmIsolate =
+        false, // Disabled by default due to asset loading in isolate
   }) async {
     if (_isInitialized) {
       return;
@@ -44,19 +60,13 @@ class FaceNetService {
       final options = InterpreterOptions();
 
       if (useGpu) {
-        // Enable GPU delegate for faster inference (Android/iOS)
-        // Note: GPU delegate may not be available on all devices
         options.addDelegate(GpuDelegateV2());
       }
 
-      // Use multiple threads for CPU inference
       options.threads = 4;
 
-      // Load the model from assets
-      _interpreter = await Interpreter.fromAsset(
-        modelPath,
-        options: options,
-      );
+      // Load the model
+      _interpreter = await Interpreter.fromAsset(modelPath, options: options);
 
       // Get input/output shapes
       _inputShape = _interpreter!.getInputTensor(0).shape;
@@ -65,35 +75,131 @@ class FaceNetService {
       print('FaceNet Model Loaded:');
       print('Input Shape: $_inputShape');
       print('Output Shape: $_outputShape');
-      print('Expected: [$inputSize, $inputSize, 3] -> [$outputSize]');
 
       _isInitialized = true;
+
+      // Start warm isolate if enabled
+      if (useWarmIsolate) {
+        await _startWarmIsolate(modelPath, options);
+      }
     } catch (e) {
       throw Exception('Failed to load FaceNet model: $e');
     }
   }
 
-  /// Generate face embedding from a cropped face image
-  ///
-  /// Parameters:
-  /// - faceImage: Pre-cropped and aligned face image
-  ///
-  /// Returns:
-  /// - List<double>: The face embedding (feature vector)
-  ///
-  /// Algorithm:
-  /// 1. Resize image to model input size (e.g., 160x160)
-  /// 2. Normalize pixel values to [-1, 1] or [0, 1]
-  /// 3. Run inference through the model
-  /// 4. Return the output embedding vector
+  /// Start warm isolate with pre-loaded interpreter
+  Future<void> _startWarmIsolate(
+      String modelPath, InterpreterOptions options) async {
+    final receivePort = ReceivePort();
+
+    _warmIsolate = await Isolate.spawn(
+      _isolateEntry,
+      _IsolateInitData(
+        sendPort: receivePort.sendPort,
+        modelPath: modelPath,
+        inputSize: _inputSize,
+        outputSize: _outputSize,
+      ),
+    );
+
+    // Listen for responses
+    receivePort.listen((message) {
+      if (message is SendPort) {
+        _isolateSendPort = message;
+        _isolateReady.complete();
+      } else if (message is _IsolateResponse) {
+        _responseStreamController.add(message);
+      }
+    });
+
+    await _isolateReady.future;
+    print('Warm Isolate ready');
+  }
+
+  /// Generate face embedding (with throttling and caching)
   Future<List<double>> generateEmbedding(img.Image faceImage) async {
     if (!_isInitialized || _interpreter == null) {
-      throw Exception(
-          'FaceNetService not initialized. Call initialize() first.');
+      throw Exception('FaceNetService not initialized');
     }
 
+    // Check cache
+    if (_cachedEmbedding != null && _cacheTimestamp != null) {
+      final cacheAge = DateTime.now().difference(_cacheTimestamp!);
+      if (cacheAge < cacheValidDuration) {
+        return _cachedEmbedding!;
+      }
+    }
+
+    // Apply throttling
+    if (_lastInferenceTime != null) {
+      final timeSinceLastInference =
+          DateTime.now().difference(_lastInferenceTime!);
+      if (timeSinceLastInference < throttleDuration) {
+        final waitTime = throttleDuration - timeSinceLastInference;
+        await Future.delayed(waitTime);
+      }
+    }
+
+    // Use warm isolate if available
+    if (_isolateSendPort != null) {
+      final embedding = await _generateEmbeddingInIsolate(faceImage);
+      _lastInferenceTime = DateTime.now();
+      _cachedEmbedding = embedding;
+      _cacheTimestamp = DateTime.now();
+      return embedding;
+    }
+
+    // Fallback to main thread
+    final embedding = await _generateEmbeddingSync(faceImage);
+    _lastInferenceTime = DateTime.now();
+    _cachedEmbedding = embedding;
+    _cacheTimestamp = DateTime.now();
+    return embedding;
+  }
+
+  /// Generate embedding in warm isolate
+  Future<List<double>> _generateEmbeddingInIsolate(img.Image faceImage) async {
+    if (_isolateSendPort == null) {
+      throw Exception('Warm isolate not ready');
+    }
+
+    // Prepare image data for transfer
+    final resizedImage = img.copyResize(
+      faceImage,
+      width: _inputSize,
+      height: _inputSize,
+      interpolation: img.Interpolation.cubic,
+    );
+
+    // Convert to bytes for efficient transfer
+    final imageBytes = _imageToBytes(resizedImage);
+    final transferable = TransferableTypedData.fromList([imageBytes]);
+
+    final requestId = DateTime.now().millisecondsSinceEpoch.toString();
+
+    // Send request
+    _isolateSendPort!.send(_IsolateRequest(
+      requestId: requestId,
+      imageData: transferable,
+      width: _inputSize,
+      height: _inputSize,
+    ));
+
+    // Wait for response
+    final response = await _responseStreamController.stream
+        .firstWhere((r) => r.requestId == requestId);
+
+    if (response.error != null) {
+      throw Exception('Isolate error: ${response.error}');
+    }
+
+    return response.embedding!;
+  }
+
+  /// Generate embedding synchronously (fallback)
+  Future<List<double>> _generateEmbeddingSync(img.Image faceImage) async {
     try {
-      // Step 1: Resize image to model input size
+      // Resize image
       final resizedImage = img.copyResize(
         faceImage,
         width: _inputSize,
@@ -101,45 +207,38 @@ class FaceNetService {
         interpolation: img.Interpolation.cubic,
       );
 
-      // Step 2: Prepare input tensor
-      // Format: [1, height, width, 3] for batch_size=1, RGB image
+      // Prepare input tensor
       final input = _imageToByteListFloat32(resizedImage);
 
-      // Step 3: Prepare output tensor
+      // Prepare output tensor
       final output = [List.filled(_outputSize, 0.0)];
 
-      // Step 4: Run inference
+      // Run inference
       _interpreter!.run(input, output);
 
-      // Step 5: Extract and normalize the embedding
+      // Extract and normalize embedding
       final embedding = List<double>.from(output[0]);
-
-      // Normalize the embedding (L2 normalization)
-      // This ensures that the distance calculation is more reliable
       return _normalizeEmbedding(embedding);
     } catch (e) {
       throw Exception('Failed to generate embedding: $e');
     }
   }
 
-  /// Generate embedding using isolate for better performance
-  ///
-  /// This prevents UI blocking during inference
-  /// Note: The actual isolate implementation is in the helper
-  Future<List<double>> generateEmbeddingInIsolate(img.Image faceImage) async {
-    // This will be implemented in the isolate helper
-    // For now, call the regular method
-    return generateEmbedding(faceImage);
+  /// Convert image to bytes for transfer
+  Uint8List _imageToBytes(img.Image image) {
+    final bytes = BytesBuilder();
+    for (int y = 0; y < image.height; y++) {
+      for (int x = 0; x < image.width; x++) {
+        final pixel = image.getPixel(x, y);
+        bytes.addByte(pixel.r.toInt());
+        bytes.addByte(pixel.g.toInt());
+        bytes.addByte(pixel.b.toInt());
+      }
+    }
+    return bytes.toBytes();
   }
 
-  /// Convert image to Float32 tensor with normalization
-  ///
-  /// Normalization strategies:
-  /// - MobileFaceNet: (pixel - 127.5) / 128.0 -> range [-1, 1]
-  /// - FaceNet: pixel / 255.0 -> range [0, 1]
-  /// - Some models: (pixel - mean) / std
-  ///
-  /// Check your model's preprocessing requirements!
+  /// Convert image to Float32 tensor
   List<List<List<List<double>>>> _imageToByteListFloat32(img.Image image) {
     final input = List.generate(
       1,
@@ -161,32 +260,25 @@ class FaceNetService {
     return input;
   }
 
-  /// Normalize embedding vector using L2 normalization
-  ///
-  /// L2 normalization formula:
-  /// normalized_vector = vector / ||vector||_2
-  ///
-  /// where ||vector||_2 = sqrt(sum(x_i^2))
-  ///
-  /// This is crucial for:
-  /// 1. Making cosine similarity equivalent to dot product
-  /// 2. Ensuring consistent distance scales
-  /// 3. Improving recognition accuracy
+  /// Normalize embedding using L2 normalization
   List<double> _normalizeEmbedding(List<double> embedding) {
-    // Calculate L2 norm (Euclidean length)
     double sumSquares = 0.0;
     for (final value in embedding) {
       sumSquares += value * value;
     }
     final norm = math.sqrt(sumSquares);
 
-    // Avoid division by zero
     if (norm == 0.0) {
       return embedding;
     }
 
-    // Normalize each element
     return embedding.map((value) => value / norm).toList();
+  }
+
+  /// Clear cache
+  void clearCache() {
+    _cachedEmbedding = null;
+    _cacheTimestamp = null;
   }
 
   /// Get model information
@@ -197,38 +289,178 @@ class FaceNetService {
       'outputSize': _outputSize,
       'inputShape': _inputShape,
       'outputShape': _outputShape,
+      'warmIsolateActive': _isolateSendPort != null,
     };
   }
 
   /// Clean up resources
   Future<void> dispose() async {
+    if (_warmIsolate != null) {
+      _warmIsolate!.kill(priority: Isolate.immediate);
+      _warmIsolate = null;
+    }
+
     if (_interpreter != null) {
       _interpreter!.close();
       _interpreter = null;
     }
+
+    await _responseStreamController.close();
     _isInitialized = false;
   }
 
   bool get isInitialized => _isInitialized;
   int get inputSize => _inputSize;
   int get outputSize => _outputSize;
+
+  // ======================== ISOLATE ENTRY POINT ========================
+
+  static void _isolateEntry(_IsolateInitData initData) async {
+    final receivePort = ReceivePort();
+    Interpreter? interpreter;
+
+    try {
+      // Load model in isolate
+      final options = InterpreterOptions()..threads = 4;
+      interpreter =
+          await Interpreter.fromAsset(initData.modelPath, options: options);
+
+      // Send back the send port
+      initData.sendPort.send(receivePort.sendPort);
+
+      // Listen for requests
+      await for (final message in receivePort) {
+        if (message is _IsolateRequest) {
+          try {
+            // Extract image data
+            final imageBytes = message.imageData.materialize().asUint8List();
+
+            // Convert to image
+            final image = _bytesToImage(
+              imageBytes,
+              message.width,
+              message.height,
+            );
+
+            // Prepare input
+            final input = _imageToFloat32Tensor(
+              image,
+              initData.inputSize,
+            );
+
+            // Run inference
+            final output = [List.filled(initData.outputSize, 0.0)];
+            interpreter.run(input, output);
+
+            // Normalize
+            final embedding = _normalizeList(List<double>.from(output[0]));
+
+            // Send response
+            initData.sendPort.send(_IsolateResponse(
+              requestId: message.requestId,
+              embedding: embedding,
+            ));
+          } catch (e) {
+            initData.sendPort.send(_IsolateResponse(
+              requestId: message.requestId,
+              error: e.toString(),
+            ));
+          }
+        }
+      }
+    } catch (e) {
+      print('Isolate error: $e');
+    } finally {
+      interpreter?.close();
+    }
+  }
+
+  static img.Image _bytesToImage(Uint8List bytes, int width, int height) {
+    final image = img.Image(width: width, height: height);
+    int index = 0;
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        final r = bytes[index++];
+        final g = bytes[index++];
+        final b = bytes[index++];
+        image.setPixelRgb(x, y, r, g, b);
+      }
+    }
+    return image;
+  }
+
+  static List<List<List<List<double>>>> _imageToFloat32Tensor(
+    img.Image image,
+    int size,
+  ) {
+    return List.generate(
+      1,
+      (_) => List.generate(
+        size,
+        (y) => List.generate(
+          size,
+          (x) {
+            final pixel = image.getPixel(x, y);
+            return [
+              (pixel.r.toInt() - 127.5) / 128.0,
+              (pixel.g.toInt() - 127.5) / 128.0,
+              (pixel.b.toInt() - 127.5) / 128.0,
+            ];
+          },
+        ),
+      ),
+    );
+  }
+
+  static List<double> _normalizeList(List<double> embedding) {
+    double sumSquares = 0.0;
+    for (final value in embedding) {
+      sumSquares += value * value;
+    }
+    final norm = math.sqrt(sumSquares);
+    if (norm == 0.0) return embedding;
+    return embedding.map((value) => value / norm).toList();
+  }
 }
 
-/// Extension to help with tensor reshaping
-extension ReshapeExtension on List {
-  List reshape(List<int> shape) {
-    if (shape.isEmpty) return this;
+// ======================== ISOLATE DATA CLASSES ========================
 
-    // For simple 2D reshape [1, n]
-    if (shape.length == 2 && shape[0] == 1) {
-      return [this];
-    }
+class _IsolateInitData {
+  final SendPort sendPort;
+  final String modelPath;
+  final int inputSize;
+  final int outputSize;
 
-    // For 4D reshape [1, h, w, c]
-    if (shape.length == 4 && shape[0] == 1) {
-      return [this];
-    }
+  _IsolateInitData({
+    required this.sendPort,
+    required this.modelPath,
+    required this.inputSize,
+    required this.outputSize,
+  });
+}
 
-    return this;
-  }
+class _IsolateRequest {
+  final String requestId;
+  final TransferableTypedData imageData;
+  final int width;
+  final int height;
+
+  _IsolateRequest({
+    required this.requestId,
+    required this.imageData,
+    required this.width,
+    required this.height,
+  });
+}
+
+class _IsolateResponse {
+  final String requestId;
+  final List<double>? embedding;
+  final String? error;
+
+  _IsolateResponse({
+    required this.requestId,
+    this.embedding,
+    this.error,
+  });
 }

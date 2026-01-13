@@ -147,9 +147,12 @@ class _CameraScreenState extends State<CameraScreen> {
               left: 0,
               right: 0,
               bottom: 0,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(0),
-                child: Container(
+              child: BottomDock(
+                extra: 0,
+                liftWithKeyboard: false,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(0),
+                  child: Container(
                   width: double.infinity,
                   height: H * 0.28, // ربع الشاشة مثل الهيدر بالضبط
                   padding:
@@ -218,8 +221,8 @@ class _CameraScreenState extends State<CameraScreen> {
                 ),
               ),
             ),
-          ]);
-        },
+          ],
+        ),
       ),
     );
   }

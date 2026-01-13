@@ -3,8 +3,11 @@ import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:permission_handler/permission_handler.dart';
+
+import '../../../../../utils/safe_insets.dart';
 
 import '../bloc/document_scanner_bloc.dart';
 import '../bloc/document_scanner_event.dart';
@@ -53,14 +56,31 @@ class _ScannerCameraScreenState extends State<ScannerCameraScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _enableImmersiveMode();
     _initializeCamera();
   }
 
   bool _isDisposed = false;
 
+  void _enableImmersiveMode() {
+    // Hide bottom navigation bar only, keep status bar
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: [SystemUiOverlay.top],
+    );
+  }
+
+  void _restoreSystemUI() {
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: SystemUiOverlay.values,
+    );
+  }
+
   @override
   void dispose() {
     _isDisposed = true;
+    _restoreSystemUI();
     WidgetsBinding.instance.removeObserver(this);
     _edgeDetectionTimer?.cancel();
     // Dispose camera asynchronously to avoid CameraX crash
@@ -90,6 +110,7 @@ class _ScannerCameraScreenState extends State<ScannerCameraScreen>
     if (state == AppLifecycleState.inactive) {
       _cameraController?.dispose();
     } else if (state == AppLifecycleState.resumed) {
+      _enableImmersiveMode(); // Re-enable immersive on Samsung devices
       _initializeCamera();
     }
   }
@@ -302,7 +323,11 @@ class _ScannerCameraScreenState extends State<ScannerCameraScreen>
           bottom: 0,
           left: 0,
           right: 0,
-          child: _buildBottomControls(),
+          child: BottomDock(
+            extra: 0,
+            liftWithKeyboard: false, // Scanner doesn't need keyboard
+            child: _buildBottomControls(),
+          ),
         ),
 
         // Processing overlay

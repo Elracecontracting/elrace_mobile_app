@@ -23,7 +23,7 @@ PreferredSize getBottomAppBar(context,
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             height: 33,
-            color: CustomColors.maroon,
+            color: const Color(0xFFD1002C),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [

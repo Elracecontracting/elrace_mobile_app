@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../../core/constants/colors.dart';
 import '../../../../../core/constants/text_styles.dart';
+import '../../../../../utils/safe_insets.dart';
 
 import '../../../../../data/repositories/company_repository.dart';
 import '../../../../widgets/square_button.dart';
@@ -98,10 +99,9 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
         title: CompanyRepository.company == null
             ? const SizedBox.shrink()
             : Image.asset(
-          CompanyRepository.company!.logo,
-          height: 60,
-        ),
-
+                CompanyRepository.company!.logo,
+                height: 60,
+              ),
         actions: [
           SquareButton(
             icon: Icons.check,
@@ -140,7 +140,8 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
                           child: Center(
                             child: Container(
                               height: 40,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
                               decoration: BoxDecoration(
                                   color:
                                       CustomColors.blue.withValues(alpha: .5),
@@ -164,7 +165,7 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
                           ),
                         ),
                         Positioned(
-                          bottom: MediaQuery.paddingOf(context).bottom + 5,
+                          bottom: context.systemBottomInset + 5,
                           right: 0,
                           left: 0,
                           child: Center(

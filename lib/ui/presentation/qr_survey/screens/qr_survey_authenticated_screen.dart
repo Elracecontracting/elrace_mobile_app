@@ -106,32 +106,35 @@ class _QrSurveyAuthenticatedScreenState
           return qrSurveyContent;
         },
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 1, // Highlight Home tab
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: Colors.white,
-        selectedItemColor: const Color(0xFF1E3A5F),
-        unselectedItemColor: Colors.grey,
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        onTap: (index) {
-          // Navigate back to main screen when any tab is tapped
-          Navigator.pop(context);
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.call),
-            label: 'Call',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.camera_alt),
-            label: 'Camera',
-          ),
-        ],
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: BottomNavigationBar(
+          currentIndex: 1, // Highlight Home tab
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          selectedItemColor: const Color(0xFF1E3A5F),
+          unselectedItemColor: Colors.grey,
+          showSelectedLabels: true,
+          showUnselectedLabels: true,
+          onTap: (index) {
+            // Navigate back to main screen when any tab is tapped
+            Navigator.pop(context);
+          },
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.call),
+              label: 'Call',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.camera_alt),
+              label: 'Camera',
+            ),
+          ],
+        ),
       ),
     );
   }

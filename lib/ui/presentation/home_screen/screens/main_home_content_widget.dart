@@ -6,6 +6,7 @@ import 'package:el_race/ui/presentation/home_screen/widgets/widget_container.dar
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/orientation_helper.dart';
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -34,7 +35,7 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
   @override
   Widget build(BuildContext context) {
     final sliderProvider = Provider.of<SliderProvider>(context);
-    final bottomPadding = MediaQuery.of(context).padding.bottom + 20.h;
+    final bottomPadding = context.systemBottomInset + 20.h;
 
     return RefreshIndicator(
       onRefresh: () async {

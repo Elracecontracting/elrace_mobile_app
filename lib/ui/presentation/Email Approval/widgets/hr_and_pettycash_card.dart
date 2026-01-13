@@ -3,6 +3,7 @@ import 'package:el_race/core/constants/app_images.dart';
 import 'package:el_race/core/services/approval_viewed_service.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_card_type_two.dart';
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,6 +13,19 @@ class HrAndPettycashCard extends StatelessWidget {
   final VoidCallback? onRefresh;
   const HrAndPettycashCard(
       {super.key, required this.approvalItems, this.onRefresh});
+
+  // Helper method to safely extract string values and handle false/true values
+  String _getSafeString(dynamic value, String fallback) {
+    if (value == null || value == false || value == true) return fallback;
+    String strValue = value.toString().trim();
+    if (strValue.isEmpty ||
+        strValue.toLowerCase() == 'false' ||
+        strValue.toLowerCase() == 'true' ||
+        strValue.toLowerCase() == 'null') {
+      return fallback;
+    }
+    return strValue;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,11 +38,8 @@ class HrAndPettycashCard extends StatelessWidget {
     }
 
     // Calculate safe bottom padding for devices with navigation bars
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final viewPadding = MediaQuery.of(context).viewPadding.bottom;
-    final safePadding =
-        bottomPadding > viewPadding ? bottomPadding : viewPadding;
-    final totalBottomPadding = safePadding > 0 ? safePadding + 20.h : 150.h;
+    final totalBottomPadding =
+        kBottomNavigationBarHeight + context.systemBottomInset + 16;
 
     return Expanded(
       child: ListView.separated(
@@ -41,18 +52,42 @@ class HrAndPettycashCard extends StatelessWidget {
           final item = approvalItems[index];
           String type = item["type"] ?? "";
           String id = item["id"]?.toString() ?? "";
-          String employeeName = item["employee_name"] ??
-              item["requester_name"] ??
+
+          // Use _getSafeString to handle false/true values properly
+          String employeeName = _getSafeString(
+              item["employee_name"] ??
+                  item["requester_name"] ??
+                  item["emp_name"],
+              "N/A");
+
+          String empCode = _getSafeString(
+              item["emp_code"] ??
+                  item["employee_code"] ??
+                  item["emp_id"]?.toString() ??
+                  item["code"],
+              "");
+
+          String reqNo = _getSafeString(
               item["name"] ??
-              "N/A";
-          String empCode = item["emp_code"]?.toString() ??
-              item["employee_code"]?.toString() ??
-              "";
-          String reqNo = item["request_no"] ?? item["ref_no"] ?? "N/A";
-          String amount = item["amount_total"]?.toString() ??
-              item["amount"]?.toString() ??
-              "0";
-          String date = item["date"] ?? item["request_date"] ?? "";
+                  item["request_no"] ??
+                  item["ref_no"] ??
+                  item["reference_no"] ??
+                  item["req_no"],
+              "N/A");
+
+          String amount = _getSafeString(
+              item["amount_total"] ??
+                  item["amount"] ??
+                  item["total_amount"] ??
+                  item["total"],
+              "0");
+
+          String date = _getSafeString(
+              item["date"] ??
+                  item["request_date"] ??
+                  item["created_date"] ??
+                  item["submission_date"],
+              "");
 
           return GestureDetector(
             onTap: () async {

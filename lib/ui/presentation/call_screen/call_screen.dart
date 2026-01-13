@@ -1,5 +1,6 @@
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/orientation_helper.dart';
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -195,14 +196,10 @@ class _CallScreenState extends State<CallScreen> {
             SliverToBoxAdapter(
               child: Builder(
                 builder: (context) {
-                  final bottomPadding = MediaQuery.of(context).padding.bottom;
-                  final viewPadding = MediaQuery.of(context).viewPadding.bottom;
-                  // Use the larger value to ensure enough space
-                  final safePadding =
-                      bottomPadding > viewPadding ? bottomPadding : viewPadding;
+                  final systemBottomInset = context.systemBottomInset;
                   // Ensure minimum 150.h padding for devices without system navigation
                   final totalPadding =
-                      safePadding > 0 ? safePadding + 20.h : 150.h;
+                      systemBottomInset > 0 ? systemBottomInset + 20.h : 150.h;
                   return SizedBox(height: totalPadding);
                 },
               ),

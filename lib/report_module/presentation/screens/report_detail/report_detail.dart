@@ -338,6 +338,14 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           : const Center(
               child: CircularProgressIndicator(),
             ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showAddOptions,
+        backgroundColor: const Color(0xFF161B54),
+        child: const Icon(
+          Icons.add_a_photo,
+          color: Colors.white,
+        ),
+      ),
     );
   }
 

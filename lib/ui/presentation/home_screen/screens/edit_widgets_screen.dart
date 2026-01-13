@@ -11,6 +11,7 @@ import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/orientation_helper.dart';
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:el_race/utils/string_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -136,154 +137,167 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : Stack(
-                alignment: Alignment.bottomCenter,
+                alignment: Alignment.topCenter,
                 children: [
-                  SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: EdgeInsets.all(SizeConfig().getWidth(16)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Builder(
+                    builder: (context) {
+                      return SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: EdgeInsets.only(
+                            left: SizeConfig().getWidth(16),
+                            right: SizeConfig().getWidth(16),
+                            top: SizeConfig().getWidth(16),
+                            bottom: SizeConfig().getWidth(16) +
+                                kBottomNavigationBarHeight +
+                                context.systemBottomInset +
+                                20,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              BackButton(onPressed: () {
-                                if (bloc.isEdit) {
-                                  _showSaveDialog(bloc);
-                                } else {
-                                  bloc.isEdit = false;
-                                  if (mounted) {
-                                    Navigator.of(context).pop();
-                                  }
-                                }
-                              }),
-                              Text(
-                                'Edit Widgets',
-                                style: GoogleFonts.koulen(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w400,
-                                  color: appFontColor,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: () => _showSaveDialog(bloc),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Image.asset(
-                                      'assets/png/save.gif',
-                                      width: 45.sp,
-                                      height: 45.sp,
-                                      fit: BoxFit.cover,
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Text(
-                                      'Save',
-                                      style: GoogleFonts.inter(
-                                        fontSize: 15.sp,
-                                        fontWeight: FontWeight.w600,
-                                        color: black,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          GestureDetector(
-                            onTap: _showAddWidgetDialog,
-                            child: Container(
-                              width: double.infinity,
-                              height: SizeConfig().getHeight(175),
-                              margin: const EdgeInsets.only(bottom: 16),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
-                                image: const DecorationImage(
-                                  image:
-                                      AssetImage('assets/png/add_widgets.png'),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              // child: Center(
-                              //   child: Column(
-                              //     mainAxisAlignment: MainAxisAlignment.center,
-                              //     children: [
-                              //       Container(
-                              //         width: 50,
-                              //         height: 50,
-                              //         decoration: BoxDecoration(
-                              //           color: white.withAlpha((0.9 * 255).toInt()),
-                              //           borderRadius: BorderRadius.circular(25),
-                              //         ),
-                              //         child: Icon(
-                              //           Icons.add,
-                              //           color: const Color(0xFF4CAF50),
-                              //           size: 30.sp,
-                              //         ),
-                              //       ),
-                              //       const SizedBox(height: 8),
-                              //       Text(
-                              //         'Add Widget',
-                              //         style: GoogleFonts.inter(
-                              //           fontSize: 16.sp,
-                              //           fontWeight: FontWeight.w600,
-                              //           color: white,
-                              //         ),
-                              //       ),
-                              //     ],
-                              //   ),
-                              // ),
-                            ),
-                          ),
-                          if (activeWidgets.isEmpty)
-                            Container(
-                              padding: const EdgeInsets.all(32),
-                              child: Column(
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Icon(
-                                    Icons.widgets_outlined,
-                                    size: 64.sp,
-                                    color: const Color(0xFF858585),
-                                  ),
-                                  const SizedBox(height: 16),
+                                  BackButton(onPressed: () {
+                                    if (bloc.isEdit) {
+                                      _showSaveDialog(bloc);
+                                    } else {
+                                      bloc.isEdit = false;
+                                      if (mounted) {
+                                        Navigator.of(context).pop();
+                                      }
+                                    }
+                                  }),
                                   Text(
-                                    'No widgets added yet',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 16.sp,
-                                      fontWeight: FontWeight.w500,
-                                      color: const Color(0xFF858585),
+                                    'Edit Widgets',
+                                    style: GoogleFonts.koulen(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w400,
+                                      color: appFontColor,
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Tap the add button above to add your first widget',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 14.sp,
-                                      color: const Color(0xFF858585),
+                                  GestureDetector(
+                                    onTap: () => _showSaveDialog(bloc),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Image.asset(
+                                          'assets/png/save.gif',
+                                          width: 45.sp,
+                                          height: 45.sp,
+                                          fit: BoxFit.cover,
+                                        ),
+                                        const SizedBox(width: 2),
+                                        Text(
+                                          'Save',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 15.sp,
+                                            fontWeight: FontWeight.w600,
+                                            color: black,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    textAlign: TextAlign.center,
-                                  ),
+                                  )
                                 ],
                               ),
-                            )
-                          else
-                            ReorderableListView.builder(
-                              shrinkWrap: true,
-                              padding: EdgeInsets.only(bottom: 100.w),
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: activeWidgets.length,
-                              onReorder: _reorderWidgets,
-                              itemBuilder: (context, index) {
-                                final widgetItem = activeWidgets[index];
-                                return TiltingCard(
-                                  key: ValueKey(index),
-                                  child: _buildWidgetCard(widgetItem, bloc),
-                                );
-                              },
-                            ),
-                        ],
-                      )),
+                              const SizedBox(height: 10),
+                              GestureDetector(
+                                onTap: _showAddWidgetDialog,
+                                child: Container(
+                                  width: double.infinity,
+                                  height: SizeConfig().getHeight(175),
+                                  margin: const EdgeInsets.only(bottom: 16),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(20),
+                                    image: const DecorationImage(
+                                      image: AssetImage(
+                                          'assets/png/add_widgets.png'),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                  // child: Center(
+                                  //   child: Column(
+                                  //     mainAxisAlignment: MainAxisAlignment.center,
+                                  //     children: [
+                                  //       Container(
+                                  //         width: 50,
+                                  //         height: 50,
+                                  //         decoration: BoxDecoration(
+                                  //           color: white.withAlpha((0.9 * 255).toInt()),
+                                  //           borderRadius: BorderRadius.circular(25),
+                                  //         ),
+                                  //         child: Icon(
+                                  //           Icons.add,
+                                  //           color: const Color(0xFF4CAF50),
+                                  //           size: 30.sp,
+                                  //         ),
+                                  //       ),
+                                  //       const SizedBox(height: 8),
+                                  //       Text(
+                                  //         'Add Widget',
+                                  //         style: GoogleFonts.inter(
+                                  //           fontSize: 16.sp,
+                                  //           fontWeight: FontWeight.w600,
+                                  //           color: white,
+                                  //         ),
+                                  //       ),
+                                  //     ],
+                                  //   ),
+                                  // ),
+                                ),
+                              ),
+                              if (activeWidgets.isEmpty)
+                                Container(
+                                  padding: const EdgeInsets.all(32),
+                                  child: Column(
+                                    children: [
+                                      Icon(
+                                        Icons.widgets_outlined,
+                                        size: 64.sp,
+                                        color: const Color(0xFF858585),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'No widgets added yet',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 16.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFF858585),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'Tap the add button above to add your first widget',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14.sp,
+                                          color: const Color(0xFF858585),
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else
+                                ReorderableListView.builder(
+                                  shrinkWrap: true,
+                                  padding: EdgeInsets.only(bottom: 100.w),
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: activeWidgets.length,
+                                  onReorder: _reorderWidgets,
+                                  itemBuilder: (context, index) {
+                                    final widgetItem = activeWidgets[index];
+                                    return TiltingCard(
+                                      key: ValueKey(index),
+                                      child: _buildWidgetCard(widgetItem, bloc),
+                                    );
+                                  },
+                                ),
+                            ],
+                          ));
+                    },
+                  ),
                   // const ArraowVisibalityBottomNav(),
                 ],
               ),

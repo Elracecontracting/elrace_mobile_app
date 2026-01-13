@@ -29,40 +29,68 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   void didChangeDependencies() {
+    // Splash screen duration: 6 seconds
     Future.delayed(const Duration(seconds: 6), () {
-      Util.fetchHomeScreenData(context);
-      if (SharedPref.isUserAuthenticated()) {
-        // Check if face registration is in progress or pending
-        final isRegistrationInProgress =
-            SharedPref().getPreferenceBoolean('isFaceRegistrationInProgress');
-        final isPendingFaceVerification =
-            SharedPref().getPreferenceBoolean('pendingFaceVerification');
-        final isFaceRegistered =
-            SharedPref().getPreferenceBoolean('isFaceRegistered');
+      if (!mounted) return;
 
-        // If registration was in progress, user must complete it
-        if (isRegistrationInProgress ||
-            (isPendingFaceVerification && !isFaceRegistered)) {
-          // In Test Mode, skip face registration
-          if (AppConfigService.instance.isTestMode) {
-            SharedPref()
-                .setPreferencesBoolean('pendingFaceVerification', false);
-            SharedPref()
-                .setPreferencesBoolean('isFaceRegistrationInProgress', false);
+      try {
+        Util.fetchHomeScreenData(context);
+        if (SharedPref.isUserAuthenticated()) {
+          // Check if face registration is in progress or pending
+          final isRegistrationInProgress =
+              SharedPref().getPreferenceBoolean('isFaceRegistrationInProgress');
+          final isPendingFaceVerification =
+              SharedPref().getPreferenceBoolean('pendingFaceVerification');
+          final isFaceRegistered =
+              SharedPref().getPreferenceBoolean('isFaceRegistered');
+
+          // If registration was in progress, user must complete it
+          if (isRegistrationInProgress ||
+              (isPendingFaceVerification && !isFaceRegistered)) {
+            // In Test Mode, skip face registration
+            if (AppConfigService.instance.isTestMode) {
+              SharedPref()
+                  .setPreferencesBoolean('pendingFaceVerification', false);
+              SharedPref()
+                  .setPreferencesBoolean('isFaceRegistrationInProgress', false);
+              Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
+              return;
+            }
+
+            // User needs to register face - go to home, it will be triggered from there
             Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
-            return;
+          } else {
+            // User already registered or no pending verification
+            Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
           }
-
-          // User needs to register face - go to home, it will be triggered from there
-          Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
         } else {
-          // User already registered or no pending verification
-          Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
+          Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
         }
-      } else {
-        Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
+      } catch (e) {
+        print('❌ Error navigating from splash: $e');
+        // Fallback to login screen on error
+        if (mounted) {
+          Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
+        }
       }
     });
+
+    // Safety timeout - force navigation after 10 seconds if nothing happened
+    Future.delayed(const Duration(seconds: 10), () {
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        print('⚠️ Splash timeout reached - forcing navigation');
+        try {
+          if (SharedPref.isUserAuthenticated()) {
+            Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
+          } else {
+            Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
+          }
+        } catch (e) {
+          print('❌ Error in safety timeout: $e');
+        }
+      }
+    });
+
     super.didChangeDependencies();
   }
 

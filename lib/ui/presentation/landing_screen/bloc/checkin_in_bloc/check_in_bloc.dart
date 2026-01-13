@@ -6,6 +6,7 @@ import 'package:el_race/ui/presentation/landing_screen/repository/check_in_repo.
 import 'package:equatable/equatable.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../repository/location_reop.dart';
+import 'package:el_race/core/biometric/face_recognition/data/services/face_embedding_storage_service.dart';
 part 'check_in_event.dart';
 part 'check_in_state.dart';
 
@@ -13,8 +14,48 @@ LocationRepo _locationRepo = LocationRepo();
 CheckInREpo _checkInRepo = CheckInREpo();
 
 class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
+  final FaceEmbeddingStorageService _storageService =
+      FaceEmbeddingStorageService();
+
   CheckInBloc() : super(CheckInInitial()) {
     on<CheckInET>(checkInMethod);
+    on<VerifyFaceForCheckInET>(verifyFaceForCheckIn);
+  }
+
+  /// Verify face before allowing check-in
+  /// This checks if embeddings exist and triggers Face Verification screen through widget
+  Future<void> verifyFaceForCheckIn(
+      VerifyFaceForCheckInET event, Emitter<CheckInState> emit) async {
+    try {
+      emit(const CheckInLoadingST(isLoading: true));
+
+      // Get user ID
+      final loginData = SharedPref.getLoginData();
+      final userId = loginData.result?.data?.emp_id ??
+          loginData.result?.data?.uid?.toString() ??
+          'unknown';
+
+      print('\n🔐 ===== FACE VERIFICATION CHECK FOR CHECK-IN =====');
+      print('👤 User ID: $userId');
+
+      // Check if user has enrolled face
+      final hasEmbeddings = await _storageService.hasEmbeddings(userId);
+
+      if (!hasEmbeddings) {
+        print('❌ No face embeddings found - user needs enrollment');
+        emit(const FaceNotEnrolledST());
+        return;
+      }
+
+      print(
+          '✅ Face embeddings found - user can proceed to verification screen');
+      emit(const FaceVerificationSuccessST());
+    } catch (e) {
+      print('❌ Error checking face embeddings: $e');
+      emit(FaceVerificationFailedST('خطأ في التحقق من الوجه: $e'));
+    } finally {
+      emit(const CheckInLoadingST(isLoading: false));
+    }
   }
 
   Future<void> checkInMethod(

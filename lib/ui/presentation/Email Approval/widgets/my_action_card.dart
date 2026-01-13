@@ -1,4 +1,5 @@
 import 'package:el_race/utils/color_utils.dart';
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
@@ -29,12 +30,8 @@ class MyActionCard extends StatelessWidget {
           final expandedItems = state.expandedItems;
 
           // Calculate safe bottom padding for devices with navigation bars
-          final bottomPadding = MediaQuery.of(context).padding.bottom;
-          final viewPadding = MediaQuery.of(context).viewPadding.bottom;
-          final safePadding =
-              bottomPadding > viewPadding ? bottomPadding : viewPadding;
           final totalBottomPadding =
-              safePadding > 0 ? safePadding + 20.h : 150.h;
+              kBottomNavigationBarHeight + context.systemBottomInset + 16;
 
           return ListView.separated(
             physics: const BouncingScrollPhysics(),
@@ -46,8 +43,9 @@ class MyActionCard extends StatelessWidget {
               final item = approvalItems[index];
               final bool isExpanded = expandedItems.contains(index);
 
-              String reqNo = item["request_no"] ?? item["req_no"] ?? "N/A";
-              String title = item["name"] ?? item["title"] ?? "N/A";
+              String reqNo =
+                  item["name"] ?? item["request_no"] ?? item["req_no"] ?? "N/A";
+              String title = item["title"] ?? item["type"] ?? "N/A";
               String dateStr = (item["date"] ?? item["request_date"] ?? "")
                   .toString()
                   .replaceAll('false', '')
@@ -154,27 +152,6 @@ class MyActionCard extends StatelessWidget {
                               ),
                               Expanded(
                                 flex: 2,
-                                child: Text(
-                                  title,
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.bold,
-                                    color: appFontColor,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 2,
-                                ),
-                              ),
-                              const SizedBox(
-                                height: 30,
-                                child: VerticalDivider(
-                                  color: Colors.grey,
-                                  thickness: 2,
-                                ),
-                              ),
-                              Expanded(
-                                flex: 1,
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
@@ -197,6 +174,27 @@ class MyActionCard extends StatelessWidget {
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                   ],
+                                ),
+                              ),
+                              const SizedBox(
+                                height: 30,
+                                child: VerticalDivider(
+                                  color: Colors.grey,
+                                  thickness: 2,
+                                ),
+                              ),
+                              Expanded(
+                                flex: 1,
+                                child: Text(
+                                  title,
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.bold,
+                                    color: appFontColor,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 2,
                                 ),
                               ),
                             ],

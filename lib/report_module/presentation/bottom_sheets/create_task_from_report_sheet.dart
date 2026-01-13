@@ -133,7 +133,7 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
         msg: 'Please enter a task title',
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.red,
+        backgroundColor: CustomColors.maroon,
         textColor: Colors.white,
         fontSize: 16.0,
       );
@@ -197,7 +197,7 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
         msg: error,
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.red,
+        backgroundColor: CustomColors.maroon,
         textColor: Colors.white,
         fontSize: 16.0,
       );

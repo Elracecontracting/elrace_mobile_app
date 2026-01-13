@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../../utils/safe_insets.dart';
+
 import '../../domain/entities/entities.dart';
 import '../bloc/document_scanner_bloc.dart';
 import '../bloc/document_scanner_event.dart';
@@ -465,7 +467,7 @@ class _DocumentPreviewScreenState extends State<DocumentPreviewScreen> {
         left: 16,
         right: 16,
         top: 16,
-        bottom: 16 + MediaQuery.of(context).padding.bottom,
+        bottom: 16 + context.systemBottomInset, // Use viewPadding not padding
       ),
       decoration: BoxDecoration(
         color: Colors.white,

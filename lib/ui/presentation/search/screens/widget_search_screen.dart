@@ -25,6 +25,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
@@ -503,7 +504,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
               return _buildCategoryCard(category);
             },
           ),
-          SizedBox(height: 100.h),
+          SizedBox(height: 100.h + context.systemBottomInset),
         ],
       ),
     );
@@ -775,13 +776,21 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
       );
     }
 
-    return ListView.separated(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      itemCount: _searchResults.length,
-      separatorBuilder: (_, __) => SizedBox(height: 12.h),
-      itemBuilder: (context, index) {
-        final item = _searchResults[index];
-        return _buildResultCard(item);
+    return Builder(
+      builder: (context) {
+        return ListView.separated(
+          padding: EdgeInsets.symmetric(horizontal: 16.w) +
+              EdgeInsets.only(
+                bottom:
+                    kBottomNavigationBarHeight + context.systemBottomInset + 16,
+              ),
+          itemCount: _searchResults.length,
+          separatorBuilder: (_, __) => SizedBox(height: 12.h),
+          itemBuilder: (context, index) {
+            final item = _searchResults[index];
+            return _buildResultCard(item);
+          },
+        );
       },
     );
   }

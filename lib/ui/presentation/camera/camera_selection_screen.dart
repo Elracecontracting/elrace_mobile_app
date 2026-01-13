@@ -12,6 +12,8 @@ import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../utils/safe_insets.dart';
+
 import '../document_scanner/data/services/document_export_service.dart';
 import '../document_scanner/data/services/image_processing_service.dart';
 import '../document_scanner/domain/entities/document_page.dart';
@@ -26,7 +28,8 @@ class CameraSelectionScreen extends StatefulWidget {
   State<CameraSelectionScreen> createState() => _CameraSelectionScreenState();
 }
 
-class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
+class _CameraSelectionScreenState extends State<CameraSelectionScreen>
+    with WidgetsBindingObserver {
   CameraController? _controller;
   late Future<void> _initializeControllerFuture;
   String _currentDate = '';
@@ -49,9 +52,35 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _enableImmersiveMode();
     _initializeCamera();
     _updateTime();
     _loadLogo();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // Re-enable immersive on resume (Samsung resets system bars)
+    if (state == AppLifecycleState.resumed) {
+      _enableImmersiveMode();
+    }
+  }
+
+  void _enableImmersiveMode() {
+    // Hide bottom navigation bar only, keep status bar for better UX
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: [SystemUiOverlay.top],
+    );
+  }
+
+  void _restoreSystemUI() {
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: SystemUiOverlay.values,
+    );
   }
 
   Future<void> _loadLogo() async {
@@ -78,7 +107,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
 
       _controller = CameraController(
         backCamera,
-        ResolutionPreset.max,
+        ResolutionPreset.medium,
         enableAudio: false,
       );
 
@@ -105,6 +134,8 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
 
   @override
   void dispose() {
+    _restoreSystemUI();
+    WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
     super.dispose();
   }
@@ -119,25 +150,37 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
     try {
       await _initializeControllerFuture;
       final file = await _controller!.takePicture();
-      final composedPath = await _composeWithOverlay(file.path);
 
-      // Save to gallery using Gal
-      await Gal.putImage(composedPath ?? file.path, album: 'RCC');
+      // Stop capturing immediately for instant response
+      if (mounted) {
+        setState(() {
+          _isCapturing = false;
+        });
+      }
 
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Photo saved to gallery ✓'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 1),
-        ),
-      );
+      // Process overlay in background (non-blocking)
+      _composeWithOverlay(file.path).then((composedPath) async {
+        await Gal.putImage(composedPath ?? file.path, album: 'RCC');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Photo saved ✓'),
+              backgroundColor: Colors.green,
+              duration: Duration(milliseconds: 600),
+            ),
+          );
+        }
+      }).catchError((e) {
+        debugPrint("Error saving: $e");
+      });
 
       // Don't go back - allow multiple photos
     } catch (e) {
       debugPrint("Camera error: $e");
       if (mounted) {
+        setState(() {
+          _isCapturing = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
@@ -146,19 +189,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
           ),
         );
       }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isCapturing = false;
-        });
-      }
     }
-  }
-
-  Future<ui.Image> _decodeImage(Uint8List bytes) {
-    final completer = Completer<ui.Image>();
-    ui.decodeImageFromList(bytes, (img) => completer.complete(img));
-    return completer.future;
   }
 
   Future<String?> _composeWithOverlay(String imagePath) async {
@@ -194,31 +225,55 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
         }
       }
 
-      // Draw date and time text
+      // Draw date and time text with shadow (smaller readable size)
       final int fontSize = (baseImage.width * 0.045).toInt();
+      final shadowOffset = 1;
 
-      // Time on the left
+      // Calculate proper date width
+      final dateTextWidth = _currentDate.length * (fontSize * 0.6).toInt();
+
+      // Draw shadow for time (left)
       img.drawString(
         baseImage,
         _currentTime,
-        font: img.arial48,
+        font: img.arial24,
+        x: padding + shadowOffset,
+        y: baseImage.height - padding - fontSize - 10 + shadowOffset,
+        color: img.ColorRgb8(50, 50, 50),
+      );
+
+      // Draw time on the left
+      img.drawString(
+        baseImage,
+        _currentTime,
+        font: img.arial24,
         x: padding,
-        y: baseImage.height - padding - fontSize * 2,
+        y: baseImage.height - padding - fontSize - 10,
         color: img.ColorRgb8(255, 255, 255),
       );
 
-      // Date on the right
+      // Draw shadow for date (right)
       img.drawString(
         baseImage,
         _currentDate,
-        font: img.arial48,
-        x: baseImage.width - padding - (_currentDate.length * fontSize ~/ 2),
-        y: baseImage.height - padding - fontSize * 2,
+        font: img.arial24,
+        x: baseImage.width - padding - dateTextWidth + shadowOffset,
+        y: baseImage.height - padding - fontSize - 10 + shadowOffset,
+        color: img.ColorRgb8(50, 50, 50),
+      );
+
+      // Draw date on the right
+      img.drawString(
+        baseImage,
+        _currentDate,
+        font: img.arial24,
+        x: baseImage.width - padding - dateTextWidth,
+        y: baseImage.height - padding - fontSize - 10,
         color: img.ColorRgb8(255, 255, 255),
       );
 
-      // Save the result with high quality
-      final outputBytes = img.encodeJpg(baseImage, quality: 100);
+      // Save the result with optimized quality
+      final outputBytes = img.encodeJpg(baseImage, quality: 95);
       await File(imagePath).writeAsBytes(outputBytes);
       return imagePath;
     } catch (e) {
@@ -237,20 +292,32 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
     try {
       await _initializeControllerFuture;
       final file = await _controller!.takePicture();
-      final withOverlay = await _composeWithOverlay(file.path) ?? file.path;
 
+      // Show overlay immediately
       setState(() {
-        _scanOriginalPath = withOverlay;
+        _scanOriginalPath = file.path;
         _scanFilteredPath = null;
         _filterCache.clear();
         _selectedFilter = ImageFilterType.magic;
         _showScanOverlay = true;
+        _isCapturing = false;
       });
 
-      await _applyScanFilter(ImageFilterType.magic);
+      // Process overlay and filter in background
+      _composeWithOverlay(file.path).then((withOverlay) {
+        if (mounted) {
+          setState(() {
+            _scanOriginalPath = withOverlay ?? file.path;
+          });
+        }
+        return _applyScanFilter(ImageFilterType.magic);
+      });
     } catch (e) {
       debugPrint('Scan capture error: $e');
       if (mounted) {
+        setState(() {
+          _isCapturing = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
@@ -258,12 +325,6 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
             duration: const Duration(seconds: 2),
           ),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isCapturing = false;
-        });
       }
     }
   }
@@ -408,7 +469,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
 
     if (_controller == null) {
       return const Scaffold(
-        backgroundColor: Colors.black,
+        backgroundColor: Colors.black12,
         body: Center(
           child: CircularProgressIndicator(color: Colors.white),
         ),
@@ -416,7 +477,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.black12,
       body: FutureBuilder(
         future: _initializeControllerFuture,
         builder: (context, snap) {
@@ -427,109 +488,200 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
 
           return Stack(children: [
             /// ================================
-            /// REAL CAMERA PREVIEW (FULL FIT)
+            /// TRANSPARENT/GRADIENT BACKGROUND
             /// ================================
-            Positioned.fill(
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: _controller!.value.previewSize!.height,
-                  height: _controller!.value.previewSize!.width,
+            Container(
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  center: Alignment.center,
+                  radius: 0.8,
+                  colors: [
+                    Colors.black.withOpacity(0.3),
+                    Colors.black.withOpacity(0.85),
+                  ],
+                ),
+              ),
+            ),
+
+            /// ================================
+            /// CAMERA PREVIEW (4:3 ASPECT RATIO)
+            /// ================================
+            Center(
+              child: AspectRatio(
+                aspectRatio: 3 / 4,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12.r),
                   child: CameraPreview(_controller!),
                 ),
               ),
             ),
 
             /// ================================
-            /// TOP GLASS BAR (PERFECT MATCH)
+            /// TOP GLASS BAR (LOGO + BACK)
             /// ================================
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              child: Container(
-                height: 175.h,
-                decoration: const BoxDecoration(
-                  color: Colors.transparent, // ← بدون سواد
-                ),
-                child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      /// BACK ARROW
-                      IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back,
-                          color: Colors.white,
-                          size: 28,
+              child: SafeArea(
+                child: Container(
+                  height: 100.h,
+                  decoration: const BoxDecoration(
+                    color: Colors.transparent,
+                  ),
+                  child: Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        /// BACK ARROW
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                          onPressed: () => Navigator.pop(context),
                         ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-
-                      /// RCC LOGO
-                      Image.asset(
-                        'assets/png/main logo 1.png',
-                        height: 42.h,
-                      ),
-
-                      const Spacer(),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
 
             /// ================================
-            /// BOTTOM GLASS CONTAINER (FULL FOOTER)
+            /// LOGO OVERLAY ON CAMERA (CENTERED TOP)
+            /// ================================
+            Center(
+              child: AspectRatio(
+                aspectRatio: 3 / 4,
+                child: Padding(
+                  padding: EdgeInsets.only(top: 30.h, left: 20.w),
+                  child: Align(
+                    alignment: Alignment.topLeft,
+                    child: Image.asset(
+                      'assets/logo/rcc2.png',
+                      height: 35.h,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            /// ================================
+            /// DATE + TIME OVERLAY ON CAMERA (BOTTOM)
+            /// ================================
+            Positioned(
+              bottom: H * 0.15 + 40.h,
+              left: 20.w,
+              right: 20.w,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    _currentTime,
+                    style: GoogleFonts.inter(
+                      fontSize: 14.sp,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.5),
+                          offset: const Offset(-1, -1),
+                          blurRadius: 2,
+                        ),
+                        Shadow(
+                          color: Colors.black.withOpacity(0.5),
+                          offset: const Offset(1, -1),
+                          blurRadius: 2,
+                        ),
+                        Shadow(
+                          color: Colors.black.withOpacity(0.5),
+                          offset: const Offset(1, 1),
+                          blurRadius: 2,
+                        ),
+                        Shadow(
+                          color: Colors.black.withOpacity(0.5),
+                          offset: const Offset(-1, 1),
+                          blurRadius: 2,
+                        ),
+                        Shadow(
+                          color: Colors.black.withOpacity(0.3),
+                          offset: const Offset(0, 0),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    _currentDate,
+                    style: GoogleFonts.inter(
+                      fontSize: 14.sp,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.5),
+                          offset: const Offset(-1, -1),
+                          blurRadius: 2,
+                        ),
+                        Shadow(
+                          color: Colors.black.withOpacity(0.5),
+                          offset: const Offset(1, -1),
+                          blurRadius: 2,
+                        ),
+                        Shadow(
+                          color: Colors.black.withOpacity(0.5),
+                          offset: const Offset(1, 1),
+                          blurRadius: 2,
+                        ),
+                        Shadow(
+                          color: Colors.black.withOpacity(0.5),
+                          offset: const Offset(-1, 1),
+                          blurRadius: 2,
+                        ),
+                        Shadow(
+                          color: Colors.black.withOpacity(0.3),
+                          offset: const Offset(0, 0),
+                          blurRadius: 4,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            /// ================================
+            /// BOTTOM CONTROLS CONTAINER
             /// ================================
             Positioned(
               left: 0,
               right: 0,
               bottom: 0,
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(0),
+              child: BottomDock(
+                extra: 0,
+                liftWithKeyboard:
+                    false, // Camera doesn't need keyboard handling
                 child: Container(
                   width: double.infinity,
-                  height: H * 0.20, // ارتفاع مناسب مع هامش أمان
+                  height: H * 0.15,
                   padding:
-                      EdgeInsets.symmetric(horizontal: 30.w, vertical: 8.h),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5), // نفس الهيدر
+                      EdgeInsets.symmetric(horizontal: 30.w, vertical: 4.h),
+                  decoration: const BoxDecoration(
+                    color: Colors.black12,
                   ),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      /// ——— DATE + TIME ———
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            _currentTime,
-                            style: GoogleFonts.inter(
-                              fontSize: 14.sp,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          Text(
-                            _currentDate,
-                            style: GoogleFonts.inter(
-                              fontSize: 14.sp,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-
                       /// ——— SHOOT BUTTON ———
                       GestureDetector(
                         onTap: _isCapturing ? null : _takePicture,
                         child: Container(
-                          width: 55.w,
-                          height: 55.w,
+                          width: 50.w,
+                          height: 50.w,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: _isCapturing
@@ -537,21 +689,21 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
                                 : Colors.white,
                             border: Border.all(
                               color: Colors.white.withOpacity(0.3),
-                              width: 60.w,
+                              width: 55.w,
                             ),
                           ),
                           child: _isCapturing
                               ? Padding(
-                                  padding: EdgeInsets.all(12.w),
+                                  padding: EdgeInsets.all(10.w),
                                   child: const CircularProgressIndicator(
-                                    color: Colors.black,
+                                    color: Colors.black12,
                                     strokeWidth: 2,
                                   ),
                                 )
                               : null,
                         ),
                       ),
-                      SizedBox(height: 10.h),
+                      SizedBox(height: 6.h),
 
                       /// ——— SCAN / PHOTO BUTTONS ———
                       Row(
@@ -705,11 +857,6 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
   Widget _filterCard(ImageFilterType type) {
     final bool selected = _selectedFilter == type;
     final Map<ImageFilterType, (String, Color, IconData)> meta = {
-      ImageFilterType.magic: (
-        'Magic',
-        Colors.tealAccent.withOpacity(0.18),
-        Icons.auto_awesome
-      ),
       ImageFilterType.enhanced: (
         'Enhanced',
         Colors.blueAccent.withOpacity(0.18),
@@ -781,24 +928,24 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
     return GestureDetector(
       onTap: onTap,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(30.r),
+        borderRadius: BorderRadius.circular(25.r),
         child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 36.w, vertical: 12.h),
+            padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.30), // ← سواد زجاجي
-              borderRadius: BorderRadius.circular(30.r),
+              color: Colors.black.withOpacity(0.30),
+              borderRadius: BorderRadius.circular(25.r),
               border: Border.all(
-                color: Colors.white.withOpacity(0.20), // ← حواف ناعمة
+                color: Colors.white.withOpacity(0.20),
                 width: 1.2,
               ),
             ),
             child: Text(
               text,
               style: GoogleFonts.koulen(
-                fontSize: 17.sp,
-                letterSpacing: 1.4,
+                fontSize: 15.sp,
+                letterSpacing: 1.2,
                 color: Colors.white,
               ),
             ),
@@ -807,4 +954,66 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen> {
       ),
     );
   }
+}
+
+/// CustomPainter for shadow overlay showing safe zones
+class CameraShadowOverlayPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Calculate exact overlay areas that match the photo composition
+    final padding = size.width * 0.04;
+
+    // Top overlay: Logo area (logo is 28% of width with proportional height)
+    final logoWidth = size.width * 0.28;
+    final logoHeight = logoWidth * 0.4; // Approximate logo aspect ratio
+    final topOverlayHeight = padding * 2 + logoHeight + padding * 2;
+
+    // Bottom overlay: Date/Time text area
+    final fontSize = size.width * 0.045;
+    final bottomTextHeight = fontSize + 10 + padding;
+    final bottomOverlayHeight = bottomTextHeight + padding * 2;
+
+    // Draw top gradient overlay (covers logo area)
+    final topGradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        Colors.black.withOpacity(0.75),
+        Colors.black.withOpacity(0.55),
+        Colors.black.withOpacity(0.25),
+        Colors.transparent,
+      ],
+      stops: const [0.0, 0.5, 0.85, 1.0],
+    );
+
+    final topRect = Rect.fromLTWH(0, 0, size.width, topOverlayHeight);
+    final topPaint = Paint()..shader = topGradient.createShader(topRect);
+    canvas.drawRect(topRect, topPaint);
+
+    // Draw bottom gradient overlay (covers date/time area)
+    final bottomGradient = LinearGradient(
+      begin: Alignment.bottomCenter,
+      end: Alignment.topCenter,
+      colors: [
+        Colors.black.withOpacity(0.75),
+        Colors.black.withOpacity(0.55),
+        Colors.black.withOpacity(0.25),
+        Colors.transparent,
+      ],
+      stops: const [0.0, 0.5, 0.85, 1.0],
+    );
+
+    final bottomRect = Rect.fromLTWH(
+      0,
+      size.height - bottomOverlayHeight,
+      size.width,
+      bottomOverlayHeight,
+    );
+    final bottomPaint = Paint()
+      ..shader = bottomGradient.createShader(bottomRect);
+    canvas.drawRect(bottomRect, bottomPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -1,5 +1,6 @@
 import 'package:el_race/ui/presentation/News%20Banner/news_detail_screen.dart';
 import 'package:el_race/utils/color_utils.dart'; // Import global colors
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
@@ -121,9 +122,14 @@ We extend our gratitude to our skilled team, trusted partners, and the community
                 var item = sliderList[index];
                 // Add extra bottom padding to the last item
                 final isLastItem = index == sliderList.length - 1;
+                final bottomMargin = isLastItem
+                    ? (kBottomNavigationBarHeight +
+                        context.systemBottomInset +
+                        16)
+                    : 3.h;
                 return Container(
                   margin: EdgeInsets.only(
-                    bottom: isLastItem ? 100.h : 3.h,
+                    bottom: bottomMargin,
                   ),
                   decoration: const BoxDecoration(
                     color: Colors.white,

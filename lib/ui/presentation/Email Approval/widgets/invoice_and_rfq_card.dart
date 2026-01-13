@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:el_race/core/services/approval_viewed_service.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_card_type_two.dart';
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -23,11 +24,8 @@ class InvoiceAndRfqCard extends StatelessWidget {
     }
 
     // Calculate safe bottom padding for devices with navigation bars
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final viewPadding = MediaQuery.of(context).viewPadding.bottom;
-    final safePadding =
-        bottomPadding > viewPadding ? bottomPadding : viewPadding;
-    final totalBottomPadding = safePadding > 0 ? safePadding + 20.h : 150.h;
+    final totalBottomPadding =
+        kBottomNavigationBarHeight + context.systemBottomInset + 16;
 
     return Expanded(
       child: ListView.separated(
@@ -40,20 +38,49 @@ class InvoiceAndRfqCard extends StatelessWidget {
           final item = approvalItems[index];
           String type = item["type"] ?? "";
           String id = item["id"]?.toString() ?? "";
-          String vendor = item["vendor"] ?? item["client"] ?? "N/A";
-          String refNo =
-              item["ref_no"] ?? item["title"] ?? item["request_no"] ?? "N/A";
-          String materialType = item["material_type"] ?? "";
-          String project = (item["project"] ?? item["work_order"] ?? "")
-              .toString()
-              .replaceAll('false', '')
-              .replaceAll('true', '');
-          String work = item["work"] ?? "";
-          String amount = item["amount_total"]?.toString() ?? "0";
-          String date = (item["date"] ?? item["request_date"] ?? "")
-              .toString()
-              .replaceAll('false', '')
-              .replaceAll('true', '');
+
+          // Helper function to safely get string value
+          String _getSafeString(dynamic value, {String fallback = "N/A"}) {
+            if (value == null || value == false || value == true)
+              return fallback;
+            String str = value.toString();
+            if (str.isEmpty ||
+                str.toLowerCase() == 'false' ||
+                str.toLowerCase() == 'true' ||
+                str.toLowerCase() == 'null') {
+              return fallback;
+            }
+            return str;
+          }
+
+          // For Invoice: client_name, For RFQ: client or vendor
+          String vendor = _getSafeString(
+              item["client_name"] ?? item["client"] ?? item["vendor"]);
+
+          // For Invoice: name might be ID, For RFQ: name has ref number
+          String refNo = _getSafeString(item["name"] ??
+              item["ref_no"] ??
+              item["title"] ??
+              item["request_no"]);
+
+          String materialType =
+              _getSafeString(item["material_type"], fallback: "");
+
+          // For Invoice: project_title, For RFQ: project
+          String project = _getSafeString(
+              item["project_title"] ?? item["project"] ?? item["work_order"],
+              fallback: "");
+
+          String work =
+              _getSafeString(item["work"] ?? item["agreement"], fallback: "");
+
+          // Check multiple amount fields
+          String amount = _getSafeString(
+              item["amount_total"] ?? item["amount"] ?? item["total"],
+              fallback: "0");
+
+          String date = _getSafeString(
+              item["date"] ?? item["request_date"] ?? item["date_order"]);
 
           return GestureDetector(
             onTap: () async {
@@ -156,8 +183,8 @@ class InvoiceAndRfqCard extends StatelessWidget {
                             width: 150.w,
                             child: Row(
                               children: [
-                                SizedBox(
-                                  width: 100.w,
+                                Flexible(
+                                  flex: 3,
                                   child: Text(
                                     project.isNotEmpty ? '$project ' : '',
                                     style: GoogleFonts.nunito(
@@ -168,15 +195,19 @@ class InvoiceAndRfqCard extends StatelessWidget {
                                     maxLines: 2,
                                   ),
                                 ),
-                                Text(
-                                  work.isNotEmpty ? '($work)' : '',
-                                  style: GoogleFonts.nunito(
-                                    fontWeight: FontWeight.normal,
-                                    fontSize: 10.sp,
+                                if (work.isNotEmpty)
+                                  Flexible(
+                                    flex: 2,
+                                    child: Text(
+                                      '($work)',
+                                      style: GoogleFonts.nunito(
+                                        fontWeight: FontWeight.normal,
+                                        fontSize: 10.sp,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: 2,
+                                    ),
                                   ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 2,
-                                ),
                               ],
                             ),
                           ),

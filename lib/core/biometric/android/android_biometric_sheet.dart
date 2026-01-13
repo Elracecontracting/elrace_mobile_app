@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import '../../../utils/safe_insets.dart';
 import 'package:get/get.dart';
 import 'package:el_race/core/biometric/android/android_biometric_controller.dart';
 
@@ -153,15 +155,18 @@ class _AndroidBiometricSheetState extends State<AndroidBiometricSheet>
           builder: (context, child) {
             return Align(
               alignment: Alignment.bottomCenter,
-              child: Transform.translate(
-                offset: Offset(
-                    0,
-                    MediaQuery.of(context).size.height *
-                        0.3 *
-                        _slideAnimation.value),
-                child: Opacity(
-                  opacity: _fadeAnimation.value,
-                  child: child,
+              child: SafeArea(
+                top: false,
+                child: Transform.translate(
+                  offset: Offset(
+                      0,
+                      MediaQuery.of(context).size.height *
+                          0.3 *
+                          _slideAnimation.value),
+                  child: Opacity(
+                    opacity: _fadeAnimation.value,
+                    child: child,
+                  ),
                 ),
               ),
             );

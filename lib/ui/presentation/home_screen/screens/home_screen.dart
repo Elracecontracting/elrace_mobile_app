@@ -192,7 +192,8 @@ class _HomeScreenState extends State<HomeScreenPage>
     return const Scaffold(
       appBar: HeaderWidget(),
       backgroundColor: lightGrey,
-      extendBody: true,
+      extendBody:
+          false, // Changed to false since bottomNavigationBar is commented out
       // bottomNavigationBar: CustomBottomNavbar(
       //   currentIndex: _selectedIndex,
       //   onItemTapped: _onItemTapped,

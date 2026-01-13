@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:intl/intl.dart';
 
 import '../../widgets/header_widget.dart';
@@ -154,324 +155,344 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 children: [
                   const SizedBox(height: 10),
                   Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        children: [
-                          SizedBox(
-                            height: 55.w,
-                            child: ListView.separated(
-                              padding:
-                                  const EdgeInsets.only(left: 10, right: 10),
-                              controller: _scrollController,
-                              itemCount: notificationType.length,
-                              physics: const BouncingScrollPhysics(),
-                              scrollDirection: Axis.horizontal,
-                              itemBuilder: (context, index) {
-                                String notificationIcon =
-                                    notificationType[index]['icon'];
-                                String notificationTitle =
-                                    notificationType[index]['title'];
-                                return InkWell(
-                                  key: _tabKeys[index],
-                                  onTap: () {
-                                    setState(() => currentIndex = index);
-                                    // Scroll to center the selected tab
-                                    _scrollToTab(index);
-                                  },
-                                  child: Container(
-                                    alignment: Alignment.center,
-                                    margin: const EdgeInsets.only(top: 6),
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 10),
-                                    decoration: BoxDecoration(
-                                      //  color: index==currentIndex ? appFontColor : Colors.grey[300],
-                                      borderRadius: BorderRadius.circular(10),
-                                      gradient: index == currentIndex
-                                          ? const LinearGradient(
-                                              colors: [
-                                                Color.fromARGB(255, 27, 27, 27),
-                                                appFontColor,
-                                              ],
-                                              stops: [
-                                                0.01,
-                                                0.9,
-                                              ],
-                                              begin: Alignment.centerLeft,
-                                              end: Alignment.centerRight,
-                                            )
-                                          : const LinearGradient(
-                                              colors: [
-                                                Color(0xffD6D6D6),
-                                                Color(0xffADB2BD),
-                                              ],
-                                              begin: Alignment.topCenter,
-                                              end: Alignment.bottomCenter,
-                                            ),
-                                    ),
-
-                                    // child: Stack(
-                                    //   children: [
-                                    //     Column(
-                                    //       crossAxisAlignment: CrossAxisAlignment.start,
-                                    //       children: [
-                                    //         // Row(
-                                    //         //   mainAxisAlignment:
-                                    //         //       MainAxisAlignment.spaceBetween,
-                                    //         //   children: [
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Image.asset(
-                                          notificationIcon,
-                                          height: 25.w,
-                                        ),
-                                        const SizedBox(
-                                          width: 5,
-                                        ),
-                                        Text(
-                                          notificationTitle.toUpperCase(),
-                                          style: GoogleFonts.koulen(
-                                            color: index == currentIndex
-                                                ? Colors.white
-                                                : const Color(0xFF1A237E),
-                                            fontSize: 20.sp,
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    // Container(
-                                    //   padding: const EdgeInsets.symmetric(
-                                    //       horizontal: 8, vertical: 4),
-                                    //   decoration: BoxDecoration(
-                                    //     color: Colors.white,
-                                    //     borderRadius:
-                                    //         BorderRadius.circular(10),
-                                    //   ),
-                                    //   child: const Icon(
-                                    //     Icons.arrow_forward,
-                                    //     size: 16,
-                                    //     color: Color(0xFF2D2F81),
-                                    //   ),
-                                    // ),
-                                    //   ],
-                                    // ),
-                                    // const SizedBox(height: 6),
-                                    // Text(
-                                    //   translate(
-                                    //       'notification_screen.stay_updated'),
-                                    //   style: const TextStyle(
-                                    //     color: Colors.black87,
-                                    //     fontSize: 11,
-                                    //     fontWeight: FontWeight.bold,
-                                    //     height: 1.4,
-                                    //   ),
-                                    // ),
-                                    //       ],
-                                    //     ),
-                                    //   ],
-                                    // ),
-                                  ),
-                                );
-                              },
-                              separatorBuilder:
-                                  (BuildContext context, int index) =>
-                                      const SizedBox(
-                                width: 10,
-                              ),
-                            ),
+                    child: Builder(
+                      builder: (context) {
+                        return SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          padding: EdgeInsets.only(
+                            bottom: kBottomNavigationBarHeight +
+                                context.systemBottomInset +
+                                16,
                           ),
-                          // Row(
-                          //   mainAxisAlignment: MainAxisAlignment.center,
-                          //   children: List.generate(3, (dotIndex) {
-                          //     return Container(
-                          //       margin: const EdgeInsets.symmetric(horizontal: 4),
-                          //       width: 8,
-                          //       height: 8,
-                          //       decoration: BoxDecoration(
-                          //         shape: BoxShape.circle,
-                          //         color: dotIndex == currentIndex ? Colors.black : Colors.grey[400],
-                          //       ),
-                          //     );
-                          //   }),
-                          // ),
+                          child: Column(
+                            children: [
+                              SizedBox(
+                                height: 55.w,
+                                child: ListView.separated(
+                                  padding: const EdgeInsets.only(
+                                      left: 10, right: 10),
+                                  controller: _scrollController,
+                                  itemCount: notificationType.length,
+                                  physics: const BouncingScrollPhysics(),
+                                  scrollDirection: Axis.horizontal,
+                                  itemBuilder: (context, index) {
+                                    String notificationIcon =
+                                        notificationType[index]['icon'];
+                                    String notificationTitle =
+                                        notificationType[index]['title'];
+                                    return InkWell(
+                                      key: _tabKeys[index],
+                                      onTap: () {
+                                        setState(() => currentIndex = index);
+                                        // Scroll to center the selected tab
+                                        _scrollToTab(index);
+                                      },
+                                      child: Container(
+                                        alignment: Alignment.center,
+                                        margin: const EdgeInsets.only(top: 6),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10),
+                                        decoration: BoxDecoration(
+                                          //  color: index==currentIndex ? appFontColor : Colors.grey[300],
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          gradient: index == currentIndex
+                                              ? const LinearGradient(
+                                                  colors: [
+                                                    Color.fromARGB(
+                                                        255, 27, 27, 27),
+                                                    appFontColor,
+                                                  ],
+                                                  stops: [
+                                                    0.01,
+                                                    0.9,
+                                                  ],
+                                                  begin: Alignment.centerLeft,
+                                                  end: Alignment.centerRight,
+                                                )
+                                              : const LinearGradient(
+                                                  colors: [
+                                                    Color(0xffD6D6D6),
+                                                    Color(0xffADB2BD),
+                                                  ],
+                                                  begin: Alignment.topCenter,
+                                                  end: Alignment.bottomCenter,
+                                                ),
+                                        ),
 
-                          const SizedBox(height: 20),
-
-                          _isLoading
-                              ? const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(32.0),
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                )
-                              : _getFilteredNotifications().isEmpty
-                                  ? Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(32.0),
-                                        child: Column(
+                                        // child: Stack(
+                                        //   children: [
+                                        //     Column(
+                                        //       crossAxisAlignment: CrossAxisAlignment.start,
+                                        //       children: [
+                                        //         // Row(
+                                        //         //   mainAxisAlignment:
+                                        //         //       MainAxisAlignment.spaceBetween,
+                                        //         //   children: [
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.center,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
                                           children: [
-                                            Icon(
-                                              Icons.notifications_none,
-                                              size: 64,
-                                              color: Colors.grey[400],
+                                            Image.asset(
+                                              notificationIcon,
+                                              height: 25.w,
                                             ),
-                                            const SizedBox(height: 16),
+                                            const SizedBox(
+                                              width: 5,
+                                            ),
                                             Text(
-                                              'No notifications yet',
+                                              notificationTitle.toUpperCase(),
                                               style: GoogleFonts.koulen(
-                                                fontSize: 18.sp,
-                                                color: Colors.grey[600],
+                                                color: index == currentIndex
+                                                    ? Colors.white
+                                                    : const Color(0xFF1A237E),
+                                                fontSize: 20.sp,
+                                                fontWeight: FontWeight.w400,
                                               ),
                                             ),
                                           ],
                                         ),
+                                        // Container(
+                                        //   padding: const EdgeInsets.symmetric(
+                                        //       horizontal: 8, vertical: 4),
+                                        //   decoration: BoxDecoration(
+                                        //     color: Colors.white,
+                                        //     borderRadius:
+                                        //         BorderRadius.circular(10),
+                                        //   ),
+                                        //   child: const Icon(
+                                        //     Icons.arrow_forward,
+                                        //     size: 16,
+                                        //     color: Color(0xFF2D2F81),
+                                        //   ),
+                                        // ),
+                                        //   ],
+                                        // ),
+                                        // const SizedBox(height: 6),
+                                        // Text(
+                                        //   translate(
+                                        //       'notification_screen.stay_updated'),
+                                        //   style: const TextStyle(
+                                        //     color: Colors.black87,
+                                        //     fontSize: 11,
+                                        //     fontWeight: FontWeight.bold,
+                                        //     height: 1.4,
+                                        //   ),
+                                        // ),
+                                        //       ],
+                                        //     ),
+                                        //   ],
+                                        // ),
+                                      ),
+                                    );
+                                  },
+                                  separatorBuilder:
+                                      (BuildContext context, int index) =>
+                                          const SizedBox(
+                                    width: 10,
+                                  ),
+                                ),
+                              ),
+                              // Row(
+                              //   mainAxisAlignment: MainAxisAlignment.center,
+                              //   children: List.generate(3, (dotIndex) {
+                              //     return Container(
+                              //       margin: const EdgeInsets.symmetric(horizontal: 4),
+                              //       width: 8,
+                              //       height: 8,
+                              //       decoration: BoxDecoration(
+                              //         shape: BoxShape.circle,
+                              //         color: dotIndex == currentIndex ? Colors.black : Colors.grey[400],
+                              //       ),
+                              //     );
+                              //   }),
+                              // ),
+
+                              const SizedBox(height: 20),
+
+                              _isLoading
+                                  ? const Center(
+                                      child: Padding(
+                                        padding: EdgeInsets.all(32.0),
+                                        child: CircularProgressIndicator(),
                                       ),
                                     )
-                                  : ListView.builder(
-                                      shrinkWrap: true,
-                                      physics:
-                                          const NeverScrollableScrollPhysics(),
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 16),
-                                      itemCount:
-                                          _getFilteredNotifications().length,
-                                      itemBuilder: (context, index) {
-                                        final filteredNotifications =
-                                            _getFilteredNotifications();
-                                        final item =
-                                            filteredNotifications[index];
-                                        // Get the icon from the currently selected notification type
-                                        String currentNotificationIcon =
-                                            notificationType[currentIndex]
-                                                ['icon'];
-                                        return Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            GestureDetector(
-                                              onTap: () =>
-                                                  _showAnnouncementDialog(
-                                                context,
-                                                item['title'] ?? 'Notification',
-                                                item['body'] ?? '',
-                                              ),
-                                              child: Container(
-                                                margin: const EdgeInsets.only(
-                                                    bottom: 6),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
+                                  : _getFilteredNotifications().isEmpty
+                                      ? Center(
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(32.0),
+                                            child: Column(
+                                              children: [
+                                                Icon(
+                                                  Icons.notifications_none,
+                                                  size: 64,
+                                                  color: Colors.grey[400],
+                                                ),
+                                                const SizedBox(height: 16),
+                                                Text(
+                                                  'No notifications yet',
+                                                  style: GoogleFonts.koulen(
+                                                    fontSize: 18.sp,
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        )
+                                      : ListView.builder(
+                                          shrinkWrap: true,
+                                          physics:
+                                              const NeverScrollableScrollPhysics(),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 16),
+                                          itemCount: _getFilteredNotifications()
+                                              .length,
+                                          itemBuilder: (context, index) {
+                                            final filteredNotifications =
+                                                _getFilteredNotifications();
+                                            final item =
+                                                filteredNotifications[index];
+                                            // Get the icon from the currently selected notification type
+                                            String currentNotificationIcon =
+                                                notificationType[currentIndex]
+                                                    ['icon'];
+                                            return Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                GestureDetector(
+                                                  onTap: () =>
+                                                      _showAnnouncementDialog(
+                                                    context,
+                                                    item['title'] ??
+                                                        'Notification',
+                                                    item['body'] ?? '',
+                                                  ),
+                                                  child: Container(
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                            bottom: 6),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
                                                         horizontal: 12,
                                                         vertical: 5),
-                                                decoration: BoxDecoration(
-                                                  image: const DecorationImage(
-                                                    image: AssetImage(
-                                                        'assets/png/bg_petty.png'),
-                                                    fit: BoxFit.cover,
-                                                  ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(16),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: Colors.black
-                                                          .withAlpha(
-                                                              (0.08 * 255)
-                                                                  .toInt()),
-                                                      blurRadius: 4,
-                                                      offset:
-                                                          const Offset(0, 2),
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: IntrinsicHeight(
-                                                  child: Row(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment
-                                                            .center,
-                                                    children: [
-                                                      Image.asset(
-                                                        currentNotificationIcon,
-                                                        width: 25.w,
-                                                        height: 25.w,
+                                                    decoration: BoxDecoration(
+                                                      image:
+                                                          const DecorationImage(
+                                                        image: AssetImage(
+                                                            'assets/png/bg_petty.png'),
+                                                        fit: BoxFit.cover,
                                                       ),
-                                                      const SizedBox(width: 7),
-                                                      Expanded(
-                                                        child: Align(
-                                                          alignment: Alignment
-                                                              .centerLeft,
-                                                          child: Column(
-                                                            crossAxisAlignment:
-                                                                CrossAxisAlignment
-                                                                    .start,
-                                                            children: [
-                                                              if (item[
-                                                                      'title'] !=
-                                                                  null)
-                                                                Text(
-                                                                  item['title'],
-                                                                  style:
-                                                                      TextStyle(
-                                                                    fontSize:
-                                                                        16.sp,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .bold,
-                                                                    color:
-                                                                        appFontColor,
-                                                                  ),
-                                                                ),
-                                                              const SizedBox(
-                                                                  height: 2),
-                                                              Text(
-                                                                item['body'] ??
-                                                                    '',
-                                                                style:
-                                                                    TextStyle(
-                                                                  fontSize:
-                                                                      14.sp,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w400,
-                                                                  color: Colors
-                                                                      .black87,
-                                                                ),
-                                                                maxLines: 2,
-                                                                overflow:
-                                                                    TextOverflow
-                                                                        .ellipsis,
-                                                              ),
-                                                            ],
-                                                          ),
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              16),
+                                                      boxShadow: [
+                                                        BoxShadow(
+                                                          color: Colors.black
+                                                              .withAlpha(
+                                                                  (0.08 * 255)
+                                                                      .toInt()),
+                                                          blurRadius: 4,
+                                                          offset: const Offset(
+                                                              0, 2),
                                                         ),
+                                                      ],
+                                                    ),
+                                                    child: IntrinsicHeight(
+                                                      child: Row(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .center,
+                                                        children: [
+                                                          Image.asset(
+                                                            currentNotificationIcon,
+                                                            width: 25.w,
+                                                            height: 25.w,
+                                                          ),
+                                                          const SizedBox(
+                                                              width: 7),
+                                                          Expanded(
+                                                            child: Align(
+                                                              alignment: Alignment
+                                                                  .centerLeft,
+                                                              child: Column(
+                                                                crossAxisAlignment:
+                                                                    CrossAxisAlignment
+                                                                        .start,
+                                                                children: [
+                                                                  if (item[
+                                                                          'title'] !=
+                                                                      null)
+                                                                    Text(
+                                                                      item[
+                                                                          'title'],
+                                                                      style:
+                                                                          TextStyle(
+                                                                        fontSize:
+                                                                            16.sp,
+                                                                        fontWeight:
+                                                                            FontWeight.bold,
+                                                                        color:
+                                                                            appFontColor,
+                                                                      ),
+                                                                    ),
+                                                                  const SizedBox(
+                                                                      height:
+                                                                          2),
+                                                                  Text(
+                                                                    item['body'] ??
+                                                                        '',
+                                                                    style:
+                                                                        TextStyle(
+                                                                      fontSize:
+                                                                          14.sp,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w400,
+                                                                      color: Colors
+                                                                          .black87,
+                                                                    ),
+                                                                    maxLines: 2,
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ),
-                                                    ],
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
-                                            ),
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                  left: 6, bottom: 10),
-                                              child: Text(
-                                                _formatTime(
-                                                    item['timestamp'] ?? ''),
-                                                style: const TextStyle(
-                                                  fontSize: 9,
-                                                  color: Colors.black54,
-                                                  fontWeight: FontWeight.bold,
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          left: 6, bottom: 10),
+                                                  child: Text(
+                                                    _formatTime(
+                                                        item['timestamp'] ??
+                                                            ''),
+                                                    style: const TextStyle(
+                                                      fontSize: 9,
+                                                      color: Colors.black54,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
                                                 ),
-                                              ),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    ),
-                        ],
-                      ),
+                                              ],
+                                            );
+                                          },
+                                        ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   )
                 ],

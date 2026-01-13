@@ -53,15 +53,15 @@ class CustomBottomNavbarState extends State<CustomBottomNavbar> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
-
+    // SafeArea will automatically add viewPadding.bottom
+    // No need to add it manually to avoid double padding
     return SafeArea(
       top: false,
       child: Padding(
-        padding: EdgeInsets.only(
+        padding: const EdgeInsets.only(
           left: 16.0,
           right: 16.0,
-          bottom: 12.0 + bottomInset,
+          bottom: 12.0, // Extra padding only, SafeArea handles system bar
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(70.0),

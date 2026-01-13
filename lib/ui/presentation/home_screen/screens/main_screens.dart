@@ -204,12 +204,13 @@ class CustomBottomNavBar extends StatelessWidget {
   }
 
   Future<void> _openCamera(BuildContext context) async {
-    // Open the Camera Selection Screen
+    // Open the Camera Selection Screen in fullscreen
     if (context.mounted) {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => const CameraSelectionScreen(),
+          fullscreenDialog: true,
         ),
       );
     }

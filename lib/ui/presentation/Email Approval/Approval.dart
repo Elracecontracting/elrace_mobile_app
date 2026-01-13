@@ -9,6 +9,7 @@ import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import '../../widgets/header_widget.dart';
@@ -303,11 +304,18 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                 }
                 return false;
               },
-              child: Column(
-                children: [
-                  // Content body - this will scroll behind the tabs
-                  body(),
-                ],
+              child: Padding(
+                padding: EdgeInsets.only(
+                  bottom: kBottomNavigationBarHeight +
+                      context.systemBottomInset +
+                      16,
+                ),
+                child: Column(
+                  children: [
+                    // Content body - this will scroll behind the tabs
+                    body(),
+                  ],
+                ),
               ),
             ),
             // iOS-style translucent tabs bar - fixed position, content scrolls behind it

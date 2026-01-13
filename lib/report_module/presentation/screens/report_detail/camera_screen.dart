@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:el_race/report_module/data/repositories/company_repository.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -215,7 +216,7 @@ class _CustomCameraScreenState extends State<CustomCameraScreen> {
                           ),
                         ),
                         Positioned(
-                          bottom: MediaQuery.paddingOf(context).bottom + 5,
+                          bottom: context.systemBottomInset + 5,
                           right: 0,
                           left: 0,
                           child: Center(
