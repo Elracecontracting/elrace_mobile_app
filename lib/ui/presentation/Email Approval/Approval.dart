@@ -294,7 +294,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: const HeaderWidget(),
-        extendBody: true,
+        extendBody: false,
         bottomNavigationBar: const CustomBottomNavBar(
           isMain: false,
         ),

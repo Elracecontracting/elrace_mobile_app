@@ -143,7 +143,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       },
       child: Scaffold(
           appBar: const HeaderWidget(),
-          extendBody: true,
+          extendBody: false,
           bottomNavigationBar: const CustomBottomNavBar(
             isMain: false,
           ),

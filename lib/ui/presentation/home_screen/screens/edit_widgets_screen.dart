@@ -130,7 +130,7 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
       child: Scaffold(
         backgroundColor: lightGrey,
         appBar: const HeaderWidget(),
-        extendBody: true,
+        extendBody: false,
         bottomNavigationBar: const CustomBottomNavBar(
           isMain: false,
         ),

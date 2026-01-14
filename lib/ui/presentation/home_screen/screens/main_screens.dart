@@ -70,9 +70,8 @@ class _MainScreenState extends State<MainScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: Colors.transparent,
-        extendBody: true,
-        extendBodyBehindAppBar: true,
+        backgroundColor: Colors.white,
+        extendBody: false,
         bottomNavigationBar: const CustomBottomNavBar(),
         body: BlocBuilder<HomeBloc, HomeState>(
           builder: (context, state) => screens[bloc.currentIndex],

@@ -23,7 +23,7 @@ class ProjectAnnouncementPage extends StatelessWidget {
     return const Scaffold(
       backgroundColor: Colors.white,
       appBar: HeaderWidget(),
-      extendBody: true,
+      extendBody: false,
       bottomNavigationBar: CustomBottomNavBar(
         isMain: false,
       ),
@@ -86,7 +86,7 @@ We extend our gratitude to our skilled team, trusted partners, and the community
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
-      extendBody: true,
+      extendBody: false,
       bottomNavigationBar: const CustomBottomNavBar(
         isMain: false,
       ),

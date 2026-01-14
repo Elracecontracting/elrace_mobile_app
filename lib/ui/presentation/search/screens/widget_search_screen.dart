@@ -420,7 +420,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         appBar: const HeaderWidget(),
-        extendBody: true,
+        extendBody: false,
         bottomNavigationBar: const CustomBottomNavBar(isMain: false),
         body: SafeArea(
           child: Column(
