@@ -11,6 +11,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart' show BlocProvider;
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:http/http.dart' as http;
+import 'package:el_race/utils/api_logger.dart';
 
 class Util {
   static fetchHomeScreenData(cxt) {
@@ -100,6 +102,118 @@ class Util {
       DateTime.parse(value);
       return true;
     } catch (e) {
+      return false;
+    }
+  }
+
+  /// Fetches the PDF report URL for a given PO ID and opens it
+  /// Returns true if successful, false otherwise
+  static Future<bool> openLpoPdfReport(BuildContext context, int poId) async {
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Loading PDF...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      final token = SharedPref.getLoginData().result?.token ?? '';
+      final url = Uri.parse('https://erp.elrace.com/api/po/report_url');
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final body = jsonEncode({
+        'jsonrpc': '2.0',
+        'params': {
+          'po_id': poId,
+        },
+      });
+
+      // 📤 Log Request
+      ApiLogger.logRequest(
+        endpoint: url.toString(),
+        method: 'POST',
+        headers: headers,
+        body: body,
+      );
+
+      final startTime = DateTime.now();
+      final response = await http.post(url, headers: headers, body: body);
+      final duration = DateTime.now().difference(startTime);
+
+      if (response.statusCode != 200) {
+        ApiLogger.logResponse(
+          endpoint: url.toString(),
+          statusCode: response.statusCode,
+          responseBody: {'error': 'HTTP ${response.statusCode}'},
+          duration: duration,
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to load PDF: HTTP ${response.statusCode}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+
+      final data = jsonDecode(response.body);
+
+      // 📥 Log Response
+      ApiLogger.logResponse(
+        endpoint: url.toString(),
+        statusCode: response.statusCode,
+        responseBody: data,
+        duration: duration,
+      );
+
+      if (data['result']?['status'] == 'success' &&
+          data['result']?['report_url'] != null) {
+        final pdfUrl = data['result']['report_url'] as String;
+
+        // Open PDF URL in browser
+        final uri = Uri.parse(pdfUrl);
+        if (await canLaunchUrl(uri)) {
+          await launchUrl(uri, mode: LaunchMode.externalApplication);
+          return true;
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not open PDF'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          return false;
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              data['result']?['error'] ?? 'Failed to retrieve PDF URL',
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return false;
+      }
+    } catch (e, stackTrace) {
+      ApiLogger.logError(
+        endpoint: 'https://erp.elrace.com/api/po/report_url',
+        error: e,
+        stackTrace: stackTrace,
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
       return false;
     }
   }

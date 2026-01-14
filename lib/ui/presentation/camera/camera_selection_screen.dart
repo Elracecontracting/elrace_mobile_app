@@ -14,6 +14,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../utils/safe_insets.dart';
 
+import 'services/image_queue_service.dart';
 import '../document_scanner/data/services/document_export_service.dart';
 import '../document_scanner/data/services/image_processing_service.dart';
 import '../document_scanner/domain/entities/document_page.dart';
@@ -37,6 +38,14 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
   bool _isCapturing = false;
   Uint8List? _logoBytes;
 
+  // Image queue service for background processing
+  final ImageQueueService _imageQueueService = ImageQueueService();
+  StreamSubscription<int>? _queueCountSubscription;
+  StreamSubscription<ProcessingStatus>? _processingStatusSubscription;
+  int _pendingImagesCount = 0;
+  int _totalCapturedCount = 0;
+  String _processingStatusText = '';
+
   // Inline scan/filter state
   final ImageProcessingService _imageProcessingService =
       ImageProcessingService();
@@ -57,6 +66,24 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
     _initializeCamera();
     _updateTime();
     _loadLogo();
+
+    // Listen to queue updates
+    _queueCountSubscription = _imageQueueService.queueCount.listen((count) {
+      if (mounted) {
+        setState(() {
+          _pendingImagesCount = count;
+        });
+      }
+    });
+
+    _processingStatusSubscription =
+        _imageQueueService.processingStatus.listen((status) {
+      if (mounted) {
+        setState(() {
+          _processingStatusText = status.progressText;
+        });
+      }
+    });
   }
 
   @override
@@ -69,10 +96,10 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
   }
 
   void _enableImmersiveMode() {
-    // Hide bottom navigation bar only, keep status bar for better UX
+    // Show all system UI (status bar and navigation bar)
     SystemChrome.setEnabledSystemUIMode(
       SystemUiMode.manual,
-      overlays: [SystemUiOverlay.top],
+      overlays: SystemUiOverlay.values,
     );
   }
 
@@ -137,50 +164,47 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
     _restoreSystemUI();
     WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
+    _queueCountSubscription?.cancel();
+    _processingStatusSubscription?.cancel();
     super.dispose();
   }
 
   Future<void> _takePicture() async {
     if (_isCapturing || _controller == null) return;
 
-    setState(() {
-      _isCapturing = true;
-    });
+    _isCapturing = true; // Direct assignment, no setState for speed
 
     try {
-      await _initializeControllerFuture;
+      // Capture photo immediately
       final file = await _controller!.takePicture();
 
-      // Stop capturing immediately for instant response
+      // Capture current date/time at moment of capture
+      final captureDate = _currentDate;
+      final captureTime = _currentTime;
+
+      // Reset capturing flag immediately
+      _isCapturing = false;
+
+      // Increment total captured count
       if (mounted) {
         setState(() {
-          _isCapturing = false;
+          _totalCapturedCount++;
         });
       }
 
-      // Process overlay in background (non-blocking)
-      _composeWithOverlay(file.path).then((composedPath) async {
-        await Gal.putImage(composedPath ?? file.path, album: 'RCC');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Photo saved ✓'),
-              backgroundColor: Colors.green,
-              duration: Duration(milliseconds: 600),
-            ),
-          );
-        }
-      }).catchError((e) {
-        debugPrint("Error saving: $e");
-      });
+      // Add to queue (non-blocking, no await for instant response)
+      _imageQueueService.addImageToQueue(
+        imagePath: file.path,
+        currentDate: captureDate,
+        currentTime: captureTime,
+        logoBytes: _logoBytes,
+      );
 
       // Don't go back - allow multiple photos
     } catch (e) {
       debugPrint("Camera error: $e");
+      _isCapturing = false;
       if (mounted) {
-        setState(() {
-          _isCapturing = false;
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
@@ -552,7 +576,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
             ),
 
             /// ================================
-            /// LOGO OVERLAY ON CAMERA (CENTERED TOP)
+            /// LOGO OVERLAY ON CAMERA (LEFT TOP)
             /// ================================
             Center(
               child: AspectRatio(
@@ -569,6 +593,53 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                 ),
               ),
             ),
+
+            /// ================================
+            /// PHOTO COUNTER (RIGHT TOP)
+            /// ================================
+            if (_totalCapturedCount > 0)
+              Center(
+                child: AspectRatio(
+                  aspectRatio: 3 / 4,
+                  child: Padding(
+                    padding: EdgeInsets.only(top: 30.h, right: 20.w),
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 12.w, vertical: 6.h),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(20.r),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.photo_camera,
+                              color: Colors.white,
+                              size: 16.sp,
+                            ),
+                            SizedBox(width: 6.w),
+                            Text(
+                              '$_totalCapturedCount',
+                              style: GoogleFonts.inter(
+                                fontSize: 16.sp,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
             /// ================================
             /// DATE + TIME OVERLAY ON CAMERA (BOTTOM)
@@ -669,13 +740,54 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                   width: double.infinity,
                   height: H * 0.15,
                   padding:
-                      EdgeInsets.symmetric(horizontal: 30.w, vertical: 4.h),
+                      EdgeInsets.symmetric(horizontal: 30.w, vertical: 2.h),
                   decoration: const BoxDecoration(
                     color: Colors.black12,
                   ),
                   child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      /// ——— PROCESSING STATUS INDICATOR ———
+                      if (_processingStatusText.isNotEmpty ||
+                          _pendingImagesCount > 0)
+                        Container(
+                          margin: EdgeInsets.only(bottom: 4.h),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 10.w, vertical: 4.h),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.5),
+                            borderRadius: BorderRadius.circular(20.r),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (_imageQueueService.isProcessing)
+                                Padding(
+                                  padding: EdgeInsets.only(right: 6.w),
+                                  child: SizedBox(
+                                    width: 10.w,
+                                    height: 10.w,
+                                    child: const CircularProgressIndicator(
+                                      strokeWidth: 1.5,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              Text(
+                                _processingStatusText.isNotEmpty
+                                    ? _processingStatusText
+                                    : 'Saving $_pendingImagesCount photo${_pendingImagesCount > 1 ? 's' : ''}...',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10.sp,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+
                       /// ——— SHOOT BUTTON ———
                       GestureDetector(
                         onTap: _isCapturing ? null : _takePicture,
@@ -703,7 +815,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                               : null,
                         ),
                       ),
-                      SizedBox(height: 6.h),
+                      SizedBox(height: 4.h),
 
                       /// ——— SCAN / PHOTO BUTTONS ———
                       Row(

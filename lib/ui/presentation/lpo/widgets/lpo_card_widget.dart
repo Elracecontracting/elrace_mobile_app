@@ -104,6 +104,7 @@ class _MarqueeTextState extends State<MarqueeText>
 class LpoCardWidget extends StatelessWidget {
   const LpoCardWidget({
     super.key,
+    this.poId,
     this.name,
     this.vendorName,
     this.projectName,
@@ -116,8 +117,10 @@ class LpoCardWidget extends StatelessWidget {
     this.requestedBy,
     this.requesterManager,
     this.state,
+    this.onTap,
   });
 
+  final int? poId;
   final String? name;
   final String? vendorName;
   final String? projectName;
@@ -130,6 +133,7 @@ class LpoCardWidget extends StatelessWidget {
   final String? requestedBy;
   final String? requesterManager;
   final String? state;
+  final VoidCallback? onTap;
 
   static final _amountFormat = NumberFormat('#,##0.00', 'en');
 
@@ -161,189 +165,192 @@ class LpoCardWidget extends StatelessWidget {
     final hasRequesterPhoto =
         requestedByUserPhoto != null && requestedByUserPhoto!.isNotEmpty;
 
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
-      padding: const EdgeInsets.all(1),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(22.r),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF151544), Color(0xFF3535AA)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+        margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+        padding: const EdgeInsets.all(1),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(21.r),
+          borderRadius: BorderRadius.circular(22.r),
           gradient: const LinearGradient(
-            colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
+            colors: [Color(0xFF151544), Color(0xFF3535AA)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
         ),
-        child: Column(
-          children: [
-            // Top row: Vendor logo and title section
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // LEFT: Vendor Logo
-                Container(
-                  width: 62.w,
-                  height: 62.w,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                    border: Border.all(color: Colors.grey.shade300, width: 2),
-                  ),
-                  alignment: Alignment.center,
-                  child: clientPhoto != null && clientPhoto!.isNotEmpty
-                      ? ClipOval(
-                          child: Image.network(
-                            clientPhoto!,
-                            fit: BoxFit.contain,
-                            headers: {
-                              'Accept': 'image/*',
-                              'Authorization':
-                                  'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
-                            },
-                            errorBuilder: (_, __, ___) =>
-                                _buildInitialsAvatar(),
-                          ),
-                        )
-                      : _buildInitialsAvatar(),
-                ),
-                SizedBox(width: 16.w),
-                // CENTER: Title + Vendor + Project
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      MarqueeText(
-                        text: name ?? 'RCC-PO-XXXX',
-                        style: GoogleFonts.koulen(
-                          fontSize: 22.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black,
-                          letterSpacing: 1.5,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      if (hasVendor || hasProject) SizedBox(height: 8.h),
-                      if (hasVendor) _braceChip(vendorName!),
-                      if (hasVendor && hasProject) SizedBox(height: 6.h),
-                      if (hasProject) _braceChip(projectName!),
-                    ],
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                SizedBox(width: 62.w), // Balance right side
-              ],
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(21.r),
+            gradient: const LinearGradient(
+              colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            SizedBox(height: 14.h),
-            // Bottom row: only render if any detail exists
-            if (hasAmount || hasDate || hasRequesterPhoto)
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8.w),
-                child: Wrap(
-                  alignment: WrapAlignment.center,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  spacing: 18.w,
-                  runSpacing: 10.h,
-                  children: [
-                    if (hasAmount)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.asset(
-                            'assets/png/icons/Coin.png',
-                            width: 24.w,
-                            height: 24.w,
-                            color: const Color(0xFF151544),
-                            errorBuilder: (_, __, ___) => Icon(
-                              Icons.attach_money,
-                              size: 24.w,
+          ),
+          child: Column(
+            children: [
+              // Top row: Vendor logo and title section
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // LEFT: Vendor Logo
+                  Container(
+                    width: 62.w,
+                    height: 62.w,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                      border: Border.all(color: Colors.grey.shade300, width: 2),
+                    ),
+                    alignment: Alignment.center,
+                    child: clientPhoto != null && clientPhoto!.isNotEmpty
+                        ? ClipOval(
+                            child: Image.network(
+                              clientPhoto!,
+                              fit: BoxFit.contain,
+                              headers: {
+                                'Accept': 'image/*',
+                                'Authorization':
+                                    'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
+                              },
+                              errorBuilder: (_, __, ___) =>
+                                  _buildInitialsAvatar(),
+                            ),
+                          )
+                        : _buildInitialsAvatar(),
+                  ),
+                  SizedBox(width: 16.w),
+                  // CENTER: Title + Vendor + Project
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        MarqueeText(
+                          text: name ?? 'RCC-PO-XXXX',
+                          style: GoogleFonts.koulen(
+                            fontSize: 22.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black,
+                            letterSpacing: 1.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        if (hasVendor || hasProject) SizedBox(height: 8.h),
+                        if (hasVendor) _braceChip(vendorName!),
+                        if (hasVendor && hasProject) SizedBox(height: 6.h),
+                        if (hasProject) _braceChip(projectName!),
+                      ],
+                    ),
+                  ),
+                  SizedBox(width: 16.w),
+                  SizedBox(width: 62.w), // Balance right side
+                ],
+              ),
+              SizedBox(height: 14.h),
+              // Bottom row: only render if any detail exists
+              if (hasAmount || hasDate || hasRequesterPhoto)
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w),
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 18.w,
+                    runSpacing: 10.h,
+                    children: [
+                      if (hasAmount)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              'assets/png/icons/Coin.png',
+                              width: 24.w,
+                              height: 24.w,
                               color: const Color(0xFF151544),
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.attach_money,
+                                size: 24.w,
+                                color: const Color(0xFF151544),
+                              ),
                             ),
-                          ),
-                          SizedBox(width: 6.w),
-                          Text(
-                            formattedAmount,
-                            style: GoogleFonts.koulen(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black87,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    if (hasRequesterPhoto)
-                      Container(
-                        width: 40.w,
-                        height: 40.w,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 1),
-                          color: Colors.white,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
+                            SizedBox(width: 6.w),
+                            Text(
+                              formattedAmount,
+                              style: GoogleFonts.koulen(
+                                fontSize: 14.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                                letterSpacing: 0.3,
+                              ),
                             ),
                           ],
                         ),
-                        child: ClipOval(
-                          child: Image.network(
-                            requestedByUserPhoto!,
-                            fit: BoxFit.contain,
-                            width: 40.w,
-                            height: 40.w,
-                            headers: {
-                              'Accept': 'image/*',
-                              'Authorization':
-                                  'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
-                            },
-                            errorBuilder: (_, __, ___) => Icon(
-                              Icons.person,
-                              size: 34.w,
-                              color: appFontColor,
+                      if (hasRequesterPhoto)
+                        Container(
+                          width: 40.w,
+                          height: 40.w,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1),
+                            color: Colors.white,
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ClipOval(
+                            child: Image.network(
+                              requestedByUserPhoto!,
+                              fit: BoxFit.contain,
+                              width: 40.w,
+                              height: 40.w,
+                              headers: {
+                                'Accept': 'image/*',
+                                'Authorization':
+                                    'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
+                              },
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.person,
+                                size: 34.w,
+                                color: appFontColor,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    if (hasDate)
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.asset(
-                            'assets/png/calender.png',
-                            width: 24.w,
-                            height: 24.w,
-                            color: const Color(0xFF151544),
-                            errorBuilder: (_, __, ___) => Icon(
-                              Icons.calendar_month,
-                              size: 24.w,
+                      if (hasDate)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              'assets/png/calender.png',
+                              width: 24.w,
+                              height: 24.w,
                               color: const Color(0xFF151544),
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.calendar_month,
+                                size: 24.w,
+                                color: const Color(0xFF151544),
+                              ),
                             ),
-                          ),
-                          SizedBox(width: 6.w),
-                          Text(
-                            formattedDate,
-                            style: GoogleFonts.inter(
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black87,
+                            SizedBox(width: 6.w),
+                            Text(
+                              formattedDate,
+                              style: GoogleFonts.inter(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black87,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                  ],
+                          ],
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );

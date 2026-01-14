@@ -962,7 +962,9 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
   // Build LPO Card using the original LpoCardWidget
   Widget _buildLpoCard(SearchResultItem item) {
     final data = item.rawData;
+    final poId = data['id'] as int?;
     return LpoCardWidget(
+      poId: poId,
       name: data['name'] ?? item.title,
       vendorName: data['vendor_name'] ?? data['partner_name'],
       projectName: data['project_name'] ?? data['x_project_id']?[1],
@@ -975,6 +977,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
       requestedBy: data['requested_by'],
       requesterManager: data['requester_manager'],
       state: data['state'] ?? item.status,
+      onTap: poId != null ? () => Util.openLpoPdfReport(context, poId) : null,
     );
   }
 

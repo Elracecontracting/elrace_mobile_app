@@ -8,6 +8,7 @@ import 'package:el_race/data/models/lpo_search_model.dart';
 import 'package:el_race/providers/global_search_provider.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/global_search_navigation_helper.dart';
+import 'package:el_race/utils/Util.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/ui/presentation/lpo/widgets/lpo_card_widget.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/entities/project_entity.dart';
@@ -704,7 +705,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
 
     // Use model data if available, otherwise fallback to manual parsing
     if (lpoModel != null) {
+      final modelId = lpoModel.id; // Capture ID in local variable
       return LpoCardWidget(
+        poId: modelId,
         name: lpoModel.name,
         vendorName: lpoModel.partnerId,
         projectName: lpoModel.project,
@@ -723,6 +726,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         requestedBy: lpoModel.requestedBy,
         requesterManager: lpoModel.requesterManager,
         state: lpoModel.state,
+        onTap: () => Util.openLpoPdfReport(context, modelId),
       );
     }
 
@@ -782,6 +786,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     }
 
     return LpoCardWidget(
+      poId: item.id,
       name: data['name'] ?? item.title,
       vendorName: _pickVendor(),
       projectName: _pickProject(),
@@ -794,6 +799,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       requestedBy: data['requested_by'],
       requesterManager: data['requester_manager'],
       state: data['state'] ?? data['status'],
+      onTap: () => Util.openLpoPdfReport(context, item.id),
     );
   }
 
