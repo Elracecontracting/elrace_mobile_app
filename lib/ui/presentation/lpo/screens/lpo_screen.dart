@@ -381,49 +381,68 @@ class _LpoListScreenState extends State<LpoListScreen> {
                         ),
                       ),
                     )
-                  : SliverList(
-                      delegate: SliverChildBuilderDelegate(
-                        (context, index) {
-                          final item = _items[index];
-                          final poId = item['id'] as int?;
-                          final name = (item['name'] ?? '').toString();
-                          final vendor = (item['partner_id'] ?? '').toString();
-                          final project = (item['project'] ?? '').toString();
-                          final dateStr = (item['date_order'] ?? '').toString();
-                          final amount =
-                              (item['amount_total'] ?? '').toString();
-                          final clientPhoto = item['client_photo'];
-                          final requestedByPhoto =
-                              item['requested_by_user_photo'];
-                          final requestedBy =
-                              (item['requested_by'] ?? '').toString();
-                          final requesterManager =
-                              (item['requester_manager'] ?? '').toString();
-                          final state = (item['state'] ?? '').toString();
-                          final attachments =
-                              (item['attachments'] ?? []) as List;
+                  : _items.isEmpty
+                      ? SliverFillRemaining(
+                          child: Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Text(
+                                translate('no_data_available'),
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  color: appFontColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      : SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final item = _items[index];
+                              final poId = item['id'] as int?;
+                              final name = (item['name'] ?? '').toString();
+                              final vendor =
+                                  (item['partner_id'] ?? '').toString();
+                              final project =
+                                  (item['project'] ?? '').toString();
+                              final dateStr =
+                                  (item['date_order'] ?? '').toString();
+                              final amount =
+                                  (item['amount_total'] ?? '').toString();
+                              final clientPhoto = item['client_photo'];
+                              final requestedByPhoto =
+                                  item['requested_by_user_photo'];
+                              final requestedBy =
+                                  (item['requested_by'] ?? '').toString();
+                              final requesterManager =
+                                  (item['requester_manager'] ?? '').toString();
+                              final state = (item['state'] ?? '').toString();
+                              final attachments =
+                                  (item['attachments'] ?? []) as List;
 
-                          return LpoCardWidget(
-                            poId: poId,
-                            name: name,
-                            vendorName: vendor,
-                            projectName: project,
-                            date: dateStr,
-                            amount: amount,
-                            clientPhoto: clientPhoto,
-                            requestedByUserPhoto: requestedByPhoto,
-                            requestedBy: requestedBy,
-                            requesterManager: requesterManager,
-                            state: state,
-                            attachments: attachments,
-                            onTap: poId != null
-                                ? () => Util.openLpoPdfReport(context, poId)
-                                : null,
-                          );
-                        },
-                        childCount: _items.length,
-                      ),
-                    ),
+                              return LpoCardWidget(
+                                poId: poId,
+                                name: name,
+                                vendorName: vendor,
+                                projectName: project,
+                                date: dateStr,
+                                amount: amount,
+                                clientPhoto: clientPhoto,
+                                requestedByUserPhoto: requestedByPhoto,
+                                requestedBy: requestedBy,
+                                requesterManager: requesterManager,
+                                state: state,
+                                attachments: attachments,
+                                onTap: poId != null
+                                    ? () => Util.openLpoPdfReport(context, poId)
+                                    : null,
+                              );
+                            },
+                            childCount: _items.length,
+                          ),
+                        ),
 
           // 🔹 Loading More Indicator
           if (_isLoadingMore)

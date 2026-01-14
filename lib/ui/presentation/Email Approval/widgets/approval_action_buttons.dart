@@ -59,12 +59,17 @@ class ApprovalActionButtons extends StatelessWidget {
       },
       listener: (ctx, state) {
         if (state is ApprovalSuccess) {
+          // Close loading overlay first
+          if (context.mounted && Navigator.canPop(context)) {
+            Navigator.pop(context); // Close loading overlay
+          }
+
           // Call the onResult callback if provided
           if (onResult != null) {
             onResult!(state.message);
           }
 
-          // Close dialog immediately - parent screen will handle refresh and count update
+          // Close main dialog - parent screen will handle refresh and count update
           if (context.mounted && Navigator.canPop(context)) {
             Navigator.pop(context, true);
 
@@ -82,7 +87,12 @@ class ApprovalActionButtons extends StatelessWidget {
             });
           }
         } else if (state is ApprovalFailure) {
-          // For failures, show error but don't close dialog automatically
+          // Close loading overlay first
+          if (context.mounted && Navigator.canPop(context)) {
+            Navigator.pop(context); // Close loading overlay
+          }
+
+          // For failures, show error but don't close main dialog
           // User needs to see the error and decide what to do
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -112,6 +122,43 @@ class ApprovalActionButtons extends StatelessWidget {
 
                   // Use comment if provided, otherwise use default
                   final finalComment = comment ?? '..';
+
+                  // Show loading immediately after comment is submitted
+                  if (context.mounted) {
+                    showDialog(
+                      context: context,
+                      barrierDismissible: false,
+                      barrierColor: Colors.black54,
+                      builder: (BuildContext dialogContext) {
+                        return PopScope(
+                          canPop: false,
+                          child: Center(
+                            child: Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  CircularProgressIndicator(),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    'Processing...',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  }
 
                   if (label == "APPROVE") {
                     context.read<ApprovalBloc>().add(

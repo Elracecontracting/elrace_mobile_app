@@ -580,9 +580,15 @@ class _ApprovalConfirmationScreenState
                                       // Don't refresh data inside the dialog since it will close anyway
                                       onResult: null,
                                       disabled: isCurrentUserInApprovals,
-                                      userIds: approvals
-                                          .map((a) => a['id'].toString())
-                                          .toList(),
+                                      // Send only current user's ID for approval
+                                      userIds: [
+                                        SharedPref.getLoginData()
+                                                .result
+                                                ?.data
+                                                ?.uid
+                                                .toString() ??
+                                            ''
+                                      ],
                                     ),
                                   ),
                                 ),
