@@ -6,5 +6,6 @@ class UrlUtil {
   static const String checkOutApi = 'check_out';
   static const String attendanceListApi = 'attendance/list';
   static const String mediaAttachmentsApi = 'media_attachments';
+  static const String prepareShareApi = 'prepare_share';
   static const String qrCodeApi = 'qr_code/';
 }

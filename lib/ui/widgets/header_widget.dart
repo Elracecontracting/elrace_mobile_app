@@ -57,6 +57,13 @@ class _HeaderWidgetState extends State<HeaderWidget> {
         _loadApprovalCount();
       }
     };
+
+    // Register callback for notification count changes
+    NotificationStorageService.onCountChanged = () {
+      if (mounted) {
+        _loadNotificationCount();
+      }
+    };
   }
 
   @override
@@ -64,6 +71,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
     // Unregister callbacks
     ApprovalViewedService.setOnCountChangedCallback(null);
     ApprovalCountService.onCountChanged = null;
+    NotificationStorageService.onCountChanged = null;
     super.dispose();
   }
 

@@ -28,6 +28,69 @@ class HrAndPettycashCard extends StatelessWidget {
     return strValue;
   }
 
+  // Helper method to check if image_emp is a URL or base64 data
+  bool _isImageUrl(String imageData) {
+    return imageData.startsWith('http://') || imageData.startsWith('https://');
+  }
+
+  // Helper widget to display employee image (URL or base64)
+  Widget _buildEmployeeImage(dynamic imageEmp, double size) {
+    if (imageEmp != null &&
+        imageEmp is String &&
+        imageEmp.isNotEmpty &&
+        imageEmp.toLowerCase() != "false") {
+      if (_isImageUrl(imageEmp)) {
+        // It's a URL, use Image.network
+        return Image.network(
+          imageEmp,
+          fit: BoxFit.cover,
+          height: size,
+          width: size,
+          errorBuilder: (context, error, stackTrace) {
+            return Image.asset(
+              AppImages.personImage,
+              fit: BoxFit.cover,
+              height: size,
+              width: size,
+            );
+          },
+        );
+      } else {
+        // It's base64 data, decode it
+        try {
+          return Image.memory(
+            base64Decode(imageEmp),
+            fit: BoxFit.cover,
+            height: size,
+            width: size,
+            errorBuilder: (context, error, stackTrace) {
+              return Image.asset(
+                AppImages.personImage,
+                fit: BoxFit.cover,
+                height: size,
+                width: size,
+              );
+            },
+          );
+        } catch (e) {
+          return Image.asset(
+            AppImages.personImage,
+            fit: BoxFit.cover,
+            height: size,
+            width: size,
+          );
+        }
+      }
+    }
+    // Fallback to default image
+    return Image.asset(
+      AppImages.personImage,
+      fit: BoxFit.cover,
+      height: size,
+      width: size,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (approvalItems.isEmpty) {
@@ -82,6 +145,9 @@ class HrAndPettycashCard extends StatelessWidget {
                   item["total_amount"] ??
                   item["total"],
               "0");
+
+          String requestType =
+              _getSafeString(item["request_type"] ?? item["type"], "N/A");
 
           String date = _getSafeString(
               item["date"] ??
@@ -140,23 +206,7 @@ class HrAndPettycashCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     ClipOval(
-                      child: (item["image_emp"] != null &&
-                              item["image_emp"] is String &&
-                              (item["image_emp"] as String).isNotEmpty &&
-                              (item["image_emp"] as String).toLowerCase() !=
-                                  "false")
-                          ? Image.memory(
-                              base64Decode(item["image_emp"] as String),
-                              fit: BoxFit.cover,
-                              height: 73.w,
-                              width: 73.w,
-                            )
-                          : Image.asset(
-                              AppImages.personImage,
-                              fit: BoxFit.cover,
-                              height: 73.w,
-                              width: 73.w,
-                            ),
+                      child: _buildEmployeeImage(item["image_emp"], 73.w),
                     ),
                     const SizedBox(width: 5),
                     Expanded(
@@ -197,7 +247,10 @@ class HrAndPettycashCard extends StatelessWidget {
                       children: [
                         InfoContainer(text: reqNo),
                         SizedBox(height: 6.w),
-                        InfoContainer(text: '$amount AED'),
+                        InfoContainer(
+                            text: type.toUpperCase() == 'HR'
+                                ? requestType
+                                : '$amount AED'),
                         SizedBox(height: 6.w),
                         InfoContainer(
                           text: date.isNotEmpty ? date : 'N/A',

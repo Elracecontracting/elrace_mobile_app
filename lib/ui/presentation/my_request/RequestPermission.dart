@@ -651,6 +651,32 @@ class _RequestPermissionState extends State<RequestPermission> {
       int startHour = get24Hour();
       int endHour = startHour + getDurationHours();
 
+      // Validation conditions
+      int tempHoursValue =
+          selectedHour; // from 1 to 10 (12-hour format, but API expects 1-10)
+      int tempSelectionValue = getDurationHours(); // from 1 to 3
+
+      // Validate temp_hours (1 to 10)
+      if (tempHoursValue < 1 || tempHoursValue > 10) {
+        _sliderKey.currentState?.resetSlider();
+        _showErrorDialog("Start hour must be between 1 and 10.");
+        return;
+      }
+
+      // Validate temp_selection (1 to 3)
+      if (tempSelectionValue < 1 || tempSelectionValue > 3) {
+        _sliderKey.currentState?.resetSlider();
+        _showErrorDialog("Duration selection must be between 1H and 3H.");
+        return;
+      }
+
+      // Validate description is not empty
+      if (description.trim().isEmpty) {
+        _sliderKey.currentState?.resetSlider();
+        _showErrorDialog("Please provide a reason for your request.");
+        return;
+      }
+
       final response = await http.post(
         Uri.parse('https://erp.elrace.com/api/submit_request'),
         headers: {
@@ -680,6 +706,9 @@ class _RequestPermissionState extends State<RequestPermission> {
             "duration_type": "custom_hours",
             "hour_from": startHour.toString(),
             "hour_to": endHour.toString(),
+            "jm_start": selectedDay.toLowerCase(),
+            "temp_hours": tempHoursValue.toString(),
+            "temp_selection": tempSelectionValue.toString(),
           }
         }),
       );

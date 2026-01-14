@@ -5,6 +5,9 @@ class NotificationStorageService {
   static const String _notificationsKey = 'stored_notifications';
   static const String _unreadCountKey = 'unread_notification_count';
 
+  /// Callback to notify when notification count changes
+  static void Function()? onCountChanged;
+
   /// Save a new notification
   static Future<void> saveNotification({
     required String title,
@@ -49,6 +52,9 @@ class NotificationStorageService {
       await _updateUnreadCount();
 
       print('✅ Notification saved: $title');
+
+      // Notify listeners that count changed
+      onCountChanged?.call();
     } catch (e) {
       print('❌ Error saving notification: $e');
     }
@@ -89,6 +95,9 @@ class NotificationStorageService {
 
         // Update unread count
         await _updateUnreadCount();
+
+        // Notify listeners that count changed
+        onCountChanged?.call();
       }
     } catch (e) {
       print('❌ Error marking notification as read: $e');
@@ -112,6 +121,9 @@ class NotificationStorageService {
 
       // Update unread count
       await prefs.setInt(_unreadCountKey, 0);
+
+      // Notify listeners that count changed
+      onCountChanged?.call();
     } catch (e) {
       print('❌ Error marking all as read: $e');
     }

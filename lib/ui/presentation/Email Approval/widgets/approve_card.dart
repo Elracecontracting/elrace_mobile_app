@@ -9,6 +9,51 @@ class ApproveCard extends StatelessWidget {
   final Map<dynamic, dynamic> item;
   const ApproveCard({super.key, required this.item});
 
+  // Helper method to check if image_emp is a URL or base64 data
+  bool _isImageUrl(String imageData) {
+    return imageData.startsWith('http://') || imageData.startsWith('https://');
+  }
+
+  // Helper widget to display employee image (URL or base64)
+  Widget _buildEmployeeImage(dynamic imageEmp) {
+    if (imageEmp != null &&
+        imageEmp is String &&
+        imageEmp.isNotEmpty &&
+        imageEmp.toLowerCase() != "false") {
+      if (_isImageUrl(imageEmp)) {
+        // It's a URL, use Image.network
+        return Image.network(
+          imageEmp,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return const Image(
+              image: AssetImage("assets/png/profile_1.png"),
+              fit: BoxFit.cover,
+            );
+          },
+        );
+      } else {
+        // It's base64 data, decode it
+        try {
+          return Image.memory(
+            base64Decode(imageEmp),
+            fit: BoxFit.cover,
+          );
+        } catch (e) {
+          return const Image(
+            image: AssetImage("assets/png/profile_1.png"),
+            fit: BoxFit.cover,
+          );
+        }
+      }
+    }
+    // Fallback to default image
+    return const Image(
+      image: AssetImage("assets/png/profile_1.png"),
+      fit: BoxFit.cover,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     String id = item["id"] ?? '';
@@ -151,19 +196,7 @@ class ApproveCard extends StatelessWidget {
                       child: Padding(
                         padding: const EdgeInsets.all(2),
                         child: ClipOval(
-                          child: (item["image_emp"] != null &&
-                                  item["image_emp"] is String &&
-                                  (item["image_emp"] as String).isNotEmpty &&
-                                  (item["image_emp"] as String).toLowerCase() !=
-                                      "false")
-                              ? Image.memory(
-                                  base64Decode(item["image_emp"] as String),
-                                  fit: BoxFit.cover,
-                                )
-                              : const Image(
-                                  image: AssetImage("assets/png/profile_1.png"),
-                                  fit: BoxFit.cover,
-                                ),
+                          child: _buildEmployeeImage(item["image_emp"]),
                         ),
                       ),
                     ),

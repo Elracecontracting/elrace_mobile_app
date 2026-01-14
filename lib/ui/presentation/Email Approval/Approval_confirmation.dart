@@ -44,6 +44,54 @@ class _ApprovalConfirmationScreenState
     return approvals.any((a) => a['id'] == userId);
   }
 
+  // Helper method to check if image_emp is a URL or base64 data
+  bool _isImageUrl(String imageData) {
+    return imageData.startsWith('http://') || imageData.startsWith('https://');
+  }
+
+  // Helper widget to display employee image (URL or base64)
+  Widget _buildEmployeeImage(dynamic imageEmp, double radius) {
+    if (imageEmp != null &&
+        imageEmp is String &&
+        imageEmp.isNotEmpty &&
+        imageEmp.toLowerCase() != "false") {
+      if (_isImageUrl(imageEmp)) {
+        // It's a URL, use Image.network inside CircleAvatar
+        return CircleAvatar(
+          radius: radius,
+          backgroundColor: Colors.grey[300],
+          child: ClipOval(
+            child: Image.network(
+              imageEmp,
+              fit: BoxFit.cover,
+              width: radius * 2,
+              height: radius * 2,
+              errorBuilder: (context, error, stackTrace) {
+                return Icon(Icons.person, size: radius);
+              },
+            ),
+          ),
+        );
+      } else {
+        // It's base64 data, decode it
+        try {
+          return CircleAvatar(
+            radius: radius,
+            backgroundImage: MemoryImage(base64Decode(imageEmp)),
+          );
+        } catch (e) {
+          return CircleAvatar(
+            radius: radius,
+            backgroundColor: Colors.grey[300],
+            child: Icon(Icons.person, size: radius),
+          );
+        }
+      }
+    }
+    // Fallback to placeholder
+    return SizedBox(width: radius * 2, height: radius * 2);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -66,7 +114,7 @@ class _ApprovalConfirmationScreenState
       "Authorization": "Bearer $token",
     };
     String getApiUrl(String type) {
-      switch (type.toUpperCase()) {
+      switch (type.toUpperCase().replaceAll(' ', '')) {
         case 'HR':
           return "https://erp.elrace.com/api/get_hr_request_details";
         case 'RFQ':
@@ -81,7 +129,7 @@ class _ApprovalConfirmationScreenState
     }
 
     String getParamKey(String type) {
-      switch (type.toUpperCase()) {
+      switch (type.toUpperCase().replaceAll(' ', '')) {
         case 'HR':
           return "request_id";
         case 'RFQ':
@@ -160,6 +208,21 @@ class _ApprovalConfirmationScreenState
   }
 
   List<Map<String, String>> get projects {
+    // Handle different table structures for different request types
+    if (widget.type.toUpperCase().replaceAll(' ', '') == 'PETTYCASH') {
+      return tableView
+          .map<Map<String, String>>((item) => {
+                "product": item["project"]?.toString() ?? "",
+                "qty": item["qty"]?.toString() ?? "",
+                "uom": "", // Not provided in petty cash
+                "unit_price": item["unit_price"]?.toString() ?? "",
+                "total": item["unit_price"]?.toString() ?? "",
+                "remarks": item["remarks"]?.toString() ?? "",
+                "sequence": item["sequence"]?.toString() ?? "",
+              })
+          .toList();
+    }
+
     return tableView
         .map<Map<String, String>>((item) => {
               "product": item["product"]?.toString() ?? "",
@@ -216,17 +279,7 @@ class _ApprovalConfirmationScreenState
                           shape: BoxShape.circle,
                         ),
                       )
-                    : (formData?["image_emp"] != null &&
-                            formData?["image_emp"] is String &&
-                            (formData?["image_emp"] as String).isNotEmpty &&
-                            (formData?["image_emp"] as String).toLowerCase() !=
-                                "false")
-                        ? CircleAvatar(
-                            radius: 28,
-                            backgroundImage: MemoryImage(
-                                base64Decode(formData!["image_emp"] as String)),
-                          )
-                        : const SizedBox(width: 56, height: 56),
+                    : _buildEmployeeImage(formData?["image_emp"], 28),
                 const SizedBox(height: 8),
                 Center(
                   child: Text(formData?["employee_name"] ?? "",
@@ -303,20 +356,8 @@ class _ApprovalConfirmationScreenState
                                       shape: BoxShape.circle,
                                     ),
                                   )
-                                : (formData?["image_emp"] != null &&
-                                        formData?["image_emp"] is String &&
-                                        (formData?["image_emp"] as String)
-                                            .isNotEmpty &&
-                                        (formData?["image_emp"] as String)
-                                                .toLowerCase() !=
-                                            "false")
-                                    ? CircleAvatar(
-                                        radius: 25.w,
-                                        backgroundImage: MemoryImage(
-                                            base64Decode(formData!["image_emp"]
-                                                as String)),
-                                      )
-                                    : SizedBox(width: 50.w, height: 50.w),
+                                : _buildEmployeeImage(
+                                    formData?["image_emp"], 25.w),
                             const SizedBox(width: 8),
                             Text(
                               'Employee Details',
@@ -423,6 +464,34 @@ class _ApprovalConfirmationScreenState
                                                 .toStringAsFixed(2)
                                             : "0.00"),
                                   ],
+                                  if (widget.type.toUpperCase() ==
+                                      'INVOICE') ...[
+                                    _buildDetailRow(
+                                        "REQ NO", formData?["title"] ?? ""),
+                                    _buildDetailRow("REQ TYPE", "Invoice"),
+                                    _buildDetailRow("STATUS", "Pending"),
+                                    _buildDetailRow(
+                                        "REQ DATE", formData?["date"] ?? ""),
+                                    _buildDetailRow(
+                                        "START DATE", formData?["date"] ?? ""),
+                                  ],
+                                  if (widget.type
+                                          .toUpperCase()
+                                          .replaceAll(' ', '') ==
+                                      'PETTYCASH') ...[
+                                    _buildDetailRow("REQ NO",
+                                        formData?["petty_cash_no"] ?? ""),
+                                    _buildDetailRow(
+                                        "REQ TYPE",
+                                        formData?["request_type"] ??
+                                            "Petty Cash"),
+                                    _buildDetailRow("STATUS",
+                                        formData?["status"] ?? "Pending"),
+                                    _buildDetailRow(
+                                        "REQ DATE", formData?["date"] ?? ""),
+                                    _buildDetailRow(
+                                        "START DATE", formData?["date"] ?? ""),
+                                  ],
                                 ],
                               ),
                             ),
@@ -479,6 +548,106 @@ class _ApprovalConfirmationScreenState
                                         itemCount: projects.length,
                                         itemBuilder: (context, index) {
                                           final item = projects[index];
+
+                                          // For Petty Cash, show sequence and remarks
+                                          if (widget.type
+                                                  .toUpperCase()
+                                                  .replaceAll(' ', '') ==
+                                              'PETTYCASH') {
+                                            return Container(
+                                              margin:
+                                                  const EdgeInsets.symmetric(
+                                                      vertical: 5),
+                                              padding: EdgeInsets.all(8.w),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.separatorColor,
+                                                borderRadius:
+                                                    BorderRadius.circular(20),
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment:
+                                                        MainAxisAlignment
+                                                            .spaceBetween,
+                                                    children: [
+                                                      Text(
+                                                        "Item ${item["sequence"]}",
+                                                        style:
+                                                            GoogleFonts.koulen(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          letterSpacing: 1.0,
+                                                          fontSize: 13.sp,
+                                                          color: const Color(
+                                                              0xFF1A1A53),
+                                                        ),
+                                                      ),
+                                                      InfoContainer(
+                                                        text:
+                                                            "${item["unit_price"]} AED",
+                                                        width: 90.w,
+                                                      ),
+                                                    ],
+                                                  ),
+                                                  SizedBox(height: 8.w),
+                                                  Text(
+                                                    "Project:",
+                                                    style: GoogleFonts.nunito(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 11.sp,
+                                                      color: Colors.grey[700],
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: 4.w),
+                                                  Text(
+                                                    "${item["product"]}",
+                                                    style: GoogleFonts.nunito(
+                                                      fontSize: 11.sp,
+                                                      color: Colors.black87,
+                                                    ),
+                                                    maxLines: 3,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                  if (item["remarks"]
+                                                          ?.toString()
+                                                          .isNotEmpty ??
+                                                      false) ...[
+                                                    SizedBox(height: 8.w),
+                                                    Text(
+                                                      "Remarks: ${item["remarks"]}",
+                                                      style: GoogleFonts.nunito(
+                                                        fontSize: 10.sp,
+                                                        fontStyle:
+                                                            FontStyle.italic,
+                                                        color: Colors.grey[600],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                  SizedBox(height: 4.w),
+                                                  Row(
+                                                    children: [
+                                                      Text(
+                                                        "Qty: ${item["qty"]}",
+                                                        style:
+                                                            GoogleFonts.nunito(
+                                                          fontSize: 10.sp,
+                                                          color:
+                                                              Colors.grey[700],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }
+
+                                          // Original layout for RFQ/Invoice
                                           return Container(
                                             margin: const EdgeInsets.symmetric(
                                                 vertical: 5),

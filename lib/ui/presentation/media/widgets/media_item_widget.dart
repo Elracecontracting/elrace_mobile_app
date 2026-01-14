@@ -1,11 +1,16 @@
+import 'dart:io';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../utils/di.dart';
 import '../data/media_model.dart';
+import '../repository/i_media_repository.dart';
 
 class MediaItemWidget extends StatelessWidget {
   final MediaModel media;
@@ -217,23 +222,118 @@ class MediaItemWidget extends StatelessWidget {
     );
   }
 
-  // Share media as link (text)
+  // Share media with thumbnail and video URL
   Future<void> _shareMediaAsLink(BuildContext context) async {
-    // Use the encoded streaming URL to avoid issues with spaces
-    final shareUrl = media.streamingUrl;
-
-    // Print to console for debugging
-    print('📤 Sharing media link:');
-    print('Original URL: ${media.url}');
-    print('Encoded URL: $shareUrl');
-
     try {
-      await Share.share(shareUrl);
-    } catch (e) {
-      print('❌ Error sharing link: $e');
+      print('🚀 Starting share process for media: ${media.id} - ${media.name}');
+
+      // Show loading indicator
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to share link')),
+          const SnackBar(
+            content: Text('Preparing share...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+
+      String? shareableUrl;
+
+      // 1. Try to call prepare_share API to get the shareable URL
+      try {
+        print('📞 Getting media repository...');
+        final mediaRepository = sl.get<IMediaRepository>();
+        print('✅ Got repository, calling prepareShare...');
+
+        shareableUrl = await mediaRepository.prepareShare(media.id);
+        print('📥 Received shareableUrl from API: $shareableUrl');
+      } catch (e) {
+        print('⚠️ API call failed: $e');
+      }
+
+      // 2. If API failed, use x_web_url as fallback
+      if (shareableUrl == null || shareableUrl.isEmpty) {
+        print('🔄 API failed, using x_web_url as fallback');
+        shareableUrl = media.xWebUrl ?? media.streamingUrl;
+        print('📤 Using fallback URL: $shareableUrl');
+      }
+
+      // Trim whitespace and encode URL to handle spaces
+      shareableUrl = shareableUrl?.trim() ?? '';
+
+      // Parse and properly encode the URL to replace spaces with %20
+      try {
+        final uri = Uri.parse(shareableUrl);
+        // Reconstruct URL with properly encoded path
+        shareableUrl = uri
+            .replace(
+              path: uri.pathSegments
+                  .map((segment) => Uri.encodeComponent(segment))
+                  .join('/'),
+            )
+            .toString();
+      } catch (e) {
+        print('⚠️ Could not parse URL for encoding: $e');
+        // Fallback: simple space replacement
+        shareableUrl = shareableUrl?.replaceAll(' ', '%20') ?? '';
+      }
+
+      if (shareableUrl.isEmpty) {
+        throw Exception('No URL available to share');
+      }
+
+      print('📤 Final shareable URL (encoded): $shareableUrl');
+
+      // 3. Download the thumbnail image if available
+      XFile? thumbnailFile;
+      if (media.thumbnail != null && media.thumbnail!.isNotEmpty) {
+        try {
+          print('📥 Downloading thumbnail from: ${media.thumbnail}');
+
+          final response = await http.get(Uri.parse(media.thumbnail!));
+          if (response.statusCode == 200) {
+            // Get temporary directory
+            final tempDir = await getTemporaryDirectory();
+            final fileName =
+                'share_thumbnail_${DateTime.now().millisecondsSinceEpoch}.jpg';
+            final filePath = '${tempDir.path}/$fileName';
+
+            // Save the thumbnail to a temporary file
+            final file = File(filePath);
+            await file.writeAsBytes(response.bodyBytes);
+
+            thumbnailFile = XFile(filePath);
+            print('✅ Thumbnail saved to: $filePath');
+          } else {
+            print('⚠️ Failed to download thumbnail: ${response.statusCode}');
+          }
+        } catch (e) {
+          print('⚠️ Error downloading thumbnail: $e');
+          // Continue without thumbnail if download fails
+        }
+      }
+
+      // 4. Share the thumbnail image + video URL
+      if (thumbnailFile != null) {
+        // Share with both thumbnail and URL
+        print('📤 Sharing thumbnail + URL');
+        await Share.shareXFiles(
+          [thumbnailFile],
+          text: shareableUrl,
+        );
+      } else {
+        // Share only the URL if thumbnail download failed
+        print('📤 Sharing URL only');
+        await Share.share(shareableUrl);
+      }
+
+      print('✅ Share completed successfully');
+    } catch (e, stackTrace) {
+      print('❌ Error sharing media: $e');
+      print('Stack trace: $stackTrace');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to share: ${e.toString()}')),
         );
       }
     }

@@ -7,4 +7,5 @@ abstract class IMediaRepository {
   Future<void> deleteMedia(String mediaId);
   Future<List<MediaModel>> getMediaByType(MediaType type);
   Future<List<MediaModel>> searchMedia(String keyword);
+  Future<String?> prepareShare(String mediaId);
 }
