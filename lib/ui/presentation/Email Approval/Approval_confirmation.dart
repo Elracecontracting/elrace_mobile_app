@@ -577,9 +577,8 @@ class _ApprovalConfirmationScreenState
                                     child: ApprovalActionButtons(
                                       requestId: widget.requestId,
                                       type: widget.type,
-                                      onResult: (result) {
-                                        _fetchRequestDetails();
-                                      },
+                                      // Don't refresh data inside the dialog since it will close anyway
+                                      onResult: null,
                                       disabled: isCurrentUserInApprovals,
                                       userIds: approvals
                                           .map((a) => a['id'].toString())

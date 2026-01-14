@@ -86,29 +86,83 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
     emit(ApprovalLoading(expandedItems: currentExpandedItems));
     try {
       final List<String> userIds = event.userIds;
-      List<String> messages = [];
+      List<String> successMessages = [];
+      List<String> failureMessages = [];
+
       for (final userId in userIds) {
-        final response = await _sendApprovalRequest(
-          userId: userId,
-          requestId: event.requestId,
-          action: "accept",
-          comment: event.comment ?? "Request approved.",
-          type: event.type,
-        );
-        final data = jsonDecode(response.body);
-        debugPrint('_onApproveRequest:  \n${response.body}');
-        if (data["result"] != null && data["result"]["message"] != null) {
-          messages.add(data["result"]["message"]);
-        } else {
-          emit(ApprovalFailure("Unknown response from server.",
-              expandedItems: currentExpandedItems));
-          return;
+        try {
+          final response = await _sendApprovalRequest(
+            userId: userId,
+            requestId: event.requestId,
+            action: "accept",
+            comment: event.comment ?? "Request approved.",
+            type: event.type,
+          );
+
+          // Check HTTP status code first
+          if (response.statusCode != 200) {
+            debugPrint(
+                '❌ HTTP Error: ${response.statusCode}\n${response.body}');
+            failureMessages
+                .add("User $userId: Server error (${response.statusCode})");
+            continue; // Continue to next user instead of returning
+          }
+
+          // Try to parse JSON, catch FormatException if HTML is returned
+          dynamic data;
+          try {
+            data = jsonDecode(response.body);
+          } on FormatException {
+            debugPrint(
+                '❌ FormatException: Server returned HTML instead of JSON\n${response.body.substring(0, 200)}...');
+            failureMessages.add("User $userId: Invalid server response");
+            continue; // Continue to next user
+          }
+
+          debugPrint('_onApproveRequest:  \n${response.body}');
+          if (data["result"] != null && data["result"]["message"] != null) {
+            successMessages.add(data["result"]["message"]);
+          } else {
+            failureMessages.add("User $userId: Unknown response from server");
+          }
+        } catch (e) {
+          debugPrint('❌ Error for user $userId: $e');
+          failureMessages.add("User $userId: ${e.toString()}");
         }
       }
-      emit(ApprovalSuccess(messages.join("\n"),
-          expandedItems: currentExpandedItems));
+
+      // Determine final state based on results
+      if (successMessages.isNotEmpty && failureMessages.isEmpty) {
+        // All succeeded
+        emit(ApprovalSuccess(successMessages.join("\n"),
+            expandedItems: currentExpandedItems));
+      } else if (successMessages.isEmpty && failureMessages.isNotEmpty) {
+        // All failed
+        emit(ApprovalFailure(failureMessages.join("\n"),
+            expandedItems: currentExpandedItems));
+      } else if (successMessages.isNotEmpty && failureMessages.isNotEmpty) {
+        // Partial success - treat as success but show warning
+        final message =
+            "Partial Success:\n${successMessages.join("\n")}\n\nWarnings:\n${failureMessages.join("\n")}";
+        emit(ApprovalSuccess(message, expandedItems: currentExpandedItems));
+      } else {
+        // No users processed (shouldn't happen)
+        emit(ApprovalFailure("No users to process.",
+            expandedItems: currentExpandedItems));
+      }
     } catch (e) {
-      emit(ApprovalFailure(e.toString(), expandedItems: currentExpandedItems));
+      debugPrint('❌ Approval Error: $e');
+      // Provide user-friendly error message
+      String errorMessage;
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection')) {
+        errorMessage = "Network error. Please check your internet connection.";
+      } else if (e.toString().contains('TimeoutException')) {
+        errorMessage = "Request timeout. Please try again.";
+      } else {
+        errorMessage = "An error occurred: ${e.toString()}";
+      }
+      emit(ApprovalFailure(errorMessage, expandedItems: currentExpandedItems));
     }
   }
 
@@ -118,29 +172,83 @@ class ApprovalBloc extends Bloc<ApprovalEvent, ApprovalState> {
     emit(ApprovalLoading(expandedItems: currentExpandedItems));
     try {
       final List<String> userIds = event.userIds;
-      List<String> messages = [];
+      List<String> successMessages = [];
+      List<String> failureMessages = [];
+
       for (final userId in userIds) {
-        final response = await _sendApprovalRequest(
-          userId: userId,
-          requestId: event.requestId,
-          action: "reject",
-          comment: event.comment ?? "Request rejected.",
-          type: event.type,
-        );
-        final data = jsonDecode(response.body);
-        debugPrint('_onRejectRequest: ${response.body}');
-        if (data["result"] != null && data["result"]["message"] != null) {
-          messages.add(data["result"]["message"]);
-        } else {
-          emit(ApprovalFailure("Unknown response from server.",
-              expandedItems: currentExpandedItems));
-          return;
+        try {
+          final response = await _sendApprovalRequest(
+            userId: userId,
+            requestId: event.requestId,
+            action: "reject",
+            comment: event.comment ?? "Request rejected.",
+            type: event.type,
+          );
+
+          // Check HTTP status code first
+          if (response.statusCode != 200) {
+            debugPrint(
+                '❌ HTTP Error: ${response.statusCode}\n${response.body}');
+            failureMessages
+                .add("User $userId: Server error (${response.statusCode})");
+            continue; // Continue to next user instead of returning
+          }
+
+          // Try to parse JSON, catch FormatException if HTML is returned
+          dynamic data;
+          try {
+            data = jsonDecode(response.body);
+          } on FormatException {
+            debugPrint(
+                '❌ FormatException: Server returned HTML instead of JSON\n${response.body.substring(0, 200)}...');
+            failureMessages.add("User $userId: Invalid server response");
+            continue; // Continue to next user
+          }
+
+          debugPrint('_onRejectRequest: ${response.body}');
+          if (data["result"] != null && data["result"]["message"] != null) {
+            successMessages.add(data["result"]["message"]);
+          } else {
+            failureMessages.add("User $userId: Unknown response from server");
+          }
+        } catch (e) {
+          debugPrint('❌ Error for user $userId: $e');
+          failureMessages.add("User $userId: ${e.toString()}");
         }
       }
-      emit(ApprovalSuccess(messages.join("\n"),
-          expandedItems: currentExpandedItems));
+
+      // Determine final state based on results
+      if (successMessages.isNotEmpty && failureMessages.isEmpty) {
+        // All succeeded
+        emit(ApprovalSuccess(successMessages.join("\n"),
+            expandedItems: currentExpandedItems));
+      } else if (successMessages.isEmpty && failureMessages.isNotEmpty) {
+        // All failed
+        emit(ApprovalFailure(failureMessages.join("\n"),
+            expandedItems: currentExpandedItems));
+      } else if (successMessages.isNotEmpty && failureMessages.isNotEmpty) {
+        // Partial success - treat as success but show warning
+        final message =
+            "Partial Success:\n${successMessages.join("\n")}\n\nWarnings:\n${failureMessages.join("\n")}";
+        emit(ApprovalSuccess(message, expandedItems: currentExpandedItems));
+      } else {
+        // No users processed (shouldn't happen)
+        emit(ApprovalFailure("No users to process.",
+            expandedItems: currentExpandedItems));
+      }
     } catch (e) {
-      emit(ApprovalFailure(e.toString(), expandedItems: currentExpandedItems));
+      debugPrint('❌ Rejection Error: $e');
+      // Provide user-friendly error message
+      String errorMessage;
+      if (e.toString().contains('SocketException') ||
+          e.toString().contains('Connection')) {
+        errorMessage = "Network error. Please check your internet connection.";
+      } else if (e.toString().contains('TimeoutException')) {
+        errorMessage = "Request timeout. Please try again.";
+      } else {
+        errorMessage = "An error occurred: ${e.toString()}";
+      }
+      emit(ApprovalFailure(errorMessage, expandedItems: currentExpandedItems));
     }
   }
 

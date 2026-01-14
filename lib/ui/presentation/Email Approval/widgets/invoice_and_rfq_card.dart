@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:el_race/core/services/approval_viewed_service.dart';
+import 'package:el_race/core/services/approval_count_service.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_card_type_two.dart';
 import 'package:el_race/utils/safe_insets.dart';
@@ -103,6 +104,9 @@ class InvoiceAndRfqCard extends StatelessWidget {
                 );
                 // Trigger a rebuild to update the list after dialog closes
                 if (result == true) {
+                  // Update approval count badge
+                  ApprovalCountService.onCountChanged?.call();
+                  // Refresh the list
                   onRefresh?.call();
                 }
               }

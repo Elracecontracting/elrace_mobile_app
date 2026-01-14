@@ -75,6 +75,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   }
 
   void _onSearchChanged() {
+    if (!mounted) return;
     setState(() {
       approvalItems = _getFilteredItems();
     });
@@ -182,6 +183,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   }
 
   Future<void> _fetchApprovalData() async {
+    if (!mounted) return;
+
     setState(() {
       isLoading = true;
       error = '';
@@ -206,6 +209,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
       allItems = [...hrItems, ...rfqItems, ...invoiceItems, ...pettyCashItems];
 
+      if (!mounted) return;
+
       setState(() {
         approvalItems = _getFilteredItems();
         isLoading = false;
@@ -215,6 +220,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         }
       });
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         error = e.toString();
         isLoading = false;
@@ -296,7 +303,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                 if (scrollNotification is ScrollUpdateNotification ||
                     scrollNotification is ScrollEndNotification) {
                   final isScrolled = scrollNotification.metrics.pixels > 10;
-                  if (isScrolled != _isScrolled) {
+                  if (isScrolled != _isScrolled && mounted) {
                     setState(() {
                       _isScrolled = isScrolled;
                     });
@@ -369,6 +376,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                                 const EdgeInsets.only(right: 20.0, left: 5.0),
                             child: GestureDetector(
                               onTap: () {
+                                if (!mounted) return;
                                 setState(() {
                                   selectedCategory = cat;
                                   approvalItems = _getFilteredItems();

@@ -6,7 +6,6 @@ import '../bloc/approval_bloc.dart';
 import '../bloc/approval_event.dart';
 import '../bloc/approval_state.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/core/services/approval_count_service.dart';
 
 class ApprovalActionButtons extends StatelessWidget {
   final String requestId;
@@ -47,28 +46,53 @@ class ApprovalActionButtons extends StatelessWidget {
       Color color, IconData icon, TextEditingController commentController,
       {bool isSelected = false}) {
     return BlocConsumer<ApprovalBloc, ApprovalState>(
+      // Only listen when the state actually changes to prevent duplicate calls
+      listenWhen: (previous, current) {
+        // Only trigger listener when transitioning to a new success/failure state
+        if (current is ApprovalSuccess && previous is! ApprovalSuccess) {
+          return true;
+        }
+        if (current is ApprovalFailure && previous is! ApprovalFailure) {
+          return true;
+        }
+        return false;
+      },
       listener: (ctx, state) {
         if (state is ApprovalSuccess) {
-          ScaffoldMessenger.of(ctx).showSnackBar(
-            SnackBar(content: Text(state.message)),
-          );
-
-          // Trigger approval count update
-          ApprovalCountService.onCountChanged?.call();
-
+          // Call the onResult callback if provided
           if (onResult != null) {
             onResult!(state.message);
           }
-          // Close the screen after successful approval/rejection
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (Navigator.of(ctx).canPop()) {
-              Navigator.of(ctx).pop(true); // Return true to indicate success
-            }
-          });
+
+          // Close dialog immediately - parent screen will handle refresh and count update
+          if (context.mounted && Navigator.canPop(context)) {
+            Navigator.pop(context, true);
+
+            // Show success message after dialog closes
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.message),
+                    duration: const Duration(seconds: 2),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            });
+          }
         } else if (state is ApprovalFailure) {
-          ScaffoldMessenger.of(ctx).showSnackBar(
-            SnackBar(content: Text(state.error)),
-          );
+          // For failures, show error but don't close dialog automatically
+          // User needs to see the error and decide what to do
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.error),
+                duration: const Duration(seconds: 4),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
         }
       },
       builder: (context, state) {
@@ -80,8 +104,15 @@ class ApprovalActionButtons extends StatelessWidget {
               ? null
               : () async {
                   final token = SharedPref.getLoginData().result?.token ?? '';
-                  String? comment = await _showCommentDialog(context, label);
-                  comment ??= '..';
+                  final String? comment =
+                      await _showCommentDialog(context, label);
+
+                  // If user cancelled the dialog or context is no longer valid, don't proceed
+                  if (!context.mounted) return;
+
+                  // Use comment if provided, otherwise use default
+                  final finalComment = comment ?? '..';
+
                   if (label == "APPROVE") {
                     context.read<ApprovalBloc>().add(
                           ApproveRequest(
@@ -89,7 +120,7 @@ class ApprovalActionButtons extends StatelessWidget {
                             type: type,
                             token: token,
                             userIds: userIds,
-                            comment: comment,
+                            comment: finalComment,
                           ),
                         );
                   } else if (label == "REJECT") {
@@ -99,7 +130,7 @@ class ApprovalActionButtons extends StatelessWidget {
                             type: type,
                             token: token,
                             userIds: userIds,
-                            comment: comment,
+                            comment: finalComment,
                           ),
                         );
                   }
@@ -119,32 +150,42 @@ class ApprovalActionButtons extends StatelessWidget {
     final TextEditingController controller = TextEditingController();
     return showDialog<String>(
       context: context,
+      barrierDismissible:
+          false, // Prevent accidental dismissal by tapping outside
       builder: (ctx) {
         return AlertDialog(
           title: Text('$action Comment'),
           content: TextField(
             controller: controller,
-            decoration:
-                const InputDecoration(hintText: 'Enter your comment...'),
+            decoration: const InputDecoration(
+              hintText: 'Enter your comment...',
+              border: OutlineInputBorder(),
+            ),
             minLines: 1,
             maxLines: 3,
+            autofocus: true,
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.of(ctx).pop(), // Return null on cancel
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(
-                  controller.text.trim().isEmpty
-                      ? null
-                      : controller.text.trim()),
+              onPressed: () {
+                final text = controller.text.trim();
+                Navigator.of(ctx).pop(text.isEmpty ? '..' : text);
+              },
               child: const Text('Submit'),
             ),
           ],
         );
       },
-    );
+    ).whenComplete(() {
+      // Dispose controller after a frame to ensure Flutter is done with it
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.dispose();
+      });
+    });
   }
 }
 
@@ -173,6 +214,7 @@ class AnimatedCircleButton extends StatefulWidget {
 class _AnimatedCircleButtonState extends State<AnimatedCircleButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
+  bool _hasTriggered = false;
 
   @override
   void initState() {
@@ -184,12 +226,29 @@ class _AnimatedCircleButtonState extends State<AnimatedCircleButton>
 
     // when animation completes → trigger action
     _controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed) {
+      if (status == AnimationStatus.completed && !_hasTriggered) {
         if (widget.onPressed != null && !widget.isDisabled) {
+          _hasTriggered = true;
           widget.onPressed!();
         }
       }
     });
+  }
+
+  @override
+  void didUpdateWidget(AnimatedCircleButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset trigger flag when widget becomes enabled (e.g., after loading completes)
+    if (oldWidget.isDisabled && !widget.isDisabled) {
+      _hasTriggered = false;
+    }
+    // If widget becomes disabled while animation is running, stop it
+    if (!oldWidget.isDisabled && widget.isDisabled) {
+      if (_controller.isAnimating) {
+        _controller.reverse();
+        _hasTriggered = false;
+      }
+    }
   }
 
   @override
@@ -199,7 +258,7 @@ class _AnimatedCircleButtonState extends State<AnimatedCircleButton>
   }
 
   void _onTapDown(TapDownDetails details) {
-    if (!widget.isDisabled && widget.onPressed != null) {
+    if (!widget.isDisabled && widget.onPressed != null && !_hasTriggered) {
       _controller.forward(from: 0); // restart animation
     }
   }
@@ -207,11 +266,13 @@ class _AnimatedCircleButtonState extends State<AnimatedCircleButton>
   void _onTapUp(TapUpDetails details) {
     if (_controller.status != AnimationStatus.completed) {
       _controller.reverse(); // released early → cancel
+      _hasTriggered = false; // Reset flag if cancelled
     }
   }
 
   void _onTapCancel() {
     _controller.reverse();
+    _hasTriggered = false; // Reset flag if cancelled
   }
 
   @override
