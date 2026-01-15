@@ -21,19 +21,22 @@ class InitializeCamera extends FaceRecognitionEvent {
 }
 
 /// Start face registration process
+/// Now supports multiple images for anti-spoofing detection
 class StartFaceRegistration extends FaceRecognitionEvent {
   final CameraImage image;
   final String userId;
   final String? label;
+  final List<CameraImage>? additionalImages; // For anti-spoof check
 
   StartFaceRegistration({
     required this.image,
     required this.userId,
     this.label,
+    this.additionalImages,
   });
 
   @override
-  List<Object?> get props => [image, userId, label];
+  List<Object?> get props => [image, userId, label, additionalImages];
 }
 
 /// Start face verification process
@@ -58,6 +61,16 @@ class CheckFaceLiveness extends FaceRecognitionEvent {
 
   @override
   List<Object?> get props => [image];
+}
+
+/// Start active liveness challenge check
+class StartLivenessChallenge extends FaceRecognitionEvent {
+  final Stream<CameraImage> frameStream;
+
+  StartLivenessChallenge({required this.frameStream});
+
+  @override
+  List<Object?> get props => [];
 }
 
 /// Delete stored embeddings

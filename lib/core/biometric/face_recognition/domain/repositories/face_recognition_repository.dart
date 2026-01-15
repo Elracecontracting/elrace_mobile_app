@@ -11,10 +11,12 @@ abstract class FaceRecognitionRepository {
 
   /// Register a new face embedding for the user
   /// Takes camera image and returns the stored embedding
+  /// Now supports anti-spoofing with multiple images
   Future<Either<FaceRecognitionFailure, FaceEmbedding>> registerFace({
     required CameraImage image,
     required String userId,
     String? label,
+    List<CameraImage>? additionalImages, // For anti-spoof check
   });
 
   /// Verify a face against stored embedding(s)
@@ -67,8 +69,9 @@ class StorageFailure extends FaceRecognitionFailure {
 }
 
 class LivenessCheckFailure extends FaceRecognitionFailure {
-  const LivenessCheckFailure()
-      : super('Liveness check failed. Please ensure you are a real person.');
+  const LivenessCheckFailure([String? customMessage])
+      : super(customMessage ??
+            'Liveness check failed. Please ensure you are a real person.');
 }
 
 class VerificationFailure extends FaceRecognitionFailure {

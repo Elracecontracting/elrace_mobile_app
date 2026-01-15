@@ -137,8 +137,11 @@ class MediaRepository implements IMediaRepository {
           String? shareUrl;
 
           if (result is Map) {
+            // Prioritize share_url as it's the main field returned by the API
             shareUrl =
-                result['url'] ?? result['share_url'] ?? result['x_web_url'];
+                result['share_url'] ?? result['url'] ?? result['x_web_url'];
+            print('🔍 Result map keys: ${result.keys.toList()}');
+            print('🔍 share_url value: ${result['share_url']}');
           } else if (result is String) {
             shareUrl = result;
           }

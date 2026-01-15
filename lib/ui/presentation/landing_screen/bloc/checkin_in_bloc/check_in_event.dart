@@ -10,11 +10,16 @@ sealed class CheckInEvent extends Equatable {
 final class CheckInET extends CheckInEvent {}
 
 /// Event to verify face before check-in
+/// Now supports multiple images for anti-spoofing detection
 final class VerifyFaceForCheckInET extends CheckInEvent {
   final String imagePath;
+  final List<String>? additionalImagePaths; // For anti-spoof check
 
-  const VerifyFaceForCheckInET({required this.imagePath});
+  const VerifyFaceForCheckInET({
+    required this.imagePath,
+    this.additionalImagePaths,
+  });
 
   @override
-  List<Object> get props => [imagePath];
+  List<Object> get props => [imagePath, additionalImagePaths ?? []];
 }

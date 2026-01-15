@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:isolate';
 import 'dart:math' as math;
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:tflite_flutter/tflite_flutter.dart';
 import 'package:image/image.dart' as img;
 
@@ -155,6 +157,90 @@ class FaceNetService {
     _cachedEmbedding = embedding;
     _cacheTimestamp = DateTime.now();
     return embedding;
+  }
+
+  /// Generate face embedding from a file with face bounding box
+  /// This is useful for Check-in verification where we have an image file
+  Future<List<double>?> getEmbeddingFromFile(
+    File imageFile,
+    ui.Rect boundingBox,
+  ) async {
+    try {
+      if (!_isInitialized || _interpreter == null) {
+        throw Exception('FaceNetService not initialized');
+      }
+
+      // Read the image file
+      final bytes = await imageFile.readAsBytes();
+      final decodedImage = img.decodeImage(bytes);
+
+      if (decodedImage == null) {
+        print('❌ Could not decode image file');
+        return null;
+      }
+
+      // Crop face region from the image
+      final cropX = boundingBox.left.toInt().clamp(0, decodedImage.width - 1);
+      final cropY = boundingBox.top.toInt().clamp(0, decodedImage.height - 1);
+      final cropWidth =
+          boundingBox.width.toInt().clamp(1, decodedImage.width - cropX);
+      final cropHeight =
+          boundingBox.height.toInt().clamp(1, decodedImage.height - cropY);
+
+      final croppedFace = img.copyCrop(
+        decodedImage,
+        x: cropX,
+        y: cropY,
+        width: cropWidth,
+        height: cropHeight,
+      );
+
+      // Generate embedding from cropped face
+      return await generateEmbedding(croppedFace);
+    } catch (e) {
+      print('❌ Error generating embedding from file: $e');
+      return null;
+    }
+  }
+
+  /// Calculate Euclidean distance between two face embeddings
+  /// Lower distance = more similar faces
+  /// Typical threshold: 0.6-1.0 (lower = stricter)
+  double euclideanDistance(List<double> embedding1, List<double> embedding2) {
+    if (embedding1.length != embedding2.length) {
+      throw ArgumentError('Embeddings must have the same length');
+    }
+
+    double sumSquares = 0.0;
+    for (int i = 0; i < embedding1.length; i++) {
+      final diff = embedding1[i] - embedding2[i];
+      sumSquares += diff * diff;
+    }
+
+    return math.sqrt(sumSquares);
+  }
+
+  /// Calculate Cosine similarity between two face embeddings
+  /// Higher similarity = more similar faces (range: -1 to 1)
+  double cosineSimilarity(List<double> embedding1, List<double> embedding2) {
+    if (embedding1.length != embedding2.length) {
+      throw ArgumentError('Embeddings must have the same length');
+    }
+
+    double dotProduct = 0.0;
+    double norm1 = 0.0;
+    double norm2 = 0.0;
+
+    for (int i = 0; i < embedding1.length; i++) {
+      dotProduct += embedding1[i] * embedding2[i];
+      norm1 += embedding1[i] * embedding1[i];
+      norm2 += embedding2[i] * embedding2[i];
+    }
+
+    final magnitude = math.sqrt(norm1) * math.sqrt(norm2);
+    if (magnitude == 0.0) return 0.0;
+
+    return dotProduct / magnitude;
   }
 
   /// Generate embedding in warm isolate

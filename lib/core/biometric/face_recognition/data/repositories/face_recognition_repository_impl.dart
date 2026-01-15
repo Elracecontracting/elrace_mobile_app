@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:camera/camera.dart';
 import 'package:dartz/dartz.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
@@ -66,40 +67,123 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
     required CameraImage image,
     required String userId,
     String? label,
+    List<CameraImage>? additionalImages, // For anti-spoof check
   }) async {
     try {
+      print('📷 Starting face registration for user: $userId');
+
+      // Step 0: Anti-Spoofing check with multiple images
+      if (additionalImages != null && additionalImages.length >= 3) {
+        print(
+            '🛡️ Step 0: Anti-spoofing check with ${additionalImages.length} images...');
+
+        final List<Face> faceSequence = [];
+        for (final img in additionalImages) {
+          final faces = await _faceDetectorService.detectFaces(img);
+          if (faces.isNotEmpty) {
+            faceSequence.add(faces.first);
+          }
+        }
+
+        if (faceSequence.length >= 3) {
+          // Check for natural micro-movements
+          final yawValues =
+              faceSequence.map((f) => f.headEulerAngleY ?? 0.0).toList();
+          final pitchValues =
+              faceSequence.map((f) => f.headEulerAngleX ?? 0.0).toList();
+
+          final yawVariation = _calculateVariation(yawValues);
+          final pitchVariation = _calculateVariation(pitchValues);
+
+          print('   📊 Head Yaw variation: $yawVariation°');
+          print('   📊 Head Pitch variation: $pitchVariation°');
+
+          // If face is perfectly static (< 0.3° movement), it's likely a photo
+          if (yawVariation < 0.3 && pitchVariation < 0.3) {
+            print('❌ Anti-spoof FAILED: Face is too static (possible photo)');
+            return const Left(
+              LivenessCheckFailure(
+                'Registration failed. Please try again with a live face.',
+              ),
+            );
+          }
+
+          print('✅ Anti-spoofing check passed');
+        }
+      }
+
       // Step 1: Detect face
+      print('🔍 Step 1: Detecting face...');
       final detectResult = await _detectSingleFace(image);
       if (detectResult.isLeft()) {
-        return detectResult.fold(
-            (failure) => Left(failure), (_) => throw Exception());
+        print('❌ Face detection failed');
+        return detectResult.fold((failure) {
+          print('❌ Failure: ${failure.runtimeType} - ${failure.message}');
+          return Left(failure);
+        }, (_) => throw Exception());
       }
 
       final face = detectResult.getOrElse(() => throw Exception());
+      print('✅ Face detected successfully');
 
       // Step 2: Check face quality (optional but recommended)
+      print('📊 Step 2: Checking face quality...');
       final quality = _faceDetectorService.getFaceQuality(face);
+      print('📊 Face quality: $quality');
       if (quality < 0.3) {
+        print('❌ Face quality too low: $quality < 0.3');
         return const Left(
           EmbeddingGenerationFailure(
             'Face quality too low. Please ensure good lighting and face the camera directly.',
           ),
         );
       }
+      print('✅ Face quality OK');
 
-      // Step 3: Check liveness (if enabled)
+      // Step 3: Check liveness (if enabled) - relaxed for registration
       if (_enableLivenessCheck) {
-        final hasLiveness = _faceDetectorService.checkLiveness(face);
+        print('🔒 Step 3: Checking liveness...');
+        // Use relaxed thresholds for registration (eyes can be partially open)
+        final hasLiveness = _faceDetectorService.checkLiveness(
+          face,
+          eyeOpenThreshold: 0.1, // Lower threshold for registration
+          maxHeadEulerAngleY: 30.0, // Allow more head rotation
+          maxHeadEulerAngleZ: 30.0,
+        );
+        print('🔒 Liveness result: $hasLiveness');
+
+        // Log detailed liveness info for debugging
+        print('   👁️ Left eye: ${face.leftEyeOpenProbability}');
+        print('   👁️ Right eye: ${face.rightEyeOpenProbability}');
+        print('   🔄 Head Y angle: ${face.headEulerAngleY}');
+        print('   🔄 Head Z angle: ${face.headEulerAngleZ}');
+
         if (!hasLiveness) {
-          return const Left(LivenessCheckFailure());
+          // For registration, warn but don't fail - only fail if eyes are completely null
+          if (face.leftEyeOpenProbability == null ||
+              face.rightEyeOpenProbability == null) {
+            print(
+                '⚠️ Liveness data not available, proceeding anyway for registration');
+          } else {
+            print('❌ Liveness check failed');
+            return const Left(LivenessCheckFailure());
+          }
+        } else {
+          print('✅ Liveness check passed');
         }
+      } else {
+        print('⏭️ Liveness check disabled');
       }
 
       // Step 4: Crop face from image
+      print('✂️ Step 4: Cropping face...');
       final croppedFace = await ImagePreprocessingHelper.cropFace(image, face);
+      print('✅ Face cropped');
 
       // Step 5: Generate embedding
+      print('🧠 Step 5: Generating embedding...');
       final embedding = await _faceNetService.generateEmbedding(croppedFace);
+      print('✅ Embedding generated (${embedding.length} dimensions)');
 
       // Step 6: Create FaceEmbedding entity
       final faceEmbedding = FaceEmbedding(
@@ -110,16 +194,23 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
       );
 
       // Step 7: Store embedding securely
+      print('💾 Step 7: Storing embedding...');
       await _storageService.saveEmbedding(faceEmbedding);
+      print('✅ Embedding stored successfully');
 
+      print('🎉 Face registration completed successfully!');
       return Right(faceEmbedding);
     } on NoFaceDetectedFailure catch (e) {
+      print('❌ NoFaceDetectedFailure: ${e.message}');
       return Left(e);
     } on MultipleFacesDetectedFailure catch (e) {
+      print('❌ MultipleFacesDetectedFailure: ${e.message}');
       return Left(e);
     } on LivenessCheckFailure catch (e) {
+      print('❌ LivenessCheckFailure: ${e.message}');
       return Left(e);
     } catch (e) {
+      print('❌ Unexpected error: $e');
       return Left(EmbeddingGenerationFailure('Registration failed: $e'));
     }
   }
@@ -274,5 +365,19 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
     }
 
     return Right(faces.first);
+  }
+
+  /// Calculate statistical variation (standard deviation) for anti-spoofing
+  double _calculateVariation(List<double> values) {
+    if (values.isEmpty) return 0.0;
+
+    final mean = values.reduce((a, b) => a + b) / values.length;
+    double sumSquaredDiff = 0.0;
+    for (final v in values) {
+      sumSquaredDiff += (v - mean) * (v - mean);
+    }
+    final variance = sumSquaredDiff / values.length;
+
+    return math.sqrt(variance);
   }
 }

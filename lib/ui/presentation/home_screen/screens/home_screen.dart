@@ -89,8 +89,14 @@ class _HomeScreenState extends State<HomeScreenPage>
           final loginData = jsonDecode(loginDataStr);
           final userId = (loginData['result']?['data']?['uid'] ??
                   loginData['result']?['data']?['username'] ??
+                  loginData['result']?['data']?['id'] ??
+                  loginData['uid'] ??
+                  loginData['username'] ??
+                  loginData['id'] ??
                   'user_${DateTime.now().millisecondsSinceEpoch}')
               .toString();
+
+          print('📱 User ID for face registration: $userId');
 
           // Set flag to indicate face registration is in progress
           SharedPref()

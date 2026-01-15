@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 import 'data/services/face_detector_service.dart';
 import 'data/services/facenet_service.dart';
 import 'data/services/face_embedding_storage_service.dart';
+import 'data/services/liveness_service.dart';
 import 'data/repositories/face_recognition_repository_impl.dart';
 import 'domain/repositories/face_recognition_repository.dart';
 import 'domain/usecases/initialize_face_recognition_usecase.dart';
@@ -41,6 +42,11 @@ class FaceRecognitionDI {
       () => FaceEmbeddingStorageService(),
     );
 
+    // Liveness Service (Singleton)
+    _getIt.registerLazySingleton<LivenessService>(
+      () => LivenessService(_getIt<FaceDetectorService>()),
+    );
+
     // Repository (Singleton)
     _getIt.registerLazySingleton<FaceRecognitionRepository>(
       () => FaceRecognitionRepositoryImpl(
@@ -51,7 +57,7 @@ class FaceRecognitionDI {
             0.6, // Stricter matching for check-in/out (lower = more strict)
         useCosineSimilarity: false, // true for cosine, false for Euclidean
         enableLivenessCheck:
-            false, // Disabled for easier first-time registration
+            true, // Enabled for enhanced security with liveness detection
       ),
     );
 
@@ -76,6 +82,7 @@ class FaceRecognitionDI {
         registerFaceUseCase: _getIt<RegisterFaceUseCase>(),
         verifyFaceUseCase: _getIt<VerifyFaceUseCase>(),
         repository: _getIt<FaceRecognitionRepository>(),
+        livenessService: _getIt<LivenessService>(),
       ),
     );
 

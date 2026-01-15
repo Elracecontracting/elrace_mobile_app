@@ -4,6 +4,7 @@ import '../../domain/usecases/initialize_face_recognition_usecase.dart';
 import '../../domain/usecases/register_face_usecase.dart';
 import '../../domain/usecases/verify_face_usecase.dart';
 import '../../domain/repositories/face_recognition_repository.dart';
+import '../../data/services/liveness_service.dart';
 import 'face_recognition_event.dart';
 import 'face_recognition_state.dart';
 
@@ -20,6 +21,7 @@ class FaceRecognitionBloc
   final RegisterFaceUseCase _registerFaceUseCase;
   final VerifyFaceUseCase _verifyFaceUseCase;
   final FaceRecognitionRepository _repository;
+  final LivenessService? _livenessService;
 
   CameraController? _cameraController;
 
@@ -28,10 +30,12 @@ class FaceRecognitionBloc
     required RegisterFaceUseCase registerFaceUseCase,
     required VerifyFaceUseCase verifyFaceUseCase,
     required FaceRecognitionRepository repository,
+    LivenessService? livenessService,
   })  : _initializeUseCase = initializeUseCase,
         _registerFaceUseCase = registerFaceUseCase,
         _verifyFaceUseCase = verifyFaceUseCase,
         _repository = repository,
+        _livenessService = livenessService,
         super(FaceRecognitionInitial()) {
     // Register event handlers
     on<InitializeFaceRecognition>(_onInitialize);
@@ -39,6 +43,7 @@ class FaceRecognitionBloc
     on<StartFaceRegistration>(_onRegisterFace);
     on<StartFaceVerification>(_onVerifyFace);
     on<CheckFaceLiveness>(_onCheckLiveness);
+    on<StartLivenessChallenge>(_onStartLivenessChallenge);
     on<DeleteStoredEmbeddings>(_onDeleteEmbeddings);
     on<ResetFaceRecognition>(_onReset);
   }
@@ -91,7 +96,7 @@ class FaceRecognitionBloc
     }
   }
 
-  /// Register face
+  /// Register face with anti-spoofing check
   Future<void> _onRegisterFace(
     StartFaceRegistration event,
     Emitter<FaceRecognitionState> emit,
@@ -102,6 +107,7 @@ class FaceRecognitionBloc
       image: event.image,
       userId: event.userId,
       label: event.label,
+      additionalImages: event.additionalImages, // For anti-spoof
     );
 
     result.fold(
@@ -167,6 +173,50 @@ class FaceRecognitionBloc
         emit(FaceDetected(hasLiveness: hasLiveness, quality: 1.0));
       },
     );
+  }
+
+  /// Start active liveness challenge
+  Future<void> _onStartLivenessChallenge(
+    StartLivenessChallenge event,
+    Emitter<FaceRecognitionState> emit,
+  ) async {
+    if (_livenessService == null) {
+      emit(LivenessCheckComplete(
+        passed: true,
+        message: 'Liveness service not available, skipping check',
+      ));
+      return;
+    }
+
+    emit(FaceRecognitionLoading(message: 'جاري التحقق من الحيوية...'));
+
+    final result = await _livenessService.performActiveChallengeCheck(
+      frameStream: event.frameStream,
+      challengeTimeout: const Duration(seconds: 10),
+    );
+
+    if (result.passed) {
+      emit(LivenessCheckComplete(
+        passed: true,
+        message: '✅ تم التحقق من الحيوية بنجاح',
+      ));
+    } else {
+      // Emit current challenge if available for UI guidance
+      if (result.currentChallenge != null) {
+        emit(LivenessChallengeInProgress(
+          challengeText: result.currentChallenge!.displayText,
+          currentChallengeIndex: result.completedChallenges.length,
+          totalChallenges: result.completedChallenges.length + 1,
+          completedChallenges:
+              result.completedChallenges.map((c) => c.displayText).toList(),
+        ));
+      }
+
+      emit(FaceRecognitionError(
+        message: result.message,
+        errorType: FaceRecognitionErrorType.livenessCheckFailed,
+      ));
+    }
   }
 
   /// Delete stored embeddings

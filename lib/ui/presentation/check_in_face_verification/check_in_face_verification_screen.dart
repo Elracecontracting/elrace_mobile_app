@@ -30,7 +30,7 @@ class _CheckInFaceVerificationScreenState
   bool _isProcessing = false;
   bool _autoVerificationAttempted = false;
   bool _showTryAgainButton = false;
-  String _statusMessage = 'ضع وجهك في الإطار';
+  String _statusMessage = 'Position your face in the frame';
   Timer? _autoVerificationTimer;
 
   @override
@@ -82,7 +82,7 @@ class _CheckInFaceVerificationScreenState
       print('❌ Error initializing camera: $e');
       if (mounted) {
         setState(() {
-          _statusMessage = 'خطأ في تشغيل الكاميرا';
+          _statusMessage = 'Camera initialization error';
           _showTryAgainButton = true;
         });
       }
@@ -95,11 +95,11 @@ class _CheckInFaceVerificationScreenState
     setState(() {
       _isProcessing = true;
       _autoVerificationAttempted = true;
-      _statusMessage = 'جاري التحقق من الوجه...';
+      _statusMessage = 'Verifying face...';
     });
 
-    // Try to capture and verify automatically for 1 second
-    _autoVerificationTimer = Timer(const Duration(seconds: 1), () {
+    // Try to capture and verify automatically after 2 seconds for better face positioning
+    _autoVerificationTimer = Timer(const Duration(seconds: 2), () {
       if (mounted && _isProcessing && !_showTryAgainButton) {
         _captureAndVerify();
       }
@@ -111,7 +111,7 @@ class _CheckInFaceVerificationScreenState
       _isProcessing = false;
       _autoVerificationAttempted = false;
       _showTryAgainButton = false;
-      _statusMessage = 'جاري التحقق من الوجه...';
+      _statusMessage = 'Verifying face...';
     });
     _startAutoVerification();
   }
@@ -120,22 +120,41 @@ class _CheckInFaceVerificationScreenState
     if (!_isProcessing || _cameraController == null) return;
 
     try {
-      // Capture image
-      final XFile imageFile = await _cameraController!.takePicture();
+      // Capture multiple images for anti-spoofing check
+      // This detects static photos/videos by checking for natural micro-movements
+      setState(() {
+        _statusMessage = 'Verifying...';
+      });
 
-      print('\n🎯 ===== CHECK-IN FACE VERIFICATION =====');
-      print('📸 Image captured: ${imageFile.path}');
+      final List<String> imagePaths = [];
 
-      // Trigger face verification in BLoC
+      // Capture 3 images with small delays to detect movement
+      for (int i = 0; i < 3; i++) {
+        final XFile imageFile = await _cameraController!.takePicture();
+        imagePaths.add(imageFile.path);
+
+        // Small delay between captures (200ms)
+        if (i < 2) {
+          await Future.delayed(const Duration(milliseconds: 200));
+        }
+      }
+
+      print('\n🎯 ===== CHECK-IN FACE VERIFICATION (ANTI-SPOOF) =====');
+      print('📸 Captured ${imagePaths.length} images for verification');
+
+      // Trigger face verification in BLoC with multiple images
       if (mounted) {
         context.read<CheckInBloc>().add(
-              VerifyFaceForCheckInET(imagePath: imageFile.path),
+              VerifyFaceForCheckInET(
+                imagePath: imagePaths.first, // Main image for embedding
+                additionalImagePaths: imagePaths, // All images for anti-spoof
+              ),
             );
       }
     } catch (e) {
       print('❌ Error capturing image: $e');
       setState(() {
-        _statusMessage = '❌ خطأ في التقاط الصورة';
+        _statusMessage = '❌ Image capture failed';
         _isProcessing = false;
         _showTryAgainButton = true;
       });
@@ -162,7 +181,7 @@ class _CheckInFaceVerificationScreenState
           onPressed: () => Navigator.of(context).pop(false),
         ),
         title: Text(
-          widget.isCheckIn ? 'تسجيل حضور' : 'تسجيل انصراف',
+          widget.isCheckIn ? 'Check In' : 'Check Out',
           style: const TextStyle(color: Colors.white),
         ),
         centerTitle: true,
@@ -172,7 +191,7 @@ class _CheckInFaceVerificationScreenState
           if (state is FaceVerificationSuccessST) {
             // Verification success - proceed with check-in
             setState(() {
-              _statusMessage = '✅ تم التحقق بنجاح';
+              _statusMessage = '✅ Verification successful';
               _isProcessing = false;
             });
 
@@ -191,7 +210,7 @@ class _CheckInFaceVerificationScreenState
             });
           } else if (state is FaceNotEnrolledST) {
             setState(() {
-              _statusMessage = '⚠️ يجب تسجيل الوجه أولاً';
+              _statusMessage = '⚠️ Face registration required first';
               _isProcessing = false;
               _showTryAgainButton = false;
             });
@@ -290,7 +309,7 @@ class _CheckInFaceVerificationScreenState
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: const Text(
-                              'جاري التحقق...',
+                              'Verifying...',
                               style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 14,
@@ -304,7 +323,7 @@ class _CheckInFaceVerificationScreenState
                             onPressed: _resetForRetry,
                             icon: const Icon(Icons.refresh, size: 24),
                             label: const Text(
-                              'حاول مرة أخرى',
+                              'Try Again',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -334,31 +353,51 @@ class _CheckInFaceVerificationScreenState
               right: 0,
               child: Container(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                margin: const EdgeInsets.symmetric(horizontal: 40),
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                margin: const EdgeInsets.symmetric(horizontal: 30),
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 1,
+                  ),
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      widget.isCheckIn ? 'لتسجيل الحضور:' : 'لتسجيل الانصراف:',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.tips_and_updates,
+                            color: Colors.amber.shade300, size: 18),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Tips for best results:',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      '• ضع وجهك داخل الإطار البيضاوي\n• انتظر حتى يتم التحقق تلقائياً',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.visibility, color: Colors.white70, size: 14),
+                        SizedBox(width: 6),
+                        Text('Keep eyes open',
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 11)),
+                        SizedBox(width: 12),
+                        Icon(Icons.face, color: Colors.white70, size: 14),
+                        SizedBox(width: 6),
+                        Text('Look at camera',
+                            style:
+                                TextStyle(color: Colors.white70, fontSize: 11)),
+                      ],
                     ),
                   ],
                 ),
@@ -371,7 +410,7 @@ class _CheckInFaceVerificationScreenState
   }
 }
 
-/// Custom painter for face oval overlay with animated pulse
+/// Custom painter for face oval overlay with animated pulse - Enhanced UI/UX
 class FaceOvalPainter extends CustomPainter {
   final double animationValue;
   final bool isProcessing;
@@ -383,95 +422,153 @@ class FaceOvalPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Determine color based on processing state
-    final baseColor = isProcessing ? Colors.greenAccent : Colors.white;
-
-    // Main oval stroke
-    final paint = Paint()
-      ..color = baseColor.withOpacity(0.8)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3;
+    // Fixed oval dimensions - EXACTLY same size for ALL states
+    final center = Offset(size.width / 2, size.height / 2 - 50);
+    final ovalWidth = size.width * 0.72;
+    final ovalHeight = size.height * 0.52;
 
     final ovalRect = Rect.fromCenter(
-      center: Offset(size.width / 2, size.height / 2 - 50),
-      width: size.width * 0.7,
-      height: size.height * 0.5,
+      center: center,
+      width: ovalWidth,
+      height: ovalHeight,
     );
 
-    canvas.drawOval(ovalRect, paint);
+    // Color based on processing state
+    final baseColor = isProcessing ? const Color(0xFF00E676) : Colors.white;
+    final glowColor = isProcessing ? const Color(0xFF00E676) : Colors.white;
 
-    // Animated pulsing effect when processing
-    if (isProcessing && animationValue > 0) {
-      final pulsePaint = Paint()
-        ..color = baseColor.withOpacity(0.3 * (1 - animationValue))
+    // Draw outer glow effect - SAME for both states for visual consistency
+    for (int i = 2; i >= 1; i--) {
+      final glowOpacity = isProcessing
+          ? 0.1 * i * (1 - animationValue * 0.3)
+          : 0.08 * i; // Subtle glow for white too
+      final glowPaint = Paint()
+        ..color = glowColor.withOpacity(glowOpacity)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
+        ..strokeWidth = 6.0 + (i * 3);
 
-      final pulseRect = Rect.fromCenter(
-        center: Offset(size.width / 2, size.height / 2 - 50),
-        width: size.width * 0.7 * (1 + animationValue * 0.1),
-        height: size.height * 0.5 * (1 + animationValue * 0.1),
-      );
-
-      canvas.drawOval(pulseRect, pulsePaint);
+      canvas.drawOval(ovalRect, glowPaint);
     }
 
-    // Corner markers for better guidance
-    final cornerPaint = Paint()
-      ..color = baseColor.withOpacity(0.9)
+    // Main oval stroke - SAME thickness for both states
+    final mainPaint = Paint()
+      ..color = baseColor.withOpacity(0.95)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
+      ..strokeWidth = 3.5;
+
+    canvas.drawOval(ovalRect, mainPaint);
+
+    // Animated pulsing rings OUTSIDE the main oval (not affecting its size)
+    if (isProcessing && animationValue > 0) {
+      // First pulse ring
+      final pulse1Paint = Paint()
+        ..color = glowColor.withOpacity(0.4 * (1 - animationValue))
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2.5;
+
+      final pulse1Rect = Rect.fromCenter(
+        center: center,
+        width: ovalWidth + (20 * animationValue),
+        height: ovalHeight + (20 * animationValue),
+      );
+      canvas.drawOval(pulse1Rect, pulse1Paint);
+
+      // Second pulse ring (delayed effect)
+      if (animationValue > 0.3) {
+        final adjustedValue = (animationValue - 0.3) / 0.7;
+        final pulse2Paint = Paint()
+          ..color = glowColor.withOpacity(0.25 * (1 - adjustedValue))
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2;
+
+        final pulse2Rect = Rect.fromCenter(
+          center: center,
+          width: ovalWidth + (35 * adjustedValue),
+          height: ovalHeight + (35 * adjustedValue),
+        );
+        canvas.drawOval(pulse2Rect, pulse2Paint);
+      }
+    }
+
+    // Enhanced corner markers with gradient effect
+    final cornerPaint = Paint()
+      ..color = baseColor
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.5
       ..strokeCap = StrokeCap.round;
 
-    final markerLength = 20.0;
+    final markerLength = 25.0;
+    final cornerOffset = 2.0; // Slight offset from oval edge
 
     // Top-left corner
     canvas.drawLine(
-      Offset(ovalRect.left, ovalRect.top + markerLength),
-      Offset(ovalRect.left, ovalRect.top),
+      Offset(ovalRect.left - cornerOffset, ovalRect.top + markerLength),
+      Offset(ovalRect.left - cornerOffset, ovalRect.top - cornerOffset),
       cornerPaint,
     );
     canvas.drawLine(
-      Offset(ovalRect.left, ovalRect.top),
-      Offset(ovalRect.left + markerLength, ovalRect.top),
+      Offset(ovalRect.left - cornerOffset, ovalRect.top - cornerOffset),
+      Offset(ovalRect.left + markerLength, ovalRect.top - cornerOffset),
       cornerPaint,
     );
 
     // Top-right corner
     canvas.drawLine(
-      Offset(ovalRect.right - markerLength, ovalRect.top),
-      Offset(ovalRect.right, ovalRect.top),
+      Offset(ovalRect.right - markerLength, ovalRect.top - cornerOffset),
+      Offset(ovalRect.right + cornerOffset, ovalRect.top - cornerOffset),
       cornerPaint,
     );
     canvas.drawLine(
-      Offset(ovalRect.right, ovalRect.top),
-      Offset(ovalRect.right, ovalRect.top + markerLength),
+      Offset(ovalRect.right + cornerOffset, ovalRect.top - cornerOffset),
+      Offset(ovalRect.right + cornerOffset, ovalRect.top + markerLength),
       cornerPaint,
     );
 
     // Bottom-left corner
     canvas.drawLine(
-      Offset(ovalRect.left, ovalRect.bottom - markerLength),
-      Offset(ovalRect.left, ovalRect.bottom),
+      Offset(ovalRect.left - cornerOffset, ovalRect.bottom - markerLength),
+      Offset(ovalRect.left - cornerOffset, ovalRect.bottom + cornerOffset),
       cornerPaint,
     );
     canvas.drawLine(
-      Offset(ovalRect.left, ovalRect.bottom),
-      Offset(ovalRect.left + markerLength, ovalRect.bottom),
+      Offset(ovalRect.left - cornerOffset, ovalRect.bottom + cornerOffset),
+      Offset(ovalRect.left + markerLength, ovalRect.bottom + cornerOffset),
       cornerPaint,
     );
 
     // Bottom-right corner
     canvas.drawLine(
-      Offset(ovalRect.right - markerLength, ovalRect.bottom),
-      Offset(ovalRect.right, ovalRect.bottom),
+      Offset(ovalRect.right - markerLength, ovalRect.bottom + cornerOffset),
+      Offset(ovalRect.right + cornerOffset, ovalRect.bottom + cornerOffset),
       cornerPaint,
     );
     canvas.drawLine(
-      Offset(ovalRect.right, ovalRect.bottom - markerLength),
-      Offset(ovalRect.right, ovalRect.bottom),
+      Offset(ovalRect.right + cornerOffset, ovalRect.bottom - markerLength),
+      Offset(ovalRect.right + cornerOffset, ovalRect.bottom + cornerOffset),
       cornerPaint,
     );
+
+    // Add subtle scanning line effect when processing
+    if (isProcessing) {
+      final scanLineY = ovalRect.top + (ovalRect.height * animationValue);
+      final scanLinePaint = Paint()
+        ..shader = LinearGradient(
+          colors: [
+            Colors.transparent,
+            glowColor.withOpacity(0.6),
+            Colors.transparent,
+          ],
+          stops: const [0.0, 0.5, 1.0],
+        ).createShader(
+            Rect.fromLTWH(ovalRect.left, scanLineY - 2, ovalRect.width, 4))
+        ..style = PaintingStyle.fill;
+
+      canvas.drawRect(
+        Rect.fromLTWH(
+            ovalRect.left + 20, scanLineY - 1.5, ovalRect.width - 40, 3),
+        scanLinePaint,
+      );
+    }
   }
 
   @override

@@ -152,10 +152,11 @@ class FaceDetectorService {
   ///
   /// Handles different image formats (YUV, BGRA, etc.) and rotations
   InputImage _convertCameraImage(CameraImage image) {
-    // Get image rotation based on device orientation
-    const rotation = InputImageRotation.rotation0deg;
+    // For front camera on Android, we typically need rotation270deg
+    // This handles the most common case for selfie/face registration
+    const rotation = InputImageRotation.rotation270deg;
 
-    // Get image format
+    // Get image format - Android typically uses NV21
     final format = InputImageFormatValue.fromRawValue(image.format.raw) ??
         InputImageFormat.nv21;
 

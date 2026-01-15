@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 import 'package:bloc/bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
@@ -40,7 +41,8 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
   }
 
   /// Verify face before allowing check-in
-  /// This performs actual face recognition verification
+  /// This performs actual face recognition verification with embedding comparison
+  /// Now includes anti-spoofing check using multiple images
   Future<void> verifyFaceForCheckIn(
       VerifyFaceForCheckInET event, Emitter<CheckInState> emit) async {
     try {
@@ -69,7 +71,7 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
       final imageFile = File(event.imagePath);
       if (!await imageFile.exists()) {
         print('❌ Image file not found');
-        emit(const FaceVerificationFailedST('خطأ: لم يتم العثور على الصورة'));
+        emit(const FaceVerificationFailedST('Error: Image file not found'));
         return;
       }
 
@@ -85,47 +87,161 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
 
       if (faces.isEmpty) {
         print('❌ No face detected in the image');
-        emit(const FaceVerificationFailedST('لم يتم اكتشاف وجه في الصورة'));
+        emit(const FaceVerificationFailedST('No face detected in the image'));
         return;
       }
 
       if (faces.length > 1) {
         print('❌ Multiple faces detected');
-        emit(const FaceVerificationFailedST('تم اكتشاف أكثر من وجه واحد'));
+        emit(const FaceVerificationFailedST('Multiple faces detected'));
         return;
       }
 
       final face = faces.first;
 
-      // Step 2: Check liveness
-      final hasLiveness = _faceDetectorService.checkLiveness(face);
+      // Step 2: Anti-Spoofing check using multiple images
+      if (event.additionalImagePaths != null &&
+          event.additionalImagePaths!.length >= 3) {
+        print(
+            '🛡️ Performing anti-spoofing check with ${event.additionalImagePaths!.length} images...');
+
+        final List<Face> faceSequence = [];
+        for (final path in event.additionalImagePaths!) {
+          final file = File(path);
+          if (await file.exists()) {
+            final input = InputImage.fromFile(file);
+            final detectedFaces =
+                await _faceDetectorService.detectFacesFromInputImage(input);
+            if (detectedFaces.isNotEmpty) {
+              faceSequence.add(detectedFaces.first);
+            }
+          }
+        }
+
+        if (faceSequence.length >= 3) {
+          // Check for natural micro-movements (photos are 100% static)
+          final yawValues =
+              faceSequence.map((f) => f.headEulerAngleY ?? 0.0).toList();
+          final pitchValues =
+              faceSequence.map((f) => f.headEulerAngleX ?? 0.0).toList();
+
+          final yawVariation = _calculateVariation(yawValues);
+          final pitchVariation = _calculateVariation(pitchValues);
+
+          print('   📊 Head Yaw variation: $yawVariation°');
+          print('   📊 Head Pitch variation: $pitchVariation°');
+
+          // If face is perfectly static (< 0.3° movement), it's likely a photo
+          if (yawVariation < 0.3 && pitchVariation < 0.3) {
+            print('❌ Anti-spoof FAILED: Face is too static (possible photo)');
+            emit(const FaceVerificationFailedST(
+                'Verification failed. Please try again'));
+            return;
+          }
+
+          print('✅ Anti-spoofing check passed');
+        }
+      }
+
+      // Step 3: Check liveness with relaxed thresholds
+      // This ensures it's a real person but not too strict
+      final hasLiveness = _faceDetectorService.checkLiveness(
+        face,
+        eyeOpenThreshold: 0.15, // Relaxed: eyes can be partially open
+        maxHeadEulerAngleY: 25.0, // Allow some head rotation
+        maxHeadEulerAngleZ: 25.0,
+      );
+
+      // Log detailed info
+      print('   👁️ Left eye: ${face.leftEyeOpenProbability}');
+      print('   👁️ Right eye: ${face.rightEyeOpenProbability}');
+      print('   🔄 Head Y: ${face.headEulerAngleY}');
+      print('   🔄 Head Z: ${face.headEulerAngleZ}');
+
       if (!hasLiveness) {
         print('❌ Liveness check failed');
         emit(const FaceVerificationFailedST(
-            'فشل فحص الحيوية. تأكد من النظر للكاميرا مباشرة'));
+            'Please look directly at the camera with eyes open'));
         return;
       }
 
-      // Step 3: Check face quality
+      // Step 4: Check face quality
       final quality = _faceDetectorService.getFaceQuality(face);
       if (quality < 0.3) {
         print('❌ Face quality too low: $quality');
         emit(const FaceVerificationFailedST(
-            'جودة الصورة منخفضة. تأكد من الإضاءة الجيدة'));
+            'Image quality is low. Please ensure good lighting'));
         return;
       }
 
       print('✅ Face quality: $quality');
       print('✅ Liveness check passed');
 
-      // For now, if face is detected with good quality and liveness, consider it verified
-      // TODO: Add actual embedding comparison when we have proper image-to-embedding conversion
+      // Step 4: Extract embedding from captured image and compare with stored
+      try {
+        // Get stored embeddings
+        final storedEmbeddings = await _storageService.getEmbeddings(userId);
+        if (storedEmbeddings.isEmpty) {
+          print('❌ No stored embeddings found');
+          emit(const FaceNotEnrolledST());
+          return;
+        }
 
-      print('✅ Face verified successfully!');
-      emit(const FaceVerificationSuccessST());
+        // Extract embedding from current image using FaceNet
+        final currentEmbedding = await _faceNetService.getEmbeddingFromFile(
+          imageFile,
+          face.boundingBox,
+        );
+
+        if (currentEmbedding == null) {
+          print('❌ Failed to extract face embedding');
+          emit(const FaceVerificationFailedST(
+              'Could not process face. Please try again'));
+          return;
+        }
+
+        // Compare embeddings
+        double bestDistance = double.infinity;
+        for (final stored in storedEmbeddings) {
+          final distance = _faceNetService.euclideanDistance(
+            currentEmbedding,
+            stored.embedding,
+          );
+          if (distance < bestDistance) {
+            bestDistance = distance;
+          }
+        }
+
+        print('📊 Best match distance: $bestDistance');
+
+        // Verification threshold:
+        // < 0.5 = Very strict (may reject valid users)
+        // 0.5-0.6 = Strict but fair (recommended)
+        // 0.6-0.7 = Balanced
+        // > 0.7 = Too lenient (security risk)
+        const verificationThreshold =
+            0.65; // Balanced: secure but not frustrating
+
+        if (bestDistance > verificationThreshold) {
+          print(
+              '❌ Face does not match. Distance: $bestDistance (threshold: $verificationThreshold)');
+          emit(const FaceVerificationFailedST(
+              'Face verification failed. Please try again'));
+          return;
+        }
+
+        print('✅ Face verified successfully! Distance: $bestDistance');
+        emit(const FaceVerificationSuccessST());
+      } catch (embeddingError) {
+        print('❌ Embedding comparison failed: $embeddingError');
+        // DO NOT allow fallback - this is a security risk
+        emit(const FaceVerificationFailedST(
+            'Face verification error. Please try again'));
+        return;
+      }
     } catch (e) {
       print('❌ Error during face verification: $e');
-      emit(FaceVerificationFailedST('خطأ في التحقق من الوجه: $e'));
+      emit(FaceVerificationFailedST('Verification error: $e'));
     } finally {
       emit(const CheckInLoadingST(isLoading: false));
     }
@@ -198,5 +314,19 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
       // Emit loading complete
       emit(const CheckInLoadingST(isLoading: false));
     }
+  }
+
+  /// Calculate statistical variation (standard deviation) for anti-spoofing
+  double _calculateVariation(List<double> values) {
+    if (values.isEmpty) return 0.0;
+
+    final mean = values.reduce((a, b) => a + b) / values.length;
+    double sumSquaredDiff = 0.0;
+    for (final v in values) {
+      sumSquaredDiff += (v - mean) * (v - mean);
+    }
+    final variance = sumSquaredDiff / values.length;
+
+    return math.sqrt(variance);
   }
 }

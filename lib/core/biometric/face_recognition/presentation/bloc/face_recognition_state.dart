@@ -86,6 +86,43 @@ class FaceRecognitionError extends FaceRecognitionState {
   List<Object?> get props => [message, errorType];
 }
 
+/// Liveness challenge in progress
+class LivenessChallengeInProgress extends FaceRecognitionState {
+  final String challengeText;
+  final int currentChallengeIndex;
+  final int totalChallenges;
+  final List<String> completedChallenges;
+
+  LivenessChallengeInProgress({
+    required this.challengeText,
+    required this.currentChallengeIndex,
+    required this.totalChallenges,
+    this.completedChallenges = const [],
+  });
+
+  @override
+  List<Object?> get props => [
+        challengeText,
+        currentChallengeIndex,
+        totalChallenges,
+        completedChallenges
+      ];
+}
+
+/// Liveness check completed
+class LivenessCheckComplete extends FaceRecognitionState {
+  final bool passed;
+  final String message;
+
+  LivenessCheckComplete({
+    required this.passed,
+    required this.message,
+  });
+
+  @override
+  List<Object?> get props => [passed, message];
+}
+
 /// Error types for better UI handling
 enum FaceRecognitionErrorType {
   noFaceDetected,
