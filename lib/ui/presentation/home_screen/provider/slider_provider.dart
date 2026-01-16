@@ -67,15 +67,12 @@ class SliderProvider extends ChangeNotifier {
           : detail.title.isNotEmpty
               ? detail.title.trim() // Clean whitespace
               : "Announcement";
-      print('📝 Banner text (cleaned): "$text"');
       // Limit to 30 characters
       final displayText =
           text.length > 30 ? '${text.substring(0, 30)}...' : text;
-      print('📝 Display text: "$displayText"');
       return displayText;
     }).toList();
 
-    print('📋 Total titles: ${result.length}');
     return result;
   }
 
@@ -95,23 +92,16 @@ class SliderProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      print('========== FETCHING BANNER ANNOUNCEMENTS ==========');
       // Step 1: Fetch announcements list to get IDs (category 2 = Announcements for banner)
       final results = await _apiService.fetchAnnouncements(
         category: AnnouncementCategory.announcements,
       );
 
-      print(
-          '✅ Fetched ${results.length} announcements from /api/announcements');
-
       // If no announcements in category 2, try News (category 1)
       if (results.isEmpty) {
-        print(
-            '⚠️ No announcements found in category 2, trying News (category 1)...');
         final newsResults = await _apiService.fetchAnnouncements(
           category: AnnouncementCategory.news,
         );
-        print('✅ Fetched ${newsResults.length} news items');
         _announcements = newsResults;
       } else {
         _announcements = results;
@@ -121,40 +111,21 @@ class SliderProvider extends ChangeNotifier {
       final List<AnnouncementDetailsModel> details = [];
       final announcementsToFetch = _announcements.take(5).toList();
 
-      print(
-          '📡 Fetching details for ${announcementsToFetch.length} announcements...');
-
       for (final announcement in announcementsToFetch) {
         try {
-          print('  → Fetching details for ID: ${announcement.id}');
           final detail = await _apiService.fetchAnnouncementDetails(
             announcementId: announcement.id,
           );
           details.add(detail);
-          final textPreview = detail.announcementText.length > 50
-              ? '${detail.announcementText.substring(0, 50)}...'
-              : detail.announcementText;
-          print(
-              '  ✅ Got details: title="${detail.title}", text="$textPreview"');
         } catch (e) {
-          print(
-              '  ❌ Error fetching details for announcement ${announcement.id}: $e');
           // Continue with next announcement if one fails
         }
       }
 
       _bannerDetails = details;
-      print('✅ Total banner details loaded: ${_bannerDetails.length}');
 
       // Update timestamp to force cache refresh
       _lastFetchTimestamp = DateTime.now().millisecondsSinceEpoch;
-
-      if (_bannerDetails.isNotEmpty) {
-        print('📸 Images URLs:');
-        for (var detail in _bannerDetails) {
-          print('  - ${detail.attachmentUrl ?? "NO IMAGE"}');
-        }
-      }
 
       _isLoading = false;
       _hasError = false;
@@ -163,24 +134,18 @@ class SliderProvider extends ChangeNotifier {
       if (_currentIndex >= _bannerDetails.length && _bannerDetails.isNotEmpty) {
         _currentIndex = 0;
       }
-
-      print('========== BANNER FETCH COMPLETE ==========');
     } on AnnouncementApiException catch (e) {
-      print('❌ API Error: ${e.message}');
       _isLoading = false;
       _hasError = true;
       _errorMessage = e.message;
       _announcements = [];
       _bannerDetails = [];
-      print('Error fetching banner announcements: ${e.message}');
     } catch (e) {
-      print('❌ Unexpected Error: $e');
       _isLoading = false;
       _hasError = true;
       _errorMessage = 'Failed to load banner data';
       _announcements = [];
       _bannerDetails = [];
-      print('Error fetching banner announcements: $e');
     }
 
     notifyListeners();

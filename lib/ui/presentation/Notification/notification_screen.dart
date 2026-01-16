@@ -1,4 +1,7 @@
 import 'package:el_race/core/services/notification_storage_service.dart';
+import 'package:el_race/ui/presentation/circular_announcement/data/circular_announcement_api_service.dart';
+import 'package:el_race/ui/presentation/circular_announcement/data/circular_announcement_model.dart';
+import 'package:el_race/ui/presentation/circular_announcement/widgets/circular_announcement_file_viewer.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -26,10 +29,18 @@ class _NotificationScreenState extends State<NotificationScreen> {
   List<Map<String, dynamic>> notifications = [];
   bool _isLoading = true;
 
+  // Circular/Announcement API data
+  final CircularAnnouncementApiService _circularApiService =
+      CircularAnnouncementApiService();
+  CircularAnnouncementResponse? _circularAnnouncementData;
+  bool _isLoadingCircularAnnouncement = false;
+  String? _circularAnnouncementError;
+
   @override
   void initState() {
     super.initState();
     _loadNotifications();
+    _loadCircularAnnouncements(); // Load from API
     // Mark all as read when screen opens
     _markAllAsRead();
   }
@@ -49,6 +60,31 @@ class _NotificationScreenState extends State<NotificationScreen> {
       print('Error loading notifications: $e');
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _loadCircularAnnouncements() async {
+    setState(() {
+      _isLoadingCircularAnnouncement = true;
+      _circularAnnouncementError = null;
+    });
+
+    try {
+      final response = await _circularApiService.fetchCircularAnnouncements();
+      if (mounted) {
+        setState(() {
+          _circularAnnouncementData = response;
+          _isLoadingCircularAnnouncement = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading circulars/announcements: $e');
+      if (mounted) {
+        setState(() {
+          _circularAnnouncementError = e.toString();
+          _isLoadingCircularAnnouncement = false;
+        });
       }
     }
   }
@@ -312,183 +348,8 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
                               const SizedBox(height: 20),
 
-                              _isLoading
-                                  ? const Center(
-                                      child: Padding(
-                                        padding: EdgeInsets.all(32.0),
-                                        child: CircularProgressIndicator(),
-                                      ),
-                                    )
-                                  : _getFilteredNotifications().isEmpty
-                                      ? Center(
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(32.0),
-                                            child: Column(
-                                              children: [
-                                                Icon(
-                                                  Icons.notifications_none,
-                                                  size: 64,
-                                                  color: Colors.grey[400],
-                                                ),
-                                                const SizedBox(height: 16),
-                                                Text(
-                                                  'No notifications yet',
-                                                  style: GoogleFonts.koulen(
-                                                    fontSize: 18.sp,
-                                                    color: Colors.grey[600],
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        )
-                                      : ListView.builder(
-                                          shrinkWrap: true,
-                                          physics:
-                                              const NeverScrollableScrollPhysics(),
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 16),
-                                          itemCount: _getFilteredNotifications()
-                                              .length,
-                                          itemBuilder: (context, index) {
-                                            final filteredNotifications =
-                                                _getFilteredNotifications();
-                                            final item =
-                                                filteredNotifications[index];
-                                            // Get the icon from the currently selected notification type
-                                            String currentNotificationIcon =
-                                                notificationType[currentIndex]
-                                                    ['icon'];
-                                            return Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                GestureDetector(
-                                                  onTap: () =>
-                                                      _showAnnouncementDialog(
-                                                    context,
-                                                    item['title'] ??
-                                                        'Notification',
-                                                    item['body'] ?? '',
-                                                  ),
-                                                  child: Container(
-                                                    margin:
-                                                        const EdgeInsets.only(
-                                                            bottom: 6),
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 12,
-                                                        vertical: 5),
-                                                    decoration: BoxDecoration(
-                                                      image:
-                                                          const DecorationImage(
-                                                        image: AssetImage(
-                                                            'assets/png/bg_petty.png'),
-                                                        fit: BoxFit.cover,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              16),
-                                                      boxShadow: [
-                                                        BoxShadow(
-                                                          color: Colors.black
-                                                              .withAlpha(
-                                                                  (0.08 * 255)
-                                                                      .toInt()),
-                                                          blurRadius: 4,
-                                                          offset: const Offset(
-                                                              0, 2),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                    child: IntrinsicHeight(
-                                                      child: Row(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .center,
-                                                        children: [
-                                                          Image.asset(
-                                                            currentNotificationIcon,
-                                                            width: 25.w,
-                                                            height: 25.w,
-                                                          ),
-                                                          const SizedBox(
-                                                              width: 7),
-                                                          Expanded(
-                                                            child: Align(
-                                                              alignment: Alignment
-                                                                  .centerLeft,
-                                                              child: Column(
-                                                                crossAxisAlignment:
-                                                                    CrossAxisAlignment
-                                                                        .start,
-                                                                children: [
-                                                                  if (item[
-                                                                          'title'] !=
-                                                                      null)
-                                                                    Text(
-                                                                      item[
-                                                                          'title'],
-                                                                      style:
-                                                                          TextStyle(
-                                                                        fontSize:
-                                                                            16.sp,
-                                                                        fontWeight:
-                                                                            FontWeight.bold,
-                                                                        color:
-                                                                            appFontColor,
-                                                                      ),
-                                                                    ),
-                                                                  const SizedBox(
-                                                                      height:
-                                                                          2),
-                                                                  Text(
-                                                                    item['body'] ??
-                                                                        '',
-                                                                    style:
-                                                                        TextStyle(
-                                                                      fontSize:
-                                                                          14.sp,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w400,
-                                                                      color: Colors
-                                                                          .black87,
-                                                                    ),
-                                                                    maxLines: 2,
-                                                                    overflow:
-                                                                        TextOverflow
-                                                                            .ellipsis,
-                                                                  ),
-                                                                ],
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
-                                                          left: 6, bottom: 10),
-                                                  child: Text(
-                                                    _formatTime(
-                                                        item['timestamp'] ??
-                                                            ''),
-                                                    style: const TextStyle(
-                                                      fontSize: 9,
-                                                      color: Colors.black54,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            );
-                                          },
-                                        ),
+                              // Show different content based on selected tab
+                              _buildContentForTab(),
                             ],
                           ),
                         );
@@ -502,6 +363,322 @@ class _NotificationScreenState extends State<NotificationScreen> {
               // ),
             ],
           )),
+    );
+  }
+
+  /// Build content based on selected tab
+  Widget _buildContentForTab() {
+    final selectedCategory = notificationType[currentIndex]['category'];
+
+    // For Notifications tab (index 0) - use local storage
+    if (selectedCategory == 'notification') {
+      return _buildLocalNotificationsList();
+    }
+
+    // For Announcements and Circulars tabs - use API data
+    return _buildApiDataList(selectedCategory);
+  }
+
+  /// Build local notifications list (from storage)
+  Widget _buildLocalNotificationsList() {
+    if (_isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final filteredNotifications = _getFilteredNotifications();
+
+    if (filteredNotifications.isEmpty) {
+      return _buildEmptyState('No notifications yet', Icons.notifications_none);
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: filteredNotifications.length,
+      itemBuilder: (context, index) {
+        final item = filteredNotifications[index];
+        String currentNotificationIcon = notificationType[currentIndex]['icon'];
+        return _buildNotificationItem(item, currentNotificationIcon);
+      },
+    );
+  }
+
+  /// Build API data list (Announcements/Circulars)
+  Widget _buildApiDataList(String category) {
+    if (_isLoadingCircularAnnouncement) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_circularAnnouncementError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32.0),
+          child: Column(
+            children: [
+              Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+              const SizedBox(height: 16),
+              Text(
+                'Failed to load data',
+                style: GoogleFonts.koulen(
+                    fontSize: 18.sp, color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _loadCircularAnnouncements,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: appFontColor,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final List<CircularAnnouncementItem> items;
+    if (category == 'announcement') {
+      items = _circularAnnouncementData?.announcements ?? [];
+    } else {
+      items = _circularAnnouncementData?.circulars ?? [];
+    }
+
+    if (items.isEmpty) {
+      final emptyMessage = category == 'announcement'
+          ? 'No announcements yet'
+          : 'No circulars yet';
+      return _buildEmptyState(
+          emptyMessage,
+          category == 'announcement'
+              ? Icons.campaign_outlined
+              : Icons.assignment_outlined);
+    }
+
+    String currentNotificationIcon = notificationType[currentIndex]['icon'];
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: items.length,
+      itemBuilder: (context, index) {
+        final item = items[index];
+        return _buildCircularAnnouncementItem(item, currentNotificationIcon);
+      },
+    );
+  }
+
+  /// Build empty state widget
+  Widget _buildEmptyState(String message, IconData icon) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          children: [
+            Icon(icon, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style:
+                  GoogleFonts.koulen(fontSize: 18.sp, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build notification item from local storage
+  Widget _buildNotificationItem(Map<String, dynamic> item, String icon) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => _showAnnouncementDialog(
+            context,
+            item['title'] ?? 'Notification',
+            item['body'] ?? '',
+          ),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              image: const DecorationImage(
+                image: AssetImage('assets/png/bg_petty.png'),
+                fit: BoxFit.cover,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha((0.08 * 255).toInt()),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Image.asset(icon, width: 25.w, height: 25.w),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (item['title'] != null)
+                          Text(
+                            item['title'],
+                            style: TextStyle(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
+                              color: appFontColor,
+                            ),
+                          ),
+                        const SizedBox(height: 2),
+                        Text(
+                          item['body'] ?? '',
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black87,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(left: 6, bottom: 10),
+          child: Text(
+            _formatTime(item['timestamp'] ?? ''),
+            style: const TextStyle(
+              fontSize: 9,
+              color: Colors.black54,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build circular/announcement item from API
+  Widget _buildCircularAnnouncementItem(
+      CircularAnnouncementItem item, String icon) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: () => _openCircularAnnouncementFile(item),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              image: const DecorationImage(
+                image: AssetImage('assets/png/bg_petty.png'),
+                fit: BoxFit.cover,
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withAlpha((0.08 * 255).toInt()),
+                  blurRadius: 4,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Image.asset(icon, width: 25.w, height: 25.w),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Show description as main text (as per requirement)
+                      Text(
+                        item.description,
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (item.date != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          DateFormat('MMM dd, yyyy').format(item.date!),
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                // File indicator
+                if (item.hasFile)
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: appFontColor,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.attach_file,
+                      color: Colors.white,
+                      size: 18,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+      ],
+    );
+  }
+
+  /// Open file for circular/announcement
+  void _openCircularAnnouncementFile(CircularAnnouncementItem item) {
+    if (!item.hasFile) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No file attached to this item'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CircularAnnouncementFileViewer(item: item),
+      ),
     );
   }
 

@@ -5,24 +5,31 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:el_race/core/utils/shared_pref.dart';
 import '../../../../../resources/app_colors.dart';
 import '../bloc/face_recognition_bloc.dart';
 import '../bloc/face_recognition_event.dart';
 import '../bloc/face_recognition_state.dart';
 
-/// Face Registration Screen - Same UI as Verification Screen
+/// Face Registration/Verification Screen - Unified UI
 ///
-/// This screen registers user's face using the same modern UI
+/// This screen can be used for both registration and verification of user's face
+/// Set isVerification=true to use for check-in/check-out verification
 class FaceRegistrationScreen extends StatefulWidget {
   final String userId;
   final String title;
   final String subtitle;
+  final bool isVerification; // If true, verify instead of register
+  final VoidCallback?
+      onVerificationSuccess; // Called when verification succeeds
 
   const FaceRegistrationScreen({
     super.key,
     required this.userId,
     this.title = 'Register Your Face',
     this.subtitle = 'Look at the camera to register your identity',
+    this.isVerification = false,
+    this.onVerificationSuccess,
   });
 
   @override
@@ -39,7 +46,9 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
   bool _permissionDenied = false;
   bool _autoRegistrationAttempted = false;
   bool _showTryAgainButton = false;
+  bool _registrationSuccess = false; // Allow pop after success
   Timer? _autoRegistrationTimer;
+  Timer? _registrationTimeoutTimer; // Timeout to prevent infinite loading
 
   // Face detection for auto-retry
   FaceDetector? _faceDetector;
@@ -49,6 +58,15 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
   @override
   void initState() {
     super.initState();
+
+    // Debug: Print screen mode and userId
+    print('\n🎬 ===== FACE REGISTRATION SCREEN INIT =====');
+    print(
+        '📱 Mode: ${widget.isVerification ? "VERIFICATION" : "REGISTRATION"}');
+    print('👤 User ID: ${widget.userId}');
+    print('📝 Title: ${widget.title}');
+    print('==========================================\n');
+
     _checkIfMandatory();
     _initializePulseAnimation();
     _initializeCamera();
@@ -267,6 +285,26 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
 
     print('📸 Starting capture with anti-spoofing...');
 
+    // Cancel any existing timeout
+    _registrationTimeoutTimer?.cancel();
+
+    // Add timeout to prevent infinite loading
+    _registrationTimeoutTimer = Timer(const Duration(seconds: 30), () {
+      print('⏰ Registration timeout - forcing retry state');
+      if (mounted && _isProcessing) {
+        setState(() {
+          _isProcessing = false;
+          _showTryAgainButton = true;
+        });
+        // Try to stop the image stream if it's still running
+        try {
+          _cameraController?.stopImageStream();
+        } catch (e) {
+          print('⚠️ Error stopping stream on timeout: $e');
+        }
+      }
+    });
+
     try {
       int frameCount = 0;
       const int requiredFrames = 5; // Capture 5 frames for anti-spoof check
@@ -299,17 +337,28 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
             print('⚠️ Error stopping stream: $e');
           }
 
-          // Trigger registration with multiple frames for anti-spoofing
+          // Trigger registration/verification with multiple frames for anti-spoofing
           if (mounted) {
-            print('🔄 Triggering registration with anti-spoof check...');
-            context.read<FaceRecognitionBloc>().add(
-                  StartFaceRegistration(
-                    image: capturedFrames.last, // Use last frame for embedding
-                    userId: widget.userId,
-                    label: 'primary',
-                    additionalImages: capturedFrames, // For anti-spoof
-                  ),
-                );
+            if (widget.isVerification) {
+              print('🔍 Triggering verification with anti-spoof check...');
+              context.read<FaceRecognitionBloc>().add(
+                    StartFaceVerification(
+                      image: capturedFrames.last,
+                      userId: widget.userId,
+                    ),
+                  );
+            } else {
+              print('🔄 Triggering registration with anti-spoof check...');
+              context.read<FaceRecognitionBloc>().add(
+                    StartFaceRegistration(
+                      image:
+                          capturedFrames.last, // Use last frame for embedding
+                      userId: widget.userId,
+                      label: 'primary',
+                      additionalImages: capturedFrames, // For anti-spoof
+                    ),
+                  );
+            }
           }
         }
       });
@@ -330,6 +379,8 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
 
     return WillPopScope(
       onWillPop: () async {
+        // Allow pop if registration was successful
+        if (_registrationSuccess) return true;
         if (_isMandatory) return false;
         Navigator.of(context).pop(false);
         return false;
@@ -338,13 +389,62 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
         backgroundColor: AppColors.white,
         body: BlocConsumer<FaceRecognitionBloc, FaceRecognitionState>(
           listener: (context, state) {
+            print('🎯 FaceRecognitionBloc state: ${state.runtimeType}');
+
             if (state is FaceRecognitionCameraReady) {
               setState(() => _cameraController = state.cameraController);
               _startAutoRegistration();
             } else if (state is FaceRegistrationSuccess) {
+              print('✅ Face registration SUCCESS - navigating back...');
               _stopFaceMonitoring();
-              Navigator.of(context).pop(true);
+              _registrationTimeoutTimer?.cancel();
+
+              // Mark success flag to allow WillPopScope to let us pop
+              _registrationSuccess = true;
+
+              // Mark as registered BEFORE popping
+              SharedPref().setPreferencesBoolean('isFaceRegistered', true);
+              SharedPref()
+                  .setPreferencesBoolean('pendingFaceVerification', false);
+              SharedPref()
+                  .setPreferencesBoolean('isFaceRegistrationInProgress', false);
+
+              // Use Navigator.maybePop to work with WillPopScope
+              if (mounted) {
+                print('🔙 Popping with result: true');
+                Navigator.of(context).pop(true);
+              }
+            } else if (state is FaceVerificationResult) {
+              // Handle verification result
+              print('🔍 Face verification result: ${state.isVerified}');
+              _stopFaceMonitoring();
+              _registrationTimeoutTimer?.cancel();
+
+              if (state.isVerified) {
+                print('✅ Face verification SUCCESS');
+                _registrationSuccess = true;
+
+                // Call callback if provided
+                if (widget.isVerification &&
+                    widget.onVerificationSuccess != null) {
+                  widget.onVerificationSuccess!();
+                }
+
+                // Also trigger check-in if needed (for check-in flow)
+                if (widget.isVerification && mounted) {
+                  // Pop and return true for check-in success
+                  Navigator.of(context).pop(true);
+                }
+              } else {
+                print('❌ Face verification FAILED: ${state.message}');
+                setState(() {
+                  _isProcessing = false;
+                  _showTryAgainButton = true;
+                });
+              }
             } else if (state is FaceRecognitionError) {
+              print('❌ Face registration ERROR: ${state.message}');
+              _registrationTimeoutTimer?.cancel(); // Cancel timeout on error
               setState(() {
                 _isProcessing = false;
                 _showTryAgainButton = true;
@@ -356,6 +456,7 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
                 }
               });
             } else if (state is FaceRecognitionLoading) {
+              print('⏳ Face registration LOADING...');
               setState(() => _isProcessing = true);
             }
           },
@@ -392,9 +493,13 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
 
                   const SizedBox(height: 20),
 
-                  // Title Section - Clean & Centered
+                  // Title Section - Clean & Centered (Dynamic based on mode)
                   Text(
-                    'Face Registration',
+                    widget.isVerification
+                        ? (widget.title.isEmpty
+                            ? 'Verify Your Face'
+                            : widget.title)
+                        : 'Face Registration',
                     style: TextStyle(
                       color: AppColors.primaryColor,
                       fontSize: 26,
@@ -404,7 +509,11 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Position your face within the circle',
+                    widget.isVerification
+                        ? (widget.subtitle.isEmpty
+                            ? 'Look at the camera to verify'
+                            : widget.subtitle)
+                        : 'Position your face within the circle',
                     style: TextStyle(
                       color: AppColors.grey,
                       fontSize: 15,
@@ -784,6 +893,7 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
   void dispose() {
     _stopFaceMonitoring();
     _autoRegistrationTimer?.cancel();
+    _registrationTimeoutTimer?.cancel(); // Cancel timeout timer
     _pulseAnimationController?.dispose();
     _cameraController?.dispose();
     _faceDetector?.close();

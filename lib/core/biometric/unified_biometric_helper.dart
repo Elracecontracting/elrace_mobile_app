@@ -22,16 +22,42 @@ class UnifiedBiometricHelper {
     try {
       // Get user ID from SharedPreferences
       final loginData = SharedPref.getLoginData();
-      final userId = loginData.result?.data?.uid?.toString() ??
-          loginData.result?.data?.username ??
-          loginData.result?.data?.emp_id;
+
+      // Debug: Print available data
+      debugPrint('🔍 UnifiedBiometricHelper: Getting user ID...');
+      debugPrint('  - uid: ${loginData.result?.data?.uid}');
+      debugPrint('  - username: ${loginData.result?.data?.username}');
+      debugPrint('  - emp_id: ${loginData.result?.data?.emp_id}');
+      debugPrint(
+          '  - emp_profile_id: ${loginData.result?.data?.emp_profile_id}');
+
+      // Priority: emp_id > emp_profile_id > uid > username
+      final userId = loginData.result?.data?.emp_id ??
+          loginData.result?.data?.emp_profile_id ??
+          loginData.result?.data?.uid?.toString() ??
+          loginData.result?.data?.username;
 
       if (userId == null || userId.isEmpty) {
         debugPrint('❌ UnifiedBiometricHelper: No user ID found');
+        debugPrint('   Login data structure: ${loginData.result?.data}');
         return null;
       }
 
-      debugPrint('✅ UnifiedBiometricHelper: User ID = $userId');
+      // Detailed logging about which field was selected
+      final empId = loginData.result?.data?.emp_id;
+      final empProfileId = loginData.result?.data?.emp_profile_id;
+      final uid = loginData.result?.data?.uid;
+
+      if (empId != null && empId.isNotEmpty) {
+        debugPrint('✅ Selected emp_id: $userId');
+      } else if (empProfileId != null && empProfileId.isNotEmpty) {
+        debugPrint('✅ Selected emp_profile_id: $userId');
+      } else if (uid != null) {
+        debugPrint('✅ Selected uid: $userId');
+      } else {
+        debugPrint('✅ Selected username: $userId');
+      }
+
       return userId;
     } catch (e) {
       debugPrint('❌ UnifiedBiometricHelper: Error getting user ID: $e');
@@ -42,8 +68,16 @@ class UnifiedBiometricHelper {
   /// Authenticate for attendance (check-in/out)
   /// Now uses Face Recognition instead of platform biometrics
   static Future<bool> authenticateForAttendance(BuildContext context) async {
+    print('\n📍 ===== UnifiedBiometricHelper.authenticateForAttendance =====');
     final userId = await _getCurrentUserId();
-    if (userId == null) return false;
+    print('📍 Selected userId to pass: $userId');
+    print(
+        '====================================================================\n');
+
+    if (userId == null) {
+      print('❌ authenticateForAttendance: userId is null, returning false');
+      return false;
+    }
 
     return await FaceRecognitionHelper.authenticateForAttendance(
       context,

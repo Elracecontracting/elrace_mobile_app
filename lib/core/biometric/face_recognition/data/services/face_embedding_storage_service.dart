@@ -54,6 +54,11 @@ class FaceEmbeddingStorageService {
   /// 4. Save metadata to secure storage
   Future<void> saveEmbedding(FaceEmbedding embedding) async {
     try {
+      print('\n💾 ===== SAVING EMBEDDING =====');
+      print('👤 User ID: ${embedding.userId}');
+      print('🏷️ Label: ${embedding.label ?? "default"}');
+      print('📊 Embedding dimensions: ${embedding.embedding.length}');
+
       // Get or create encryption key for this user
       final encryptionKey = await _getOrCreateEncryptionKey(embedding.userId);
 
@@ -72,9 +77,14 @@ class FaceEmbeddingStorageService {
       await file.create(recursive: true);
       await file.writeAsBytes(encryptedData);
 
+      print('✅ Embedding saved to: $filePath');
+      print('🔐 Encrypted data size: ${encryptedData.length} bytes');
+
       // Save metadata
       await _saveMetadata(embedding, filePath);
+      print('✅ Metadata saved\n');
     } catch (e) {
+      print('❌ ERROR saving embedding: $e\n');
       throw StorageException('Failed to save embedding: $e');
     }
   }
@@ -89,20 +99,41 @@ class FaceEmbeddingStorageService {
   /// Get all embeddings for a user
   Future<List<FaceEmbedding>> getEmbeddings(String userId) async {
     try {
+      print('\n🔍 ===== GETTING EMBEDDINGS =====');
+      print('👤 User ID: $userId');
+
+      // DEBUG: List ALL stored embeddings keys to see what's available
+      final allKeys = await _secureStorage.readAll();
+      final faceMetaKeys =
+          allKeys.keys.where((k) => k.startsWith(_keyPrefix)).toList();
+      print('📋 ALL stored face metadata keys:');
+      for (final key in faceMetaKeys) {
+        print('   - $key');
+      }
+      print('📋 Total keys: ${faceMetaKeys.length}');
+
       final metadataList = await _getAllMetadata(userId);
+      print(
+          '📦 Found ${metadataList.length} metadata entries for userId: $userId');
+
       final embeddings = <FaceEmbedding>[];
 
       for (final metadata in metadataList) {
         try {
+          print('   Loading: ${metadata["label"] ?? "default"}');
           final embedding = await _loadEmbeddingFromMetadata(metadata, userId);
           embeddings.add(embedding);
+          print('   ✅ Loaded successfully');
         } catch (e) {
-          print('Warning: Failed to load embedding from ${metadata['filePath']}: $e');
+          print(
+              '   ⚠️ Warning: Failed to load embedding from ${metadata['filePath']}: $e');
         }
       }
 
+      print('✅ Total embeddings loaded: ${embeddings.length}\n');
       return embeddings;
     } catch (e) {
+      print('❌ ERROR getting embeddings: $e\n');
       throw StorageException('Failed to get embeddings: $e');
     }
   }
@@ -177,6 +208,45 @@ class FaceEmbeddingStorageService {
     }
   }
 
+  /// Delete ALL embeddings (for debugging/cleanup)
+  Future<void> deleteAllEmbeddings() async {
+    try {
+      print('\n🗑️ ===== DELETING ALL EMBEDDINGS =====');
+      final allKeys = await _secureStorage.readAll();
+
+      int deleted = 0;
+      for (final key in allKeys.keys) {
+        if (key.startsWith(_keyPrefix) ||
+            key.startsWith(_encryptionKeyPrefix)) {
+          // Try to get and delete the file first
+          if (key.startsWith(_keyPrefix)) {
+            try {
+              final metadata =
+                  jsonDecode(allKeys[key]!) as Map<String, dynamic>;
+              final filePath = metadata['filePath'] as String?;
+              if (filePath != null) {
+                final file = File(filePath);
+                if (await file.exists()) {
+                  await file.delete();
+                  print('   🗑️ Deleted file: $filePath');
+                }
+              }
+            } catch (e) {
+              print('   ⚠️ Could not parse/delete file for key: $key');
+            }
+          }
+          await _secureStorage.delete(key: key);
+          print('   🗑️ Deleted key: $key');
+          deleted++;
+        }
+      }
+      print('✅ Deleted $deleted keys/files\n');
+    } catch (e) {
+      print('❌ Error deleting all embeddings: $e');
+      throw StorageException('Failed to delete all embeddings: $e');
+    }
+  }
+
   /// Check if user has any stored embeddings
   Future<bool> hasEmbeddings(String userId) async {
     try {
@@ -209,7 +279,8 @@ class FaceEmbeddingStorageService {
       // Clear secure storage
       final allKeys = await _secureStorage.readAll();
       for (final key in allKeys.keys) {
-        if (key.startsWith(_keyPrefix) || key.startsWith(_encryptionKeyPrefix)) {
+        if (key.startsWith(_keyPrefix) ||
+            key.startsWith(_encryptionKeyPrefix)) {
           await _secureStorage.delete(key: key);
         }
       }

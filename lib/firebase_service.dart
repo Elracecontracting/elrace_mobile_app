@@ -1,7 +1,10 @@
+import 'dart:convert';
+
 import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/main.dart';
 import 'package:el_race/ui/presentation/Notification/notification_screen.dart';
+import 'package:el_race/ui/presentation/circular_announcement/screens/circular_announcement_screen.dart';
 import 'package:el_race/utils/string_utils.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
@@ -324,8 +327,68 @@ class FirebaseService {
     print('   - Payload: $payload');
     print('   - Context available: ${navKey.currentContext != null}');
 
-    // Navigate to notification screen only if not already there
+    // Parse payload to check for circular/announcement type
+    Map<String, dynamic>? payloadData;
+    try {
+      if (payload != null && payload.isNotEmpty) {
+        // Try to parse as JSON if it looks like JSON
+        if (payload.startsWith('{')) {
+          payloadData = jsonDecode(payload);
+        } else {
+          // Handle the toString() format: {key: value, key2: value2}
+          final cleanPayload = payload.replaceAll('{', '').replaceAll('}', '');
+          final pairs = cleanPayload.split(',');
+          payloadData = {};
+          for (final pair in pairs) {
+            final keyValue = pair.split(':');
+            if (keyValue.length >= 2) {
+              final key = keyValue[0].trim();
+              final value = keyValue.sublist(1).join(':').trim();
+              payloadData[key] = value;
+            }
+          }
+        }
+        print('   - Parsed payload: $payloadData');
+      }
+    } catch (e) {
+      print('   - Failed to parse payload: $e');
+    }
+
+    // Check if this is a circular or announcement notification
+    final category = payloadData?['category']?.toString().toLowerCase() ??
+        payloadData?['type']?.toString().toLowerCase() ??
+        '';
+    final itemId = int.tryParse(payloadData?['id']?.toString() ?? '');
+
+    print('   - Category: $category');
+    print('   - Item ID: $itemId');
+
+    // Navigate based on notification type
     if (navKey.currentContext != null) {
+      final navigator = Navigator.of(navKey.currentContext!);
+
+      if (category == 'circular' || category == 'announcement') {
+        // Navigate to CircularAnnouncementScreen
+        print('   - ✅ Navigating to Circular/Announcement screen...');
+
+        final initialTabIndex = category == 'announcement' ? 1 : 0;
+
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => CircularAnnouncementScreen(
+              initialTabIndex: initialTabIndex,
+              autoOpenItemId: itemId,
+              autoOpenCategory: category,
+            ),
+            settings: const RouteSettings(name: '/circular_announcement'),
+          ),
+          (route) => route.isFirst,
+        );
+        print('   - ✅ Navigation to Circular/Announcement completed!');
+        return;
+      }
+
+      // Default: Navigate to notification screen
       final currentRoute = ModalRoute.of(navKey.currentContext!);
       print('   - Current route name: ${currentRoute?.settings.name}');
 
@@ -337,8 +400,6 @@ class FirebaseService {
 
       if (!isOnNotificationScreen) {
         print('   - ✅ Navigating to notification screen...');
-        // Check if we can navigate
-        final navigator = Navigator.of(navKey.currentContext!);
 
         // Remove any existing notification screens from stack and push new one
         navigator.pushAndRemoveUntil(
@@ -356,16 +417,7 @@ class FirebaseService {
       print('⚠️ Navigation context is null, waiting for app to initialize...');
       // Retry after a delay if context is not available yet
       Future.delayed(const Duration(milliseconds: 500), () {
-        if (navKey.currentContext != null) {
-          final navigator = Navigator.of(navKey.currentContext!);
-          navigator.pushAndRemoveUntil(
-            MaterialPageRoute(
-              builder: (context) => const NotificationScreen(),
-              settings: const RouteSettings(name: '/notification'),
-            ),
-            (route) => route.isFirst,
-          );
-        }
+        _handleNotificationTap(payload);
       });
     }
   }

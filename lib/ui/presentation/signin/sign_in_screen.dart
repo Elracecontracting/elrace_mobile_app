@@ -147,8 +147,19 @@ class _SignInScreenState extends State<SignInScreen> {
               'DEBUG: partnerDisplayName = ${state.loginResponse.result?.data?.partnerDisplayName}');
           print('DEBUG: job_id = ${state.loginResponse.result?.data?.job_id}');
           print('DEBUG: emp_id = ${state.loginResponse.result?.data?.emp_id}');
+          print(
+              'DEBUG: emp_profile_id = ${state.loginResponse.result?.data?.emp_profile_id}');
           print('DEBUG: uid = ${state.loginResponse.result?.data?.uid}');
           print('DEBUG: ===================================');
+
+          // Additional debug for Face Registration
+          print('\n📱 ===== FACE REGISTRATION USER ID SELECTION =====');
+          final userId = state.loginResponse.result?.data?.emp_id ??
+              state.loginResponse.result?.data?.emp_profile_id ??
+              state.loginResponse.result?.data?.uid?.toString() ??
+              state.loginResponse.result?.data?.username;
+          print('SELECTED USER ID FOR FACE REGISTRATION: $userId');
+          print('==================================================\n');
 
           SharedPref().setPreferencesString(
               'loginResponse', jsonEncode(state.loginResponse.toJson()));

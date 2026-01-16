@@ -43,8 +43,16 @@ class CheckOutBloc extends Bloc<CheckOutEvent, CheckOutState> {
           // Save check-out time in UAE timezone (GMT+4) for display
           final uaeTime = DateTime.now().toUtc().add(const Duration(hours: 4));
           final displayTime =
-              '${uaeTime.hour.toString().padLeft(2, '0')}:${uaeTime.minute.toString().padLeft(2, '0')}';
-          SharedPref().setPreferencesString('checkOutDisplayTime', displayTime);
+              '${uaeTime.hour.toString().padLeft(2, '0')}:${uaeTime.minute.toString().padLeft(2, '0')}:${uaeTime.second.toString().padLeft(2, '0')}';
+
+          print('\n🔴 ===== CHECK-OUT BLOC - SAVING TIME =====');
+          print('🔴 Key: checkOutDisplayTime');
+          print('🔴 Value: $displayTime');
+          print('🔴 =========================================\n');
+
+          await SharedPref()
+              .setPreferencesString('checkOutDisplayTime', displayTime);
+          print('✅ Check-out time saved to SharedPref: $displayTime');
 
           // Emit success state with the message
           emit(CheckedOutST(responseData['message']));
@@ -52,8 +60,16 @@ class CheckOutBloc extends Bloc<CheckOutEvent, CheckOutState> {
           // Save check-out time even on warning
           final uaeTime = DateTime.now().toUtc().add(const Duration(hours: 4));
           final displayTime =
-              '${uaeTime.hour.toString().padLeft(2, '0')}:${uaeTime.minute.toString().padLeft(2, '0')}';
-          SharedPref().setPreferencesString('checkOutDisplayTime', displayTime);
+              '${uaeTime.hour.toString().padLeft(2, '0')}:${uaeTime.minute.toString().padLeft(2, '0')}:${uaeTime.second.toString().padLeft(2, '0')}';
+
+          print('\n🟡 ===== CHECK-OUT BLOC (WARNING) - SAVING TIME =====');
+          print('🟡 Key: checkOutDisplayTime');
+          print('🟡 Value: $displayTime');
+          print('🟡 ===================================================\n');
+
+          await SharedPref()
+              .setPreferencesString('checkOutDisplayTime', displayTime);
+          print('✅ Check-out time saved (warning): $displayTime');
 
           // Emit warning state with the warning message
           emit(CheckOutWarningST(responseData['message']));

@@ -335,5 +335,17 @@
     "list_name_hint": "List name",
     "list_name_required": "Please enter a list name",
     "create": "Create"
+  },
+  "circular_announcement": {
+    "title": "Circulars & Announcements",
+    "circulars": "Circulars",
+    "announcements": "Announcements",
+    "no_circulars": "No circulars available",
+    "no_announcements": "No announcements available",
+    "no_file_attached": "No file attached to this item",
+    "loading_file": "Loading file...",
+    "failed_to_load": "Failed to load file",
+    "share": "Share",
+    "retry": "Retry"
   }
 }

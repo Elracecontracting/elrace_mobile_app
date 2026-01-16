@@ -39,6 +39,7 @@ import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:app_links/app_links.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'core/services/app_config_service.dart';
 import 'firebase_service.dart';
 import 'report_module/data/provider/reports_provider.dart';
@@ -249,12 +250,35 @@ void main() async {
     await delegate.changeLocale(const Locale('ar'));
   }
 
+  // Request essential permissions at app start
+  await _requestEssentialPermissions();
+
   runApp(
     BlocProvider(
       create: (_) => ApprovalBloc(),
       child: LocalizedApp(delegate, const MyApp()),
     ),
   );
+}
+
+/// Request Camera and Location permissions at app start
+/// This prevents lag when opening face registration or check-in screens
+Future<void> _requestEssentialPermissions() async {
+  try {
+    print('📍 Requesting essential permissions...');
+
+    // Request Camera permission
+    final cameraStatus = await Permission.camera.request();
+    print('📷 Camera permission: $cameraStatus');
+
+    // Request Location permission
+    final locationStatus = await Permission.location.request();
+    print('📍 Location permission: $locationStatus');
+
+    print('✅ Essential permissions requested');
+  } catch (e) {
+    print('⚠️ Error requesting permissions: $e');
+  }
 }
 
 class MyApp extends StatelessWidget {

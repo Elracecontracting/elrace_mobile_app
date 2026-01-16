@@ -84,12 +84,23 @@ class CustomSwipeButtonRepo {
         "office": null
       }
     });
-    print(body);
+    print('🌍 ════════════════════════════════════════════════════════');
+    print('📍 اللوكيشن تبعك الحين:');
+    print('   Latitude: $latitude');
+    print('   Longitude: $longitude');
+    print('🏗️ Project ID: $projectId');
+    print('📤 Request Body: $body');
     try {
       final response = await http.post(url, headers: headers, body: body);
+      print('📥 Response Status: ${response.statusCode}');
+      print('📦 Response Body: ${response.body}');
       final data = jsonDecode(response.body);
+      print('✅ Result: ${data['result']}');
+      print('🌍 ════════════════════════════════════════════════════════');
       return data['result'];
     } catch (e) {
+      print('❌ Error: $e');
+      print('🌍 ════════════════════════════════════════════════════════');
       return {"status": "error", "message": "Failed to validate location: $e"};
     }
   }

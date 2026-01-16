@@ -335,5 +335,17 @@
     "list_name_hint": "اسم القائمة",
     "list_name_required": "يرجى إدخال اسم القائمة",
     "create": "إنشاء"
+  },
+  "circular_announcement": {
+    "title": "التعاميم والإعلانات",
+    "circulars": "التعاميم",
+    "announcements": "الإعلانات",
+    "no_circulars": "لا توجد تعاميم متاحة",
+    "no_announcements": "لا توجد إعلانات متاحة",
+    "no_file_attached": "لا يوجد ملف مرفق لهذا العنصر",
+    "loading_file": "جاري تحميل الملف...",
+    "failed_to_load": "فشل تحميل الملف",
+    "share": "مشاركة",
+    "retry": "إعادة المحاولة"
   }
 }

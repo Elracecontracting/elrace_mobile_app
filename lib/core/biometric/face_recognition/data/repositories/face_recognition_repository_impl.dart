@@ -221,13 +221,26 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
     required String userId,
   }) async {
     try {
+      print('\n🔐 ===== FACE VERIFICATION START =====');
+      print('👤 User ID for verification: $userId');
+
       // Step 1: Check if user has registered embeddings
+      print('🔍 Step 1: Checking for registered embeddings...');
       final storedEmbeddings = await _storageService.getEmbeddings(userId);
+      print(
+          '📦 Found ${storedEmbeddings.length} stored embeddings for user: $userId');
+
       if (storedEmbeddings.isEmpty) {
+        print('❌ No registered embeddings found for user: $userId');
+        print('   Available embeddings for debugging:');
+        // Try to get all embeddings to debug
+        print('   (Note: Check if userId is correct during registration)');
         return const Left(
           VerificationFailure('No registered face found for this user.'),
         );
       }
+
+      print('✅ Found registered embeddings, proceeding with verification...');
 
       // Step 2: Detect face in current image
       final detectResult = await _detectSingleFace(image);
@@ -379,5 +392,10 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
     final variance = sumSquaredDiff / values.length;
 
     return math.sqrt(variance);
+  }
+
+  /// Delete all stored embeddings (for debugging/cleanup)
+  Future<void> deleteAllEmbeddings() async {
+    await _storageService.deleteAllEmbeddings();
   }
 }

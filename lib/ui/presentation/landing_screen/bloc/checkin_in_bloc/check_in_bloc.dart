@@ -54,15 +54,10 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
           loginData.result?.data?.uid?.toString() ??
           'unknown';
 
-      print('\n🔐 ===== FACE VERIFICATION CHECK FOR CHECK-IN =====');
-      print('👤 User ID: $userId');
-      print('📸 Image Path: ${event.imagePath}');
-
       // Check if user has enrolled face
       final hasEmbeddings = await _storageService.hasEmbeddings(userId);
 
       if (!hasEmbeddings) {
-        print('❌ No face embeddings found - user needs enrollment');
         emit(const FaceNotEnrolledST());
         return;
       }
@@ -70,7 +65,6 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
       // Load image from path
       final imageFile = File(event.imagePath);
       if (!await imageFile.exists()) {
-        print('❌ Image file not found');
         emit(const FaceVerificationFailedST('Error: Image file not found'));
         return;
       }
@@ -79,20 +73,17 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
       final inputImage = InputImage.fromFile(imageFile);
 
       // Perform face verification using FaceDetectorService
-      print('🔍 Starting face verification...');
 
       // Step 1: Detect faces in the image
       final faces =
           await _faceDetectorService.detectFacesFromInputImage(inputImage);
 
       if (faces.isEmpty) {
-        print('❌ No face detected in the image');
         emit(const FaceVerificationFailedST('No face detected in the image'));
         return;
       }
 
       if (faces.length > 1) {
-        print('❌ Multiple faces detected');
         emit(const FaceVerificationFailedST('Multiple faces detected'));
         return;
       }
@@ -102,9 +93,6 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
       // Step 2: Anti-Spoofing check using multiple images
       if (event.additionalImagePaths != null &&
           event.additionalImagePaths!.length >= 3) {
-        print(
-            '🛡️ Performing anti-spoofing check with ${event.additionalImagePaths!.length} images...');
-
         final List<Face> faceSequence = [];
         for (final path in event.additionalImagePaths!) {
           final file = File(path);
@@ -128,18 +116,12 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
           final yawVariation = _calculateVariation(yawValues);
           final pitchVariation = _calculateVariation(pitchValues);
 
-          print('   📊 Head Yaw variation: $yawVariation°');
-          print('   📊 Head Pitch variation: $pitchVariation°');
-
           // If face is perfectly static (< 0.3° movement), it's likely a photo
           if (yawVariation < 0.3 && pitchVariation < 0.3) {
-            print('❌ Anti-spoof FAILED: Face is too static (possible photo)');
             emit(const FaceVerificationFailedST(
                 'Verification failed. Please try again'));
             return;
           }
-
-          print('✅ Anti-spoofing check passed');
         }
       }
 
@@ -152,14 +134,7 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
         maxHeadEulerAngleZ: 25.0,
       );
 
-      // Log detailed info
-      print('   👁️ Left eye: ${face.leftEyeOpenProbability}');
-      print('   👁️ Right eye: ${face.rightEyeOpenProbability}');
-      print('   🔄 Head Y: ${face.headEulerAngleY}');
-      print('   🔄 Head Z: ${face.headEulerAngleZ}');
-
       if (!hasLiveness) {
-        print('❌ Liveness check failed');
         emit(const FaceVerificationFailedST(
             'Please look directly at the camera with eyes open'));
         return;
@@ -168,21 +143,16 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
       // Step 4: Check face quality
       final quality = _faceDetectorService.getFaceQuality(face);
       if (quality < 0.3) {
-        print('❌ Face quality too low: $quality');
         emit(const FaceVerificationFailedST(
             'Image quality is low. Please ensure good lighting'));
         return;
       }
-
-      print('✅ Face quality: $quality');
-      print('✅ Liveness check passed');
 
       // Step 4: Extract embedding from captured image and compare with stored
       try {
         // Get stored embeddings
         final storedEmbeddings = await _storageService.getEmbeddings(userId);
         if (storedEmbeddings.isEmpty) {
-          print('❌ No stored embeddings found');
           emit(const FaceNotEnrolledST());
           return;
         }
@@ -194,7 +164,6 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
         );
 
         if (currentEmbedding == null) {
-          print('❌ Failed to extract face embedding');
           emit(const FaceVerificationFailedST(
               'Could not process face. Please try again'));
           return;
@@ -212,8 +181,6 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
           }
         }
 
-        print('📊 Best match distance: $bestDistance');
-
         // Verification threshold:
         // < 0.5 = Very strict (may reject valid users)
         // 0.5-0.6 = Strict but fair (recommended)
@@ -223,24 +190,19 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
             0.65; // Balanced: secure but not frustrating
 
         if (bestDistance > verificationThreshold) {
-          print(
-              '❌ Face does not match. Distance: $bestDistance (threshold: $verificationThreshold)');
           emit(const FaceVerificationFailedST(
               'Face verification failed. Please try again'));
           return;
         }
 
-        print('✅ Face verified successfully! Distance: $bestDistance');
         emit(const FaceVerificationSuccessST());
       } catch (embeddingError) {
-        print('❌ Embedding comparison failed: $embeddingError');
         // DO NOT allow fallback - this is a security risk
         emit(const FaceVerificationFailedST(
             'Face verification error. Please try again'));
         return;
       }
     } catch (e) {
-      print('❌ Error during face verification: $e');
       emit(FaceVerificationFailedST('Verification error: $e'));
     } finally {
       emit(const CheckInLoadingST(isLoading: false));
@@ -268,38 +230,53 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
         if (responseData['status'] == 'success') {
           final checkInRecordId = responseData['check_in_record_id'];
           print('checkInRecordIdBloc: $checkInRecordId');
-          SharedPref().setPreferenceInt('checkInRecordId', checkInRecordId);
+          await SharedPref()
+              .setPreferenceInt('checkInRecordId', checkInRecordId);
 
           // Save check-in time in UAE timezone (GMT+4) for display
           final uaeTime = DateTime.now().toUtc().add(const Duration(hours: 4));
           final displayTime =
-              '${uaeTime.hour.toString().padLeft(2, '0')}:${uaeTime.minute.toString().padLeft(2, '0')}';
-          SharedPref().setPreferencesString('checkInDisplayTime', displayTime);
+              '${uaeTime.hour.toString().padLeft(2, '0')}:${uaeTime.minute.toString().padLeft(2, '0')}:${uaeTime.second.toString().padLeft(2, '0')}';
+
+          print('\n🟢 ===== CHECK-IN BLOC - SAVING TIME =====');
+          print('🟢 Key: checkInDisplayTime');
+          print('🟢 Value: $displayTime');
+          print('🟢 ========================================\n');
+
+          await SharedPref()
+              .setPreferencesString('checkInDisplayTime', displayTime);
+          print('✅ Check-in time saved to SharedPref: $displayTime');
 
           // Save check-in timestamp for 16-hour reset logic
-          SharedPref().setPreferenceInt(
+          await SharedPref().setPreferenceInt(
               'checkInTime', DateTime.now().millisecondsSinceEpoch);
 
           // Reset check-out time
-          SharedPref().setPreferencesString('checkOutDisplayTime', '00:00:00');
+          print('🟢 Resetting checkOutDisplayTime to 00:00:00');
+          await SharedPref()
+              .setPreferencesString('checkOutDisplayTime', '00:00:00');
 
           emit(CheckedInST(responseData['message'], checkInRecordId));
         } else if (responseData['status'] == 'warning') {
           final checkInRecordId = responseData['check_in_record_id'];
-          SharedPref().setPreferenceInt('checkInRecordId', checkInRecordId);
+          await SharedPref()
+              .setPreferenceInt('checkInRecordId', checkInRecordId);
 
           // Save check-in time in UAE timezone (GMT+4) for display
           final uaeTime = DateTime.now().toUtc().add(const Duration(hours: 4));
           final displayTime =
-              '${uaeTime.hour.toString().padLeft(2, '0')}:${uaeTime.minute.toString().padLeft(2, '0')}';
-          SharedPref().setPreferencesString('checkInDisplayTime', displayTime);
+              '${uaeTime.hour.toString().padLeft(2, '0')}:${uaeTime.minute.toString().padLeft(2, '0')}:${uaeTime.second.toString().padLeft(2, '0')}';
+          await SharedPref()
+              .setPreferencesString('checkInDisplayTime', displayTime);
+          print('✅ Check-in time saved (warning): $displayTime');
 
           // Save check-in timestamp for 16-hour reset logic
-          SharedPref().setPreferenceInt(
+          await SharedPref().setPreferenceInt(
               'checkInTime', DateTime.now().millisecondsSinceEpoch);
 
           // Reset check-out time
-          SharedPref().setPreferencesString('checkOutDisplayTime', '00:00:00');
+          await SharedPref()
+              .setPreferencesString('checkOutDisplayTime', '00:00:00');
 
           emit(CheckInWarningST(responseData['message'], checkInRecordId));
         } else {

@@ -2,17 +2,24 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:el_race/core/biometric/face_recognition/presentation/bloc/face_recognition_bloc.dart';
+import 'package:el_race/core/biometric/face_recognition/presentation/bloc/face_recognition_event.dart';
+import 'package:el_race/core/biometric/face_recognition/presentation/bloc/face_recognition_state.dart';
 import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_in_bloc/check_in_bloc.dart';
 import 'package:el_race/resources/app_colors.dart';
 
 /// Face Verification screen for Check-in/Check-out
-/// Uses enhanced face recognition with Liveness + Quality Gates
+/// Uses SAME UI/UX as Face Registration Screen but for verification
 class CheckInFaceVerificationScreen extends StatefulWidget {
   final bool isCheckIn; // true = check-in, false = check-out
+  final String userId;
 
   const CheckInFaceVerificationScreen({
     Key? key,
     required this.isCheckIn,
+    required this.userId,
   }) : super(key: key);
 
   @override
@@ -26,18 +33,38 @@ class _CheckInFaceVerificationScreenState
   CameraController? _cameraController;
   AnimationController? _pulseAnimationController;
   Animation<double>? _pulseAnimation;
-  bool _isCameraInitialized = false;
   bool _isProcessing = false;
+  bool _permissionDenied = false;
   bool _autoVerificationAttempted = false;
   bool _showTryAgainButton = false;
-  String _statusMessage = 'Position your face in the frame';
+  bool _verificationSuccess = false;
   Timer? _autoVerificationTimer;
+  Timer? _verificationTimeoutTimer;
+
+  // Face detection for auto-retry
+  FaceDetector? _faceDetector;
+  bool _isMonitoringForFace = false;
+  bool _faceCurrentlyVisible = false;
 
   @override
   void initState() {
     super.initState();
     _initializePulseAnimation();
     _initializeCamera();
+    _initializeFaceDetector();
+  }
+
+  void _initializeFaceDetector() {
+    _faceDetector = FaceDetector(
+      options: FaceDetectorOptions(
+        enableContours: false,
+        enableClassification: false,
+        enableTracking: false,
+        enableLandmarks: false,
+        performanceMode: FaceDetectorMode.fast,
+        minFaceSize: 0.15,
+      ),
+    );
   }
 
   void _initializePulseAnimation() {
@@ -55,38 +82,27 @@ class _CheckInFaceVerificationScreenState
   }
 
   Future<void> _initializeCamera() async {
-    try {
-      final cameras = await availableCameras();
-      final frontCamera = cameras.firstWhere(
-        (camera) => camera.lensDirection == CameraLensDirection.front,
-        orElse: () => cameras.first,
-      );
-
-      _cameraController = CameraController(
-        frontCamera,
-        ResolutionPreset.high,
-        enableAudio: false,
-      );
-
-      await _cameraController!.initialize();
-
-      if (mounted) {
-        setState(() {
-          _isCameraInitialized = true;
-        });
-
-        // Auto-start verification after camera initializes
-        _startAutoVerification();
-      }
-    } catch (e) {
-      print('❌ Error initializing camera: $e');
-      if (mounted) {
-        setState(() {
-          _statusMessage = 'Camera initialization error';
-          _showTryAgainButton = true;
-        });
-      }
+    final status = await Permission.camera.request();
+    if (!status.isGranted) {
+      setState(() {
+        _permissionDenied = true;
+        _isProcessing = false;
+      });
+      _showError('Camera permission is required to continue');
+      return;
     }
+
+    setState(() => _permissionDenied = false);
+
+    // Get available cameras
+    final cameras = await availableCameras();
+    final frontCamera = cameras.firstWhere(
+      (camera) => camera.lensDirection == CameraLensDirection.front,
+      orElse: () => cameras.first,
+    );
+
+    // Initialize camera via BLoC
+    context.read<FaceRecognitionBloc>().add(InitializeCamera(frontCamera));
   }
 
   void _startAutoVerification() {
@@ -95,485 +111,590 @@ class _CheckInFaceVerificationScreenState
     setState(() {
       _isProcessing = true;
       _autoVerificationAttempted = true;
-      _statusMessage = 'Verifying face...';
     });
 
-    // Try to capture and verify automatically after 2 seconds for better face positioning
-    _autoVerificationTimer = Timer(const Duration(seconds: 2), () {
-      if (mounted && _isProcessing && !_showTryAgainButton) {
-        _captureAndVerify();
-      }
-    });
+    // Start monitoring for face detection
+    _monitorForFace();
   }
 
-  void _resetForRetry() {
-    setState(() {
-      _isProcessing = false;
-      _autoVerificationAttempted = false;
-      _showTryAgainButton = false;
-      _statusMessage = 'Verifying face...';
-    });
-    _startAutoVerification();
-  }
+  void _monitorForFace() async {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      setState(() {
+        _isProcessing = false;
+        _showTryAgainButton = true;
+      });
+      return;
+    }
 
-  Future<void> _captureAndVerify() async {
-    if (!_isProcessing || _cameraController == null) return;
+    print('👀 Monitoring for face (verification)...');
 
     try {
-      // Capture multiple images for anti-spoofing check
-      // This detects static photos/videos by checking for natural micro-movements
-      setState(() {
-        _statusMessage = 'Verifying...';
-      });
+      bool faceDetected = false;
+      bool isMonitoring = true;
 
-      final List<String> imagePaths = [];
+      await _cameraController!.startImageStream((CameraImage image) async {
+        if (faceDetected || !isMonitoring) return;
 
-      // Capture 3 images with small delays to detect movement
-      for (int i = 0; i < 3; i++) {
-        final XFile imageFile = await _cameraController!.takePicture();
-        imagePaths.add(imageFile.path);
+        // Quick check: just verify we can process the image
+        if (mounted && _isProcessing && !_showTryAgainButton) {
+          faceDetected = true;
+          isMonitoring = false;
 
-        // Small delay between captures (200ms)
-        if (i < 2) {
-          await Future.delayed(const Duration(milliseconds: 200));
+          await _cameraController!.stopImageStream();
+
+          // Small delay to stabilize
+          await Future.delayed(const Duration(milliseconds: 300));
+
+          if (mounted) {
+            _captureAndVerify();
+          }
         }
-      }
-
-      print('\n🎯 ===== CHECK-IN FACE VERIFICATION (ANTI-SPOOF) =====');
-      print('📸 Captured ${imagePaths.length} images for verification');
-
-      // Trigger face verification in BLoC with multiple images
-      if (mounted) {
-        context.read<CheckInBloc>().add(
-              VerifyFaceForCheckInET(
-                imagePath: imagePaths.first, // Main image for embedding
-                additionalImagePaths: imagePaths, // All images for anti-spoof
-              ),
-            );
-      }
+      });
     } catch (e) {
-      print('❌ Error capturing image: $e');
+      print('❌ Error monitoring face: $e');
       setState(() {
-        _statusMessage = '❌ Image capture failed';
         _isProcessing = false;
         _showTryAgainButton = true;
       });
     }
   }
 
-  @override
-  void dispose() {
-    _autoVerificationTimer?.cancel();
-    _pulseAnimationController?.dispose();
-    _cameraController?.dispose();
-    super.dispose();
+  Future<void> _captureAndVerify() async {
+    if (!mounted || _cameraController == null) return;
+
+    print('\n🔐 ===== FACE VERIFICATION FOR CHECK-IN =====');
+    print('📸 Capturing frames for face verification...');
+
+    // Cancel any existing timeout
+    _verificationTimeoutTimer?.cancel();
+
+    // Set timeout for verification (30 seconds)
+    _verificationTimeoutTimer = Timer(const Duration(seconds: 30), () {
+      if (mounted && _isProcessing && !_verificationSuccess) {
+        print('⏱️ Verification timeout');
+        setState(() {
+          _isProcessing = false;
+          _showTryAgainButton = true;
+        });
+        _showError('Verification timeout. Please try again.');
+      }
+    });
+
+    try {
+      int frameCount = 0;
+      const int requiredFrames = 3; // Capture 3 frames for liveness check
+      final List<CameraImage> capturedFrames = [];
+      bool verificationTriggered = false;
+
+      // Start image stream and collect multiple frames
+      await _cameraController!.startImageStream((CameraImage image) async {
+        if (verificationTriggered) return;
+
+        frameCount++;
+
+        // Collect frames with small intervals (every 3rd frame ~100ms apart)
+        if (frameCount % 3 == 0 && capturedFrames.length < requiredFrames) {
+          capturedFrames.add(image);
+          print('📷 Captured frame ${capturedFrames.length}/$requiredFrames');
+        }
+
+        // Once we have enough frames, trigger verification
+        if (capturedFrames.length >= requiredFrames && !verificationTriggered) {
+          verificationTriggered = true;
+
+          print(
+              '✅ ${capturedFrames.length} frames captured, stopping stream...');
+
+          // Stop stream
+          try {
+            await _cameraController!.stopImageStream();
+          } catch (e) {
+            print('⚠️ Error stopping stream: $e');
+          }
+
+          // Trigger verification
+          if (mounted) {
+            print('🎯 Starting face verification via BLoC...');
+            context.read<FaceRecognitionBloc>().add(
+                  StartFaceVerification(
+                    image: capturedFrames.last,
+                    userId: widget.userId,
+                  ),
+                );
+          }
+        }
+      });
+    } catch (e) {
+      print('❌ Error capturing/verifying: $e');
+      setState(() {
+        _isProcessing = false;
+        _showTryAgainButton = true;
+      });
+      _showError('Failed to capture image. Please try again.');
+    }
+  }
+
+  void _stopFaceMonitoring() {
+    if (_isMonitoringForFace && _cameraController != null) {
+      try {
+        _cameraController!.stopImageStream();
+      } catch (e) {
+        print('⚠️ Error stopping image stream: $e');
+      }
+      _isMonitoringForFace = false;
+    }
+  }
+
+  void _resetForRetry() {
+    _stopFaceMonitoring();
+    setState(() {
+      _isProcessing = false;
+      _autoVerificationAttempted = false;
+      _showTryAgainButton = false;
+      _faceCurrentlyVisible = false;
+    });
+    _startAutoVerification();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(false),
-        ),
-        title: Text(
-          widget.isCheckIn ? 'Check In' : 'Check Out',
-          style: const TextStyle(color: Colors.white),
-        ),
-        centerTitle: true,
-      ),
-      body: BlocListener<CheckInBloc, CheckInState>(
-        listener: (context, state) {
-          if (state is FaceVerificationSuccessST) {
-            // Verification success - proceed with check-in
-            setState(() {
-              _statusMessage = '✅ Verification successful';
-              _isProcessing = false;
-            });
+    return WillPopScope(
+      onWillPop: () async => !_isProcessing || _verificationSuccess,
+      child: Scaffold(
+        backgroundColor: AppColors.lightBlue,
+        body: MultiBlocListener(
+          listeners: [
+            // Listen to FaceRecognitionBloc for verification result
+            BlocListener<FaceRecognitionBloc, FaceRecognitionState>(
+              listener: (context, state) {
+                print('🔔 FaceRecognitionBloc State: ${state.runtimeType}');
 
-            // Delay to show success message, then trigger check-in
-            Future.delayed(const Duration(milliseconds: 500), () {
-              if (mounted) {
-                // Trigger actual check-in API
-                context.read<CheckInBloc>().add(CheckInET());
-              }
-            });
-          } else if (state is FaceVerificationFailedST) {
-            setState(() {
-              _statusMessage = '❌ ${state.reason}';
-              _isProcessing = false;
-              _showTryAgainButton = true;
-            });
-          } else if (state is FaceNotEnrolledST) {
-            setState(() {
-              _statusMessage = '⚠️ Face registration required first';
-              _isProcessing = false;
-              _showTryAgainButton = false;
-            });
+                if (state is FaceRecognitionCameraReady) {
+                  setState(() {
+                    _cameraController = state.cameraController;
+                  });
+                  _startAutoVerification();
+                } else if (state is FaceVerificationResult) {
+                  _verificationTimeoutTimer?.cancel();
 
-            Future.delayed(const Duration(seconds: 2), () {
-              if (mounted) {
-                Navigator.of(context).pop(false);
-              }
-            });
-          } else if (state is CheckedInST) {
-            // Check-in successful - close with success
-            Navigator.of(context).pop(true);
-          } else if (state is CheckInErrorST) {
-            setState(() {
-              _statusMessage = '❌ ${state.errorMessage}';
-              _isProcessing = false;
-              _showTryAgainButton = true;
-            });
-          }
-        },
-        child: Stack(
-          children: [
-            // Camera preview
-            if (_isCameraInitialized && _cameraController != null)
-              Center(
-                child: AspectRatio(
-                  aspectRatio: _cameraController!.value.aspectRatio,
-                  child: CameraPreview(_cameraController!),
-                ),
-              )
-            else
-              const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              ),
+                  if (state.isVerified) {
+                    print('✅ Face verification SUCCESS!');
+                    setState(() {
+                      _verificationSuccess = true;
+                      _isProcessing = false;
+                    });
 
-            // Face oval overlay with pulse animation
-            if (_pulseAnimation != null)
-              AnimatedBuilder(
-                animation: _pulseAnimation!,
-                builder: (context, child) {
-                  return CustomPaint(
-                    size: MediaQuery.of(context).size,
-                    painter: FaceOvalPainter(
-                      animationValue: _pulseAnimation!.value,
-                      isProcessing: _isProcessing && !_showTryAgainButton,
-                    ),
-                  );
-                },
-              ),
-
-            // Status message
-            Positioned(
-              top: 40,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                margin: const EdgeInsets.symmetric(horizontal: 30),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  _statusMessage,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
+                    // Delay to show success, then trigger check-in
+                    Future.delayed(const Duration(milliseconds: 800), () {
+                      if (mounted) {
+                        print('🎯 Triggering check-in API call...');
+                        context.read<CheckInBloc>().add(CheckInET());
+                      }
+                    });
+                  } else {
+                    print('❌ Face verification FAILED');
+                    setState(() {
+                      _isProcessing = false;
+                      _showTryAgainButton = true;
+                    });
+                    _showError(state.message);
+                  }
+                } else if (state is FaceRecognitionError) {
+                  print('❌ Face verification ERROR: ${state.message}');
+                  _verificationTimeoutTimer?.cancel();
+                  setState(() {
+                    _isProcessing = false;
+                    _showTryAgainButton = true;
+                  });
+                  _showError(state.message);
+                }
+              },
             ),
+            // Listen to CheckInBloc for check-in result
+            BlocListener<CheckInBloc, CheckInState>(
+              listener: (context, state) {
+                print('🔔 CheckInBloc State: ${state.runtimeType}');
 
-            // Capture/Retry button or Loader
-            Positioned(
-              bottom: 40,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: _isProcessing && !_showTryAgainButton
-                    ? Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 3,
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.6),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: const Text(
-                              'Verifying...',
+                if (state is CheckedInST) {
+                  print('✅ Check-in API SUCCESS!');
+                  // Success - close with true
+                  Navigator.of(context).pop(true);
+                } else if (state is CheckInErrorST) {
+                  print('❌ Check-in API ERROR: ${state.errorMessage}');
+                  setState(() {
+                    _isProcessing = false;
+                    _showTryAgainButton = true;
+                  });
+                  _showError(state.errorMessage);
+                }
+              },
+            ),
+          ],
+          child: SafeArea(
+            child: Column(
+              children: [
+                // Header
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.arrow_back,
+                            color: AppColors.primaryColor),
+                        onPressed: _verificationSuccess || _isProcessing
+                            ? null
+                            : () => Navigator.of(context).pop(false),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.isCheckIn
+                                  ? 'Verify Face to Check In'
+                                  : 'Verify Face to Check Out',
                               style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    : _showTryAgainButton
-                        ? ElevatedButton.icon(
-                            onPressed: _resetForRetry,
-                            icon: const Icon(Icons.refresh, size: 24),
-                            label: const Text(
-                              'Try Again',
-                              style: TextStyle(
-                                fontSize: 18,
+                                color: AppColors.primaryColor,
+                                fontSize: 20,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primaryColor,
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 32,
-                                vertical: 16,
+                            const SizedBox(height: 4),
+                            Text(
+                              'Position your face within the frame',
+                              style: TextStyle(
+                                color: AppColors.grey,
+                                fontSize: 14,
                               ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              elevation: 5,
                             ),
-                          )
-                        : const SizedBox.shrink(),
-              ),
-            ),
-
-            // Instructions
-            Positioned(
-              bottom: 140,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                margin: const EdgeInsets.symmetric(horizontal: 30),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.2),
-                    width: 1,
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+
+                const Spacer(flex: 1),
+
+                // Camera Section with Modern UI
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 30),
+                  child: Center(
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        Icon(Icons.tips_and_updates,
-                            color: Colors.amber.shade300, size: 18),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Tips for best results:',
+                        // Outer container for camera
+                        BlocBuilder<FaceRecognitionBloc, FaceRecognitionState>(
+                          builder: (context, state) {
+                            final size = MediaQuery.of(context).size.width - 60;
+                            return Container(
+                              width: size,
+                              height: size,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(size / 2),
+                                border: Border.all(
+                                  color:
+                                      AppColors.primaryColor.withOpacity(0.1),
+                                  width: 8,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: _isProcessing && !_showTryAgainButton
+                                        ? AppColors.primaryColor
+                                            .withOpacity(0.3)
+                                        : Colors.black.withOpacity(0.05),
+                                    blurRadius: 20,
+                                    spreadRadius: 5,
+                                  ),
+                                ],
+                              ),
+                              child: ClipOval(
+                                child: _buildCameraContent(state, size),
+                              ),
+                            );
+                          },
+                        ),
+
+                        // Animated scanning overlay
+                        if (_isProcessing && !_showTryAgainButton)
+                          BlocBuilder<FaceRecognitionBloc,
+                              FaceRecognitionState>(
+                            builder: (context, state) {
+                              final size =
+                                  MediaQuery.of(context).size.width - 60;
+                              return AnimatedBuilder(
+                                animation: _pulseAnimation!,
+                                builder: (context, child) {
+                                  return Container(
+                                    width: size,
+                                    height: size,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      gradient: RadialGradient(
+                                        colors: [
+                                          Colors.transparent,
+                                          AppColors.primaryColor.withOpacity(
+                                              0.05 * _pulseAnimation!.value),
+                                          AppColors.primaryColor.withOpacity(
+                                              0.1 * _pulseAnimation!.value),
+                                          AppColors.primaryColor.withOpacity(
+                                              0.05 * _pulseAnimation!.value),
+                                          Colors.transparent,
+                                        ],
+                                        stops: const [0.0, 0.2, 0.5, 0.8, 1.0],
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: AppColors.primaryColor
+                                              .withOpacity(0.5),
+                                          blurRadius: 10,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                const Spacer(flex: 1),
+
+                // Status Section
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: Column(
+                    children: [
+                      if (_verificationSuccess) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 12),
+                          decoration: BoxDecoration(
+                            color: AppColors.green.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.check_circle,
+                                  color: AppColors.green, size: 22),
+                              const SizedBox(width: 10),
+                              Text(
+                                'Verification Successful',
+                                style: TextStyle(
+                                  color: AppColors.green,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else if (_showTryAgainButton &&
+                          !_faceCurrentlyVisible) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.info_outline,
+                                  color: Colors.orange.shade300, size: 18),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Face not detected or not matching',
+                                style: TextStyle(
+                                  color: Colors.orange.shade300,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 54,
+                          child: ElevatedButton(
+                            onPressed: _resetForRetry,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.red,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: const Text(
+                              'Try Again',
+                              style: TextStyle(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ] else if (_showTryAgainButton &&
+                          _faceCurrentlyVisible) ...[
+                        Text(
+                          'Face detected! Retrying...',
                           style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
+                            color: AppColors.green,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ] else if (_isProcessing) ...[
+                        Text(
+                          'Verifying your face...',
+                          style: TextStyle(
+                            color: AppColors.primaryColor,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ] else ...[
+                        Text(
+                          'Ready to verify',
+                          style: TextStyle(
+                            color: AppColors.grey,
+                            fontSize: 15,
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+
+                // Minimal Tips
+                if (!_showTryAgainButton && !_verificationSuccess)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.visibility, color: Colors.white70, size: 14),
-                        SizedBox(width: 6),
-                        Text('Keep eyes open',
-                            style:
-                                TextStyle(color: Colors.white70, fontSize: 11)),
-                        SizedBox(width: 12),
-                        Icon(Icons.face, color: Colors.white70, size: 14),
-                        SizedBox(width: 6),
-                        Text('Look at camera',
-                            style:
-                                TextStyle(color: Colors.white70, fontSize: 11)),
+                      children: [
+                        _buildMinimalTip(Icons.lightbulb_outline, 'Good light'),
+                        const SizedBox(width: 24),
+                        _buildMinimalTip(Icons.face_outlined, 'Face forward'),
+                        const SizedBox(width: 24),
+                        _buildMinimalTip(
+                            Icons.visibility_outlined, 'Eyes open'),
                       ],
                     ),
-                  ],
-                ),
-              ),
+                  )
+                else
+                  const SizedBox(height: 60),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
-}
 
-/// Custom painter for face oval overlay with animated pulse - Enhanced UI/UX
-class FaceOvalPainter extends CustomPainter {
-  final double animationValue;
-  final bool isProcessing;
-
-  FaceOvalPainter({
-    this.animationValue = 0.0,
-    this.isProcessing = false,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Fixed oval dimensions - EXACTLY same size for ALL states
-    final center = Offset(size.width / 2, size.height / 2 - 50);
-    final ovalWidth = size.width * 0.72;
-    final ovalHeight = size.height * 0.52;
-
-    final ovalRect = Rect.fromCenter(
-      center: center,
-      width: ovalWidth,
-      height: ovalHeight,
+  Widget _buildMinimalTip(IconData icon, String label) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.primaryColor.withOpacity(0.08),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon,
+              color: AppColors.primaryColor.withOpacity(0.6), size: 20),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: TextStyle(
+            color: AppColors.grey,
+            fontSize: 11,
+          ),
+        ),
+      ],
     );
+  }
 
-    // Color based on processing state
-    final baseColor = isProcessing ? const Color(0xFF00E676) : Colors.white;
-    final glowColor = isProcessing ? const Color(0xFF00E676) : Colors.white;
-
-    // Draw outer glow effect - SAME for both states for visual consistency
-    for (int i = 2; i >= 1; i--) {
-      final glowOpacity = isProcessing
-          ? 0.1 * i * (1 - animationValue * 0.3)
-          : 0.08 * i; // Subtle glow for white too
-      final glowPaint = Paint()
-        ..color = glowColor.withOpacity(glowOpacity)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 6.0 + (i * 3);
-
-      canvas.drawOval(ovalRect, glowPaint);
-    }
-
-    // Main oval stroke - SAME thickness for both states
-    final mainPaint = Paint()
-      ..color = baseColor.withOpacity(0.95)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.5;
-
-    canvas.drawOval(ovalRect, mainPaint);
-
-    // Animated pulsing rings OUTSIDE the main oval (not affecting its size)
-    if (isProcessing && animationValue > 0) {
-      // First pulse ring
-      final pulse1Paint = Paint()
-        ..color = glowColor.withOpacity(0.4 * (1 - animationValue))
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.5;
-
-      final pulse1Rect = Rect.fromCenter(
-        center: center,
-        width: ovalWidth + (20 * animationValue),
-        height: ovalHeight + (20 * animationValue),
-      );
-      canvas.drawOval(pulse1Rect, pulse1Paint);
-
-      // Second pulse ring (delayed effect)
-      if (animationValue > 0.3) {
-        final adjustedValue = (animationValue - 0.3) / 0.7;
-        final pulse2Paint = Paint()
-          ..color = glowColor.withOpacity(0.25 * (1 - adjustedValue))
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 2;
-
-        final pulse2Rect = Rect.fromCenter(
-          center: center,
-          width: ovalWidth + (35 * adjustedValue),
-          height: ovalHeight + (35 * adjustedValue),
-        );
-        canvas.drawOval(pulse2Rect, pulse2Paint);
-      }
-    }
-
-    // Enhanced corner markers with gradient effect
-    final cornerPaint = Paint()
-      ..color = baseColor
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.5
-      ..strokeCap = StrokeCap.round;
-
-    final markerLength = 25.0;
-    final cornerOffset = 2.0; // Slight offset from oval edge
-
-    // Top-left corner
-    canvas.drawLine(
-      Offset(ovalRect.left - cornerOffset, ovalRect.top + markerLength),
-      Offset(ovalRect.left - cornerOffset, ovalRect.top - cornerOffset),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(ovalRect.left - cornerOffset, ovalRect.top - cornerOffset),
-      Offset(ovalRect.left + markerLength, ovalRect.top - cornerOffset),
-      cornerPaint,
-    );
-
-    // Top-right corner
-    canvas.drawLine(
-      Offset(ovalRect.right - markerLength, ovalRect.top - cornerOffset),
-      Offset(ovalRect.right + cornerOffset, ovalRect.top - cornerOffset),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(ovalRect.right + cornerOffset, ovalRect.top - cornerOffset),
-      Offset(ovalRect.right + cornerOffset, ovalRect.top + markerLength),
-      cornerPaint,
-    );
-
-    // Bottom-left corner
-    canvas.drawLine(
-      Offset(ovalRect.left - cornerOffset, ovalRect.bottom - markerLength),
-      Offset(ovalRect.left - cornerOffset, ovalRect.bottom + cornerOffset),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(ovalRect.left - cornerOffset, ovalRect.bottom + cornerOffset),
-      Offset(ovalRect.left + markerLength, ovalRect.bottom + cornerOffset),
-      cornerPaint,
-    );
-
-    // Bottom-right corner
-    canvas.drawLine(
-      Offset(ovalRect.right - markerLength, ovalRect.bottom + cornerOffset),
-      Offset(ovalRect.right + cornerOffset, ovalRect.bottom + cornerOffset),
-      cornerPaint,
-    );
-    canvas.drawLine(
-      Offset(ovalRect.right + cornerOffset, ovalRect.bottom - markerLength),
-      Offset(ovalRect.right + cornerOffset, ovalRect.bottom + cornerOffset),
-      cornerPaint,
-    );
-
-    // Add subtle scanning line effect when processing
-    if (isProcessing) {
-      final scanLineY = ovalRect.top + (ovalRect.height * animationValue);
-      final scanLinePaint = Paint()
-        ..shader = LinearGradient(
-          colors: [
-            Colors.transparent,
-            glowColor.withOpacity(0.6),
-            Colors.transparent,
+  Widget _buildCameraContent(FaceRecognitionState state, double size) {
+    if (_permissionDenied) {
+      return Container(
+        color: AppColors.lightBlue,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.camera_alt_outlined,
+                color: AppColors.primaryColor.withOpacity(0.4), size: 40),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: _initializeCamera,
+              child: Text(
+                'Enable Camera',
+                style: TextStyle(color: AppColors.primaryColor),
+              ),
+            ),
           ],
-          stops: const [0.0, 0.5, 1.0],
-        ).createShader(
-            Rect.fromLTWH(ovalRect.left, scanLineY - 2, ovalRect.width, 4))
-        ..style = PaintingStyle.fill;
-
-      canvas.drawRect(
-        Rect.fromLTWH(
-            ovalRect.left + 20, scanLineY - 1.5, ovalRect.width - 40, 3),
-        scanLinePaint,
+        ),
       );
     }
+
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return Container(
+        color: AppColors.lightBlue,
+        child: Center(
+          child: CircularProgressIndicator(
+            color: AppColors.primaryColor,
+            strokeWidth: 2,
+          ),
+        ),
+      );
+    }
+
+    return FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        width: _cameraController!.value.previewSize?.height ?? size,
+        height: _cameraController!.value.previewSize?.width ?? size,
+        child: CameraPreview(_cameraController!),
+      ),
+    );
+  }
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override
-  bool shouldRepaint(covariant FaceOvalPainter oldDelegate) {
-    return oldDelegate.animationValue != animationValue ||
-        oldDelegate.isProcessing != isProcessing;
+  void dispose() {
+    _stopFaceMonitoring();
+    _autoVerificationTimer?.cancel();
+    _verificationTimeoutTimer?.cancel();
+    _pulseAnimationController?.dispose();
+    _cameraController?.dispose();
+    _faceDetector?.close();
+    super.dispose();
   }
 }

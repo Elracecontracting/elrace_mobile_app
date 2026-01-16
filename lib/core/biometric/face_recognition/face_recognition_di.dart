@@ -27,8 +27,21 @@ import 'presentation/bloc/face_recognition_bloc.dart';
 /// ```
 class FaceRecognitionDI {
   static final GetIt _getIt = GetIt.instance;
+  static bool _initialized = false;
 
   static Future<void> init() async {
+    // Prevent double initialization
+    if (_initialized && _getIt.isRegistered<FaceRecognitionRepository>()) {
+      print('ℹ️ Face Recognition already initialized, skipping...');
+      return;
+    }
+
+    // Reset if partially initialized (e.g., after hot restart)
+    if (_getIt.isRegistered<FaceDetectorService>()) {
+      print('🔄 Resetting Face Recognition DI for re-initialization...');
+      await _resetFaceRecognitionDI();
+    }
+
     // Services (Singletons - created once and reused)
     _getIt.registerLazySingleton<FaceDetectorService>(
       () => FaceDetectorService(),
@@ -90,6 +103,7 @@ class FaceRecognitionDI {
     try {
       await _getIt<FaceDetectorService>().initialize();
       await _getIt<FaceNetService>().initialize();
+      _initialized = true;
       print('✅ Face Recognition initialized successfully');
     } catch (e) {
       print('⚠️ Face Recognition initialization failed: $e');
@@ -99,11 +113,47 @@ class FaceRecognitionDI {
     }
   }
 
+  /// Reset Face Recognition DI registrations
+  static Future<void> _resetFaceRecognitionDI() async {
+    try {
+      if (_getIt.isRegistered<FaceRecognitionBloc>()) {
+        _getIt.unregister<FaceRecognitionBloc>();
+      }
+      if (_getIt.isRegistered<VerifyFaceUseCase>()) {
+        _getIt.unregister<VerifyFaceUseCase>();
+      }
+      if (_getIt.isRegistered<RegisterFaceUseCase>()) {
+        _getIt.unregister<RegisterFaceUseCase>();
+      }
+      if (_getIt.isRegistered<InitializeFaceRecognitionUseCase>()) {
+        _getIt.unregister<InitializeFaceRecognitionUseCase>();
+      }
+      if (_getIt.isRegistered<FaceRecognitionRepository>()) {
+        _getIt.unregister<FaceRecognitionRepository>();
+      }
+      if (_getIt.isRegistered<LivenessService>()) {
+        _getIt.unregister<LivenessService>();
+      }
+      if (_getIt.isRegistered<FaceEmbeddingStorageService>()) {
+        _getIt.unregister<FaceEmbeddingStorageService>();
+      }
+      if (_getIt.isRegistered<FaceNetService>()) {
+        _getIt.unregister<FaceNetService>();
+      }
+      if (_getIt.isRegistered<FaceDetectorService>()) {
+        _getIt.unregister<FaceDetectorService>();
+      }
+      _initialized = false;
+    } catch (e) {
+      print('⚠️ Error resetting Face Recognition DI: $e');
+    }
+  }
+
   /// Get instance of a registered dependency
   static T get<T extends Object>() => _getIt<T>();
 
   /// Reset all dependencies (useful for testing)
   static Future<void> reset() async {
-    await _getIt.reset();
+    await _resetFaceRecognitionDI();
   }
 }
