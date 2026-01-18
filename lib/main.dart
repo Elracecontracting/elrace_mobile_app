@@ -29,6 +29,7 @@ import 'package:el_race/core/biometric/android/android_biometric_helper.dart';
 import 'package:el_race/core/biometric/face_recognition/face_recognition_di.dart';
 import 'package:el_race/data/services/auto_checkout_service.dart';
 import 'package:el_race/data/services/checkin_reminder_notification_service.dart';
+import 'package:el_race/data/services/counter_reset_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -206,6 +207,28 @@ void main() async {
     );
   } catch (e) {
     print('❌ Error initializing auto checkout: $e');
+  }
+
+  // ⭐ تصفير عدادات الدخول/الخروج الساعة 5 صباحاً
+  // أولاً: تحقق فوري عند فتح التطبيق
+  try {
+    await CounterResetService.checkAndResetOnAppStart();
+    debugPrint('✅ Counter reset check completed on app start');
+  } catch (e) {
+    print('❌ Error checking counter reset: $e');
+  }
+
+  // ثانياً: جدولة التصفير التلقائي يومياً الساعة 5 صباحاً (حتى لو التطبيق مغلق)
+  try {
+    await CounterResetService.initialize().timeout(
+      const Duration(seconds: 5),
+      onTimeout: () {
+        print('⚠️ Counter reset service init timeout');
+      },
+    );
+    debugPrint('✅ Daily counter reset scheduled for 5:00 AM');
+  } catch (e) {
+    print('❌ Error initializing counter reset service: $e');
   }
 
   // تهيئة خدمة إشعارات التذكير بـ Check In/Out

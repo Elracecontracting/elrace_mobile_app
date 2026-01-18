@@ -29,6 +29,10 @@ environment:
 # versions available, run `flutter pub outdated`.
 dependencies:
   screen_protector: ^1.4.7
+  # Security detection packages
+  flutter_jailbreak_detection: ^1.10.0
+  safe_device: ^1.3.8
+  vpn_connection_detector: ^1.0.10
   adhan: ^2.0.0+1
   another_flushbar: ^1.12.30
   bloc: ^8.1.4

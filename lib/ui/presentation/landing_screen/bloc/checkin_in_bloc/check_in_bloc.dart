@@ -209,11 +209,38 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     }
   }
 
+  /// Get Dubai time
+  DateTime _getDubaiTime() {
+    return DateTime.now().toUtc().add(const Duration(hours: 4));
+  }
+
+  /// Get check-in cutoff time for today (11:59 AM Dubai time)
+  DateTime _getCutoffTime() {
+    final dubaiTime = _getDubaiTime();
+    return DateTime(dubaiTime.year, dubaiTime.month, dubaiTime.day, 11, 59);
+  }
+
   Future<void> checkInMethod(
       CheckInET event, Emitter<CheckInState> emit) async {
     try {
       // Emit loading state
       emit(const CheckInLoadingST(isLoading: true));
+
+      // Check if check-in is allowed based on time restriction
+      // Check-in is only allowed before 11:59 AM Dubai time
+      final dubaiTime = _getDubaiTime();
+      final cutoffTime = _getCutoffTime();
+
+      // After 11:59 AM (hour >= 12) and before 5:00 AM next day, check-in is blocked
+      if (dubaiTime.hour >= 12 || dubaiTime.hour < 5) {
+        emit(CheckInBlockedST(
+          message:
+              'Check-in is not allowed after 11:59 AM. Please try again tomorrow after 5:00 AM.',
+          currentDubaiTime: dubaiTime,
+          cutoffTime: cutoffTime,
+        ));
+        return;
+      }
 
       // Simulate API call or perform your actual API logic here
       Position location = await _locationRepo.getCurrentLocation();

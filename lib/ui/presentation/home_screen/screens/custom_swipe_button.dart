@@ -94,14 +94,33 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
     print('⏰   checkOutDisplayTime = "$checkOut"');
 
     setState(() {
-      _checkInDisplayTime = checkIn.isEmpty ? '00:00:00' : checkIn;
-      _checkOutDisplayTime = checkOut.isEmpty ? '00:00:00' : checkOut;
+      _checkInDisplayTime =
+          (checkIn.isEmpty || checkIn == '--:--') ? '00:00:00' : checkIn;
+      _checkOutDisplayTime =
+          (checkOut.isEmpty || checkOut == '--:--') ? '00:00:00' : checkOut;
     });
 
     print('⏰ After setState:');
     print('⏰   _checkInDisplayTime (GREEN/LEFT) = $_checkInDisplayTime');
     print('⏰   _checkOutDisplayTime (RED/RIGHT) = $_checkOutDisplayTime');
     print('⏰ ===================================\n');
+  }
+
+  /// التحقق من أن الوقت الحالي ضمن فترة السماح بـ Check-in
+  /// Check-in مسموح من 5:00 AM حتى 11:59 AM بتوقيت دبي
+  bool _isCheckInAllowed() {
+    final dubaiTime = DateTime.now().toUtc().add(const Duration(hours: 4));
+
+    // Check-in مسموح من الساعة 5 صباحاً حتى 11:59 صباحاً
+    if (dubaiTime.hour >= 5 && dubaiTime.hour < 12) {
+      return true;
+    }
+    return false;
+  }
+
+  /// الحصول على الوقت الحالي بتوقيت دبي
+  DateTime _getDubaiTime() {
+    return DateTime.now().toUtc().add(const Duration(hours: 4));
   }
 
   @override
@@ -115,24 +134,56 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   _loadCheckInState() {
     final storedState = SharedPref().getPreferenceBoolean('isCheckedIn');
 
-    // التحقق من نظام reset 16 ساعة
+    // التحقق من نظام reset عند الساعة 5 صباحاً بتوقيت دبي
     if (storedState) {
       final checkInTime = SharedPref().getPreferenceInt('checkInTime');
       if (checkInTime != 0) {
         final checkInDateTime =
             DateTime.fromMillisecondsSinceEpoch(checkInTime);
         final now = DateTime.now();
-        final difference = now.difference(checkInDateTime);
 
-        // إذا مر أكثر من 16 ساعة، reset الحالة
-        if (difference.inHours >= 16) {
-          debugPrint('⏰ 16 hours passed since check-in. Resetting state...');
+        // احسب توقيت دبي (UTC+4)
+        final dubaiNow = now.toUtc().add(const Duration(hours: 4));
+
+        // احسب آخر وقت reset (5 صباحاً بتوقيت دبي)
+        DateTime lastResetTime;
+        if (dubaiNow.hour >= 5) {
+          // اليوم الساعة 5 صباحاً
+          lastResetTime =
+              DateTime(dubaiNow.year, dubaiNow.month, dubaiNow.day, 5, 0);
+        } else {
+          // أمس الساعة 5 صباحاً
+          final yesterday = dubaiNow.subtract(const Duration(days: 1));
+          lastResetTime =
+              DateTime(yesterday.year, yesterday.month, yesterday.day, 5, 0);
+        }
+
+        // تحويل checkInDateTime لتوقيت دبي
+        final checkInDubaiTime =
+            checkInDateTime.toUtc().add(const Duration(hours: 4));
+
+        // DEBUG: طباعة معلومات التشخيص
+        debugPrint('⏰ ===== CHECK-IN RESET DEBUG =====');
+        debugPrint('⏰ Dubai Now: $dubaiNow');
+        debugPrint('⏰ Check-in Time (stored): $checkInDateTime');
+        debugPrint('⏰ Check-in Dubai Time: $checkInDubaiTime');
+        debugPrint('⏰ Last Reset Time (5 AM): $lastResetTime');
+        debugPrint(
+            '⏰ Should reset? ${checkInDubaiTime.isBefore(lastResetTime)}');
+        debugPrint('⏰ ================================');
+
+        // إذا كان check-in قبل آخر وقت reset، يجب reset الحالة
+        if (checkInDubaiTime.isBefore(lastResetTime)) {
+          debugPrint(
+              '⏰ Check-in was before 5:00 AM reset time. Resetting state...');
+          debugPrint('⏰ Check-in Dubai time: $checkInDubaiTime');
+          debugPrint('⏰ Last reset time: $lastResetTime');
 
           // Reset check in/out state
           SharedPref().setPreferencesBoolean('isCheckedIn', false);
           SharedPref().setPreferenceInt('checkInRecordId', 0);
-          SharedPref().setPreferencesString('checkInDisplayTime', '--:--');
-          SharedPref().setPreferencesString('checkOutDisplayTime', '--:--');
+          SharedPref().setPreferencesString('checkInDisplayTime', '00:00:00');
+          SharedPref().setPreferencesString('checkOutDisplayTime', '00:00:00');
           SharedPref().removePreference('checkInProjectId');
           SharedPref().removePreference('checkInBranchId');
           SharedPref().removePreference('checkInAuthMethod');
@@ -145,6 +196,8 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
             isCheckedIn = false;
             _isVisualCheckedIn = false;
             dragOffset = 0;
+            _checkInDisplayTime = '00:00:00';
+            _checkOutDisplayTime = '00:00:00';
           });
           return;
         }
@@ -199,6 +252,25 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
     final threshold = buttonWidth * 0.6;
     if ((!isCheckedIn && dragOffset >= threshold) ||
         (isCheckedIn && dragOffset <= (buttonWidth - knobSize - threshold))) {
+      // التحقق من وقت Check-in قبل السماح (فقط عند محاولة check-in وليس check-out)
+      if (!isCheckedIn && !_isCheckInAllowed()) {
+        final dubaiTime = _getDubaiTime();
+        final timeStr =
+            '${dubaiTime.hour.toString().padLeft(2, '0')}:${dubaiTime.minute.toString().padLeft(2, '0')}';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'تسجيل الحضور غير متاح بعد الساعة 11:59 صباحاً. الوقت الحالي: $timeStr',
+              style: const TextStyle(fontSize: 14),
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        _resetPosition();
+        return;
+      }
+
       final targetOffset = isCheckedIn ? 0.0 : (buttonWidth - knobSize);
       SharedPref()
           .setPreferencesBoolean('wasCheckedInBeforeFaceAuth', isCheckedIn);
@@ -305,6 +377,21 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
             if (state is CheckedInST || state is CheckInWarningST) {
               // Reload display times after successful check-in
               _loadDisplayTimes();
+            } else if (state is CheckInBlockedST) {
+              // Check-in is blocked due to time restriction (after 11:59 AM)
+              _resetPosition();
+              final timeStr =
+                  '${state.currentDubaiTime.hour.toString().padLeft(2, '0')}:${state.currentDubaiTime.minute.toString().padLeft(2, '0')}';
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'تسجيل الحضور غير متاح بعد الساعة 11:59 صباحاً. الوقت الحالي: $timeStr',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 4),
+                ),
+              );
             }
           },
         ),

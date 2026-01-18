@@ -326,6 +326,19 @@ class _CheckInFaceVerificationScreenState
                     _showTryAgainButton = true;
                   });
                   _showError(state.errorMessage);
+                } else if (state is CheckInBlockedST) {
+                  print('⏰ Check-in BLOCKED: ${state.message}');
+                  final timeStr =
+                      '${state.currentDubaiTime.hour.toString().padLeft(2, '0')}:${state.currentDubaiTime.minute.toString().padLeft(2, '0')}';
+                  setState(() {
+                    _isProcessing = false;
+                    _showTryAgainButton = false;
+                  });
+                  _showError(
+                      'تسجيل الحضور غير متاح بعد الساعة 11:59 صباحاً. الوقت الحالي: $timeStr');
+                  Future.delayed(const Duration(seconds: 2), () {
+                    if (mounted) Navigator.of(context).pop(false);
+                  });
                 }
               },
             ),

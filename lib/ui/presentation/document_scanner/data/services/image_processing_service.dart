@@ -392,31 +392,48 @@ String _applyFilterIsolate(_FilterParams params) {
 }
 
 /// Applies adaptive thresholding for document scanning.
+/// Optimized version using integral image for O(1) local mean calculation.
 img.Image _adaptiveThreshold(img.Image image) {
   final result = img.Image(width: image.width, height: image.height);
   const blockSize = 15;
   const c = 10;
+  final halfBlock = blockSize ~/ 2;
 
+  // Build integral image for O(1) mean calculation
+  final integral = List.generate(
+    image.height + 1,
+    (_) => List.filled(image.width + 1, 0),
+  );
+
+  // Pre-compute luminance values and build integral image
+  for (int y = 0; y < image.height; y++) {
+    int rowSum = 0;
+    for (int x = 0; x < image.width; x++) {
+      final lum = img.getLuminance(image.getPixel(x, y)).toInt();
+      rowSum += lum;
+      integral[y + 1][x + 1] = integral[y][x + 1] + rowSum;
+    }
+  }
+
+  // Apply threshold using integral image
   for (int y = 0; y < image.height; y++) {
     for (int x = 0; x < image.width; x++) {
-      // Calculate local mean
-      int sum = 0;
-      int count = 0;
+      // Calculate block bounds
+      final x1 = (x - halfBlock).clamp(0, image.width - 1);
+      final y1 = (y - halfBlock).clamp(0, image.height - 1);
+      final x2 = (x + halfBlock).clamp(0, image.width - 1);
+      final y2 = (y + halfBlock).clamp(0, image.height - 1);
 
-      for (int dy = -blockSize ~/ 2; dy <= blockSize ~/ 2; dy++) {
-        for (int dx = -blockSize ~/ 2; dx <= blockSize ~/ 2; dx++) {
-          final nx = x + dx;
-          final ny = y + dy;
-          if (nx >= 0 && nx < image.width && ny >= 0 && ny < image.height) {
-            sum += img.getLuminance(image.getPixel(nx, ny)).toInt();
-            count++;
-          }
-        }
-      }
+      final count = (x2 - x1 + 1) * (y2 - y1 + 1);
+
+      // O(1) sum calculation using integral image
+      final sum = integral[y2 + 1][x2 + 1] -
+          integral[y1][x2 + 1] -
+          integral[y2 + 1][x1] +
+          integral[y1][x1];
 
       final mean = sum / count;
-      final pixel = image.getPixel(x, y);
-      final luminance = img.getLuminance(pixel).toInt();
+      final luminance = img.getLuminance(image.getPixel(x, y)).toInt();
 
       if (luminance < mean - c) {
         result.setPixelRgb(x, y, 0, 0, 0);

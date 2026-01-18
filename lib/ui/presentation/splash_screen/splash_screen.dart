@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/core/services/app_config_service.dart';
+import 'package:el_race/core/security/device_security_service.dart';
 import 'package:provider/provider.dart';
 import 'package:el_race/ui/presentation/qr_survey/providers/qr_survey_data_provider.dart';
 
@@ -15,9 +16,13 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  bool _isSecurityCheckComplete = false;
+  bool _isDeviceSecure = true;
+
   @override
   void initState() {
     super.initState();
+    _performSecurityCheck();
     // Clear any QR data from previous sessions
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final provider =
@@ -27,71 +32,134 @@ class _SplashScreenState extends State<SplashScreen> {
     });
   }
 
+  /// Perform security check before allowing app usage
+  Future<void> _performSecurityCheck() async {
+    try {
+      print('🔒 Starting security check...');
+      final result =
+          await DeviceSecurityService.instance.performSecurityCheck();
+
+      if (mounted) {
+        setState(() {
+          _isDeviceSecure = result.isSecure;
+          _isSecurityCheckComplete = true;
+        });
+
+        if (!result.isSecure) {
+          print('❌ Device security check failed!');
+          // Show security warning dialog
+          DeviceSecurityService.showSecurityBlockDialog(context, result);
+        } else {
+          print('✅ Device security check passed!');
+        }
+      }
+    } catch (e) {
+      print('⚠️ Error during security check: $e');
+      // On error, allow app to continue (fail-open for better UX)
+      if (mounted) {
+        setState(() {
+          _isSecurityCheckComplete = true;
+          _isDeviceSecure = true;
+        });
+      }
+    }
+  }
+
   @override
   void didChangeDependencies() {
-    // Splash screen duration: 6 seconds
+    // Splash screen duration: 6 seconds (wait for security check too)
     Future.delayed(const Duration(seconds: 6), () {
       if (!mounted) return;
 
-      try {
-        Util.fetchHomeScreenData(context);
-        if (SharedPref.isUserAuthenticated()) {
-          // Check if face registration is in progress or pending
-          final isRegistrationInProgress =
-              SharedPref().getPreferenceBoolean('isFaceRegistrationInProgress');
-          final isPendingFaceVerification =
-              SharedPref().getPreferenceBoolean('pendingFaceVerification');
-          final isFaceRegistered =
-              SharedPref().getPreferenceBoolean('isFaceRegistered');
-
-          // If registration was in progress, user must complete it
-          if (isRegistrationInProgress ||
-              (isPendingFaceVerification && !isFaceRegistered)) {
-            // In Test Mode, skip face registration
-            if (AppConfigService.instance.isTestMode) {
-              SharedPref()
-                  .setPreferencesBoolean('pendingFaceVerification', false);
-              SharedPref()
-                  .setPreferencesBoolean('isFaceRegistrationInProgress', false);
-              Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
-              return;
-            }
-
-            // User needs to register face - go to home, it will be triggered from there
-            Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
-          } else {
-            // User already registered or no pending verification
-            Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
-          }
-        } else {
-          Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
-        }
-      } catch (e) {
-        print('❌ Error navigating from splash: $e');
-        // Fallback to login screen on error
-        if (mounted) {
-          Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
-        }
+      // Don't navigate if device is not secure
+      if (!_isDeviceSecure && _isSecurityCheckComplete) {
+        print('🚫 Navigation blocked - device not secure');
+        return;
       }
+
+      // Wait for security check if not complete yet
+      if (!_isSecurityCheckComplete) {
+        print('⏳ Waiting for security check to complete...');
+        _waitForSecurityCheckAndNavigate();
+        return;
+      }
+
+      _navigateToNextScreen();
     });
 
-    // Safety timeout - force navigation after 10 seconds if nothing happened
-    Future.delayed(const Duration(seconds: 10), () {
+    // Safety timeout - force navigation after 15 seconds if nothing happened
+    Future.delayed(const Duration(seconds: 15), () {
       if (mounted && ModalRoute.of(context)?.isCurrent == true) {
         print('⚠️ Splash timeout reached - forcing navigation');
-        try {
-          if (SharedPref.isUserAuthenticated()) {
-            Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
-          } else {
-            Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
-          }
-        } catch (e) {
-          print('❌ Error in safety timeout: $e');
+        if (_isDeviceSecure || !_isSecurityCheckComplete) {
+          _navigateToNextScreen();
         }
       }
     });
 
     super.didChangeDependencies();
+  }
+
+  /// Wait for security check to complete then navigate
+  Future<void> _waitForSecurityCheckAndNavigate() async {
+    // Wait up to 5 more seconds for security check
+    for (int i = 0; i < 10; i++) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (_isSecurityCheckComplete) {
+        if (_isDeviceSecure) {
+          _navigateToNextScreen();
+        }
+        return;
+      }
+    }
+    // Timeout - navigate anyway
+    _navigateToNextScreen();
+  }
+
+  /// Navigate to the appropriate screen after security check
+  void _navigateToNextScreen() {
+    if (!mounted) return;
+
+    try {
+      Util.fetchHomeScreenData(context);
+      if (SharedPref.isUserAuthenticated()) {
+        // Check if face registration is in progress or pending
+        final isRegistrationInProgress =
+            SharedPref().getPreferenceBoolean('isFaceRegistrationInProgress');
+        final isPendingFaceVerification =
+            SharedPref().getPreferenceBoolean('pendingFaceVerification');
+        final isFaceRegistered =
+            SharedPref().getPreferenceBoolean('isFaceRegistered');
+
+        // If registration was in progress, user must complete it
+        if (isRegistrationInProgress ||
+            (isPendingFaceVerification && !isFaceRegistered)) {
+          // In Test Mode, skip face registration
+          if (AppConfigService.instance.isTestMode) {
+            SharedPref()
+                .setPreferencesBoolean('pendingFaceVerification', false);
+            SharedPref()
+                .setPreferencesBoolean('isFaceRegistrationInProgress', false);
+            Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
+            return;
+          }
+
+          // User needs to register face - go to home, it will be triggered from there
+          Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
+        } else {
+          // User already registered or no pending verification
+          Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
+        }
+      } else {
+        Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
+      }
+    } catch (e) {
+      print('❌ Error navigating from splash: $e');
+      // Fallback to login screen on error
+      if (mounted) {
+        Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
+      }
+    }
   }
 
   @override
