@@ -18,6 +18,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:get/get.dart';
 import 'package:location/location.dart';
+import '../../tasks_dashboard/screens/tasks_dashboard_screen.dart';
+import '../../tasks/data/task_model.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -152,8 +154,7 @@ class _HomeScreenState extends State<HomeScreenPage>
           }
 
           // Ensure userId is not null (use fallback if still null)
-          final finalUserId =
-              userId ?? 'user_${DateTime.now().millisecondsSinceEpoch}';
+          final finalUserId = userId;
           print('📱 User ID for face registration: $finalUserId');
 
           // Set flag to indicate face registration is in progress
@@ -246,6 +247,14 @@ class _HomeScreenState extends State<HomeScreenPage>
           ],
         );
       },
+    );
+  }
+
+  void _navigateToTasksDashboard(BuildContext context, List<TaskModel> tasks) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const TasksDashboardScreen(),
+      ),
     );
   }
 

@@ -16,7 +16,7 @@ import 'package:el_race/ui/presentation/my_projects/presentation/screens/my_proj
 import 'package:el_race/ui/presentation/my_request/MyRequestsPage.dart';
 import 'package:el_race/ui/presentation/task_sheet/task_sheet_screen.dart';
 import 'package:el_race/ui/presentation/tasks/logic/tasks_provider.dart';
-import 'package:el_race/ui/presentation/tasks/tasks_screen.dart';
+import 'package:el_race/ui/presentation/tasks_dashboard/screens/tasks_dashboard_screen.dart';
 import 'package:el_race/utils/custom_navigate.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/orientation_helper.dart';
@@ -396,7 +396,12 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                     ),
                   );
                 } else {
-                  Util.pushPage(const TasksScreen(), context);
+                  // Navigate to new Tasks Dashboard
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const TasksDashboardScreen(),
+                    ),
+                  );
                 }
               },
               childWidget: isLoading
