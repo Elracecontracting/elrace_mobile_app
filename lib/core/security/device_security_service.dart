@@ -33,17 +33,17 @@ class SecurityCheckResult {
 
     if (isRooted || isJailbroken) {
       violations.add(Platform.isIOS
-          ? 'تم اكتشاف Jailbreak على الجهاز'
-          : 'تم اكتشاف Root على الجهاز');
+          ? 'Jailbreak detected on device'
+          : 'Root access detected on device');
     }
     if (isUsingVpn) {
-      violations.add('تم اكتشاف اتصال VPN نشط');
+      violations.add('Active VPN connection detected');
     }
     if (isMockLocation) {
-      violations.add('تم اكتشاف موقع وهمي (Fake Location)');
+      violations.add('Fake location (Mock Location) detected');
     }
     if (isEmulator) {
-      violations.add('تم اكتشاف أن الجهاز محاكي (Emulator)');
+      violations.add('Emulator detected');
     }
 
     if (violations.isEmpty) {
@@ -53,13 +53,13 @@ class SecurityCheckResult {
     return violations.join('\n');
   }
 
-  /// Returns an Arabic-friendly message for the user
+  /// Returns a user-friendly message
   String getUserFriendlyMessage() {
     if (isSecure) {
-      return 'الجهاز آمن ✓';
+      return 'Device is secure ✓';
     }
 
-    return 'لا يمكن استخدام التطبيق للأسباب التالية:\n\n${getSecurityViolationMessage()}\n\nيرجى تعطيل هذه الميزات وإعادة تشغيل التطبيق.';
+    return 'The application cannot be used for the following reasons:\n\n${getSecurityViolationMessage()}\n\nPlease disable these features and restart the application.';
   }
 }
 
@@ -118,7 +118,7 @@ class DeviceSecurityService {
       // If you need emulator detection, consider using a different approach
       print('🔒 Emulator check: skipped (unreliable)');
     } catch (e) {
-      errorMessage = 'خطأ في فحص الأمان: $e';
+      errorMessage = 'Security check error: $e';
       print('❌ Security check error: $e');
     }
 
@@ -169,7 +169,7 @@ class DeviceSecurityService {
               Icon(Icons.security, color: Colors.red, size: 32),
               SizedBox(width: 12),
               Text(
-                'تحذير أمني',
+                'Security Warning',
                 style: TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.bold,
@@ -188,7 +188,7 @@ class DeviceSecurityService {
                   fontSize: 16,
                   height: 1.5,
                 ),
-                textDirection: TextDirection.rtl,
+                textDirection: TextDirection.ltr,
               ),
               const SizedBox(height: 20),
               Container(
@@ -204,12 +204,12 @@ class DeviceSecurityService {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'للمحافظة على أمان بياناتك، لا يمكن استخدام التطبيق في هذه الحالة.',
+                        'To protect your data security, the app cannot be used in this state.',
                         style: TextStyle(
                           color: Colors.red,
                           fontSize: 13,
                         ),
-                        textDirection: TextDirection.rtl,
+                        textDirection: TextDirection.ltr,
                       ),
                     ),
                   ],
@@ -234,7 +234,7 @@ class DeviceSecurityService {
                   ),
                 ),
                 child: const Text(
-                  'إغلاق التطبيق',
+                  'Close App',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -267,7 +267,7 @@ class DeviceSecurityService {
                 ),
                 const SizedBox(height: 32),
                 const Text(
-                  'تحذير أمني',
+                  'Security Warning',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -288,7 +288,7 @@ class DeviceSecurityService {
                       height: 1.6,
                     ),
                     textAlign: TextAlign.center,
-                    textDirection: TextDirection.rtl,
+                    textDirection: TextDirection.ltr,
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -305,7 +305,7 @@ class DeviceSecurityService {
                       ),
                     ),
                     child: const Text(
-                      'إغلاق التطبيق',
+                      'Close App',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,

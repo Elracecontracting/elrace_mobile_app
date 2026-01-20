@@ -41,16 +41,39 @@ class CounterResetService {
       debugPrint('🔄 CounterResetService: Checking reset on app start...');
 
       final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
+      final checkInTime = SharedPref().getPreferenceInt('checkInTime');
+      final checkInDisplayTime =
+          SharedPref().getPreferenceString('checkInDisplayTime');
+      final checkOutDisplayTime =
+          SharedPref().getPreferenceString('checkOutDisplayTime');
 
-      if (!isCheckedIn) {
-        debugPrint('ℹ️ User is not checked in, no reset needed');
+      debugPrint('🔄 isCheckedIn = $isCheckedIn');
+      debugPrint('🔄 checkInTime (milliseconds) = $checkInTime');
+      debugPrint('🔄 checkInDisplayTime = "$checkInDisplayTime"');
+      debugPrint('🔄 checkOutDisplayTime = "$checkOutDisplayTime"');
+
+      // تحقق إذا كانت هناك عدادات تحتاج تصفير
+      final hasDisplayTimes = (checkInDisplayTime.isNotEmpty &&
+              checkInDisplayTime != '00:00:00' &&
+              checkInDisplayTime != '--:--') ||
+          (checkOutDisplayTime.isNotEmpty &&
+              checkOutDisplayTime != '00:00:00' &&
+              checkOutDisplayTime != '--:--');
+
+      debugPrint('🔄 hasDisplayTimes = $hasDisplayTimes');
+
+      // إذا لا يوجد عدادات ولا checkInTime، لا حاجة للتصفير
+      if (!hasDisplayTimes && checkInTime == 0) {
+        debugPrint(
+            'ℹ️ No display times or check-in time saved, no reset needed');
         return;
       }
 
-      final checkInTime = SharedPref().getPreferenceInt('checkInTime');
-
-      if (checkInTime == 0) {
-        debugPrint('ℹ️ No check-in time saved, no reset needed');
+      // إذا لا يوجد checkInTime لكن يوجد عدادات قديمة، صفّرها
+      if (checkInTime == 0 && hasDisplayTimes) {
+        debugPrint('🔄 Display times exist but no checkInTime, resetting...');
+        await _performReset();
+        debugPrint('✅ Counters reset (no checkInTime but had display times)');
         return;
       }
 
@@ -63,14 +86,14 @@ class CounterResetService {
       // احسب آخر وقت reset (5 صباحاً بتوقيت دبي)
       DateTime lastResetTime;
       if (dubaiNow.hour >= 5) {
-        // اليوم الساعة 5 صباحاً
+        // اليوم الساعة 5 صباحاً بتوقيت دبي
         lastResetTime =
-            DateTime(dubaiNow.year, dubaiNow.month, dubaiNow.day, 5, 0);
+            DateTime.utc(dubaiNow.year, dubaiNow.month, dubaiNow.day, 5, 0);
       } else {
-        // أمس الساعة 5 صباحاً
+        // أمس الساعة 5 صباحاً بتوقيت دبي
         final yesterday = dubaiNow.subtract(const Duration(days: 1));
         lastResetTime =
-            DateTime(yesterday.year, yesterday.month, yesterday.day, 5, 0);
+            DateTime.utc(yesterday.year, yesterday.month, yesterday.day, 5, 0);
       }
 
       // تحويل checkInDateTime لتوقيت دبي
@@ -78,11 +101,13 @@ class CounterResetService {
           checkInDateTime.toUtc().add(const Duration(hours: 4));
 
       debugPrint('⏰ ===== COUNTER RESET CHECK ON APP START =====');
+      debugPrint('⏰ Now (local): $now');
       debugPrint('⏰ Dubai Now: $dubaiNow');
-      debugPrint('⏰ Check-in Time (stored): $checkInDateTime');
+      debugPrint('⏰ Check-in Time (stored local): $checkInDateTime');
       debugPrint('⏰ Check-in Dubai Time: $checkInDubaiTime');
-      debugPrint('⏰ Last Reset Time (5 AM): $lastResetTime');
-      debugPrint('⏰ Should reset? ${checkInDubaiTime.isBefore(lastResetTime)}');
+      debugPrint('⏰ Last Reset Time (5 AM Dubai): $lastResetTime');
+      debugPrint(
+          '⏰ checkInDubaiTime.isBefore(lastResetTime) = ${checkInDubaiTime.isBefore(lastResetTime)}');
       debugPrint('⏰ ==============================================');
 
       // إذا كان check-in قبل آخر وقت reset، يجب reset الحالة

@@ -260,7 +260,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'تسجيل الحضور غير متاح بعد الساعة 11:59 صباحاً. الوقت الحالي: $timeStr',
+              'Check-in is not available after 11:59 AM. Current time: $timeStr',
               style: const TextStyle(fontSize: 14),
             ),
             backgroundColor: Colors.red,
@@ -385,7 +385,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'تسجيل الحضور غير متاح بعد الساعة 11:59 صباحاً. الوقت الحالي: $timeStr',
+                    'Check-in is not available after 11:59 AM. Current time: $timeStr',
                     style: const TextStyle(fontSize: 14),
                   ),
                   backgroundColor: Colors.red,

@@ -314,18 +314,11 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                 }
                 return false;
               },
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: kBottomNavigationBarHeight +
-                      context.systemBottomInset +
-                      16,
-                ),
-                child: Column(
-                  children: [
-                    // Content body - this will scroll behind the tabs
-                    body(),
-                  ],
-                ),
+              child: Column(
+                children: [
+                  // Content body - this will scroll behind the tabs
+                  body(),
+                ],
               ),
             ),
             // iOS-style translucent tabs bar - fixed position, content scrolls behind it

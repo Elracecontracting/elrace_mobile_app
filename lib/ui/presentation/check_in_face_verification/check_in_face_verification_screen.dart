@@ -335,7 +335,7 @@ class _CheckInFaceVerificationScreenState
                     _showTryAgainButton = false;
                   });
                   _showError(
-                      'تسجيل الحضور غير متاح بعد الساعة 11:59 صباحاً. الوقت الحالي: $timeStr');
+                      'Check-in is not available after 11:59 AM. Current time: $timeStr');
                   Future.delayed(const Duration(seconds: 2), () {
                     if (mounted) Navigator.of(context).pop(false);
                   });
