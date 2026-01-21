@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:dotted_border/dotted_border.dart';
 
 class AddTaskScreen extends StatefulWidget {
   const AddTaskScreen({Key? key}) : super(key: key);
@@ -13,6 +14,7 @@ class AddTaskScreen extends StatefulWidget {
 class _AddTaskScreenState extends State<AddTaskScreen> {
   double _daysValue = 5;
   late TextEditingController _daysController;
+  late TextEditingController _descriptionController;
   String _selectedProject = 'Alfoua - Abu Dhabi Police';
   String _selectedDepartment = 'Media Department';
 
@@ -20,11 +22,13 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   void initState() {
     super.initState();
     _daysController = TextEditingController(text: _daysValue.toInt().toString());
+    _descriptionController = TextEditingController();
   }
 
   @override
   void dispose() {
     _daysController.dispose();
+    _descriptionController.dispose();
     super.dispose();
   }
 
@@ -92,12 +96,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               const SizedBox(height: 20),
 
               // Description
-              _buildSectionLabel('Description'),
-              const SizedBox(height: 8),
-              _buildTextField(
-                hint: 'This application is designed for super shops. By using this application they can enlist all their products in one place and then can get a one-stop solution for their inventory and sales management.',
-                maxLines: 5,
-              ),
+              _buildDescriptionSection(),
               const SizedBox(height: 20),
 
               // Days Section with Dates
@@ -202,7 +201,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               const SizedBox(height: 20),
 
               // Following By
-              _buildSectionLabel('Following By'),
+  Center(
+                child:             _buildSectionLabel('Following By'),
+              ),
               const SizedBox(height: 12),
               Row(
                 children: [
@@ -277,14 +278,42 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   }
 
   Widget _buildSectionLabel(String label) {
-    return Text(
-      label,
-      style: GoogleFonts.poppins(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: Colors.grey[600],
-      ),
-    );
+    final parts = label.split('\n');
+    
+    if (parts.length > 1) {
+      // Two-line label (first line gray, second line black bold)
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            parts[0],
+            style: GoogleFonts.poppins(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[600],
+            ),
+          ),
+          Text(
+            parts[1],
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+        ],
+      );
+    } else {
+      // Single-line label (black bold)
+      return Text(
+        label,
+        style: GoogleFonts.poppins(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
+        ),
+      );
+    }
   }
 
   Widget _buildTextField({String hint = '', int maxLines = 1}) {
@@ -346,33 +375,47 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   }
 
   Widget _buildAddButton() {
-    return Container(
-      width: 50,
-      height: 50,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(
-          color: Colors.grey[300]!,
-          width: 2,
-          style: BorderStyle.solid,
+    return Column(
+      children: [
+       DottedBorder(
+      borderType: BorderType.Circle,
+      color: Colors.black,
+      strokeWidth: 2,
+      dashPattern: [6, 4],
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Colors.white,
         ),
-        color: Colors.white,
+        child:            Icon(Icons.add, size: 25, color: Colors.black),
+
+        
+        
+       
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.add, size: 20, color: Colors.grey[700]),
-          Text(
-            'Add',
-            style: GoogleFonts.poppins(
-              fontSize: 8,
-              color: Colors.grey[700],
-            ),
+    ),
+        const SizedBox(height: 4),
+        Text(
+          'Add',
+          style: GoogleFonts.poppins(
+            fontSize: 10,
+            color: Colors.black,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
+
+
+  /*   Text(
+              'Add',
+              style: GoogleFonts.poppins(
+                fontSize: 8,
+                color: Colors.black
+              ),
+            ),*/
 
   Widget _buildMemberAvatar(String name, String imagePath) {
     return Column(
@@ -437,6 +480,170 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildDescriptionSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with label and icons
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Description',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+              Row(
+                children: [
+                  _buildIconButton(Icons.format_align_left, _formatAlignLeft),
+                  const SizedBox(width: 8),
+                  _buildIconButton(Icons.format_list_bulleted, _formatBulletList),
+                  const SizedBox(width: 8),
+                  _buildIconButton(Icons.format_list_numbered, _formatNumberedList),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Text field
+          TextField(
+            controller: _descriptionController,
+            maxLines: 5,
+            onChanged: _handleDescriptionChange,
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: Colors.black87,
+            ),
+            decoration: InputDecoration(
+              hintText: 'Enter task description...',
+              hintStyle: GoogleFonts.poppins(
+                fontSize: 13,
+                color: Colors.grey[400],
+              ),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIconButton(IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: Colors.grey[700],
+        ),
+      ),
+    );
+  }
+
+  void _formatAlignLeft() {
+    // Format text alignment - for now just showing the action
+    setState(() {});
+  }
+
+  void _handleDescriptionChange(String value) {
+    // Auto-add bullet point when pressing Enter after a bulleted line
+    if (value.endsWith('\n')) {
+      final lines = value.split('\n');
+      if (lines.length >= 2) {
+        final previousLine = lines[lines.length - 2].trim();
+        
+        // Check if previous line starts with bullet point
+        if (previousLine.startsWith('• ')) {
+          final newText = value + '• ';
+          _descriptionController.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.fromPosition(
+              TextPosition(offset: newText.length),
+            ),
+          );
+          return;
+        }
+        
+        // Check if previous line starts with number
+        final numberMatch = RegExp(r'^(\d+)\.\s').firstMatch(previousLine);
+        if (numberMatch != null) {
+          final nextNumber = int.parse(numberMatch.group(1)!) + 1;
+          final newText = value + '$nextNumber. ';
+          _descriptionController.value = TextEditingValue(
+            text: newText,
+            selection: TextSelection.fromPosition(
+              TextPosition(offset: newText.length),
+            ),
+          );
+          return;
+        }
+      }
+    }
+  }
+
+  void _formatBulletList() {
+    final text = _descriptionController.text;
+    if (text.isEmpty) return;
+    
+    final lines = text.split('\n');
+    final formattedLines = lines.where((line) => line.trim().isNotEmpty).map((line) {
+      final trimmed = line.trim();
+      if (trimmed.startsWith('• ')) return trimmed;
+      if (RegExp(r'^\d+\.\s').hasMatch(trimmed)) {
+        return '• ${trimmed.replaceFirst(RegExp(r'^\d+\.\s'), '')}';
+      }
+      return '• $trimmed';
+    }).join('\n');
+    
+    _descriptionController.text = formattedLines;
+    _descriptionController.selection = TextSelection.fromPosition(
+      TextPosition(offset: formattedLines.length),
+    );
+  }
+
+  void _formatNumberedList() {
+    final text = _descriptionController.text;
+    if (text.isEmpty) return;
+    
+    final lines = text.split('\n');
+    int number = 1;
+    final formattedLines = lines.where((line) => line.trim().isNotEmpty).map((line) {
+      final trimmed = line.trim();
+      if (trimmed.startsWith('• ')) {
+        return '${number++}. ${trimmed.substring(2)}';
+      }
+      if (RegExp(r'^\d+\.\s').hasMatch(trimmed)) {
+        return '${number++}. ${trimmed.replaceFirst(RegExp(r'^\d+\.\s'), '')}';
+      }
+      return '${number++}. $trimmed';
+    }).join('\n');
+    
+    _descriptionController.text = formattedLines;
+    _descriptionController.selection = TextSelection.fromPosition(
+      TextPosition(offset: formattedLines.length),
     );
   }
 }

@@ -44,7 +44,7 @@ dependencies:
   cupertino_icons: ^1.0.6
   dartz: ^0.10.1
   device_info_plus: null
-
+  dotted_border: ^2.1.0
   dio: null
   dio_cookie_manager: null
   dropdown_search: ^6.0.2
