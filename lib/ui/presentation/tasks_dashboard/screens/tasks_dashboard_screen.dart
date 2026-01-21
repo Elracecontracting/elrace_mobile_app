@@ -8,6 +8,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:el_race/ui/presentation/tasks_dashboard/screens/add_task.dart';
+import 'package:el_race/ui/presentation/tasks_dashboard/screens/task_details.dart';
 
 class Task {
   final String title;
@@ -205,23 +206,27 @@ class TaskDashboardCardV2 extends StatelessWidget {
   Widget build(BuildContext context) {
     final statusColor = _statusColor(task.status);
 
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 10,horizontal: 16),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: const Color(0xFFD0D0D0)),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 6,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, TaskDetailsScreen.routeName);
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 10,horizontal: 16),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: const Color(0xFFD0D0D0)),
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 6,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -455,6 +460,7 @@ class TaskDashboardCardV2 extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }
