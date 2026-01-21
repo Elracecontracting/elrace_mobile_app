@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:el_race/ui/presentation/tasks_dashboard/screens/add_task.dart';
 
 class Task {
   final String title;
@@ -796,25 +797,35 @@ class SectionHeader extends StatelessWidget {
             letterSpacing: 1.1,
           ),
         ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          decoration: BoxDecoration(
-            color: const Color(0xFF90CAF9),
-            borderRadius: BorderRadius.circular(999),
-          ),
-          child: Row(
-            children: const [
-              Icon(Icons.add, color: Colors.white, size: 18),
-              SizedBox(width: 8),
-              Text(
-                '+ ADD TASK',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
-                ),
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const AddTaskScreen(),
               ),
-            ],
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF90CAF9),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Row(
+              children: const [
+                Icon(Icons.add, color: Colors.white, size: 18),
+                SizedBox(width: 8),
+                Text(
+                  '+ ADD TASK',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ],
@@ -871,30 +882,40 @@ class AddTaskButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF8BC6EC), Color(0xFF9599E2)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.add, color: Colors.white, size: 18),
-          SizedBox(width: 8),
-          Text(
-            'ADD TASK',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1,
-            ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AddTaskScreen(),
           ),
-        ],
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(999),
+          gradient: const LinearGradient(
+            colors: [Color(0xFF8BC6EC), Color(0xFF9599E2)],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.add, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Text(
+              'ADD TASK',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
