@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
-
+// وبأعلى الملف:
 import 'dart:math' as Math;
+import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:el_race/utils/color_utils.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class Task {
   final String title;
@@ -38,72 +42,113 @@ class TasksDashboardScreen extends StatelessWidget {
     final tasks = _generateFakeTasks();
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
-      body: Column(
-        children: [
-          // Header
-          Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Expanded(
-                      child: SummaryCard(
-                        title: 'Total Tasks',
-                        value: '32',
-                        subtitle: 'Overdue Tasks 12',
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF039BE5), Color(0xFF4DD0E1)],
-                          begin: Alignment.centerLeft,
-                          end: Alignment.centerRight,
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SvgPicture.asset(
+                        "assets/png/Tasks.svg",
+                        height: 24.w,
+                        width: 24.w,
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        'TASKS DASHBOARD',
+                        style: GoogleFonts.koulen(
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.w500,
+                          color: appFontColor,
                         ),
-                        bottomSection: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              '20 task completed',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 12.0,
-                              ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: SummaryCard(
+                            title: 'Total Tasks',
+                            value: '32',
+                            subtitle: 'Overdue Tasks 12',
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF039BE5), Color(0xFF4DD0E1)],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
                             ),
-                            const SizedBox(height: 4.0),
-                            Container(
-                              height: 5.0,
-                              width: 80.0,
-                              decoration: BoxDecoration(
-                                color: Colors.green,
-                                borderRadius: BorderRadius.circular(2.0),
-                              ),
+                            bottomSection: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  '20 task completed',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 12.0,
+                                  ),
+                                ),
+                                const SizedBox(height: 4.0),
+                                Container(
+                                  height: 5.0,
+                                  width: 80.0,
+                                  decoration: BoxDecoration(
+                                    color: Colors.green,
+                                    borderRadius: BorderRadius.circular(2.0),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        const Expanded(
+                          child: PendingReportsCard(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const FilterTabs(),
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: const Row(
+                    children: [
+                      Text(
+                        'Total TASKS',
+                        style: TextStyle(
+                          color: Color(0xFFB0B0B0),
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.1,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    const Expanded(
-                      child: PendingReportsCard(),
-                    ),
-                  ],
+                      Spacer(),
+                      AddTaskButton(),
+                    ],
+                  ),
                 ),
-              )),
-
-          // Filters Tabs
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.0),
-            child: FilterTabs(),
+              ],
+            ),
           ),
-
-          // Tasks List
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
                 final task = tasks[index];
                 return TaskDashboardCardV2(task: task);
               },
+              childCount: tasks.length,
             ),
           ),
         ],
@@ -139,195 +184,6 @@ class TasksDashboardScreen extends StatelessWidget {
   }
 }
 
-class TaskDashboardCard extends StatelessWidget {
-  final Task task;
-
-  const TaskDashboardCard({Key? key, required this.task}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12.0),
-      padding: const EdgeInsets.all(14.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10.0,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Top Row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  task.title.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 14.0,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF2E2E2E),
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              CircleAvatar(
-                radius: 12.0,
-                backgroundColor: task.status == TaskStatus.completed
-                    ? const Color(0xFFE8F5E9)
-                    : task.status == TaskStatus.overdue
-                        ? const Color(0xFFFDECEA)
-                        : const Color(0xFFFFF3E0),
-                child: Icon(
-                  task.status == TaskStatus.completed
-                      ? Icons.star
-                      : task.status == TaskStatus.overdue
-                          ? Icons.error
-                          : Icons.settings,
-                  size: 14.0,
-                  color: task.status == TaskStatus.completed
-                      ? const Color(0xFF43A047)
-                      : task.status == TaskStatus.overdue
-                          ? const Color(0xFFE53935)
-                          : const Color(0xFFFB8C00),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8.0),
-
-          // User Section
-          Row(
-            children: [
-              CircleAvatar(
-                radius: 12.0,
-                child: Text(task.assignedUser[0]),
-              ),
-              const SizedBox(width: 8.0),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    task.assignedUser,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13.0,
-                    ),
-                  ),
-                  Text(
-                    task.department,
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 11.0,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 8.0),
-
-          // Dates Section
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'START DATE',
-                    style: const TextStyle(
-                      color: Colors.green,
-                      fontSize: 10.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    DateFormat('dd MMM yyyy').format(task.startDate),
-                    style: const TextStyle(fontSize: 10.0),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'END DATE',
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 10.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    DateFormat('dd MMM yyyy').format(task.endDate),
-                    style: const TextStyle(fontSize: 10.0),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 8.0),
-
-          // Progress Line
-          Container(
-            height: 2.0,
-            width: double.infinity,
-            color: task.status == TaskStatus.completed
-                ? const Color(0xFF43A047)
-                : task.status == TaskStatus.overdue
-                    ? const Color(0xFFE53935)
-                    : const Color(0xFFFB8C00),
-          ),
-          const SizedBox(height: 8.0),
-
-          // Footer
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.access_time,
-                    size: 14.0,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(width: 4.0),
-                  Text(
-                    task.time,
-                    style: const TextStyle(fontSize: 11.0),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.calendar_today,
-                    size: 14.0,
-                    color: Colors.grey,
-                  ),
-                  const SizedBox(width: 4.0),
-                  Text(
-                    '${task.remainingDays} Days',
-                    style: const TextStyle(fontSize: 11.0),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class TaskDashboardCardV2 extends StatelessWidget {
   final Task task;
 
@@ -336,11 +192,11 @@ class TaskDashboardCardV2 extends StatelessWidget {
   Color _statusColor(TaskStatus s) {
     switch (s) {
       case TaskStatus.pending:
-        return const Color(0xFFFF9800); // orange
+        return const Color(0xFFFF9800);
       case TaskStatus.completed:
-        return const Color(0xFF0F9D58); // green
+        return const Color(0xFF0F9D58);
       case TaskStatus.overdue:
-        return const Color(0xFFC62828); // red
+        return const Color(0xFFC62828);
     }
   }
 
@@ -349,80 +205,68 @@ class TaskDashboardCardV2 extends StatelessWidget {
     final statusColor = _statusColor(task.status);
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 14),
-      padding: const EdgeInsets.all(18),
+      margin: const EdgeInsets.symmetric(vertical: 10,horizontal: 16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border.all(color: const Color(0xFFD0D0D0), width: 1),
-        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: const Color(0xFFD0D0D0)),
+        borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 10,
-            offset: const Offset(0, 6),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 6,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Stack(
         children: [
-          // المحتوى الأساسي
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              // LEFT SIDE
+              // LEFT
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // TITLE (يبقى فاضي يمين شوي حتى ما يركب فوق الـ badge)
                     Padding(
-                      padding: const EdgeInsets.only(right: 44),
+                      padding: const EdgeInsets.only(right: 32),
                       child: Text(
                         task.title.toUpperCase(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF2B2B2B),
-                          letterSpacing: 0.6,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.4,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 14),
-
-                    // USER ROW
+                    const SizedBox(height: 8),
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Avatar مع Border رمادي
                         Container(
-                          width: 56,
-                          height: 56,
+                          width: 42,
+                          height: 42,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.all(
                               color: const Color(0xFFD9D9D9),
-                              width: 3,
+                              width: 2,
                             ),
                           ),
                           child: CircleAvatar(
                             backgroundColor: const Color(0xFFEFEFEF),
                             child: Text(
-                              task.assignedUser.isNotEmpty
-                                  ? task.assignedUser[0].toUpperCase()
-                                  : '?',
+                              task.assignedUser[0].toUpperCase(),
                               style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF111111),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),
                         ),
-                        const SizedBox(width: 12),
-
-                        // Name + Department
+                        const SizedBox(width: 8),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -432,21 +276,16 @@ class TaskDashboardCardV2 extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF111111),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                task.department.toUpperCase(),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              Text(
+                                task.department.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
                                   color: Color(0xFF9AA3AE),
-                                  letterSpacing: 0.6,
                                 ),
                               ),
                             ],
@@ -454,61 +293,68 @@ class TaskDashboardCardV2 extends StatelessWidget {
                         ),
                       ],
                     ),
-
-                    const SizedBox(height: 22),
-
-                    // PROGRESS TRACK + WALKER
+                    const SizedBox(height: 12),
                     LayoutBuilder(
                       builder: (context, constraints) {
-                        final trackW = constraints.maxWidth;
+                        final trackWidth = constraints.maxWidth;
                         final progress = task.progress.clamp(0.0, 1.0);
-                        final coloredW =
-                            progress >= 1 ? trackW : trackW * progress;
-// الرجل دائمًا واقف عند نهاية الخط
-                        const walkerSize = 20.0;
-                        final walkerLeft = trackW - walkerSize;
+
+                        const double iconSize = 16;
+
+                        // عرض الجزء الملوّن
+                        final double coloredWidth = trackWidth * progress;
+
+                        // مكان الأيقونة (مربوطة بنهاية اللون)
+                        final double iconLeft = (coloredWidth - iconSize / 2)
+                            .clamp(0.0, trackWidth - iconSize);
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                // Black track
-                                Container(
-                                  height: 6,
-                                  width: double.infinity,
-                                  color: const Color(0xFF111111),
-                                ),
-                                // Colored progress
-                                Container(
-                                  height: 6,
-                                  width: coloredW,
-                                  color: statusColor,
-                                ),
-                                // Walker icon فوق الخط قرب النهاية
-                                Positioned(
-                                  left: walkerLeft,
-                                  top: -16,
-                                  child: const Icon(
-                                    Icons.directions_walk,
-                                    size: walkerSize,
-                                    color: Color(0xFF9E9E9E),
+                            SizedBox(
+                              height: 24, // 🔑 ارتفاع ثابت يمنع التداخل
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Align(
+                                    alignment: Alignment.bottomLeft,
+                                    child: Container(
+                                      height: 4,
+                                      width: double.infinity,
+                                      color: Colors.black,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                  Align(
+                                    alignment: Alignment.bottomLeft,
+                                    child: Container(
+                                      height: 4,
+                                      width: coloredWidth,
+                                      color: statusColor,
+                                    ),
+                                  ),
+                                  Positioned(
+                                    left: iconLeft,
+                                    bottom: 4,
+                                    child: Image.asset(
+                                      progress < 1.0
+                                          ? 'assets/png/walker-man.png'
+                                          : 'assets/png/stand.png',
+                                      width: iconSize,
+                                      height: iconSize,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(height: 4),
 
-                            const SizedBox(height: 8),
-
-                            // TIME تحت الخط يسار
+                            // الوقت
                             Text(
                               task.time,
                               style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
                                 color: Color(0xFF9AA3AE),
-                                letterSpacing: 0.6,
                               ),
                             ),
                           ],
@@ -519,31 +365,28 @@ class TaskDashboardCardV2 extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(width: 16),
+              const SizedBox(width: 10),
 
-              // VERTICAL DIVIDER
               Container(
-                width: 2,
-                margin: const EdgeInsets.only(top: 52, bottom: 18),
+                width: 1,
+                height: 72,
                 color: const Color(0xFFD9D9D9),
               ),
 
-              const SizedBox(width: 16),
+              const SizedBox(width: 10),
 
-              // RIGHT SIDE (Dates + Days)
+              // RIGHT
               SizedBox(
-                width: 90, // ثابت مثل المرجع
+                width: 86,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 42), // نزول بسيط تحت مستوى العنوان
                     const Text(
-                      'STAT DATE', // مثل المرجع
+                      'STAT DATE',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
                         color: Color(0xFF11A84A),
-                        letterSpacing: 0.4,
                       ),
                     ),
                     Text(
@@ -551,19 +394,17 @@ class TaskDashboardCardV2 extends StatelessWidget {
                           .format(task.startDate)
                           .toUpperCase(),
                       style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 10,
                         color: Color(0xFF9AA3AE),
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 6),
                     const Text(
                       'END DATE',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
                         color: Color(0xFFD32F2F),
-                        letterSpacing: 0.4,
                       ),
                     ),
                     Text(
@@ -571,36 +412,30 @@ class TaskDashboardCardV2 extends StatelessWidget {
                           .format(task.endDate)
                           .toUpperCase(),
                       style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 10,
                         color: Color(0xFF9AA3AE),
                       ),
                     ),
-                    const SizedBox(height: 18),
-
-                    // DAYS (5 Days)
+                    const SizedBox(height: 8),
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
                         Text(
                           task.remainingDays.toString(),
                           style: const TextStyle(
-                            fontSize: 72,
+                            fontSize: 40,
                             fontWeight: FontWeight.w900,
                             color: Color(0xFFBDBDBD),
                             height: 0.9,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 12),
-                          child: Text(
-                            'Days',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800,
-                              color: Color(0xFFBDBDBD),
-                            ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          'Days',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFFBDBDBD),
                           ),
                         ),
                       ],
@@ -610,13 +445,11 @@ class TaskDashboardCardV2 extends StatelessWidget {
               ),
             ],
           ),
-
-          // BADGE (Starburst) أعلى يمين
           Positioned(
-            top: 8,
-            right: 8,
+            top: 6,
+            right: 6,
             child: StarburstBadge(
-              size: 34,
+              size: 22,
               color: statusColor,
             ),
           ),
@@ -920,7 +753,7 @@ class FilterTabs extends StatelessWidget {
 
   Widget _buildTab(String text, bool isSelected) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
         gradient: isSelected
@@ -930,7 +763,7 @@ class FilterTabs extends StatelessWidget {
                 end: Alignment.centerRight,
               )
             : null,
-        color: isSelected ? null : const Color(0xFFE3F2FD),
+        color: isSelected ? null : const Color(0xFFC0DBEE),
       ),
       child: Text(
         text,
@@ -998,9 +831,9 @@ Widget buildSummaryCards() {
           value: '32',
           subtitle: 'Overdue Tasks 12',
           gradient: const LinearGradient(
-            colors: [Color(0xFF0093E9), Color(0xFF80D0C7)],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
+            colors: [Color(0xFF80D0C7),Color(0xFF0093E9)],
+            begin: Alignment.bottomRight,
+            end: Alignment.centerLeft,
           ),
           bottomSection: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1031,4 +864,38 @@ Widget buildSummaryCards() {
       ),
     ],
   );
+}
+
+class AddTaskButton extends StatelessWidget {
+  const AddTaskButton({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(999),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF8BC6EC), Color(0xFF9599E2)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.add, color: Colors.white, size: 18),
+          SizedBox(width: 8),
+          Text(
+            'ADD TASK',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
