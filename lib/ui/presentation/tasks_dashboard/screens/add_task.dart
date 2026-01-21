@@ -4,6 +4,9 @@ import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:el_race/utils/color_utils.dart';
 
 class AddTaskScreen extends StatefulWidget {
   const AddTaskScreen({Key? key}) : super(key: key);
@@ -38,12 +41,35 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+      body: CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.all(20.0),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+              // Header
+              Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SvgPicture.asset(
+                      "assets/png/Tasks.svg",
+                      height: 24.w,
+                      width: 24.w,
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'ADD TASK',
+                      style: GoogleFonts.koulen(
+                        fontSize: 22.sp,
+                        fontWeight: FontWeight.w500,
+                        color: appFontColor,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              const SizedBox(height: 5),
+              
               // Task Title
               _buildBorderedFieldWithLabel(
                 label: 'Task\nTitle',
@@ -274,9 +300,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 ),
               ),
               const SizedBox(height: 30),
-            ],
+              ]),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
