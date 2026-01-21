@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dotted_border/dotted_border.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 
 class AddTaskScreen extends StatefulWidget {
   const AddTaskScreen({Key? key}) : super(key: key);
@@ -44,36 +45,39 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Task Title
-              _buildSectionLabel('Task\nTitle'),
-              const SizedBox(height: 8),
-              _buildTextField(hint: ''),
+              _buildBorderedFieldWithLabel(
+                label: 'Task\nTitle',
+                child: _buildTextField(hint: ''),
+              ),
               const SizedBox(height: 20),
 
               // Project Name
-              _buildSectionLabel('Project\nName'),
-              const SizedBox(height: 8),
-              _buildDropdown(
-                value: _selectedProject,
-                items: ['Alfoua - Abu Dhabi Police', 'Other Project'],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedProject = value!;
-                  });
-                },
+              _buildBorderedFieldWithLabel(
+                label: 'Project\nName',
+                child: _buildDropdown(
+                  value: _selectedProject,
+                  items: ['Alfoua - Abu Dhabi Police', 'Other Project'],
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedProject = value!;
+                    });
+                  },
+                ),
               ),
               const SizedBox(height: 20),
 
               // Task Department
-              _buildSectionLabel('Task\nDepartment'),
-              const SizedBox(height: 8),
-              _buildDropdown(
-                value: _selectedDepartment,
-                items: ['Media Department', 'Development', 'Marketing'],
-                onChanged: (value) {
-                  setState(() {
-                    _selectedDepartment = value!;
-                  });
-                },
+              _buildBorderedFieldWithLabel(
+                label: 'Task\nDepartment',
+                child: _buildDropdown(
+                  value: _selectedDepartment,
+                  items: ['Media Department', 'Development', 'Marketing'],
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedDepartment = value!;
+                    });
+                  },
+                ),
               ),
               const SizedBox(height: 20),
 
@@ -229,7 +233,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               // Submit Button
               Center(
                 child: Container(
-                  width: double.infinity,
+                  width: 220,
                   height: 55,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
@@ -316,10 +320,57 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     }
   }
 
+  Widget _buildBorderedFieldWithLabel({required String label, required Widget child}) {
+    final parts = label.split('\n');
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[300]!, width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (parts.length > 1) ...[
+            Text(
+              parts[0],
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[500],
+              ),
+            ),
+            Text(
+              parts[1],
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ] else ...[
+            Text(
+              label,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+          ],
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+
   Widget _buildTextField({String hint = '', int maxLines = 1}) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey[300]!),
       ),
@@ -339,36 +390,94 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     );
   }
 
+  Widget _buildLabeledInputField({required String label, String hint = ''}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: TextField(
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[400],
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildDropdown({
     required String value,
     required List<String> items,
     required Function(String?) onChanged,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: value,
-          isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.black54),
-          items: items.map((String item) {
-            return DropdownMenuItem<String>(
-              value: item,
-              child: Text(
-                item,
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  color: Colors.grey[600],
-                ),
+    return DropdownButtonHideUnderline(
+      child: DropdownButton2<String>(
+        value: value,
+        isExpanded: true,
+        items: items.map((String item) {
+          return DropdownMenuItem<String>(
+            value: item,
+            child: Text(
+              item,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[600],
               ),
-            );
-          }).toList(),
-          onChanged: onChanged,
+            ),
+          );
+        }).toList(),
+        onChanged: onChanged,
+        buttonStyleData: ButtonStyleData(
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+        ),
+        iconStyleData: const IconStyleData(
+          icon: Icon(Icons.keyboard_arrow_down),
+          iconSize: 24,
+          iconEnabledColor: Colors.black54,
+        ),
+        dropdownStyleData: DropdownStyleData(
+          maxHeight: 200,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+          ),
+          offset: const Offset(0, -5),
+          scrollbarTheme: ScrollbarThemeData(
+            radius: const Radius.circular(40),
+            thickness: WidgetStateProperty.all(6),
+            thumbVisibility: WidgetStateProperty.all(true),
+          ),
+        ),
+        menuItemStyleData: MenuItemStyleData(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
       ),
     );
