@@ -30,6 +30,18 @@ class TaskDetailsScreen extends StatelessWidget {
     }
   }
 
+  Color _priorityColorssssDeleteMe(String? priority) {
+    switch (priority) {
+      case '1':
+        return Colors.red.shade600;
+      case '2':
+        return Colors.orange.shade600;
+      case '3':
+        return Colors.green.shade600;
+      default:
+        return Colors.grey;
+    }
+  }
   String _formatDate(DateTime? date) {
     if (date == null) return '-';
     return DateFormat('yyyy-MM-dd HH:mm').format(date);
