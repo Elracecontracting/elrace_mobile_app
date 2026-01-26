@@ -116,7 +116,7 @@ class HrAndPettycashCard extends StatelessWidget {
                         Text(
                           requestType.toUpperCase(),
                           style: GoogleFonts.nunito(
-                            fontSize: 15.sp,
+                            fontSize: 17.sp,
                             fontWeight: FontWeight.w900,
                             color: const Color(0xFF0E0E10),
                           ),
@@ -258,7 +258,7 @@ class HrAndPettycashCard extends StatelessWidget {
                         Text(
                           employeeName.toUpperCase(),
                           style: GoogleFonts.nunito(
-                            fontSize: 16.sp,
+                            fontSize: 17.sp,
                             fontWeight: FontWeight.w900,
                             color: const Color(0xFF0E0E10),
                             letterSpacing: 0.2,
@@ -293,7 +293,7 @@ class HrAndPettycashCard extends StatelessWidget {
                 child: Text(
                   amountText,
                   style: GoogleFonts.nunito(
-                    fontSize: 26.sp,
+                    fontSize: 22.sp,
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF0B2D5E),
                     letterSpacing: 0.3,

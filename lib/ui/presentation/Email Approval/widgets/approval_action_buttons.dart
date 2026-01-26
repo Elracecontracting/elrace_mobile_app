@@ -14,6 +14,7 @@ class ApprovalActionButtons extends StatelessWidget {
   final bool disabled;
   final String? selectedAction;
   final List<String> userIds;
+  final ApprovalActionButtonsVariant variant;
 
   const ApprovalActionButtons({
     super.key,
@@ -23,11 +24,61 @@ class ApprovalActionButtons extends StatelessWidget {
     this.disabled = false,
     this.selectedAction,
     required this.userIds,
+    this.variant = ApprovalActionButtonsVariant.holdCircle,
   });
 
   @override
   Widget build(BuildContext context) {
     final TextEditingController commentController = TextEditingController();
+    if (variant == ApprovalActionButtonsVariant.rectangle) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Expanded(
+            child: _buildRectangleActionButton(
+              context,
+              label: 'REJECT',
+              color: const Color(0xFFBA1719),
+              commentController: commentController,
+              isSelected: selectedAction == 'reject',
+            ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: _buildRectangleActionButton(
+              context,
+              label: 'APPROVE',
+              color: const Color(0xFF009859),
+              commentController: commentController,
+              isSelected: selectedAction == 'approve',
+            ),
+          ),
+        ],
+      );
+    }
+    if (variant == ApprovalActionButtonsVariant.pill) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          _buildPillActionButton(
+            context,
+            label: 'REJECT',
+            color: const Color(0xFFBA1719),
+            commentController: commentController,
+            isSelected: selectedAction == 'reject',
+          ),
+          SizedBox(width: 16.w),
+          _buildPillActionButton(
+            context,
+            label: 'APPROVE',
+            color: const Color(0xFF009859),
+            commentController: commentController,
+            isSelected: selectedAction == 'approve',
+          ),
+        ],
+      );
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
@@ -35,10 +86,322 @@ class ApprovalActionButtons extends StatelessWidget {
             Icons.close, commentController,
             isSelected: selectedAction == 'reject'),
         SizedBox(width: 40.w),
-        _buildCircleActionButton(context, "APPROVE", const Color(0xFF00D17A),
+        _buildCircleActionButton(context, "APPROVE", const Color(0xFF009859),
             Icons.check, commentController,
             isSelected: selectedAction == 'approve'),
       ],
+    );
+  }
+
+  Widget _buildRectangleActionButton(
+    BuildContext context, {
+    required String label,
+    required Color color,
+    required TextEditingController commentController,
+    bool isSelected = false,
+  }) {
+    return BlocConsumer<ApprovalBloc, ApprovalState>(
+      listenWhen: (previous, current) {
+        if (current is ApprovalSuccess && previous is! ApprovalSuccess) {
+          return true;
+        }
+        if (current is ApprovalFailure && previous is! ApprovalFailure) {
+          return true;
+        }
+        return false;
+      },
+      listener: (ctx, state) {
+        if (state is ApprovalSuccess) {
+          if (context.mounted && Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+
+          if (onResult != null) {
+            onResult!(state.message);
+          }
+
+          if (context.mounted && Navigator.canPop(context)) {
+            Navigator.pop(context, true);
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.message),
+                    duration: const Duration(seconds: 2),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            });
+          }
+        } else if (state is ApprovalFailure) {
+          if (context.mounted && Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.error),
+                duration: const Duration(seconds: 4),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is ApprovalLoading;
+        final isButtonDisabled = disabled || isLoading;
+
+        return SizedBox(
+          width: double.infinity,
+          height: 52.w,
+          child: ElevatedButton(
+            onPressed: isButtonDisabled
+                ? null
+                : () async {
+                    final token =
+                        SharedPref.getLoginData().result?.token ?? '';
+                    final String? comment =
+                        await _showCommentDialog(context, label);
+
+                    if (!context.mounted) return;
+                    final finalComment = comment ?? '..';
+
+                    if (context.mounted) {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        barrierColor: Colors.black54,
+                        builder: (BuildContext dialogContext) {
+                          return PopScope(
+                            canPop: false,
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircularProgressIndicator(),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'Processing...',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }
+
+                    if (label == 'APPROVE') {
+                      context.read<ApprovalBloc>().add(
+                            ApproveRequest(
+                              requestId: requestId,
+                              type: type,
+                              token: token,
+                              userIds: userIds,
+                              comment: finalComment,
+                            ),
+                          );
+                    } else {
+                      context.read<ApprovalBloc>().add(
+                            RejectRequest(
+                              requestId: requestId,
+                              type: type,
+                              token: token,
+                              userIds: userIds,
+                              comment: finalComment,
+                            ),
+                          );
+                    }
+                  },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: color,
+              disabledBackgroundColor: color.withValues(alpha: 0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.r),
+              ),
+              elevation: isSelected ? 6 : 2,
+            ),
+            child: Text(
+              label,
+              style: GoogleFonts.koulen(
+                fontSize: 20.sp,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.2,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPillActionButton(
+    BuildContext context, {
+    required String label,
+    required Color color,
+    required TextEditingController commentController,
+    bool isSelected = false,
+  }) {
+    return BlocConsumer<ApprovalBloc, ApprovalState>(
+      listenWhen: (previous, current) {
+        if (current is ApprovalSuccess && previous is! ApprovalSuccess) {
+          return true;
+        }
+        if (current is ApprovalFailure && previous is! ApprovalFailure) {
+          return true;
+        }
+        return false;
+      },
+      listener: (ctx, state) {
+        if (state is ApprovalSuccess) {
+          if (context.mounted && Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+
+          if (onResult != null) {
+            onResult!(state.message);
+          }
+
+          if (context.mounted && Navigator.canPop(context)) {
+            Navigator.pop(context, true);
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.message),
+                    duration: const Duration(seconds: 2),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            });
+          }
+        } else if (state is ApprovalFailure) {
+          if (context.mounted && Navigator.canPop(context)) {
+            Navigator.pop(context);
+          }
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.error),
+                duration: const Duration(seconds: 4),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      },
+      builder: (context, state) {
+        final isLoading = state is ApprovalLoading;
+        final isButtonDisabled = disabled || isLoading;
+
+        return SizedBox(
+          width: 150.w,
+          height: 52.w,
+          child: ElevatedButton(
+            onPressed: isButtonDisabled
+                ? null
+                : () async {
+                    final token =
+                        SharedPref.getLoginData().result?.token ?? '';
+                    final String? comment =
+                        await _showCommentDialog(context, label);
+
+                    if (!context.mounted) return;
+                    final finalComment = comment ?? '..';
+
+                    if (context.mounted) {
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        barrierColor: Colors.black54,
+                        builder: (BuildContext dialogContext) {
+                          return PopScope(
+                            canPop: false,
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    CircularProgressIndicator(),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'Processing...',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }
+
+                    if (label == 'APPROVE') {
+                      context.read<ApprovalBloc>().add(
+                            ApproveRequest(
+                              requestId: requestId,
+                              type: type,
+                              token: token,
+                              userIds: userIds,
+                              comment: finalComment,
+                            ),
+                          );
+                    } else {
+                      context.read<ApprovalBloc>().add(
+                            RejectRequest(
+                              requestId: requestId,
+                              type: type,
+                              token: token,
+                              userIds: userIds,
+                              comment: finalComment,
+                            ),
+                          );
+                    }
+                  },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: color,
+              disabledBackgroundColor: color.withValues(alpha: 0.4),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
+              elevation: isSelected ? 6 : 2,
+            ),
+            child: Text(
+              label,
+              style: GoogleFonts.koulen(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.0,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -234,6 +597,12 @@ class ApprovalActionButtons extends StatelessWidget {
       });
     });
   }
+}
+
+enum ApprovalActionButtonsVariant {
+  holdCircle,
+  pill,
+  rectangle,
 }
 
 class AnimatedCircleButton extends StatefulWidget {
