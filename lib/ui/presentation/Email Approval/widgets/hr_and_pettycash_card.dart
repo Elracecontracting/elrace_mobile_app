@@ -43,7 +43,33 @@ class HrAndPettycashCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-           
+            Row(
+              children: [
+                SizedBox(width: 50.w + 12.w + 2.w + 14.w),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        reqNo.toUpperCase(),
+                        style: GoogleFonts.nunito(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0B2D5E),
+                          letterSpacing: 0.5,
+                          height: 1.0,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.start,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
             SizedBox(height: 6.w),
             Expanded(
               child: Row(
@@ -77,17 +103,6 @@ class HrAndPettycashCard extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                reqNo.toUpperCase(),
-                style: GoogleFonts.nunito(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFF0B2D5E),
-                  letterSpacing: 0.5,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
                         Text(
                           requestType.toUpperCase(),
                           style: GoogleFonts.nunito(
