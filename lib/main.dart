@@ -1,5 +1,6 @@
 import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/chat/chat.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/data/services/prayer_background_service.dart';
 import 'package:el_race/providers/announcements_provider.dart';
@@ -261,6 +262,9 @@ void main() async {
     print('❌ Error scheduling notifications: $e');
   }
 
+  // Initialize chat module if user is already logged in
+  await _initializeChatIfLoggedIn();
+
   // debugPrint = (String? message, {int? wrapWidth}) {};
   // Get saved language from SharedPref
   final delegate = await LocalizationDelegate.create(
@@ -301,6 +305,27 @@ Future<void> _requestEssentialPermissions() async {
     print('✅ Essential permissions requested');
   } catch (e) {
     print('⚠️ Error requesting permissions: $e');
+  }
+}
+
+/// Initialize chat module if user is already logged in.
+/// This restores chat session on app restart.
+Future<void> _initializeChatIfLoggedIn() async {
+  try {
+    if (SharedPref.isUserAuthenticated()) {
+      print('🔷 main: User is authenticated, restoring chat session...');
+      final result = await ChatModuleHelper.instance.restoreFromStoredSession();
+      if (result != null && result.chatEnabled) {
+        print('✅ main: Chat session restored successfully');
+      } else {
+        print('ℹ️ main: Chat not available: ${result?.error ?? "No session"}');
+      }
+    } else {
+      print('ℹ️ main: User not authenticated, skipping chat initialization');
+    }
+  } catch (e) {
+    print('❌ main: Error initializing chat: $e');
+    // Don't rethrow - chat is optional
   }
 }
 

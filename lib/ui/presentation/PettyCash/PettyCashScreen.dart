@@ -1,20 +1,19 @@
 import 'dart:convert';
 
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/ui/presentation/PettyCash/PettyCashDraftScreen.dart';
+import 'package:el_race/ui/presentation/PettyCash/PettyCashSubmittedScreen.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashPopUpScreen.dart';
 import 'package:el_race/utils/api_logger.dart';
-import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
-import '../../widgets/header_widget.dart';
+import 'package:el_race/ui/widgets/header_widget.dart';
 
 class PettyCashScreen extends StatefulWidget {
-  const PettyCashScreen({
-    super.key,
-  });
+  const PettyCashScreen({super.key});
 
   @override
   _PettyCashScreenState createState() => _PettyCashScreenState();
@@ -27,10 +26,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
   double incoming = 0.0;
   double spent = 0.0;
   List<Map<String, dynamic>> expenseSheets = [];
-  bool isDraftLoading = true;
-  double draftAmount = 0;
-  int draftExpensesCount = 0;
-  double draftExpensesTotal = 0.0;
+
+  final NumberFormat _amountFormat = NumberFormat('#,##0');
 
   @override
   void initState() {
@@ -38,72 +35,68 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
     _fetchPettyCashData();
   }
 
-  Future<void> _fetchDraftSummary() async {
-    if (!mounted) return;
+  bool _isDraft(dynamic state) {
+    final s = (state ?? '').toString().toLowerCase();
+    return s.contains('draft') || s.isEmpty || s == 'false';
+  }
 
-    try {
-      final token = SharedPref.getLoginData().result?.token;
+  String _formatAmount(dynamic value) {
+    final numVal = (value is num)
+        ? value
+        : num.tryParse(value?.toString().replaceAll(',', '') ?? '') ?? 0;
+    return _amountFormat.format(numVal.round());
+  }
 
-      final headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": "Bearer $token",
-      };
-
-      final url = Uri.parse("https://erp.elrace.com/api/draft_summary");
-      final body = jsonEncode({
-        "jsonrpc": "2.0",
-        "params": {},
-      });
-
-      // 📤 Log Request
-      ApiLogger.logRequest(
-        endpoint: url.toString(),
-        method: 'GET',
-        headers: headers,
-        body: body,
-      );
-
-      final request = http.Request('GET', url)
-        ..headers.addAll(headers)
-        ..body = body;
-
-      final startTime = DateTime.now();
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-      final duration = DateTime.now().difference(startTime);
-
-      final responseData = jsonDecode(response.body);
-
-      // 📥 Log Response
-      ApiLogger.logResponse(
-        endpoint: url.toString(),
-        statusCode: response.statusCode,
-        responseBody: responseData,
-        duration: duration,
-      );
-
-      if (response.statusCode == 200) {
-        final data = responseData;
-        final result = data['result']['data'];
-
-        setState(() {
-          balance = (result['total_balance'] ?? 0).toDouble();
-          draftAmount = (result['total_draft_amount'] ?? 0).toDouble();
-        });
-      } else {
-        throw Exception(
-            "Failed to fetch draft summary: ${response.statusCode}");
-      }
-    } catch (e, stackTrace) {
-      // ❌ Log Error
-      ApiLogger.logError(
-        endpoint: 'https://erp.elrace.com/api/draft_summary',
-        error: e,
-        stackTrace: stackTrace,
-      );
-      if (!mounted) return;
+  String _formatSheetTitle(Map<String, dynamic> sheet) {
+    final titleCandidates = [
+      sheet['name'],
+      sheet['reference'],
+      sheet['display_name'],
+      sheet['employee_name'],
+      sheet['employee'],
+    ];
+    for (final c in titleCandidates) {
+      final s = (c ?? '').toString().trim();
+      if (s.isNotEmpty && s.toLowerCase() != 'false') return s;
     }
+    return 'RCC PC 1';
+  }
+
+  String _formatSheetDate(Map<String, dynamic> sheet) {
+    final candidates = [sheet['create_date'], sheet['date'], sheet['datetime']];
+    DateTime? parsed;
+    for (final c in candidates) {
+      final raw = (c ?? '').toString().trim();
+      if (raw.isEmpty || raw.toLowerCase() == 'false') continue;
+      parsed = DateTime.tryParse(raw);
+      if (parsed != null) break;
+    }
+
+    if (parsed == null) return '';
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(parsed.year, parsed.month, parsed.day);
+    final diffDays = today.difference(day).inDays;
+
+    final timeStr = DateFormat('HH:mm').format(parsed);
+    if (diffDays == 0) return 'Today : $timeStr';
+    if (diffDays == 1) return 'Yesterday : $timeStr';
+    return '${DateFormat('MMM d').format(parsed)} : $timeStr';
+  }
+
+  Color _statusDotColor(Map<String, dynamic> sheet) {
+    final s = (sheet['state'] ?? '').toString().toLowerCase();
+    if (s.contains('paid') || s.contains('approve') || s.contains('done')) {
+      return const Color(0xFF18A558);
+    }
+    if (s.contains('submit') || s.contains('pending') || s.contains('draft')) {
+      return const Color(0xFFF0B400);
+    }
+    if (s.contains('reject') || s.contains('cancel') || s.contains('refuse')) {
+      return const Color(0xFFD1002C);
+    }
+    return const Color(0xFF18A558);
   }
 
   Future<void> _fetchPettyCashData() async {
@@ -127,12 +120,10 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
 
       final url = Uri.parse("https://erp.elrace.com/api/petty_cash_home");
 
-      // Get current date dynamically
       final now = DateTime.now();
       final currentDate =
           '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 
-      // Use current balance if available, otherwise default to 0
       final lastLimit = balance > 0 ? balance.toInt() : 0;
 
       final bodyData = {
@@ -207,10 +198,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
           balance = result['balance'].toDouble();
           incoming = result['incoming'].toDouble();
           spent = result['spent'].toDouble();
-          draftExpensesCount = result['draft_expenses_count'] ?? 0;
-          draftExpensesTotal = (result['draft_expenses_total'] ?? 0).toDouble();
 
-          // Handle expense_sheets - can be String or List
           if (result['expense_sheets'] is List) {
             expenseSheets =
                 List<Map<String, dynamic>>.from(result['expense_sheets']);
@@ -222,11 +210,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
 
           isLoading = false;
         });
-
-        print('✅ State updated successfully');
-        print('   Balance: $balance | Incoming: $incoming | Spent: $spent');
-        print(
-            '   Draft Count: $draftExpensesCount | Draft Total: $draftExpensesTotal\n');
+        print('   Balance: $balance | Incoming: $incoming | Spent: $spent\n');
       } else {
         print(
             '\n╔═══════════════════════════════════════════════════════════════');
@@ -265,333 +249,179 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
       appBar: const HeaderWidget(),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Page Title (Scrollable with content)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10.0, vertical: 10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const SizedBox(width: 40), // Spacer to center title
-                        Text(
-                          translate('home.petty_cash'),
-                          style: GoogleFonts.koulen(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w400,
-                            color: appFontColor,
-                            letterSpacing: 1.5,
+          : RefreshIndicator(
+              onRefresh: _fetchPettyCashData,
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildHeaderStack(context),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (expenseSheets.isEmpty)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 40),
+                        child: Center(
+                          child: Text(
+                            'No record found.',
+                            style: TextStyle(color: Colors.grey),
                           ),
                         ),
-                        IconButton(
-                          iconSize: 32,
-                          icon: const Icon(Icons.add, color: appFontColor),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const PettyCashPopUpScreen(),
-                              ),
-                            );
-                          },
+                      ),
+                    )
+                  else
+                    SliverList.separated(
+                      itemCount: expenseSheets.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 6),
+                      itemBuilder: (context, index) {
+                        final sheet = expenseSheets[index];
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 2),
+                          child: _buildExpenseRow(sheet),
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ),
+    );
+  }
+
+  Widget _buildHeaderStack(BuildContext context) {
+    return SizedBox(
+      height: 190 + 84,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            top: 0,
+            bottom: 84,
+            child: _buildBalanceCard(context),
+          ),
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _buildTabs(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBalanceCard(BuildContext context) {
+    // Calculate draft and not paid from expense_sheets
+    double draftTotal = 0.0;
+    double notPaidTotal = 0.0;
+    for (final sheet in expenseSheets) {
+      final amount =
+          (sheet['total_amount'] ?? sheet['amount'] ?? 0).toDouble();
+      if (_isDraft(sheet['state'])) {
+        draftTotal += amount;
+      } else {
+        notPaidTotal += amount;
+      }
+    }
+
+    final balanceText = _formatAmount(balance);
+    final amountText = _formatAmount(incoming);
+    final draftText = _formatAmount(draftTotal);
+    final notPaidText = _formatAmount(notPaidTotal);
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: Stack(
+        children: [
+          SizedBox(
+            height: 190,
+            width: double.infinity,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset(
+                  'assets/png/petty-colors.png',
+                  fit: BoxFit.cover,
+                ),
+                Image.asset(
+                  'assets/png/lines.png',
+                  fit: BoxFit.cover,
+                ),
+              ],
+            ),
+          ),
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/png/petty-cash-icon.png',
+                        width: 28,
+                        height: 28,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'PETTYCASH',
+                        style: GoogleFonts.inter(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Your Balance',
+                          style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            balanceText,
+                            style: GoogleFonts.koulen(
+                              fontSize: 46,
+                              height: 1.0,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 10),
-
-                  // Circles Summary
-                  SizedBox(
-                    height: 190,
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        final double screenWidth = constraints.maxWidth;
-                        const double circleSize = 121;
-                        final double sideOffset =
-                            screenWidth / 3.8 - circleSize / 2;
-
-                        return Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Positioned(
-                              top: 60,
-                              right: sideOffset,
-                              child: _buildCircleWithBackground(
-                                "SPENT",
-                                spent.toString(),
-                                "assets/png/spent.png",
-                                "assets/png/spent_bg.png",
-                              ),
-                            ),
-                            Positioned(
-                              top: 0,
-                              child: GestureDetector(
-                                onTap: () => _showIncomingPopup(context),
-                                child: _buildCircleWithBackground(
-                                  "INCOMING",
-                                  incoming.toString(),
-                                  "assets/png/Profit.png",
-                                  "assets/png/incoming_bg.png",
-                                ),
-                              ),
-                            ),
-                            Positioned(
-                              top: 60,
-                              left: sideOffset,
-                              child: _buildCircleWithBackground(
-                                "BALANCE",
-                                balance.toString(),
-                                "assets/png/Wallet.png",
-                                "assets/png/balance_bg.png",
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 20),
-                  _buildDraftSection(),
-                  const SizedBox(height: 20),
-
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 66),
-                    child: Divider(color: Colors.grey, thickness: 1.5),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  expenseSheets.isEmpty
-                      ? const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(20),
-                            child: Text(
-                              "No record found.",
-                              style:
-                                  TextStyle(color: Colors.grey, fontSize: 14),
-                            ),
-                          ),
-                        )
-                      : ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: expenseSheets.length,
-                          itemBuilder: (context, index) {
-                            final sheet = expenseSheets[index];
-                            final status = (sheet['state'] ?? 'Submitted')
-                                .toString()
-                                .toUpperCase();
-                            final date = sheet['date'] == false
-                                ? 'N/A'
-                                : sheet['date'].toString();
-                            final amount =
-                                sheet['total_amount']?.toStringAsFixed(2) ??
-                                    '0.00';
-
-                            return Padding(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 8.0, horizontal: 5.0),
-                              child:
-                                  _buildTransactionItem_2(status, date, amount),
-                            );
-                          },
-                        ),
-
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-    );
-  }
-
-  Widget _buildDraftSection() {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const PettyCashPopUpScreen(),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 5),
-        padding: const EdgeInsets.fromLTRB(30, 8, 15, 12),
-        decoration: BoxDecoration(
-          image: const DecorationImage(
-            image: AssetImage("assets/png/item_bg_yellow.png"),
-            fit: BoxFit.cover,
-          ),
-          borderRadius: BorderRadius.circular(0),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            // Draft Text
-            Text(
-              "DRAFT",
-              style: GoogleFonts.inter(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: appFontColor,
-              ),
-            ),
-
-            // Divider
-            const SizedBox(
-              height: 30,
-              child: VerticalDivider(color: Colors.grey, thickness: 2),
-            ),
-
-            // No of Bills (dynamic)
-            Expanded(
-              child: Column(
-                children: [
-                  Text(
-                    "No of Bills",
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: appFontColor,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    draftExpensesCount.toString(),
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: appFontColor,
-                    ),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildMetric('Incoming', amountText),
+                      _buildMetric('Draft', draftText),
+                      _buildMetric('Not Paid', notPaidText),
+                    ],
                   ),
                 ],
               ),
-            ),
-
-            // Divider
-            const SizedBox(
-              height: 30,
-              child: VerticalDivider(color: Colors.grey, thickness: 2),
-            ),
-
-            // Amount (dynamic)
-            Expanded(
-              child: Column(
-                children: [
-                  const Text(
-                    "Amount",
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: appFontColor),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    draftExpensesTotal.toStringAsFixed(2),
-                    style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: appFontColor),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /*
-
-  Widget _buildTransactionItem(String status, String date, String amount) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 5),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha((0.2 * 255).toInt()),
-            spreadRadius: 2,
-            blurRadius: 5,
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.check_circle, color: Colors.green),
-              const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(status,
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  Text("Date: $date"),
-                ],
-              ),
-            ],
-          ),
-          Text("Amount: $amount",
-              style: const TextStyle(fontWeight: FontWeight.bold)),
-        ],
-      ),
-    );
-  }
-
-  */
-
-  Widget _buildCircleWithBackground(
-      String title, String amount, String iconPath, String backgroundPath) {
-    return Container(
-      width: 130,
-      height: 130,
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage(backgroundPath),
-          fit: BoxFit.cover,
-        ),
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha((0.2 * 255).toInt()),
-            blurRadius: 5,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Image.asset(iconPath, width: 37, height: 37),
-          const SizedBox(height: 5),
-          Text(
-            title,
-            style: GoogleFonts.koulen(
-              fontSize: 20,
-              fontWeight: FontWeight.w400,
-              color: Colors.white,
-              letterSpacing: 1.9,
-            ),
-          ),
-          Text(
-            amount,
-            style: GoogleFonts.koulen(
-              fontSize: 16, // 2+ font from original 14
-              fontWeight: FontWeight.w300,
-              color: Colors.white,
-              letterSpacing: 1.9,
             ),
           ),
         ],
@@ -599,162 +429,214 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
     );
   }
 
-  Widget _buildTransactionItem_2(String status, String date, String amount) {
-    return Container(
-      decoration: BoxDecoration(
-        image: const DecorationImage(
-          image: AssetImage('assets/png/item_bg_green.png'),
-          fit: BoxFit.cover,
-        ),
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha((0.1 * 255).toInt()),
-            blurRadius: 4,
-            spreadRadius: 2,
+  Widget _buildMetric(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Colors.white.withOpacity(0.85),
+            height: 1.4,
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(30, 8, 15, 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: GoogleFonts.koulen(
+            fontSize: 24,
+            height: 1.0,
+            color: Colors.white,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabs(BuildContext context) {
+    Widget tabItem({
+      required String assetPath,
+      required String label,
+      required VoidCallback onTap,
+    }) {
+      return Expanded(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(18),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                Image.asset(
+                  assetPath,
+                  width: 34,
+                  height: 34,
+                  color: Colors.black87,
+                ),
+                const SizedBox(height: 10),
                 Text(
-                  status,
+                  label,
                   style: GoogleFonts.inter(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: appFontColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
                   ),
                 ),
               ],
             ),
-            const SizedBox(width: 15),
-            const SizedBox(
-              height: 30,
-              child: VerticalDivider(
-                color: Colors.grey,
-                thickness: 2,
-              ),
-            ),
-            const SizedBox(width: 5),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    'Date',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xff151544),
-                    ),
-                  ),
-                  Text(
-                    date,
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(
-              height: 30,
-              child: VerticalDivider(
-                color: Colors.grey,
-                thickness: 2,
-              ),
-            ),
-            const SizedBox(width: 5),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Amount',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: appFontColor,
-                    ),
-                  ),
-                  Text(
-                    amount,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 0),
-            const CircleAvatar(
-              radius: 10,
-              backgroundImage: AssetImage('assets/png/tick-petty.png'),
-            ),
-            const SizedBox(width: 5),
-          ],
+          ),
         ),
+      );
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 14,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          tabItem(
+            assetPath: 'assets/png/draft2.png',
+            label: 'Draft',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const PettyCashDraftScreen()),
+              );
+            },
+          ),
+          Container(
+            width: 1,
+            height: 50,
+            color: Colors.black.withOpacity(0.08),
+          ),
+          tabItem(
+            assetPath: 'assets/png/Bill.png',
+            label: 'Submitted',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const PettyCashSubmittedScreen()),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 
-  void _showIncomingPopup(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (context) {
-        return Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          backgroundColor: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildPopupItem(),
-                const SizedBox(height: 16),
-                _buildPopupItem(), // You can remove this if only one message is needed
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
+  Widget _buildExpenseRow(Map<String, dynamic> sheet) {
+    final title = _formatSheetTitle(sheet);
+    final subtitle = _formatSheetDate(sheet);
+    final amountRaw = sheet['total_amount'] ?? sheet['amount'] ?? 0;
+    final amountText = _formatAmount(amountRaw);
+    final dotColor = _statusDotColor(sheet);
 
-  Widget _buildPopupItem() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Image.asset(
-          'assets/png/info_icon.png', // Replace with your bulb/info icon
-          width: 30,
-          height: 30,
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            translate('pettycash.received_message'),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11),
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PettyCashPopUpScreen()),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.chevron_right,
+                color: Colors.black54,
+                size: 24,
+              ),
+              const SizedBox(width: 10),
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2F0FF),
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Image.asset(
+                  'assets/png/Bill.png',
+                  width: 22,
+                  height: 22,
+                  color: Colors.black87,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '-$amountText',
+                    style: GoogleFonts.inter(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFFD1002C),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: dotColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 }

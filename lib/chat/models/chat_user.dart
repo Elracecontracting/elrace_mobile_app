@@ -1,0 +1,150 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+/// Represents a user profile in the chat system.
+/// Stored in Firestore at: users/{uid}
+class ChatUser {
+  final String uid;
+  final int odooUserId;
+  final int? employeeId;
+  final String name;
+  final String? email;
+  final int roleId;
+  final int? branchId;
+  final int companyId;
+  final String? avatarUrl;
+  final DateTime? lastSeenAt;
+  final DateTime? lastLoginAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final List<String> searchKeywords;
+
+  ChatUser({
+    required this.uid,
+    required this.odooUserId,
+    this.employeeId,
+    required this.name,
+    this.email,
+    required this.roleId,
+    this.branchId,
+    required this.companyId,
+    this.avatarUrl,
+    this.lastSeenAt,
+    this.lastLoginAt,
+    required this.createdAt,
+    required this.updatedAt,
+    this.searchKeywords = const [],
+  });
+
+  /// Generate search keywords from name and email for prefix search.
+  static List<String> buildSearchKeywords(String name, String? email) {
+    final keywords = <String>{};
+    
+    // Process name tokens
+    final nameTokens = name.toLowerCase().split(RegExp(r'\s+'));
+    for (final token in nameTokens) {
+      if (token.isEmpty) continue;
+      // Add full token and prefixes (min 2 chars)
+      keywords.add(token);
+      for (int i = 2; i < token.length; i++) {
+        keywords.add(token.substring(0, i));
+      }
+    }
+    
+    // Process email if present
+    if (email != null && email.isNotEmpty) {
+      final emailLower = email.toLowerCase();
+      keywords.add(emailLower);
+      
+      // Extract username part (before @)
+      final atIndex = emailLower.indexOf('@');
+      if (atIndex > 0) {
+        final username = emailLower.substring(0, atIndex);
+        keywords.add(username);
+        for (int i = 2; i < username.length; i++) {
+          keywords.add(username.substring(0, i));
+        }
+      }
+    }
+    
+    return keywords.toList();
+  }
+
+  factory ChatUser.fromFirestore(DocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>? ?? {};
+    return ChatUser(
+      uid: doc.id,
+      odooUserId: data['odoo_user_id'] ?? 0,
+      employeeId: data['employee_id'],
+      name: data['name'] ?? '',
+      email: data['email'],
+      roleId: data['role_id'] ?? 0,
+      branchId: data['branch_id'],
+      companyId: data['company_id'] ?? 0,
+      avatarUrl: data['avatar_url'],
+      lastSeenAt: (data['last_seen_at'] as Timestamp?)?.toDate(),
+      lastLoginAt: (data['last_login_at'] as Timestamp?)?.toDate(),
+      createdAt: (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      updatedAt: (data['updated_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      searchKeywords: List<String>.from(data['search_keywords'] ?? []),
+    );
+  }
+
+  Map<String, dynamic> toFirestore({bool isUpdate = false}) {
+    final map = <String, dynamic>{
+      'odoo_user_id': odooUserId,
+      'employee_id': employeeId,
+      'name': name,
+      'email': email,
+      'role_id': roleId,
+      'branch_id': branchId,
+      'company_id': companyId,
+      'avatar_url': avatarUrl,
+      'last_login_at': FieldValue.serverTimestamp(),
+      'updated_at': FieldValue.serverTimestamp(),
+      'search_keywords': searchKeywords,
+    };
+    
+    if (!isUpdate) {
+      map['created_at'] = FieldValue.serverTimestamp();
+    }
+    
+    return map;
+  }
+
+  ChatUser copyWith({
+    String? uid,
+    int? odooUserId,
+    int? employeeId,
+    String? name,
+    String? email,
+    int? roleId,
+    int? branchId,
+    int? companyId,
+    String? avatarUrl,
+    DateTime? lastSeenAt,
+    DateTime? lastLoginAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    List<String>? searchKeywords,
+  }) {
+    return ChatUser(
+      uid: uid ?? this.uid,
+      odooUserId: odooUserId ?? this.odooUserId,
+      employeeId: employeeId ?? this.employeeId,
+      name: name ?? this.name,
+      email: email ?? this.email,
+      roleId: roleId ?? this.roleId,
+      branchId: branchId ?? this.branchId,
+      companyId: companyId ?? this.companyId,
+      avatarUrl: avatarUrl ?? this.avatarUrl,
+      lastSeenAt: lastSeenAt ?? this.lastSeenAt,
+      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      searchKeywords: searchKeywords ?? this.searchKeywords,
+    );
+  }
+
+  @override
+  String toString() => 'ChatUser(uid: $uid, name: $name, email: $email)';
+}

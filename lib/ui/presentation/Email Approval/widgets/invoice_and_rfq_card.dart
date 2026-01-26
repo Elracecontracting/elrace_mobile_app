@@ -7,12 +7,23 @@ import 'package:el_race/utils/safe_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class InvoiceAndRfqCard extends StatelessWidget {
   final List<dynamic> approvalItems;
   final VoidCallback? onRefresh;
   const InvoiceAndRfqCard(
       {super.key, required this.approvalItems, this.onRefresh});
+
+  String _formatAmountForCard(String raw) {
+    final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
+    final value = double.tryParse(cleaned);
+    if (value == null) return raw;
+    if (value % 1 == 0) {
+      return NumberFormat('#,##0', 'en_US').format(value);
+    }
+    return NumberFormat('#,##0.##', 'en_US').format(value);
+  }
 
   // Helper method to check if image_emp is a URL or base64 data
   bool _isImageUrl(String imageData) {
@@ -77,6 +88,159 @@ class InvoiceAndRfqCard extends StatelessWidget {
     );
   }
 
+  Widget _buildRfqCard({
+    required dynamic item,
+    required String refNo,
+    required String vendor,
+    required String subtitle,
+    required String amount,
+  }) {
+    final amountText = _formatAmountForCard(amount);
+
+    return Container(
+      height: 125.w,
+      width: 350.w,
+      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 1.w),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFE1E4E8),
+            Color(0xFFB9C0CB),
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(22.r),
+        border: Border.all(color: const Color(0xFF5F666F), width: 1),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SizedBox(width: 54.w + 12.w + 2.w + 14.w),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        refNo.toUpperCase(),
+                        style: GoogleFonts.nunito(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0B2D5E),
+                          letterSpacing: 0.4,
+                          height: 1.0,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.start,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 6.w),
+            SizedBox(
+              height: 54.w,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 54.w,
+                    height: 54.w,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: Colors.white.withOpacity(0.95), width: 2),
+                    ),
+                    child: ClipOval(
+                      child: _buildEmployeeImage(item["image_emp"], 54.w),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Container(
+                    width: 2.w,
+                    height: 54.w,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(2.r),
+                    ),
+                  ),
+                  SizedBox(width: 14.w),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          vendor.toUpperCase(),
+                          style: GoogleFonts.nunito(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF0E0E10),
+                            letterSpacing: 0.2,
+                            height: 1.0,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: 2.w),
+                        Text(
+                          subtitle.toUpperCase(),
+                          style: GoogleFonts.nunito(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF6B717B),
+                            letterSpacing: 0.2,
+                            height: 1.0,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 4.w),
+            Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  amountText,
+                  style: GoogleFonts.nunito(
+                    fontSize: 26.sp,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF0B2D5E),
+                    letterSpacing: 0.3,
+                    height: 1.0,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (approvalItems.isEmpty) {
@@ -102,6 +266,7 @@ class InvoiceAndRfqCard extends StatelessWidget {
           final item = approvalItems[index];
           String type = item["type"] ?? "";
           String id = item["id"]?.toString() ?? "";
+          final isRfq = type.toString().toUpperCase() == 'RFQ';
 
           // Helper function to safely get string value
           String _getSafeString(dynamic value, {String fallback = "N/A"}) {
@@ -149,6 +314,15 @@ class InvoiceAndRfqCard extends StatelessWidget {
           String date = _getSafeString(
               item["date"] ?? item["request_date"] ?? item["date_order"]);
 
+          final subtitle = _getSafeString(
+            item["partner_name"] ??
+                item["requester_name"] ??
+                item["emp_name"] ??
+                item["project"] ??
+                project,
+            fallback: "",
+          );
+
           return GestureDetector(
             onTap: () async {
               // Mark item as viewed
@@ -177,118 +351,129 @@ class InvoiceAndRfqCard extends StatelessWidget {
                 }
               }
             },
-            child: Container(
-              height: 105.w,
-              width: 350.w,
-              margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 1.w),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xffD6D6D6),
-                    Color(0xffADB2BD),
-                  ],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    ClipOval(
-                      child: _buildEmployeeImage(item["image_emp"], 73.w),
+            child: isRfq
+                ? _buildRfqCard(
+                    item: item,
+                    refNo: refNo,
+                    vendor: vendor,
+                    subtitle: subtitle,
+                    amount: amount,
+                  )
+                : Container(
+                    height: 105.w,
+                    width: 350.w,
+                    margin:
+                        EdgeInsets.symmetric(horizontal: 10.w, vertical: 1.w),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [
+                          Color(0xffD6D6D6),
+                          Color(0xffADB2BD),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    const SizedBox(width: 5),
-                    Expanded(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          SizedBox(
-                            width: 130.w,
-                            child: Text(
-                              vendor,
-                              style: GoogleFonts.nunito(
-                                fontSize: 17.sp,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
-                            ),
+                          ClipOval(
+                            child: _buildEmployeeImage(item["image_emp"], 73.w),
                           ),
-                          SizedBox(height: 5.w),
-                          Text(
-                            refNo,
-                            style: GoogleFonts.nunito(
-                              color: const Color(0xff333333).withOpacity(0.75),
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                          SizedBox(height: 5.w),
-                          SizedBox(
-                            width: 150.w,
-                            child: Row(
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                Flexible(
-                                  flex: 3,
+                                SizedBox(
+                                  width: 130.w,
                                   child: Text(
-                                    project.isNotEmpty ? '$project ' : '',
+                                    vendor,
                                     style: GoogleFonts.nunito(
+                                      fontSize: 17.sp,
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 12.sp,
+                                      color: Colors.black,
                                     ),
                                     overflow: TextOverflow.ellipsis,
-                                    maxLines: 2,
+                                    maxLines: 1,
                                   ),
                                 ),
-                                if (work.isNotEmpty)
-                                  Flexible(
-                                    flex: 2,
-                                    child: Text(
-                                      '($work)',
-                                      style: GoogleFonts.nunito(
-                                        fontWeight: FontWeight.normal,
-                                        fontSize: 10.sp,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                      maxLines: 2,
-                                    ),
+                                SizedBox(height: 5.w),
+                                Text(
+                                  refNo,
+                                  style: GoogleFonts.nunito(
+                                    color: const Color(0xff333333)
+                                        .withOpacity(0.75),
+                                    fontSize: 13.sp,
+                                    fontWeight: FontWeight.bold,
                                   ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                                SizedBox(height: 5.w),
+                                SizedBox(
+                                  width: 150.w,
+                                  child: Row(
+                                    children: [
+                                      Flexible(
+                                        flex: 3,
+                                        child: Text(
+                                          project.isNotEmpty ? '$project ' : '',
+                                          style: GoogleFonts.nunito(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 12.sp,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                          maxLines: 2,
+                                        ),
+                                      ),
+                                      if (work.isNotEmpty)
+                                        Flexible(
+                                          flex: 2,
+                                          child: Text(
+                                            '($work)',
+                                            style: GoogleFonts.nunito(
+                                              fontWeight: FontWeight.normal,
+                                              fontSize: 10.sp,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: 2,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
+                          ),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              InfoContainer(
+                                  text: materialType.isNotEmpty
+                                      ? materialType
+                                      : refNo),
+                              SizedBox(height: 6.w),
+                              InfoContainer(text: '$amount AED'),
+                              SizedBox(height: 6.w),
+                              InfoContainer(
+                                text: date.isNotEmpty ? date : 'N/A',
+                                icon: Icon(Icons.date_range,
+                                    size: 14.w, color: const Color(0xFF1A1A53)),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        InfoContainer(
-                            text:
-                                materialType.isNotEmpty ? materialType : refNo),
-                        SizedBox(height: 6.w),
-                        InfoContainer(text: '$amount AED'),
-                        SizedBox(height: 6.w),
-                        InfoContainer(
-                          text: date.isNotEmpty ? date : 'N/A',
-                          icon: Icon(Icons.date_range,
-                              size: 14.w, color: const Color(0xFF1A1A53)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
           );
         },
       ),
@@ -296,39 +481,36 @@ class InvoiceAndRfqCard extends StatelessWidget {
   }
 }
 
+// final item = approvalItems[index];
+// List<String> statuses = ['approved', 'pending', 'rejected'];
+// String sampleStatus = statuses[index % statuses.length];
+// final itemData = {
+//   "id": "${item["id"] ?? ""}",
+//   "name": "${item["name"] ?? ""}",
+//   "type": "${item["type"] ?? ""}",
+//   "requester": "${item["requester_name"] ?? ""}",
+//   "approver": "${item["emp_name"] ?? ""}",
+//   "location": "${item["location"] ?? ""}",
+//   "date": "${item["date"] ?? ""}",
+//   "image_emp": "${item["image_emp"] ?? ""}",
+//   "req_no":
+//   "REQ-${(item["id"] ?? "").toString().padLeft(6, '0')}",
+//   "title": "${item["name"] ?? ""}",
+//   "status": item["status"] ?? sampleStatus,
+// };
 
- // final item = approvalItems[index];
-          // List<String> statuses = ['approved', 'pending', 'rejected'];
-          // String sampleStatus = statuses[index % statuses.length];
-          // final itemData = {
-          //   "id": "${item["id"] ?? ""}",
-          //   "name": "${item["name"] ?? ""}",
-          //   "type": "${item["type"] ?? ""}",
-          //   "requester": "${item["requester_name"] ?? ""}",
-          //   "approver": "${item["emp_name"] ?? ""}",
-          //   "location": "${item["location"] ?? ""}",
-          //   "date": "${item["date"] ?? ""}",
-          //   "image_emp": "${item["image_emp"] ?? ""}",
-          //   "req_no":
-          //   "REQ-${(item["id"] ?? "").toString().padLeft(6, '0')}",
-          //   "title": "${item["name"] ?? ""}",
-          //   "status": item["status"] ?? sampleStatus,
-          // };
-
-
-
-            // return ApprovalCardTypeTwo(
-          //   item: itemData,
-          //   isExpanded: false,
-          //   onTap: () {
-          //     showDialog(
-          //       context: context,
-          //       builder: (BuildContext context) {
-          //         return ApprovalConfirmationScreen(
-          //           requestId: itemData["id"],
-          //           type: itemData["type"],
-          //         );
-          //       },
-          //     );
-          //   },
-          // );
+// return ApprovalCardTypeTwo(
+//   item: itemData,
+//   isExpanded: false,
+//   onTap: () {
+//     showDialog(
+//       context: context,
+//       builder: (BuildContext context) {
+//         return ApprovalConfirmationScreen(
+//           requestId: itemData["id"],
+//           type: itemData["type"],
+//         );
+//       },
+//     );
+//   },
+// );

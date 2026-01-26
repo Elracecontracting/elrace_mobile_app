@@ -5,20 +5,22 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/hr_and_pettycash_card.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/invoice_and_rfq_card.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/my_action_card.dart';
+import 'package:el_race/ui/presentation/home_screen/widgets/visibilty_icon.dart';
+import 'package:el_race/ui/widgets/glass_tab_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-import 'package:el_race/utils/safe_insets.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:hexcolor/hexcolor.dart';
 import 'package:http/http.dart' as http;
 import '../../widgets/header_widget.dart';
 import '../home_screen/screens/main_screens.dart';
 
 class ApprovalsScreen extends StatefulWidget {
   const ApprovalsScreen({
-    super.key,
-  });
+    Key? key,
+  }) : super(key: key);
 
   @override
   State<ApprovalsScreen> createState() => _ApprovalsScreenState();
@@ -41,9 +43,6 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   // Add a field to store errors per category
   Map<String, String> categoryErrors = {};
 
-  // Track badge visibility for each category
-  Map<String, bool> badgeVisibility = {};
-
   @override
   void initState() {
     super.initState();
@@ -62,7 +61,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   void _scrollToSelectedTab(int index) {
     if (_tabScrollController.hasClients) {
       // Calculate the position based on tab width + padding
-      const double tabWidth =
+      final double tabWidth =
           90 + 9; // 90w for width + 5 right padding + 4 margin
       final double screenWidth = MediaQuery.of(context).size.width;
       final double targetPosition =
@@ -78,7 +77,6 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   }
 
   void _onSearchChanged() {
-    if (!mounted) return;
     setState(() {
       approvalItems = _getFilteredItems();
     });
@@ -118,7 +116,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       "Authorization": "Bearer $token",
     };
 
-    final url = Uri.parse("https://erp.elrace.com/api/my_approvals_grouped");
+    final url = Uri.parse("https://test.elrace.com/api/my_approvals_grouped");
 
     final body = jsonEncode({
       "jsonrpc": "2.0",
@@ -149,28 +147,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
       final actualKey = responseKeys[groupType] ?? groupType;
 
-      // Get the list and filter out items with errors
-      List<dynamic> items = data['result']['data'][actualKey] ?? [];
-
-      // Filter out items that contain error messages
-      items = items.where((item) {
-        // Check if item is a string error message
-        if (item is String) {
-          return false; // Skip error messages
-        }
-        // Check if item has error fields
-        if (item is Map) {
-          final itemStr = item.toString().toLowerCase();
-          if (itemStr.contains('not found') ||
-              itemStr.contains('error') ||
-              item['error'] != null) {
-            return false; // Skip items with errors
-          }
-        }
-        return true; // Keep valid items
-      }).toList();
-
-      return items;
+      return data['result']['data'][actualKey] ?? [];
     } else {
       throw Exception("Failed to fetch $groupType: ${response.statusCode}");
     }
@@ -186,8 +163,6 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   }
 
   Future<void> _fetchApprovalData() async {
-    if (!mounted) return;
-
     setState(() {
       isLoading = true;
       error = '';
@@ -212,8 +187,6 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
       allItems = [...hrItems, ...rfqItems, ...invoiceItems, ...pettyCashItems];
 
-      if (!mounted) return;
-
       setState(() {
         approvalItems = _getFilteredItems();
         isLoading = false;
@@ -223,8 +196,6 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         }
       });
     } catch (e) {
-      if (!mounted) return;
-
       setState(() {
         error = e.toString();
         isLoading = false;
@@ -286,139 +257,119 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: true,
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-      },
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: const HeaderWidget(),
-        extendBody: false,
-        bottomNavigationBar: const CustomBottomNavBar(
-          isMain: false,
-        ),
-        body: Stack(
-          children: [
-            // Main content - starts from top and scrolls behind tabs
-            NotificationListener<ScrollNotification>(
-              onNotification: (scrollNotification) {
-                if (scrollNotification is ScrollUpdateNotification ||
-                    scrollNotification is ScrollEndNotification) {
-                  final isScrolled = scrollNotification.metrics.pixels > 10;
-                  if (isScrolled != _isScrolled && mounted) {
-                    setState(() {
-                      _isScrolled = isScrolled;
-                    });
-                  }
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: const HeaderWidget(),
+      extendBody: true,
+      bottomNavigationBar: const CustomBottomNavBar(
+        isMain: false,
+      ),
+      body: Stack(
+        children: [
+          // Main content - starts from top and scrolls behind tabs
+          NotificationListener<ScrollNotification>(
+            onNotification: (scrollNotification) {
+              if (scrollNotification is ScrollUpdateNotification ||
+                  scrollNotification is ScrollEndNotification) {
+                final isScrolled = scrollNotification.metrics.pixels > 10;
+                if (isScrolled != _isScrolled) {
+                  setState(() {
+                    _isScrolled = isScrolled;
+                  });
                 }
-                return false;
-              },
-              child: Column(
-                children: [
-                  // Content body - this will scroll behind the tabs
-                  body(),
-                ],
-              ),
+              }
+              return false;
+            },
+            child: Column(
+              children: [
+                // Content body - this will scroll behind the tabs
+                body(),
+              ],
             ),
-            // iOS-style translucent tabs bar - fixed position, content scrolls behind it
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: ClipRRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(
-                    sigmaX: _isScrolled ? 5.0 : 0.0,
-                    sigmaY: _isScrolled ? 5.0 : 0.0,
-                  ),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: _isScrolled
-                          ? Colors.white.withOpacity(0.1)
-                          : Colors.white,
-                      border: Border(
-                        bottom: BorderSide(
-                          color: _isScrolled
-                              ? Colors.grey.withOpacity(0.3)
-                              : Colors.transparent,
-                          width: 1.0,
-                        ),
+          ),
+          // iOS-style translucent tabs bar - fixed position, content scrolls behind it
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ClipRRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(
+                  sigmaX: _isScrolled ? 5.0 : 0.0,
+                  sigmaY: _isScrolled ? 5.0 : 0.0,
+                ),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: _isScrolled
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.white,
+                    border: Border(
+                      bottom: BorderSide(
+                        color: _isScrolled
+                            ? Colors.grey.withOpacity(0.3)
+                            : Colors.transparent,
+                        width: 1.0,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 4,
-                          offset: const Offset(0, 6),
-                        ),
-                      ],
                     ),
-                    child: SingleChildScrollView(
-                      controller: _tabScrollController,
-                      scrollDirection: Axis.horizontal,
-                      physics: const BouncingScrollPhysics(),
-                      clipBehavior: Clip.none,
-                      child: Row(
-                        children: categories.asMap().entries.map((entry) {
-                          int index = entry.key;
-                          String cat = entry.value;
-                          bool isSelected = selectedCategory == cat;
-                          return Container(
-                            margin:
-                                const EdgeInsets.only(right: 20.0, left: 5.0),
-                            child: GestureDetector(
-                              onTap: () {
-                                if (!mounted) return;
-                                // Hide badge for this category
-                                setState(() {
-                                  badgeVisibility[cat] = false;
-                                  selectedCategory = cat;
-                                  approvalItems = _getFilteredItems();
-                                  _isScrolled = false;
-                                });
-                                _scrollToSelectedTab(index);
-                                // Force reset after frame
-                                WidgetsBinding.instance
-                                    .addPostFrameCallback((_) {
-                                  if (mounted && _isScrolled) {
-                                    setState(() {
-                                      _isScrolled = false;
-                                    });
-                                  }
-                                });
-                                // Reload badge after 1 second
-                                Future.delayed(const Duration(seconds: 1), () {
-                                  if (mounted) {
-                                    setState(() {
-                                      badgeVisibility[cat] = true;
-                                    });
-                                  }
-                                });
-                              },
-                              child: _buildGlassTab(
-                                icon: categoryIcons[cat] ??
-                                    "assets/icons/default.png",
-                                title: cat,
-                                isSelected: isSelected,
-                                count: _getCategoryCount(cat),
-                                showBadge: badgeVisibility[cat] ?? true,
-                              ),
-                            ),
-                          );
-                        }).toList(),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 4,
+                        offset: const Offset(0, 6),
                       ),
+                    ],
+                  ),
+                  child: SingleChildScrollView(
+                    controller: _tabScrollController,
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    clipBehavior: Clip.none,
+                    child: Row(
+                      children: categories.asMap().entries.map((entry) {
+                        int index = entry.key;
+                        String cat = entry.value;
+                        bool isSelected = selectedCategory == cat;
+                        return Container(
+                          margin: const EdgeInsets.only(right: 20.0, left: 5.0),
+                          child: GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                selectedCategory = cat;
+                                approvalItems = _getFilteredItems();
+                                _isScrolled = false;
+                              });
+                              _scrollToSelectedTab(index);
+                              // Force reset after frame
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted && _isScrolled) {
+                                  setState(() {
+                                    _isScrolled = false;
+                                  });
+                                }
+                              });
+                            },
+                            child: _buildGlassTab(
+                              icon: categoryIcons[cat] ??
+                                  "assets/icons/default.png",
+                              title: cat,
+                              isSelected: isSelected,
+                              count: _getCategoryCount(cat),
+                            ),
+                          ),
+                        );
+                      }).toList(),
                     ),
                   ),
                 ),
               ),
             ),
-            // Floating bottom navigation bar
-          ],
-        ),
+          ),
+          // Floating bottom navigation bar
+        ],
       ),
     );
   }
@@ -435,25 +386,13 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     if (selectedCategory.toLowerCase() == "MY ACTION".toLowerCase()) {
       return MyActionCard(approvalItems: approvalItems);
     } else if (selectedCategory.toLowerCase() == "HR".toLowerCase()) {
-      return HrAndPettycashCard(
-        approvalItems: approvalItems,
-        onRefresh: _fetchApprovalData,
-      );
+      return HrAndPettycashCard(approvalItems: approvalItems);
     } else if (selectedCategory.toLowerCase() == "Petty Cash".toLowerCase()) {
-      return HrAndPettycashCard(
-        approvalItems: approvalItems,
-        onRefresh: _fetchApprovalData,
-      );
+      return HrAndPettycashCard(approvalItems: approvalItems);
     } else if (selectedCategory.toLowerCase() == "RFQ".toLowerCase()) {
-      return InvoiceAndRfqCard(
-        approvalItems: approvalItems,
-        onRefresh: _fetchApprovalData,
-      );
+      return InvoiceAndRfqCard(approvalItems: approvalItems);
     } else if (selectedCategory.toLowerCase() == "INVOICE".toLowerCase()) {
-      return InvoiceAndRfqCard(
-        approvalItems: approvalItems,
-        onRefresh: _fetchApprovalData,
-      );
+      return InvoiceAndRfqCard(approvalItems: approvalItems);
     } else {
       return const SizedBox.shrink();
     }
@@ -464,7 +403,6 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     required String title,
     required bool isSelected,
     int count = 0,
-    bool showBadge = true,
   }) {
     return Stack(
       clipBehavior: Clip.none,
@@ -537,33 +475,34 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
             ),
           ),
         ),
-        // Badge
-        if (count > 0 && showBadge)
+        // Badge for count
+        if (count > 0)
           Positioned(
-            top: -4,
-            right: -4,
+            right: -5,
+            top: -5,
             child: Container(
-              padding: const EdgeInsets.all(4),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
+                color: red,
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(
                   color: Colors.white,
-                  width: 1.5,
+                  width: 2,
                 ),
-              ),
-              constraints: const BoxConstraints(
-                minWidth: 20,
-                minHeight: 20,
-              ),
-              child: Center(
-                child: Text(
-                  count > 99 ? '99+' : count.toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.03),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
+                ],
+              ),
+              child: Text(
+                count > 99 ? '99+' : count.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ),

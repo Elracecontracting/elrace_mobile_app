@@ -6,6 +6,7 @@ import 'package:el_race/ui/presentation/camera/camera_selection_screen.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/ui/presentation/qr_survey/screens/qr_survey_content_wrapper.dart';
+import 'package:el_race/ui/chat/chat_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -98,19 +99,19 @@ class CustomBottomNavBar extends StatelessWidget {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(70.r),
             child: BackdropFilter(
-              filter: ui.ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
+              filter: ui.ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
               child: Container(
                 height: 60.h,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(70.r),
                   border: Border.all(
-                      color: Colors.white.withOpacity(0.28), width: 1.0),
+                      color: Colors.white.withOpacity(0.2), width: 1.0),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.12),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
                     ),
                   ],
                 ),
@@ -136,6 +137,14 @@ class CustomBottomNavBar extends StatelessWidget {
                       isMain: isMain,
                       icon: AppImages.chatIcon,
                     ),
+                    // Chat button for testing
+                    _buildNavItem(
+                      context,
+                      index: 3,
+                      isMain: isMain,
+                      icon: Icons.forum,
+                      isIconData: true,
+                    ),
                   ],
                 ),
               ),
@@ -160,6 +169,14 @@ class CustomBottomNavBar extends StatelessWidget {
           if (index == 2) {
             // Open camera
             await _openCamera(context);
+            return;
+          }
+          if (index == 3) {
+            // Open chat
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ChatListScreen()),
+            );
             return;
           }
           bloc.add(ChangeCurrentIndex(index: index));
