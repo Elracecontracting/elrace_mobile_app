@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/resources/app_colors.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_card_type_two.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/file_binary.dart';
 import 'package:el_race/utils/Util.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -158,20 +160,44 @@ class _ApprovalConfirmationScreenState
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      // Print full response
-      debugPrint("=========== FULL API RESPONSE START ===========");
-      debugPrint(response.body);
-      debugPrint("=========== FULL API RESPONSE END ===========");
+      final normalizedType = widget.type.toUpperCase().replaceAll(' ', '');
+      final isInvoice = normalizedType == 'INVOICE';
+
+      void debugPrintLong(String text) {
+        const chunkSize = 900;
+        if (text.isEmpty) {
+          debugPrint('');
+          return;
+        }
+        for (var i = 0; i < text.length; i += chunkSize) {
+          final end = math.min(i + chunkSize, text.length);
+          debugPrint(text.substring(i, end));
+        }
+      }
+
+      if (kDebugMode && isInvoice) {
+        debugPrint('=========== INVOICE API RESPONSE START ===========');
+        debugPrint('Status: ${response.statusCode}');
+        try {
+          final pretty = const JsonEncoder.withIndent('  ')
+              .convert(jsonDecode(response.body));
+          debugPrintLong(pretty);
+        } catch (_) {
+          debugPrintLong(response.body);
+        }
+        debugPrint('=========== INVOICE API RESPONSE END ===========');
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final result = data['result']['data'];
 
-        // Print result structure
-        debugPrint('=========== RESULT DATA START ===========');
-        debugPrint('Result Keys: ${result?.keys?.toList()}');
-        debugPrint('Result Data: $result');
-        debugPrint('=========== RESULT DATA END ===========');
+        if (kDebugMode && isInvoice) {
+          debugPrint('=========== INVOICE RESULT DATA START ===========');
+          debugPrint('Result Keys: ${result?.keys?.toList()}');
+          debugPrint('Result Data: $result');
+          debugPrint('=========== INVOICE RESULT DATA END ===========');
+        }
 
         setState(() {
           formData = result['form_view'] ?? {};
@@ -180,16 +206,12 @@ class _ApprovalConfirmationScreenState
           attachmentIds = result['attachment_ids'] ?? [];
         });
 
-        // Print formData to see available fields
-        debugPrint('=========== FORM DATA START ===========');
-        debugPrint('🔍 Form Data Keys: ${formData?.keys.toList()}');
-        debugPrint('🔍 Full Form Data: $formData');
-        debugPrint('📱 Mobile Phone: ${formData?["mobile_phone"]}');
-        debugPrint('📱 Mobile: ${formData?["mobile"]}');
-        debugPrint('📱 Phone: ${formData?["phone"]}');
-        debugPrint('📧 Work Email: ${formData?["work_email"]}');
-        debugPrint('📧 Email: ${formData?["email"]}');
-        debugPrint('=========== FORM DATA END ===========');
+        if (kDebugMode && isInvoice) {
+          debugPrint('=========== INVOICE FORM DATA START ===========');
+          debugPrint('🔍 Form Data Keys: ${formData?.keys.toList()}');
+          debugPrint('🔍 Full Form Data: $formData');
+          debugPrint('=========== INVOICE FORM DATA END ===========');
+        }
 
         await Future.delayed(const Duration(seconds: 1));
         setState(() {

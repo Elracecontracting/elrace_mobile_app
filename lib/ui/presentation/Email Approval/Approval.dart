@@ -2,15 +2,15 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/delayed/data/delayed_approvals_repository.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/delayed/screens/delayed_requests_screen.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/widgets/all_approvals_overview.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/hr_and_pettycash_card.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/invoice_and_rfq_card.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/widgets/my_action_card.dart';
-import 'package:el_race/ui/presentation/home_screen/widgets/visibilty_icon.dart';
-import 'package:el_race/ui/widgets/glass_tab_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:http/http.dart' as http;
@@ -27,7 +27,7 @@ class ApprovalsScreen extends StatefulWidget {
 }
 
 class _ApprovalsScreenState extends State<ApprovalsScreen> {
-  String selectedCategory = "My Actions";
+  String selectedCategoryKey = _CategoryKeys.all;
   TextEditingController searchController = TextEditingController();
   final ScrollController _tabScrollController = ScrollController();
   List<dynamic> hrItems = [];
@@ -38,6 +38,10 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   List<dynamic> approvalItems = [];
   bool isLoading = false;
   String error = '';
+  
+  // Delayed requests count from API
+  int delayedCount = 0;
+  final DelayedApprovalsRepository _delayedRepo = DelayedApprovalsRepository();
   bool _isScrolled = false;
 
   // Add a field to store errors per category
@@ -46,7 +50,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   @override
   void initState() {
     super.initState();
-    selectedCategory = categories.first;
+    selectedCategoryKey = categoryKeys.first;
     searchController.addListener(_onSearchChanged);
     _fetchApprovalData();
   }
@@ -131,8 +135,31 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
-    debugPrint(
-        "fetchCategoryData: ${request.url} $groupType \n${response.body}");
+
+    // Detailed invoice list logging
+    if (kDebugMode && groupType == 'invoice') {
+      debugPrint('=========== INVOICE LIST API RESPONSE START ===========');
+      debugPrint('URL: ${request.url}');
+      debugPrint('Group Type: $groupType');
+      debugPrint('Status: ${response.statusCode}');
+      try {
+        final decoded = jsonDecode(response.body);
+        final invoices = decoded['result']?['data']?['invoices'];
+        debugPrint('Invoice count from API: ${invoices?.length ?? 0}');
+        debugPrint('Invoice IDs: ${invoices?.map((e) => e['id']).toList()}');
+        const encoder = JsonEncoder.withIndent('  ');
+        final pretty = encoder.convert(decoded);
+        // Print in chunks to avoid truncation
+        const chunkSize = 900;
+        for (var i = 0; i < pretty.length; i += chunkSize) {
+          final end = i + chunkSize > pretty.length ? pretty.length : i + chunkSize;
+          debugPrint(pretty.substring(i, end));
+        }
+      } catch (_) {
+        debugPrint(response.body);
+      }
+      debugPrint('=========== INVOICE LIST API RESPONSE END ===========');
+    }
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
@@ -187,6 +214,9 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
       allItems = [...hrItems, ...rfqItems, ...invoiceItems, ...pettyCashItems];
 
+      // Fetch delayed requests count
+      await _fetchDelayedCount();
+
       setState(() {
         approvalItems = _getFilteredItems();
         isLoading = false;
@@ -204,54 +234,90 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   }
 
   List<dynamic> _getApprovalListForSelectedCategory() {
-    switch (selectedCategory.toLowerCase()) {
-      case 'hr':
+    switch (selectedCategoryKey) {
+      case _CategoryKeys.hr:
         return hrItems;
-      case 'rfq':
+      case _CategoryKeys.rfq:
         return rfqItems;
-      case 'invoice':
+      case _CategoryKeys.invoice:
         return invoiceItems;
-      case 'petty cash':
+      case _CategoryKeys.pettyCash:
         return pettyCashItems;
-      case 'all':
+      case _CategoryKeys.all:
       default:
         return allItems;
     }
   }
 
-  int _getCategoryCount(String category) {
-    switch (category.toLowerCase()) {
-      case 'my action':
-      case 'my actions':
-      case 'all':
+  int _getCategoryCount(String categoryKey) {
+    switch (categoryKey) {
+      case _CategoryKeys.all:
         return allItems.length;
-      case 'hr':
+      case _CategoryKeys.hr:
         return hrItems.length;
-      case 'rfq':
+      case _CategoryKeys.rfq:
         return rfqItems.length;
-      case 'invoice':
+      case _CategoryKeys.invoice:
         return invoiceItems.length;
-      case 'petty cash':
+      case _CategoryKeys.pettyCash:
         return pettyCashItems.length;
       default:
         return 0;
     }
   }
 
-  Map<String, String> get categoryIcons => {
-        translate('home.my_action'): "assets/png/all-icon.png",
-        translate('home.hr'): "assets/png/hr-icon.png",
-        translate('home.rfq'): "assets/png/rfq-icon.png",
-        translate('home.invoice'): "assets/png/invoice-icon.png",
-        translate('home.petty_cash'): "assets/png/petty-cash-icon.png",
-      };
+  Future<void> _fetchDelayedCount() async {
+    try {
+      final response = await _delayedRepo.fetchDelayedApprovals();
+      setState(() {
+        delayedCount = response.totalCount;
+      });
+    } catch (e) {
+      // If delayed API fails, keep count as 0
+      debugPrint('Failed to fetch delayed count: $e');
+    }
+  }
 
-  final List<String> categories = [
-    translate('home.my_action'),
-    translate('home.hr'),
-    translate('home.rfq'),
-    translate('home.invoice'),
-    translate('home.petty_cash'),
+  String _tabTitleFor(String categoryKey) {
+    switch (categoryKey) {
+      case _CategoryKeys.all:
+        return 'ALL';
+      case _CategoryKeys.hr:
+        return 'HR';
+      case _CategoryKeys.rfq:
+        return 'RFQ';
+      case _CategoryKeys.invoice:
+        return 'INVOICE';
+      case _CategoryKeys.pettyCash:
+        return 'PETTY CASH';
+      default:
+        return categoryKey;
+    }
+  }
+
+  String _iconFor(String categoryKey) {
+    switch (categoryKey) {
+      case _CategoryKeys.all:
+        return "assets/png/all-icon.png";
+      case _CategoryKeys.hr:
+        return "assets/png/hr-icon.png";
+      case _CategoryKeys.rfq:
+        return "assets/png/rfq-icon.png";
+      case _CategoryKeys.invoice:
+        return "assets/png/invoice-icon.png";
+      case _CategoryKeys.pettyCash:
+        return "assets/png/petty-cash-icon.png";
+      default:
+        return "assets/icons/default.png";
+    }
+  }
+
+  final List<String> categoryKeys = const [
+    _CategoryKeys.all,
+    _CategoryKeys.hr,
+    _CategoryKeys.rfq,
+    _CategoryKeys.invoice,
+    _CategoryKeys.pettyCash,
   ];
   bool isSearch = false;
 
@@ -329,16 +395,16 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                     physics: const BouncingScrollPhysics(),
                     clipBehavior: Clip.none,
                     child: Row(
-                      children: categories.asMap().entries.map((entry) {
+                      children: categoryKeys.asMap().entries.map((entry) {
                         int index = entry.key;
-                        String cat = entry.value;
-                        bool isSelected = selectedCategory == cat;
+                        String categoryKey = entry.value;
+                        bool isSelected = selectedCategoryKey == categoryKey;
                         return Container(
                           margin: const EdgeInsets.only(right: 20.0, left: 5.0),
                           child: GestureDetector(
                             onTap: () {
                               setState(() {
-                                selectedCategory = cat;
+                                selectedCategoryKey = categoryKey;
                                 approvalItems = _getFilteredItems();
                                 _isScrolled = false;
                               });
@@ -353,11 +419,10 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                               });
                             },
                             child: _buildGlassTab(
-                              icon: categoryIcons[cat] ??
-                                  "assets/icons/default.png",
-                              title: cat,
+                              icon: _iconFor(categoryKey),
+                              title: _tabTitleFor(categoryKey),
                               isSelected: isSelected,
-                              count: _getCategoryCount(cat),
+                              count: 0,
                             ),
                           ),
                         );
@@ -382,16 +447,30 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         ),
       );
     }
-    //MY ACTION
-    if (selectedCategory.toLowerCase() == "MY ACTION".toLowerCase()) {
-      return MyActionCard(approvalItems: approvalItems);
-    } else if (selectedCategory.toLowerCase() == "HR".toLowerCase()) {
+
+    if (selectedCategoryKey == _CategoryKeys.all) {
+      return AllApprovalsOverview(
+        invoiceCount: invoiceItems.length,
+        pettyCashCount: pettyCashItems.length,
+        rfqCount: rfqItems.length,
+        hrCount: hrItems.length,
+        delayedCount: delayedCount,
+        onDelayedTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const DelayedRequestsScreen(),
+            ),
+          );
+        },
+      );
+    } else if (selectedCategoryKey == _CategoryKeys.hr) {
       return HrAndPettycashCard(approvalItems: approvalItems);
-    } else if (selectedCategory.toLowerCase() == "Petty Cash".toLowerCase()) {
+    } else if (selectedCategoryKey == _CategoryKeys.pettyCash) {
       return HrAndPettycashCard(approvalItems: approvalItems);
-    } else if (selectedCategory.toLowerCase() == "RFQ".toLowerCase()) {
+    } else if (selectedCategoryKey == _CategoryKeys.rfq) {
       return InvoiceAndRfqCard(approvalItems: approvalItems);
-    } else if (selectedCategory.toLowerCase() == "INVOICE".toLowerCase()) {
+    } else if (selectedCategoryKey == _CategoryKeys.invoice) {
       return InvoiceAndRfqCard(approvalItems: approvalItems);
     } else {
       return const SizedBox.shrink();
@@ -510,4 +589,12 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       ],
     );
   }
+}
+
+class _CategoryKeys {
+  static const String all = 'all';
+  static const String hr = 'hr';
+  static const String rfq = 'rfq';
+  static const String invoice = 'invoice';
+  static const String pettyCash = 'petty_cash';
 }

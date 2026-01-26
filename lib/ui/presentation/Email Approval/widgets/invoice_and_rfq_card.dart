@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:el_race/core/services/approval_viewed_service.dart';
 import 'package:el_race/core/services/approval_count_service.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_card_type_two.dart';
 import 'package:el_race/utils/safe_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -292,17 +291,6 @@ class InvoiceAndRfqCard extends StatelessWidget {
               item["title"] ??
               item["request_no"]);
 
-          String materialType =
-              _getSafeString(item["material_type"], fallback: "");
-
-          // For Invoice: project_title, For RFQ: project
-          String project = _getSafeString(
-              item["project_title"] ?? item["project"] ?? item["work_order"],
-              fallback: "");
-
-          String work =
-              _getSafeString(item["work"] ?? item["agreement"], fallback: "");
-
           // Check multiple amount fields
           String amount = _getSafeString(
               item["total_amount"] ??
@@ -311,15 +299,21 @@ class InvoiceAndRfqCard extends StatelessWidget {
                   item["total"],
               fallback: "0");
 
-          String date = _getSafeString(
-              item["date"] ?? item["request_date"] ?? item["date_order"]);
-
           final subtitle = _getSafeString(
             item["partner_name"] ??
                 item["requester_name"] ??
                 item["emp_name"] ??
                 item["project"] ??
-                project,
+                item["project_title"] ??
+                item["project"],
+            fallback: "",
+          );
+
+          final location = _getSafeString(
+            item["location"] ??
+                item["work_location"] ??
+                item["site"] ??
+                item["address"],
             fallback: "",
           );
 
@@ -359,120 +353,17 @@ class InvoiceAndRfqCard extends StatelessWidget {
                     subtitle: subtitle,
                     amount: amount,
                   )
-                : Container(
-                    height: 105.w,
-                    width: 350.w,
-                    margin:
-                        EdgeInsets.symmetric(horizontal: 10.w, vertical: 1.w),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0xffD6D6D6),
-                          Color(0xffADB2BD),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
+                : _buildRfqCard(
+                    item: item,
+                    refNo: refNo,
+                    vendor: _getSafeString(
+                      item["project_title"] ?? item["project"] ?? item["name"],
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          ClipOval(
-                            child: _buildEmployeeImage(item["image_emp"], 73.w),
-                          ),
-                          const SizedBox(width: 5),
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                  width: 130.w,
-                                  child: Text(
-                                    vendor,
-                                    style: GoogleFonts.nunito(
-                                      fontSize: 17.sp,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                  ),
-                                ),
-                                SizedBox(height: 5.w),
-                                Text(
-                                  refNo,
-                                  style: GoogleFonts.nunito(
-                                    color: const Color(0xff333333)
-                                        .withOpacity(0.75),
-                                    fontSize: 13.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                                SizedBox(height: 5.w),
-                                SizedBox(
-                                  width: 150.w,
-                                  child: Row(
-                                    children: [
-                                      Flexible(
-                                        flex: 3,
-                                        child: Text(
-                                          project.isNotEmpty ? '$project ' : '',
-                                          style: GoogleFonts.nunito(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 12.sp,
-                                          ),
-                                          overflow: TextOverflow.ellipsis,
-                                          maxLines: 2,
-                                        ),
-                                      ),
-                                      if (work.isNotEmpty)
-                                        Flexible(
-                                          flex: 2,
-                                          child: Text(
-                                            '($work)',
-                                            style: GoogleFonts.nunito(
-                                              fontWeight: FontWeight.normal,
-                                              fontSize: 10.sp,
-                                            ),
-                                            overflow: TextOverflow.ellipsis,
-                                            maxLines: 2,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              InfoContainer(
-                                  text: materialType.isNotEmpty
-                                      ? materialType
-                                      : refNo),
-                              SizedBox(height: 6.w),
-                              InfoContainer(text: '$amount AED'),
-                              SizedBox(height: 6.w),
-                              InfoContainer(
-                                text: date.isNotEmpty ? date : 'N/A',
-                                icon: Icon(Icons.date_range,
-                                    size: 14.w, color: const Color(0xFF1A1A53)),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                    subtitle: _getSafeString(
+                      item["client_name"] ?? item["client"] ?? item["partner_name"],
+                      fallback: 'N/A',
                     ),
+                    amount: amount,
                   ),
           );
         },

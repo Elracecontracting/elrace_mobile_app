@@ -21,6 +21,7 @@ import '../ui/presentation/task_sheet/task_sheet_screen.dart';
 import '../ui/presentation/Attendace_list/attendance_page.dart';
 import '../ui/presentation/News Banner/news_screen.dart';
 import '../ui/presentation/tasks_dashboard/screens/task_details.dart';
+import '../ui/presentation/Email Approval/delayed/screens/delayed_requests_screen.dart';
 
 class OnGeneratedRoutes {
   Route<dynamic> generatedRoutes(RouteSettings settings) {
@@ -70,6 +71,8 @@ class OnGeneratedRoutes {
         return CupertinoPageRoute(builder: (_) => const NewsScreen());
       case '/task-details':
         return CupertinoPageRoute(builder: (_) => TaskDetailsScreen());
+      case '/delayed_requests':
+        return CupertinoPageRoute(builder: (_) => const DelayedRequestsScreen());
     }
     return MaterialPageRoute(
         builder: (_) => Scaffold(

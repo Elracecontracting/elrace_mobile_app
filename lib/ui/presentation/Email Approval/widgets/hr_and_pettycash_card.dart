@@ -3,17 +3,27 @@ import 'package:el_race/core/constants/app_images.dart';
 import 'package:el_race/core/services/approval_viewed_service.dart';
 import 'package:el_race/core/services/approval_count_service.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_card_type_two.dart';
 import 'package:el_race/utils/safe_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class HrAndPettycashCard extends StatelessWidget {
   final List<dynamic> approvalItems;
   final VoidCallback? onRefresh;
   const HrAndPettycashCard(
       {super.key, required this.approvalItems, this.onRefresh});
+
+  String _formatAmountForCard(String raw) {
+    final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
+    final value = double.tryParse(cleaned);
+    if (value == null) return raw;
+    if (value % 1 == 0) {
+      return NumberFormat('#,##0', 'en_US').format(value);
+    }
+    return NumberFormat('#,##0.##', 'en_US').format(value);
+  }
 
   Widget _buildHrCard({
     required dynamic item,
@@ -140,6 +150,159 @@ class HrAndPettycashCard extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPettyCashCard({
+    required dynamic item,
+    required String refNo,
+    required String employeeName,
+    required String subtitle,
+    required String amount,
+  }) {
+    final amountText = _formatAmountForCard(amount);
+
+    return Container(
+      height: 125.w,
+      width: 350.w,
+      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 1.w),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFE1E4E8),
+            Color(0xFFB9C0CB),
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(22.r),
+        border: Border.all(color: const Color(0xFF5F666F), width: 1),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                SizedBox(width: 54.w + 12.w + 2.w + 14.w),
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        refNo.toUpperCase(),
+                        style: GoogleFonts.nunito(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0B2D5E),
+                          letterSpacing: 0.4,
+                          height: 1.0,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.start,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 6.w),
+            SizedBox(
+              height: 54.w,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 54.w,
+                    height: 54.w,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                          color: Colors.white.withOpacity(0.95), width: 2),
+                    ),
+                    child: ClipOval(
+                      child: _buildEmployeeImage(item["image_emp"], 54.w),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  Container(
+                    width: 2.w,
+                    height: 54.w,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.95),
+                      borderRadius: BorderRadius.circular(2.r),
+                    ),
+                  ),
+                  SizedBox(width: 14.w),
+                  Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          employeeName.toUpperCase(),
+                          style: GoogleFonts.nunito(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF0E0E10),
+                            letterSpacing: 0.2,
+                            height: 1.0,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: 2.w),
+                        Text(
+                          subtitle.toUpperCase(),
+                          style: GoogleFonts.nunito(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF6B717B),
+                            letterSpacing: 0.2,
+                            height: 1.0,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 4.w),
+            Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  amountText,
+                  style: GoogleFonts.nunito(
+                    fontSize: 26.sp,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF0B2D5E),
+                    letterSpacing: 0.3,
+                    height: 1.0,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
           ],
@@ -280,19 +443,19 @@ class HrAndPettycashCard extends StatelessWidget {
                   item["total"],
               "0");
 
-            String requestType = _getSafeString(
+          String requestType = _getSafeString(
               item["request_type_name"] ??
-                item["request_type"] ??
-                item["subject"] ??
-                item["title"] ??
-                item["type"],
+                  item["request_type"] ??
+                  item["subject"] ??
+                  item["title"] ??
+                  item["type"],
               "N/A");
 
-          String date = _getSafeString(
+            String date = _getSafeString(
               item["date"] ??
-                  item["request_date"] ??
-                  item["created_date"] ??
-                  item["submission_date"],
+                item["request_date"] ??
+                item["created_date"] ??
+                item["submission_date"],
               "");
 
           return GestureDetector(
@@ -331,84 +494,12 @@ class HrAndPettycashCard extends StatelessWidget {
                     employeeName: employeeName,
                     empCode: empCode,
                   )
-                : Container(
-                    height: 105.w,
-                    width: 350.w,
-                    margin:
-                        EdgeInsets.symmetric(horizontal: 10.w, vertical: 1.w),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [
-                          Color(0xffD6D6D6),
-                          Color(0xffADB2BD),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          ClipOval(
-                            child: _buildEmployeeImage(item["image_emp"], 73.w),
-                          ),
-                          const SizedBox(width: 5),
-                          Expanded(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                  width: 130.w,
-                                  child: Text(
-                                    employeeName,
-                                    style: GoogleFonts.nunito(
-                                      fontSize: 15.sp,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                  ),
-                                ),
-                                SizedBox(height: 5.w),
-                                Text(
-                                  empCode,
-                                  style: GoogleFonts.nunito(
-                                    color:
-                                        const Color(0xff333333).withOpacity(0.75),
-                                    fontSize: 13.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ],
-                            ),
-                          ),
-                          Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              InfoContainer(text: reqNo),
-                              SizedBox(height: 6.w),
-                              InfoContainer(text: '$amount AED'),
-                              SizedBox(height: 6.w),
-                              InfoContainer(
-                                text: date.isNotEmpty ? date : 'N/A',
-                                icon: Icon(Icons.date_range,
-                                    size: 14.w,
-                                    color: const Color(0xFF1A1A53)),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
+                : _buildPettyCashCard(
+                    item: item,
+                    refNo: reqNo,
+                    employeeName: employeeName,
+                    subtitle: date.isNotEmpty ? date : 'N/A',
+                    amount: amount,
                   ),
           );
         },
