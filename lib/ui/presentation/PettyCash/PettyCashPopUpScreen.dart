@@ -17,6 +17,7 @@ import 'package:el_race/utils/color_utils.dart'; // Import global colors
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -238,15 +239,19 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
 
   void _showAttachmentsPreview() {
     if (attachments.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No attachments added yet")),
+      Fluttertoast.showToast(
+        msg: "No attachments added yet",
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
       );
       return;
     }
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return Dialog(
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -268,7 +273,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                     ),
                     IconButton(
                       icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pop(dialogContext),
                     ),
                   ],
                 ),
@@ -287,18 +292,43 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                     itemBuilder: (context, index) {
                       return Stack(
                         children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey.shade300),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.file(
-                                attachments[index],
-                                fit: BoxFit.cover,
-                                width: double.infinity,
-                                height: double.infinity,
+                          GestureDetector(
+                            onTap: () {
+                              // Open full screen image viewer
+                              Navigator.push(
+                                dialogContext,
+                                MaterialPageRoute(
+                                  builder: (_) => Scaffold(
+                                    backgroundColor: Colors.black,
+                                    appBar: AppBar(
+                                      backgroundColor: Colors.black,
+                                      iconTheme: const IconThemeData(color: Colors.white),
+                                    ),
+                                    body: Center(
+                                      child: InteractiveViewer(
+                                        child: Image.file(
+                                          attachments[index],
+                                          fit: BoxFit.contain,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey.shade300),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.file(
+                                  attachments[index],
+                                  fit: BoxFit.cover,
+                                  width: double.infinity,
+                                  height: double.infinity,
+                                ),
                               ),
                             ),
                           ),
@@ -310,7 +340,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                 setState(() {
                                   attachments.removeAt(index);
                                 });
-                                Navigator.pop(context);
+                                Navigator.pop(dialogContext);
                                 if (attachments.isNotEmpty) {
                                   _showAttachmentsPreview();
                                 }
@@ -651,8 +681,12 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200 &&
           data["result"]?['status'] == 'success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(translate('pettycash.request_submitted'))),
+        Fluttertoast.showToast(
+          msg: translate('pettycash.request_submitted'),
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
         );
         Navigator.pop(context, true); // ✅ Back with success
       } else {
@@ -671,8 +705,12 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
 
   Future<void> _generateAttachmentPdf() async {
     if (attachments.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please add images first!')),
+      Fluttertoast.showToast(
+        msg: 'Please add images first!',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
       );
       return;
     }
@@ -683,8 +721,12 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
         CompanyRepository.company = await CompanyRepository().getCompany();
       } catch (e) {
         print("Failed to load company: $e");
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to load company information.')),
+        Fluttertoast.showToast(
+          msg: 'Failed to load company information.',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
         );
         return;
       }
@@ -742,8 +784,12 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       await file.writeAsBytes(pdfBytes);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('PDF generated and opened!')),
+        Fluttertoast.showToast(
+          msg: 'PDF generated and opened!',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
         );
 
         Navigator.push(
@@ -755,8 +801,12 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to generate PDF: $e')),
+        Fluttertoast.showToast(
+          msg: 'Failed to generate PDF: $e',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
         );
       }
     }
@@ -1139,11 +1189,13 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                 final decoded = jsonDecode(response.body);
 
                 if (decoded['result']['status'] == 'success') {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                        behavior: SnackBarBehavior.floating,
-                        content: Text(decoded['result']['message'] ??
-                            translate('pettycash.request_submitted'))),
+                  Fluttertoast.showToast(
+                    msg: decoded['result']['message'] ??
+                        translate('pettycash.request_submitted'),
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.CENTER,
+                    backgroundColor: Colors.black,
+                    textColor: Colors.white,
                   );
                   Navigator.pop(dialogContext);
                   _fetchDraftSummary(); // Refresh the list
@@ -1915,14 +1967,16 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                 ),
 
                 // Preview Attachments Button
-                if (attachments.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: GestureDetector(
-                      onTap: _showAttachmentsPreview,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      _showAttachmentsPreview();
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 12),
                         decoration: BoxDecoration(
                           color: const Color(0xFF1B1464),
                           borderRadius: BorderRadius.circular(25),
@@ -1934,7 +1988,9 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                 color: Colors.white, size: 20),
                             const SizedBox(width: 8),
                             Text(
-                              "View ${attachments.length} Attachment${attachments.length > 1 ? 's' : ''}",
+                              attachments.isEmpty 
+                                  ? "View Attachments"
+                                  : "View ${attachments.length} Attachment${attachments.length > 1 ? 's' : ''}",
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 14,

@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 import 'package:el_race/utils/color_utils.dart';
 import 'package:dio/dio.dart';
 import 'package:intl/intl.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'widgets/approval_action_buttons.dart';
 
 class ApprovalConfirmationScreen extends StatefulWidget {
@@ -595,10 +596,12 @@ class _ApprovalConfirmationScreenState
                                 
                                 onPressed: () async {
                                   if (attachmentIds.isEmpty) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content:
-                                              Text('No attachment found.')),
+                                    Fluttertoast.showToast(
+                                      msg: 'No attachment found.',
+                                      toastLength: Toast.LENGTH_SHORT,
+                                      gravity: ToastGravity.CENTER,
+                                      backgroundColor: Colors.black,
+                                      textColor: Colors.white,
                                     );
                                     return;
                                   }
@@ -666,14 +669,6 @@ class _ApprovalConfirmationScreenState
   }
 
   Widget _buildPettyCashDialog(BuildContext context) {
-    // DEBUG: Print formData keys to find holder field
-    if (kDebugMode) {
-      debugPrint('=========== PETTY CASH FORM DATA ===========');
-      debugPrint('Keys: ${formData?.keys.toList()}');
-      debugPrint('Full Data: $formData');
-      debugPrint('=============================================');
-    }
-
     String safeValue(dynamic v) {
       if (v == null) return '';
       final s = v.toString();
@@ -795,12 +790,15 @@ class _ApprovalConfirmationScreenState
                                         enabled: attachmentIds.isNotEmpty,
                                         buttonColor: borderColor,
                                         onPressed: () async {
+                                          print('🟢 VIEW button pressed!');
+                                          print('🟢 attachmentIds: $attachmentIds');
                                           if (attachmentIds.isEmpty) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              const SnackBar(
-                                                  content: Text(
-                                                      'No attachment found.')),
+                                            Fluttertoast.showToast(
+                                              msg: 'No attachment found.',
+                                              toastLength: Toast.LENGTH_SHORT,
+                                              gravity: ToastGravity.CENTER,
+                                              backgroundColor: Colors.black,
+                                              textColor: Colors.white,
                                             );
                                             return;
                                           }
@@ -1022,20 +1020,23 @@ class _ApprovalConfirmationScreenState
           ),
           SizedBox(width: 10.w),
           Expanded(
-            child: SizedBox(
-              height: 36.w,
-              child: ElevatedButton(
-                onPressed: enabled ? () async => onPressed() : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A1A53),
-                  disabledBackgroundColor: const Color(0xFF1A1A53).withOpacity(0.4),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(22.r),
-                  ),
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () async {
+                if (enabled) {
+                  await onPressed();
+                }
+              },
+              child: Container(
+                height: 36.w,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: enabled ? const Color(0xFF1A1A53) : Colors.grey,
+                  borderRadius: BorderRadius.circular(22.r),
                 ),
                 child: Text(
-                  'View',
+                  'VIEW',
+                  textAlign: TextAlign.center,
                   style: GoogleFonts.koulen(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
@@ -1406,11 +1407,12 @@ class _ApprovalConfirmationScreenState
                                         buttonColor: borderColor,
                                         onPressed: () async {
                                           if (attachmentIds.isEmpty) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              const SnackBar(
-                                                  content: Text(
-                                                      'No attachment found.')),
+                                            Fluttertoast.showToast(
+                                              msg: 'No attachment found.',
+                                              toastLength: Toast.LENGTH_SHORT,
+                                              gravity: ToastGravity.CENTER,
+                                              backgroundColor: Colors.black,
+                                              textColor: Colors.white,
                                             );
                                             return;
                                           }
@@ -1994,11 +1996,12 @@ class _ApprovalConfirmationScreenState
                                         enabled: attachmentIds.isNotEmpty,
                                         onPressed: () async {
                                           if (attachmentIds.isEmpty) {
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              const SnackBar(
-                                                  content: Text(
-                                                      'No attachment found.')),
+                                            Fluttertoast.showToast(
+                                              msg: 'No attachment found.',
+                                              toastLength: Toast.LENGTH_SHORT,
+                                              gravity: ToastGravity.CENTER,
+                                              backgroundColor: Colors.black,
+                                              textColor: Colors.white,
                                             );
                                             return;
                                           }
@@ -2606,9 +2609,12 @@ class _ApprovalConfirmationScreenState
                           _buildHrAttachmentRow(
                             onPressed: () async {
                               if (attachmentIds.isEmpty) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                      content: Text('No attachment found.')),
+                                Fluttertoast.showToast(
+                                  msg: 'No attachment found.',
+                                  toastLength: Toast.LENGTH_SHORT,
+                                  gravity: ToastGravity.CENTER,
+                                  backgroundColor: Colors.black,
+                                  textColor: Colors.white,
                                 );
                                 return;
                               }
@@ -2934,8 +2940,25 @@ class _ApprovalConfirmationScreenState
   }
 
   _viewAttachement() async {
+    print('🔵 _viewAttachement called');
+    print('🔵 attachmentIds: $attachmentIds');
+    
+    if (attachmentIds.isEmpty) {
+      print('🔴 No attachments found');
+      Fluttertoast.showToast(
+        msg: 'No attachment found.',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
+      );
+      return;
+    }
+    
     final attachmentId =
         attachmentIds.first['attachment_id'] ?? attachmentIds.first;
+    print('🔵 attachmentId: $attachmentId');
+    
     final token = SharedPref.getLoginData().result?.token;
     final headers = {
       "Content-Type": "application/json",
@@ -2970,8 +2993,12 @@ class _ApprovalConfirmationScreenState
           resData['result']['data']['attachment_binary_data'] ?? '';
       final fileName = resData['result']['data']['attachment_name'] ?? '';
       if (binaryBase64 == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No binary data found.')),
+        Fluttertoast.showToast(
+          msg: 'No binary data found.',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
         );
         return;
       }
@@ -2984,8 +3011,12 @@ class _ApprovalConfirmationScreenState
           context);
     } catch (e) {
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: \n$e')),
+      Fluttertoast.showToast(
+        msg: 'Error: $e',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
       );
     }
   }
