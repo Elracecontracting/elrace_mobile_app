@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/ui/presentation/lpo/screens/lpo_pdf_viewer_screen.dart';
 import 'package:el_race/ui/presentation/call_screen/bloc/contact_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
@@ -176,20 +177,17 @@ class Util {
           data['result']?['report_url'] != null) {
         final pdfUrl = data['result']['report_url'] as String;
 
-        // Open PDF URL in browser
-        final uri = Uri.parse(pdfUrl);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-          return true;
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Could not open PDF'),
-              backgroundColor: Colors.red,
+        // Open PDF in-app using LpoPdfViewerScreen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => LpoPdfViewerScreen(
+              pdfUrl: pdfUrl,
+              title: 'LPO Report #$poId',
             ),
-          );
-          return false;
-        }
+          ),
+        );
+        return true;
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

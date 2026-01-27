@@ -7,8 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-
-import '../../widgets/header_widget.dart';
 import '../Attendace_list/repository/attendance_repository.dart';
 
 // Number formatter with thousand separators
@@ -78,12 +76,31 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
   String? errorMessage;
   dynamic selectedUser;
   String amount = '';
-  String selectedExpenseType = 'EXPENSE TYPE'; // Default display text
+  String selectedExpenseType = 'EXPENSE TYPE';
   final List<String> expenseTypes = ['Petrol ', 'Hospitality ', 'Others'];
   String empID = '';
   String companyId = '';
   final String baseUrl = 'https://erp.elrace.com/api/';
   bool isSubmitting = false;
+
+  // Text controllers
+  final TextEditingController user = TextEditingController();
+  final TextEditingController date = TextEditingController();
+  final TextEditingController amout = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    date.text = DateFormat('dd/MM/yyyy').format(selectedDate);
+  }
+
+  @override
+  void dispose() {
+    user.dispose();
+    date.dispose();
+    amout.dispose();
+    super.dispose();
+  }
 
   Future<void> _showPettyCashUserDialog() async {
     setState(() {
@@ -125,6 +142,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
         });
 
         // Now show the dialog
+        if (!mounted) return;
         showDialog(
           context: context,
           builder: (BuildContext context) {
@@ -175,17 +193,17 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                                     child: ListView.separated(
                                       itemCount: filteredUsers.length,
                                       itemBuilder: (_, index) {
-                                        final user = filteredUsers[index];
+                                        final userItem = filteredUsers[index];
                                         return ListTile(
-                                          title: Text(user['name'],
+                                          title: Text(userItem['name'],
                                               style: const TextStyle(
                                                   fontSize: 13)),
                                           tileColor:
-                                              selectedUser?['id'] == user['id']
+                                              selectedUser?['id'] == userItem['id']
                                                   ? Colors.blue.shade100
                                                   : Colors.transparent,
                                           onTap: () => setDialogState(() {
-                                            selectedUser = user;
+                                            selectedUser = userItem;
                                           }),
                                         );
                                       },
@@ -206,9 +224,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                               onPressed: selectedUser != null
                                   ? () {
                                       setState(() {
-                                        print(selectedUser);
                                         user.text = "${selectedUser['name']}";
-                                        // Use selectedUser['name'] or ['id'] as needed
                                       });
                                       Navigator.pop(context);
                                       FocusScope.of(context).unfocus();
@@ -267,37 +283,9 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
     if (picked != null && picked != selectedDate) {
       setState(() {
         selectedDate = picked;
-        date.text =
-            "${selectedDate.year}-${selectedDate.month}-${selectedDate.day}";
+        date.text = DateFormat('dd/MM/yyyy').format(selectedDate);
       });
     }
-  }
-
-  Widget _buildInfoRow(String imagePath, String title, String value,
-      {VoidCallback? onTap}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: GestureDetector(
-        onTap: onTap,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Image.asset(imagePath, width: 34, height: 34, fit: BoxFit.contain),
-            const SizedBox(width: 22),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.bold)),
-                Text(value,
-                    style: const TextStyle(fontSize: 12, color: Colors.black)),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Future<void> submitExpense() async {
@@ -305,10 +293,10 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
       await init(base: baseUrl);
     }
 
-    // 🔍 Field validation
+    // Field validation
     if (selectedExpenseType == 'EXPENSE TYPE') {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(translate('home.Select_Petty_Cash_Holder'))),
+        SnackBar(content: Text(translate('home.Select_Expense_Type'))),
       );
       return;
     }
@@ -366,6 +354,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
       final decoded = jsonDecode(response.body);
 
       if (decoded['result']['status'] == 'success') {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(decoded['result']['message'] ??
@@ -377,539 +366,210 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
             translate('pettycash.failed_to_submit'));
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text("${translate('pettycash.error')}: ${e.toString()}")),
       );
     } finally {
-      setState(() => isSubmitting = false);
+      if (mounted) {
+        setState(() => isSubmitting = false);
+      }
     }
   }
 
-  TextEditingController user = TextEditingController();
-  TextEditingController date = TextEditingController();
-  TextEditingController amout = TextEditingController();
-
   @override
   Widget build(BuildContext context) {
-    final String formattedDate = DateFormat('dd/MM/yyyy').format(selectedDate);
+    const labelStyle = TextStyle(
+      fontSize: 22,
+      fontWeight: FontWeight.w800,
+      color: Colors.black,
+    );
+
+    TextStyle fieldTextStyle(bool isPlaceholder) => TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: isPlaceholder ? Colors.black.withOpacity(0.45) : Colors.black,
+        );
+
+    InputDecoration pillDecoration({String? hintText, Widget? suffixIcon}) {
+      return InputDecoration(
+        hintText: hintText,
+        hintStyle: fieldTextStyle(true),
+        filled: false,
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        suffixIcon: suffixIcon,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: BorderSide(color: Colors.black.withOpacity(0.25), width: 1),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: BorderSide(color: Colors.black.withOpacity(0.25), width: 1),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(28),
+          borderSide: BorderSide(color: Colors.black.withOpacity(0.35), width: 1.2),
+        ),
+      );
+    }
+
+    Widget labeledField({required String label, required Widget child}) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          child,
+        ],
+      );
+    }
+
+    final isExpenseTypePlaceholder = selectedExpenseType == 'EXPENSE TYPE';
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: const HeaderWidget(),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 10),
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () {
+              FocusScope.of(context).unfocus();
+              Navigator.pop(context);
+            },
+            child: const SizedBox.expand(),
+          ),
+          SafeArea(
+            child: Center(
+              child: GestureDetector(
+                onTap: () => FocusScope.of(context).unfocus(),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 420),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('+ ADD EXPENSE', style: labelStyle, textAlign: TextAlign.center),
+                          const SizedBox(height: 18),
 
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  Center(
-                    child: Image.asset(
-                      'assets/png/add_expense_title.png',
-                      width: 180,
-                      height: 60,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  const SizedBox(width: 40),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 10),
-            Center(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return PopupMenuButton<String>(
-                    onSelected: (value) {
-                      setState(() {
-                        selectedExpenseType = value;
-                      });
-                    },
-                    position: PopupMenuPosition.under,
-                    itemBuilder: (BuildContext context) =>
-                        expenseTypes.map((String type) {
-                      return PopupMenuItem<String>(
-                        value: type,
-                        child: SizedBox(
-                          width: 200, // 👈 نفس عرض الزرّ
-                          child: Text(
-                            type,
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.black,
+                          labeledField(
+                            label: 'Amount',
+                            child: TextField(
+                              controller: amout,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              inputFormatters: [ThousandsSeparatorInputFormatter()],
+                              textAlign: TextAlign.center,
+                              style: fieldTextStyle(false),
+                              onChanged: (value) => setState(() {
+                                amount = value.replaceAll(',', '');
+                              }),
+                              decoration: pillDecoration(hintText: '0'),
                             ),
                           ),
-                        ),
-                      );
-                    }).toList(),
-                    color: Colors.white,
-                    elevation: 6,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {},
-                        borderRadius: BorderRadius.circular(20),
-                        child: SizedBox(
-                          width: 240, // 👈 الزرّ الأساسي
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                vertical: 8, horizontal: 36),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF1A237E), Color(0xFF3F51B5)],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
+                          const SizedBox(height: 14),
+
+                          labeledField(
+                            label: 'Pettycash holder',
+                            child: TextField(
+                              controller: user,
+                              readOnly: true,
+                              textAlign: TextAlign.center,
+                              style: fieldTextStyle(user.text.trim().isEmpty),
+                              onTap: _showPettyCashUserDialog,
+                              decoration: pillDecoration(hintText: translate('pettycash.select_user')),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          labeledField(
+                            label: 'Invoice Date',
+                            child: TextField(
+                              controller: date,
+                              readOnly: true,
+                              textAlign: TextAlign.center,
+                              style: fieldTextStyle(false),
+                              onTap: _pickDate,
+                              decoration: pillDecoration(hintText: DateFormat('dd/MM/yyyy').format(selectedDate)),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          labeledField(
+                            label: 'Expense type',
+                            child: DropdownButtonFormField<String>(
+                              value: isExpenseTypePlaceholder ? null : selectedExpenseType,
+                              items: expenseTypes
+                                  .map((t) => DropdownMenuItem<String>(
+                                        value: t,
+                                        child: Text(t.trim(), style: fieldTextStyle(false)),
+                                      ))
+                                  .toList(),
+                              onChanged: (v) {
+                                if (v == null) return;
+                                setState(() {
+                                  selectedExpenseType = v;
+                                });
+                              },
+                              decoration: pillDecoration(
+                                hintText: isExpenseTypePlaceholder ? 'Car petrol' : null,
+                                suffixIcon: const Icon(Icons.arrow_drop_down, color: Colors.black54),
                               ),
-                              borderRadius: BorderRadius.circular(20),
+                              icon: const SizedBox.shrink(),
+                              isExpanded: true,
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    selectedExpenseType,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
+                          ),
+
+                          const SizedBox(height: 14),
+                          labeledField(
+                            label: translate('pettycash.description'),
+                            child: TextField(
+                              maxLines: 3,
+                              onChanged: (value) => setState(() => description = value),
+                              decoration: pillDecoration(hintText: translate('pettycash.description')),
+                            ),
+                          ),
+
+                          const SizedBox(height: 18),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF6E6E6E),
+                                shape: const StadiumBorder(),
+                                elevation: 0,
+                              ),
+                              onPressed: isSubmitting ? null : submitExpense,
+                              child: isSubmitting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                    )
+                                  : const Text(
+                                      '+ ADD EXPENSE',
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
                                     ),
-                                  ),
-                                ),
-                                const Icon(Icons.arrow_drop_down,
-                                    color: Colors.white),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-
-            const SizedBox(height: 20),
-            // Padding(
-            //   padding: const EdgeInsets.symmetric(horizontal: 40),
-            //   child: Column(
-            //     crossAxisAlignment: CrossAxisAlignment.start,
-            //     children: [
-            //       _buildInfoRow('assets/png/calendar_icon.png',
-            //           translate('pettycash.date'), formattedDate,
-            //           onTap: _pickDate),
-            //       _buildInfoRow(
-            //         'assets/png/supplier_icon.png',
-            //         translate('pettycash.holder'),
-            //         selectedUser?['name'] ?? translate('pettycash.select_user'),
-            //         onTap: _showPettyCashUserDialog,
-            //       ),
-            //       Padding(
-            //         padding: const EdgeInsets.symmetric(vertical: 8),
-            //         child: Row(
-            //           crossAxisAlignment: CrossAxisAlignment.center,
-            //           children: [
-            //             Image.asset(
-            //               'assets/png/money_icon.png',
-            //               width: 34,
-            //               height: 34,
-            //               fit: BoxFit.contain,
-            //             ),
-            //             const SizedBox(width: 22),
-            //             Expanded(
-            //               child: Column(
-            //                 crossAxisAlignment: CrossAxisAlignment.start,
-            //                 children: [
-            //                   const Text(
-            //                     'Amount',
-            //                     style: TextStyle(
-            //                         fontSize: 15, fontWeight: FontWeight.bold),
-            //                   ),
-            //                   TextField(
-            //                     keyboardType: TextInputType.number,
-            //                     onChanged: (value) {
-            //                       // You can parse or validate here
-            //                       setState(() {
-            //                         amount = value;
-            //                       });
-            //                     },
-            //                     decoration: InputDecoration(
-            //                       hintText: translate('pettycash.enter_amount'),
-            //                       isDense: true,
-            //                       contentPadding:
-            //                           const EdgeInsets.symmetric(vertical: 4),
-            //                     ),
-            //                   ),
-            //                 ],
-            //               ),
-            //             ),
-            //           ],
-            //         ),
-            //       ),
-            //     ],
-            //   ),
-            // ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.blue, width: 2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/png/calendar_icon.png',
-                            width: 34,
-                            height: 34,
-                            fit: BoxFit.contain,
-                          ),
-                          const SizedBox(width: 22),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "Select ${translate('pettycash.date')}",
-                                  style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                TextField(
-                                  keyboardType: TextInputType.none,
-                                  controller: date,
-                                  onTap: _pickDate,
-                                  enabled: true,
-                                  onTapOutside: (b) {
-                                    FocusScope.of(context)
-                                        .unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
-                                  },
-                                  decoration: InputDecoration(
-                                    hintText: translate('pettycash.date'),
-                                    isDense: true,
-                                    border: InputBorder.none,
-                                    contentPadding:
-                                        const EdgeInsets.symmetric(vertical: 4),
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.blue, width: 2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/png/supplier_icon.png',
-                            width: 34,
-                            height: 34,
-                            fit: BoxFit.contain,
-                          ),
-                          const SizedBox(width: 22),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  translate('pettycash.holder'),
-                                  style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                TextField(
-                                  keyboardType: TextInputType.none,
-                                  controller: user,
-                                  onTap: _showPettyCashUserDialog,
-                                  enabled: true,
-                                  onTapOutside: (b) {
-                                    FocusScope.of(context)
-                                        .unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
-                                  },
-                                  decoration: InputDecoration(
-                                    hintText:
-                                        translate('pettycash.select_user'),
-                                    isDense: true,
-                                    border: InputBorder.none,
-                                    contentPadding:
-                                        const EdgeInsets.symmetric(vertical: 4),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.blue, width: 2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/png/money_icon.png',
-                            width: 34,
-                            height: 34,
-                            fit: BoxFit.contain,
-                          ),
-                          const SizedBox(width: 22),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Amount',
-                                  style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                                TextField(
-                                  keyboardType:
-                                      const TextInputType.numberWithOptions(
-                                          decimal: true),
-                                  inputFormatters: [
-                                    ThousandsSeparatorInputFormatter(),
-                                  ],
-                                  controller: amout,
-                                  onChanged: (value) {
-                                    // You can parse or validate here
-                                    setState(() {
-                                      amount = value.replaceAll(',', '');
-                                    });
-                                  },
-                                  onTapOutside: (b) {
-                                    FocusScope.of(context)
-                                        .unfocus(); // 👈 يغلق الكيبورد ويفقد التركيز
-                                  },
-                                  decoration: InputDecoration(
-                                    hintText:
-                                        translate('pettycash.enter_amount'),
-                                    isDense: true,
-                                    border: InputBorder.none,
-                                    contentPadding:
-                                        const EdgeInsets.symmetric(vertical: 4),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-            // Description Field
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0), // Adjust padding as needed
-              child: Align(
-                alignment: Alignment.center, // Align text to the left
-                child: Text(
-                  translate('pettycash.description').toUpperCase(),
-                  style: _infoTextStyle_1(),
-                  textAlign: TextAlign.center, // Ensures left alignment
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Stack(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withAlpha((0.3 * 255).toInt()),
-                          spreadRadius: 1, // Reduced shadow spread
-                          blurRadius: 5, // Reduced blur
-                          offset: const Offset(2, 3),
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      maxLines: 3, // Reduced height
-                      onChanged: (value) => setState(() => description = value),
-                      decoration: InputDecoration(
-                        border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(22), // Adjust border radius
-                          borderSide: const BorderSide(
-                              color: Colors.grey, width: 0.5), // Add border
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(22),
-                          borderSide: const BorderSide(
-                              color: Colors.grey,
-                              width: 0.5), // Normal state border
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(22),
-                          borderSide: const BorderSide(
-                              color: Colors.blue,
-                              width: 2), // Highlight border when focused
-                        ),
-                        filled: true,
-                        fillColor: Colors.grey[300], // Keep background white
-                        contentPadding: const EdgeInsets.symmetric(
-                            vertical: 18, horizontal: 12), // Reduce padding
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 6,
-                    right: 10,
-                    child: Column(
-                      children: [
-                        Text(
-                          '${description.split(' ').length}/50',
-                          style: const TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.bold),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          translate('pettycash.max_words'),
-                          style: const TextStyle(
-                              fontSize: 10, color: Colors.black),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
-
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 40),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: appFontColor,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: isSubmitting ? null : submitExpense,
-                      child: isSubmitting
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2))
-                          : Text(translate('pettycash.save'),
-                              style: const TextStyle(color: Colors.white)),
-                    ),
-                  ),
-                  const SizedBox(width: 15), // Adds spacing between buttons
-                  Expanded(
-                      child: _buildButton(translate('pettycash.cancel'),
-                          const Color(0xFFBA1719))),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
-
-  // Widget _buildInfoRow(String imagePath, String title, String value) {
-  //   return Padding(
-  //     padding: const EdgeInsets.symmetric(vertical: 8),
-  //     child: Row(
-  //       crossAxisAlignment: CrossAxisAlignment.center,
-  //       children: [
-  //         Image.asset(
-  //           imagePath,
-  //           width: 34, // Ensure it matches the icon size
-  //           height: 34,
-  //           fit: BoxFit.contain,
-  //         ),
-  //         const SizedBox(width: 22), // Adjusted spacing for alignment
-  //         Column(
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             Text(
-  //               title,
-  //               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-  //             ),
-  //             Text(
-  //               value,
-  //               style: const TextStyle(fontSize: 12, color: Colors.black),
-  //             ),
-  //           ],
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  Widget _buildButton(String text, Color color) {
-    return Expanded(
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-        onPressed: () {
-          Navigator.pop(context);
-        },
-        child: Text(text, style: const TextStyle(color: Colors.white)),
-      ),
-    );
-  }
-
-  TextStyle _infoTextStyle_1() => const TextStyle(
-      fontSize: 14, fontWeight: FontWeight.bold, color: appFontColor);
 }

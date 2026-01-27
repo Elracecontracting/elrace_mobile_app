@@ -71,8 +71,15 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
       isLoading = true;
     });
 
+
     try {
-      final token = SharedPref.getLoginData().result?.token;
+      final loginData = SharedPref.getLoginData();
+      final token = loginData.result?.token;
+      // last_limit: من بيانات المستخدم (مثلاً balance أو emp_id أو حسب ما هو متوفر)
+      // هنا سنستخدم balance إذا متوفر، أو 0 كقيمة افتراضية
+      final lastLimit = balance > 0 ? balance.toInt() : 0;
+      final now = DateTime.now();
+      final lastLimitDate = '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
 
       final headers = {
         "Content-Type": "application/json",
@@ -83,8 +90,13 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
       final url = Uri.parse("https://erp.elrace.com/api/draft_summary");
       final body = jsonEncode({
         "jsonrpc": "2.0",
-        "params": {},
+        "params": {
+          "last_limit": lastLimit,
+          "last_limit_date": lastLimitDate,
+        },
       });
+
+      print('📤 DraftSummary GET body: ' + body);
 
       final request = http.Request('GET', url)
         ..headers.addAll(headers)
@@ -106,7 +118,23 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
 
       if (response.statusCode == 200) {
         final data = responseData;
-        final result = data['result']['data'];
+        
+        // Check if response has error
+        if (data['error'] != null) {
+          print('⚠️ Draft Summary API returned error: ${data['error']['message']}');
+          setState(() => isLoading = false);
+          return;
+        }
+        
+        // Safely access result and data
+        final resultData = data['result'];
+        if (resultData == null) {
+          print('⚠️ Draft Summary API returned null result');
+          setState(() => isLoading = false);
+          return;
+        }
+        
+        final result = resultData['data'] ?? resultData;
 
         final rawDraftExpenses = result['draft_expenses'];
         final parsedDraftExpenses = (rawDraftExpenses is List)
@@ -151,11 +179,35 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
                 slivers: [
                   SliverToBoxAdapter(
                     child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+                      padding: const EdgeInsets.fromLTRB(0, 16, 0, 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            Icons.hourglass_empty,
+                            size: 24,
+                            color: Colors.black87,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'DRAFT',
+                            style: GoogleFonts.inter(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 6, 0, 8),
                       child: Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                             decoration: BoxDecoration(
                               color: const Color(0xFF6E6E6E),
                               borderRadius: BorderRadius.circular(16),
@@ -163,7 +215,7 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
                             child: Text(
                               'TOTAL ${draftExpenses.length}',
                               style: GoogleFonts.inter(
-                                fontSize: 12,
+                                fontSize: 11.5,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
                               ),
@@ -179,7 +231,7 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
                               );
                             },
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(18),
@@ -188,12 +240,12 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.attach_file, size: 18, color: Colors.black87),
-                                  const SizedBox(width: 8),
+                                  const Icon(Icons.attach_file, size: 16, color: Colors.black87),
+                                  const SizedBox(width: 6),
                                   Text(
                                     'Add Attachments',
                                     style: GoogleFonts.inter(
-                                      fontSize: 12,
+                                      fontSize: 11.5,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.black87,
                                     ),
@@ -233,7 +285,7 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
     return [
       SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+          padding: const EdgeInsets.fromLTRB(0, 6, 0, 6),
           child: _buildDraftHeaderCard(
             title: 'RCC PC 1',
             subtitle: _formatSheetDate(draftExpenses.first),
@@ -247,21 +299,37 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
         itemBuilder: (context, index) {
           final e = draftExpenses[index];
           return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 22),
+            padding: EdgeInsets.zero,
             child: _buildDraftBulletRow(e),
           );
         },
       ),
       SliverToBoxAdapter(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 22, 16, 10),
+          padding: const EdgeInsets.fromLTRB(0, 22, 0, 10),
           child: Center(
             child: InkWell(
               borderRadius: BorderRadius.circular(26),
               onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PettyCashAddExpense()),
+                Navigator.of(context).push(
+                  PageRouteBuilder(
+                    opaque: false,
+                    barrierDismissible: true,
+                    barrierColor: Colors.black.withOpacity(0.20),
+                    pageBuilder: (_, __, ___) => const PettyCashAddExpense(),
+                    transitionsBuilder: (_, animation, __, child) {
+                      final fade = CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutCubic,
+                      );
+                      final scale = Tween<double>(begin: 0.98, end: 1.0)
+                          .animate(fade);
+                      return FadeTransition(
+                        opacity: fade,
+                        child: ScaleTransition(scale: scale, child: child),
+                      );
+                    },
+                  ),
                 );
               },
               child: Container(

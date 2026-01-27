@@ -21,6 +21,13 @@ class _PettyCashListState extends State<PettyCashList> {
   List<Map<String, dynamic>> expenseSheets = [];
   bool isLoading = true;
   String error = '';
+  int employeeId = 0;
+  double balance = 0.0;
+  double incoming = 0.0;
+  double spent = 0.0;
+  double paid = 0.0;
+  int draftExpensesCount = 0;
+  double draftExpensesTotal = 0.0;
 
   @override
   void initState() {
@@ -54,9 +61,30 @@ class _PettyCashListState extends State<PettyCashList> {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final result = data['result']['data'];
+        
+        print('\n╔═══════════════════════════════════════════════════════════════');
+        print('║ 📊 PETTY CASH RESPONSE DATA:');
+        print('╠═══════════════════════════════════════════════════════════════');
+        print('║ 👤 Employee ID: ${result['employee_id']}');
+        print('║ 💰 Balance: ${result['balance']} AED');
+        print('║ 📈 Incoming: ${result['incoming']} AED');
+        print('║ 📉 Spent: ${result['spent']} AED');
+        print('║ 💳 Paid: ${result['paid']} AED');
+        print('║ 📝 Draft Count: ${result['draft_expenses_count']}');
+        print('║ 💵 Draft Total: ${result['draft_expenses_total']} AED');
+        print('║ 📋 Expense Sheets: ${result['expense_sheets']?.length ?? 0}');
+        print('╚═══════════════════════════════════════════════════════════════\n');
+        
         setState(() {
+          employeeId = result['employee_id'] ?? 0;
+          balance = (result['balance'] ?? 0).toDouble();
+          incoming = (result['incoming'] ?? 0).toDouble();
+          spent = (result['spent'] ?? 0).toDouble();
+          paid = (result['paid'] ?? 0).toDouble();
+          draftExpensesCount = result['draft_expenses_count'] ?? 0;
+          draftExpensesTotal = (result['draft_expenses_total'] ?? 0).toDouble();
           expenseSheets =
-              List<Map<String, dynamic>>.from(result['expense_sheets']);
+              List<Map<String, dynamic>>.from(result['expense_sheets'] ?? []);
           isLoading = false;
         });
       } else {
@@ -118,6 +146,74 @@ class _PettyCashListState extends State<PettyCashList> {
               ],
             ),
           ),
+
+          // 📊 Petty Cash Summary Card
+          if (!isLoading)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF2C3E50), Color(0xFF3498DB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  // Balance
+                  Text(
+                    'Your Balance',
+                    style: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white70,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    balance.toStringAsFixed(0),
+                    style: GoogleFonts.koulen(
+                      fontSize: 40,
+                      color: Colors.white,
+                      height: 1.0,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Stats Row
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildStatItem('Incoming', incoming.toStringAsFixed(0)),
+                      Container(width: 1, height: 40, color: Colors.white24),
+                      _buildStatItem('Spent', spent.toStringAsFixed(0)),
+                      Container(width: 1, height: 40, color: Colors.white24),
+                      _buildStatItem('Paid', paid.toStringAsFixed(0)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Divider(color: Colors.white24, height: 1),
+                  const SizedBox(height: 12),
+                  // Draft Info
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildStatItem('Draft Count', draftExpensesCount.toString(), isCount: true),
+                      Container(width: 1, height: 40, color: Colors.white24),
+                      _buildStatItem('Draft Total', draftExpensesTotal.toStringAsFixed(0)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
 
           // ✅ Expense List
           Expanded(
@@ -255,6 +351,30 @@ class _PettyCashListState extends State<PettyCashList> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, {bool isCount = false}) {
+    return Column(
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.white70,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: GoogleFonts.koulen(
+            fontSize: isCount ? 22 : 20,
+            color: Colors.white,
+            height: 1.0,
+          ),
+        ),
+      ],
     );
   }
 }

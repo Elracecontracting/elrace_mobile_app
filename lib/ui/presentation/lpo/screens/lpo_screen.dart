@@ -7,6 +7,7 @@ import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/api_logger.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/Util.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -38,6 +39,52 @@ class _LpoListScreenState extends State<LpoListScreen> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   final bool _showSearch = false;
+
+  String? _asNonEmptyString(dynamic value) {
+    final s = value?.toString().trim();
+    if (s == null || s.isEmpty) return null;
+    return s;
+  }
+
+  String? _normalizeImageUrl(String? url) {
+    if (url == null) return null;
+    // Some payloads come as "https:/domain..." (missing slash). Normalize to "https://".
+    if (url.startsWith('https:/') && !url.startsWith('https://')) {
+      return url.replaceFirst('https:/', 'https://');
+    }
+    if (url.startsWith('http:/') && !url.startsWith('http://')) {
+      return url.replaceFirst('http:/', 'http://');
+    }
+    return url;
+  }
+
+  void _debugPrintLpoImageFields(List list, {String tag = 'LPO'}) {
+    if (!kDebugMode) return;
+
+    final total = list.length;
+    final take = total < 10 ? total : 10;
+    debugPrint('[$tag] Items: $total | showing first $take image fields');
+
+    for (var i = 0; i < take; i++) {
+      final item = list[i];
+      if (item is! Map) {
+        debugPrint('[$tag][$i] unexpected item type: ${item.runtimeType}');
+        continue;
+      }
+
+      final id = item['id'];
+      final name = _asNonEmptyString(item['name']);
+      final clientPhoto = _normalizeImageUrl(_asNonEmptyString(item['client_photo']));
+      final requesterPhoto =
+          _normalizeImageUrl(_asNonEmptyString(item['requested_by_user_photo']));
+
+      debugPrint(
+        '[$tag][$i] id=$id name=${name ?? '-'} '
+        '| client_photo=${clientPhoto ?? '<empty>'} '
+        '| requested_by_user_photo=${requesterPhoto ?? '<empty>'}',
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -155,6 +202,9 @@ class _LpoListScreenState extends State<LpoListScreen> {
       if (data['result'] != null) {
         final List list = (data['result']['data'] ?? []) as List;
         final bool hasMore = data['result']['has_more'] ?? false;
+
+        _debugPrintLpoImageFields(list, tag: 'LPO_FETCH');
+
         setState(() {
           _items = list.cast<Map<String, dynamic>>();
           _currentPage = 1;
@@ -251,6 +301,9 @@ class _LpoListScreenState extends State<LpoListScreen> {
         final List list = (data['result']['data'] ?? []) as List;
         final bool hasMore = data['result']['has_more'] ?? false;
         print('✅ Load More: Got ${list.length} items, has_more: $hasMore');
+
+        _debugPrintLpoImageFields(list, tag: 'LPO_LOAD_MORE');
+
         setState(() {
           _items.addAll(list.cast<Map<String, dynamic>>());
           _currentPage += 1;

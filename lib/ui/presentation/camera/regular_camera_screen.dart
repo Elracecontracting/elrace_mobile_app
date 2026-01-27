@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:gal/gal.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 /// Regular Camera Screen with Logo on top and Date/Time on bottom
 /// Saves photo to device gallery
@@ -24,6 +26,7 @@ class _RegularCameraScreenState extends State<RegularCameraScreen> {
   late CameraController _controller;
   int _selectedCameraIndex = 0;
   String _currentDateTime = '';
+  String _currentLocation = '';
   bool _isCapturing = false;
 
   @override
@@ -35,6 +38,7 @@ class _RegularCameraScreenState extends State<RegularCameraScreen> {
     );
     if (_selectedCameraIndex == -1) _selectedCameraIndex = 0;
     _updateDateTime();
+    _fetchLocation();
 
     // Update time every second
     Future.doWhile(() async {
@@ -53,6 +57,79 @@ class _RegularCameraScreenState extends State<RegularCameraScreen> {
         final now = DateTime.now();
         _currentDateTime = DateFormat('dd/MM/yyyy\nhh:mm a').format(now);
       });
+    }
+  }
+
+  Future<void> _fetchLocation() async {
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint('Location services are disabled.');
+        return;
+      }
+
+      // Check location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          debugPrint('Location permissions are denied');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint('Location permissions are permanently denied');
+        return;
+      }
+
+      // Get current position
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+      );
+
+      // Get address from coordinates
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty && mounted) {
+        Placemark place = placemarks.first;
+        String locationText = '';
+        
+        // Show the specific area/neighborhood + emirate/city
+        // Priority: subLocality > thoroughfare > locality
+        if (place.subLocality != null && place.subLocality!.isNotEmpty) {
+          locationText = place.subLocality!;
+        } else if (place.thoroughfare != null && place.thoroughfare!.isNotEmpty) {
+          locationText = place.thoroughfare!;
+        } else if (place.locality != null && place.locality!.isNotEmpty) {
+          locationText = place.locality!;
+        }
+        
+        // Add emirate/city (locality or administrativeArea)
+        String emirate = '';
+        if (place.locality != null && place.locality!.isNotEmpty && place.locality != locationText) {
+          emirate = place.locality!;
+        } else if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
+          emirate = place.administrativeArea!;
+        }
+        
+        if (emirate.isNotEmpty && locationText.isNotEmpty) {
+          locationText = '$locationText, $emirate';
+        } else if (emirate.isNotEmpty) {
+          locationText = emirate;
+        }
+
+        setState(() {
+          _currentLocation = locationText;
+        });
+        debugPrint('✓ Location fetched: $_currentLocation');
+      }
+    } catch (e) {
+      debugPrint('✗ Error fetching location: $e');
     }
   }
 
@@ -194,7 +271,7 @@ class _RegularCameraScreenState extends State<RegularCameraScreen> {
               ),
             ),
 
-          // Date and Time at bottom right
+          // Date, Time and Location at bottom right
           Positioned(
             bottom: 120.h,
             right: 20.w,
@@ -204,14 +281,32 @@ class _RegularCameraScreenState extends State<RegularCameraScreen> {
                 color: Colors.black.withOpacity(0.5),
                 borderRadius: BorderRadius.circular(8.r),
               ),
-              child: Text(
-                _currentDateTime,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w600,
-                ),
-                textAlign: TextAlign.right,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _currentDateTime,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                  if (_currentLocation.isNotEmpty) ...[
+                    SizedBox(height: 4.h),
+                    Text(
+                      _currentLocation,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                  ],
+                ],
               ),
             ),
           ),

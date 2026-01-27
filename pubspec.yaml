@@ -83,6 +83,7 @@ dependencies:
   flutter_xlider: null
   fluttertoast: ^8.2.4
   geolocator: ^14.0.2
+  geocoding: ^3.0.0
   get: ^4.6.6
   get_it: null
   google_fonts: ^6.2.1

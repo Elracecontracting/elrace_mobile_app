@@ -21,8 +21,22 @@ class _PettyCashSubmittedScreenState extends State<PettyCashSubmittedScreen> {
   bool isLoading = true;
   List<Map<String, dynamic>> submittedSheets = [];
   int _currentPage = 1;
+  static const double _kChevronSize = 26;
+  static const double _kChevronGap = 10;
+  static const double _kBubbleSize = 52;
+  static const double _kBubbleRadius = 26;
+  static const double _kBubbleIconSize = 22;
+  static const double _kTitleSize = 20;
+  static const double _kSubtitleSize = 14;
+  static const double _kAmountSize = 34;
+  static const double _kStatusDotSize = 14;
   final int _pageCount = 4;
   final int _itemsPerPage = 10; // عدد العناصر لكل صفحة
+
+  int? _expandedSheetId;
+  final Map<int, List<Map<String, dynamic>>> _sheetLinesById = {};
+  final Set<int> _sheetLinesLoading = {};
+  final Map<int, String> _sheetLinesError = {};
 
   final NumberFormat _amountFormat = NumberFormat('#,##0');
 
@@ -110,6 +124,96 @@ class _PettyCashSubmittedScreenState extends State<PettyCashSubmittedScreen> {
     return const Color(0xFF18A558);
   }
 
+  int? _sheetIdFrom(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is int) return raw;
+    return int.tryParse(raw.toString());
+  }
+
+  String _formatLineTitle(Map<String, dynamic> line) {
+    final candidates = [
+      line['name'],
+      line['description'],
+      line['remarks'],
+      line['label'],
+    ];
+    for (final c in candidates) {
+      final s = (c ?? '').toString().trim();
+      if (s.isNotEmpty && s.toLowerCase() != 'false') return s;
+    }
+    return 'Expense';
+  }
+
+  String _formatLineDate(Map<String, dynamic> line) {
+    final rawDate = line['date'] ?? line['date_order'] ?? line['create_date'];
+    if (rawDate == null || rawDate == false) return 'No date';
+    try {
+      final parsed = DateTime.parse(rawDate.toString());
+      final now = DateTime.now();
+      final diffDays = now.difference(parsed).inDays;
+      final timeStr = DateFormat('HH:mm').format(parsed);
+      if (diffDays == 0) return 'Today : $timeStr';
+      if (diffDays == 1) return 'Yesterday : $timeStr';
+      return '${DateFormat('MMM d').format(parsed)} : $timeStr';
+    } catch (_) {
+      return rawDate.toString();
+    }
+  }
+
+  Future<void> _fetchExpenseLinesForSheet(int sheetId) async {
+    if (_sheetLinesLoading.contains(sheetId)) return;
+
+    setState(() {
+      _sheetLinesLoading.add(sheetId);
+      _sheetLinesError.remove(sheetId);
+    });
+
+    try {
+      final token = SharedPref.getLoginData().result?.token;
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+
+      final url = Uri.parse('https://erp.elrace.com/api/expense/lines');
+      final body = jsonEncode({
+        'jsonrpc': '2.0',
+        'params': {
+          'sheet_id': sheetId,
+        }
+      });
+
+      final response = await http.post(url, headers: headers, body: body);
+
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}');
+      }
+
+      final decoded = jsonDecode(response.body);
+      final result = decoded['result'] ?? decoded;
+      final data = result['data'] ?? result;
+      final List<Map<String, dynamic>> lines = (data is List)
+          ? data.map((e) => Map<String, dynamic>.from(e as Map)).toList()
+          : <Map<String, dynamic>>[];
+
+      if (!mounted) return;
+      setState(() {
+        _sheetLinesById[sheetId] = lines;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _sheetLinesError[sheetId] = e.toString();
+      });
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _sheetLinesLoading.remove(sheetId);
+      });
+    }
+  }
+
   Future<void> _fetchSubmittedData() async {
     if (!mounted) return;
 
@@ -127,21 +231,34 @@ class _PettyCashSubmittedScreenState extends State<PettyCashSubmittedScreen> {
         "Authorization": "Bearer $token",
       };
 
-      final url = Uri.parse("https://erp.elrace.com/api/petty_cash_home");
-
-      final now = DateTime.now();
-      final currentDate =
-          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      // Use the new API endpoint for viewing all submitted expense sheets
+      final url = Uri.parse("https://erp.elrace.com/api/view_all_hr_expense_sheets");
 
       final bodyData = {
         "jsonrpc": "2.0",
-        "params": {
-          "last_limit": 0,
-          "last_limit_date": currentDate,
-        },
+        "params": {},
       };
       final body = jsonEncode(bodyData);
 
+      print(
+          '\n╔═══════════════════════════════════════════════════════════════');
+      print('║ 📡 PETTY CASH API: VIEW ALL HR EXPENSE SHEETS');
+      print('╠═══════════════════════════════════════════════════════════════');
+      print('║ 🌐 URL: $url');
+      print('║ 📤 METHOD: GET (with body)');
+      print('║ 📋 HEADERS:');
+      headers.forEach((key, value) {
+        if (key == 'Authorization') {
+          print('║    $key: Bearer ${value.toString().substring(7, 27)}...');
+        } else {
+          print('║    $key: $value');
+        }
+      });
+      print('║ 📦 BODY: $body');
+      print(
+          '╚═══════════════════════════════════════════════════════════════\n');
+
+      // Use GET with body (same pattern as petty_cash_home)
       final request = http.Request('GET', url)
         ..headers.addAll(headers)
         ..body = body;
@@ -149,13 +266,36 @@ class _PettyCashSubmittedScreenState extends State<PettyCashSubmittedScreen> {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
+      print(
+          '\n╔═══════════════════════════════════════════════════════════════');
+      print('║ 📥 PETTY CASH API RESPONSE: VIEW ALL HR EXPENSE SHEETS');
+      print('╠═══════════════════════════════════════════════════════════════');
+      print('║ ✅ STATUS CODE: ${response.statusCode}');
+      print('║ 📄 RESPONSE BODY (RAW):');
+      print('║ ${response.body}');
+      print('║');
+      print('║ 📄 RESPONSE BODY (FORMATTED):');
+      try {
+        final jsonData = jsonDecode(response.body);
+        final prettyJson = const JsonEncoder.withIndent('  ').convert(jsonData);
+        prettyJson.split('\n').forEach((line) => print('║ $line'));
+      } catch (e) {
+        print('║ Failed to format JSON: $e');
+      }
+      print(
+          '╚═══════════════════════════════════════════════════════════════\n');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final result = data['result']['data'];
+        final result = data['result'];
 
         List<Map<String, dynamic>> allSheets = [];
-        if (result['expense_sheets'] is List) {
-          allSheets = List<Map<String, dynamic>>.from(result['expense_sheets']);
+        if (result != null && result['data'] != null) {
+          if (result['data'] is List) {
+            allSheets = List<Map<String, dynamic>>.from(result['data']);
+          } else if (result['data']['expense_sheets'] is List) {
+            allSheets = List<Map<String, dynamic>>.from(result['data']['expense_sheets']);
+          }
         }
 
         // Filter submitted only (non-draft)
@@ -168,10 +308,21 @@ class _PettyCashSubmittedScreenState extends State<PettyCashSubmittedScreen> {
           submittedSheets = submitted;
           isLoading = false;
         });
+        
+        print('✅ Submitted sheets loaded: ${submittedSheets.length} items');
       } else {
         throw Exception("Failed to load submitted data: ${response.statusCode}");
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print(
+          '\n╔═══════════════════════════════════════════════════════════════');
+      print('║ ⚠️ VIEW ALL HR EXPENSE SHEETS API ERROR');
+      print('╠═══════════════════════════════════════════════════════════════');
+      print('║ Error: $e');
+      print(
+          '║ Stack Trace: ${stackTrace.toString().split('\n').take(3).join('\n║ ')}');
+      print(
+          '╚═══════════════════════════════════════════════════════════════\n');
       if (!mounted) return;
       setState(() {
         isLoading = false;
@@ -370,25 +521,41 @@ class _PettyCashSubmittedScreenState extends State<PettyCashSubmittedScreen> {
     final amountRaw = sheet['total_amount'] ?? sheet['amount'] ?? 0;
     final amountText = _formatAmount(amountRaw);
     final dotColor = _statusDotColor(sheet);
+    final sheetId = _sheetIdFrom(sheet['id']);
+    final isExpanded = sheetId != null && _expandedSheetId == sheetId;
 
-    return Material(
+    final header = Material(
       color: Colors.white,
       borderRadius: BorderRadius.circular(12),
       elevation: 0,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const PettyCashPopUpScreen()),
-          );
+          if (sheetId == null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PettyCashPopUpScreen()),
+            );
+            return;
+          }
+
+          setState(() {
+            _expandedSheetId = isExpanded ? null : sheetId;
+          });
+
+          if (!isExpanded && !_sheetLinesById.containsKey(sheetId)) {
+            _fetchExpenseLinesForSheet(sheetId);
+          }
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
           child: Row(
             children: [
-              Icon(Icons.chevron_right,
-                  size: 24, color: Colors.black.withOpacity(0.4)),
+              Icon(
+                isExpanded ? Icons.expand_more : Icons.chevron_right,
+                size: 24,
+                color: Colors.black.withOpacity(0.4),
+              ),
               const SizedBox(width: 8),
               Container(
                 width: 40,
@@ -463,6 +630,215 @@ class _PettyCashSubmittedScreenState extends State<PettyCashSubmittedScreen> {
           ),
         ),
       ),
+    );
+
+    if (sheetId == null) return header;
+
+    return Column(
+      children: [
+        header,
+        if (isExpanded) ...[
+          const SizedBox(height: 6),
+          _buildExpandedLines(sheetId),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildExpandedLines(int sheetId) {
+    final isLoading = _sheetLinesLoading.contains(sheetId);
+    final errorMsg = _sheetLinesError[sheetId];
+    final lines = _sheetLinesById[sheetId] ?? const <Map<String, dynamic>>[];
+
+    if (isLoading) {
+      return _buildShimmerLines();
+    }
+
+    if (errorMsg != null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Failed to load lines',
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black54,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => _fetchExpenseLinesForSheet(sheetId),
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (lines.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Text(
+          'No expense lines',
+          style: GoogleFonts.inter(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.black54,
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: lines.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 6),
+      itemBuilder: (context, index) {
+        return _buildExpenseLineRow(lines[index]);
+      },
+    );
+  }
+
+  Widget _buildExpenseLineRow(Map<String, dynamic> line) {
+    final title = _formatLineTitle(line);
+    final subtitle = _formatLineDate(line);
+    final amountRaw = line['unit_amount'] ?? line['amount'] ?? 0;
+    final amountText = _formatAmount(amountRaw);
+
+    const double leadingIndent = _kChevronSize + _kChevronGap;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+          child: Row(
+            children: [
+              const SizedBox(width: leadingIndent),
+              Container(
+                width: _kBubbleSize,
+                height: _kBubbleSize,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF2F0FF),
+                  borderRadius: BorderRadius.circular(_kBubbleRadius),
+                ),
+                child: Center(
+                  child: Image.asset(
+                    'assets/png/Bill.png',
+                    width: _kBubbleIconSize,
+                    height: _kBubbleIconSize,
+                    color: Colors.black87,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: _kSubtitleSize,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black.withOpacity(0.45),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                '-$amountText',
+                style: GoogleFonts.inter(
+                  fontSize: 30,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFFD1002C),
+                  height: 1.0,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShimmerLines() {
+    return Column(
+      children: List.generate(3, (index) => _buildShimmerRow()),
+    );
+  }
+
+  Widget _buildShimmerRow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+        ),
+        child: Row(
+          children: [
+            const SizedBox(width: _kChevronSize + _kChevronGap),
+            _buildShimmerBox(width: _kBubbleSize, height: _kBubbleSize, isCircle: true),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildShimmerBox(width: 120, height: 16),
+                  const SizedBox(height: 6),
+                  _buildShimmerBox(width: 80, height: 12),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            _buildShimmerBox(width: 60, height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShimmerBox({required double width, required double height, bool isCircle = false}) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.3, end: 1.0),
+      duration: const Duration(milliseconds: 800),
+      curve: Curves.easeInOut,
+      builder: (context, value, child) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 400),
+          width: width,
+          height: height,
+          decoration: BoxDecoration(
+            color: Colors.grey[300]!.withOpacity(value),
+            borderRadius: isCircle ? null : BorderRadius.circular(8),
+            shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
+          ),
+        );
+      },
+      onEnd: () {},
     );
   }
 }

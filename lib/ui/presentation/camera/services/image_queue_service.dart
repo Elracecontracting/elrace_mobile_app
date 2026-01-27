@@ -9,12 +9,14 @@ class ImageProcessingParams {
   final String imagePath;
   final String currentDate;
   final String currentTime;
+  final String currentLocation;
   final Uint8List? logoBytes;
 
   ImageProcessingParams({
     required this.imagePath,
     required this.currentDate,
     required this.currentTime,
+    this.currentLocation = '',
     this.logoBytes,
   });
 }
@@ -61,12 +63,14 @@ class ImageQueueService {
     required String imagePath,
     required String currentDate,
     required String currentTime,
+    String currentLocation = '',
     Uint8List? logoBytes,
   }) {
     final task = ImageTask(
       imagePath: imagePath,
       currentDate: currentDate,
       currentTime: currentTime,
+      currentLocation: currentLocation,
       logoBytes: logoBytes,
     );
 
@@ -110,6 +114,7 @@ class ImageQueueService {
           imagePath: task.imagePath,
           currentDate: task.currentDate,
           currentTime: task.currentTime,
+          currentLocation: task.currentLocation,
           logoBytes: task.logoBytes,
         );
 
@@ -209,50 +214,91 @@ ImageProcessingResult _processImageInIsolate(ImageProcessingParams params) {
       }
     }
 
-    // Draw date and time text with shadow
+    // Draw time, date and location text with shadow (all right-aligned, stacked vertically)
     final int fontSize = (baseImage.width * 0.045).toInt();
+    final int locationFontSize = (baseImage.width * 0.035).toInt();
     const shadowOffset = 1;
+    final timeTextWidth = params.currentTime.length * (fontSize * 0.6).toInt();
     final dateTextWidth = params.currentDate.length * (fontSize * 0.6).toInt();
 
-    // Draw shadow for time (left)
+    // Calculate vertical positions - stack time, date, location from top to bottom
+    final int lineHeight = fontSize + 8;
+    int currentY;
+    
+    if (params.currentLocation.isNotEmpty) {
+      currentY = baseImage.height - padding - (lineHeight * 2) - locationFontSize - 10;
+    } else {
+      currentY = baseImage.height - padding - (lineHeight * 2);
+    }
+
+    // Draw shadow for time (right-aligned)
     img.drawString(
       baseImage,
       params.currentTime,
       font: img.arial24,
-      x: padding + shadowOffset,
-      y: baseImage.height - padding - fontSize - 10 + shadowOffset,
+      x: baseImage.width - padding - timeTextWidth + shadowOffset,
+      y: currentY + shadowOffset,
       color: img.ColorRgb8(50, 50, 50),
     );
 
-    // Draw time on the left
+    // Draw time (right-aligned)
     img.drawString(
       baseImage,
       params.currentTime,
       font: img.arial24,
-      x: padding,
-      y: baseImage.height - padding - fontSize - 10,
+      x: baseImage.width - padding - timeTextWidth,
+      y: currentY,
       color: img.ColorRgb8(255, 255, 255),
     );
 
-    // Draw shadow for date (right)
+    currentY += lineHeight;
+
+    // Draw shadow for date (right-aligned)
     img.drawString(
       baseImage,
       params.currentDate,
       font: img.arial24,
       x: baseImage.width - padding - dateTextWidth + shadowOffset,
-      y: baseImage.height - padding - fontSize - 10 + shadowOffset,
+      y: currentY + shadowOffset,
       color: img.ColorRgb8(50, 50, 50),
     );
 
-    // Draw date on the right
+    // Draw date (right-aligned)
     img.drawString(
       baseImage,
       params.currentDate,
       font: img.arial24,
       x: baseImage.width - padding - dateTextWidth,
-      y: baseImage.height - padding - fontSize - 10,
+      y: currentY,
       color: img.ColorRgb8(255, 255, 255),
     );
+
+    // Draw location below date (right-aligned)
+    if (params.currentLocation.isNotEmpty) {
+      // Use same width calculation as date for consistency
+      final locationTextWidth = params.currentLocation.length * (fontSize * 0.55).toInt();
+      currentY += lineHeight;
+
+      // Draw shadow for location
+      img.drawString(
+        baseImage,
+        params.currentLocation,
+        font: img.arial14,
+        x: baseImage.width - padding - locationTextWidth + shadowOffset,
+        y: currentY + shadowOffset,
+        color: img.ColorRgb8(50, 50, 50),
+      );
+
+      // Draw location
+      img.drawString(
+        baseImage,
+        params.currentLocation,
+        font: img.arial14,
+        x: baseImage.width - padding - locationTextWidth,
+        y: currentY,
+        color: img.ColorRgb8(255, 255, 255),
+      );
+    }
 
     // Save composed image
     final composedFile = File(
@@ -280,12 +326,14 @@ class ImageTask {
   final String imagePath;
   final String currentDate;
   final String currentTime;
+  final String currentLocation;
   final Uint8List? logoBytes;
 
   ImageTask({
     required this.imagePath,
     required this.currentDate,
     required this.currentTime,
+    this.currentLocation = '',
     this.logoBytes,
   });
 }

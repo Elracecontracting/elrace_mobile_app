@@ -18,6 +18,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -400,6 +401,198 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
   String capitalize(String text) {
     if (text.isEmpty) return text;
     return text[0].toUpperCase() + text.substring(1);
+  }
+
+  IconData _getExpenseTypeIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'fuel':
+      case 'petrol':
+        return Icons.local_gas_station;
+      case 'hospitality':
+        return Icons.restaurant;
+      case 'site':
+      case 'site material':
+        return Icons.construction;
+      default:
+        return Icons.receipt_long;
+    }
+  }
+
+  void _showExpenseDetailsDialog(Map<String, dynamic> expense) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: const LinearGradient(
+                colors: [Color(0xFFF8F9FA), Colors.white],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: appFontColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        _getExpenseTypeIcon(expense['x_expense_type'] ?? ''),
+                        color: appFontColor,
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Expense Details',
+                            style: GoogleFonts.inter(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          Text(
+                            'ID: ${expense['id'] ?? 'N/A'}',
+                            style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close),
+                      padding: EdgeInsets.zero,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const Divider(height: 1),
+                const SizedBox(height: 20),
+
+                // Details
+                _buildDetailRow(
+                  'Name',
+                  expense['name'] ?? expense['remarks'] ?? 'N/A',
+                  Icons.description,
+                ),
+                const SizedBox(height: 12),
+                _buildDetailRow(
+                  'Amount',
+                  '${expense['amount'] ?? 0} AED',
+                  Icons.attach_money,
+                  isAmount: true,
+                ),
+                const SizedBox(height: 12),
+                _buildDetailRow(
+                  'Date',
+                  expense['date']?.toString() ?? 'N/A',
+                  Icons.calendar_today,
+                ),
+                const SizedBox(height: 12),
+                _buildDetailRow(
+                  'Type',
+                  (expense['x_expense_type'] ?? 'Other').toString().toUpperCase(),
+                  Icons.category,
+                ),
+                const SizedBox(height: 12),
+                _buildDetailRow(
+                  'State',
+                  (expense['state'] ?? 'Draft').toString().toUpperCase(),
+                  Icons.info_outline,
+                ),
+                if (expense['project_name'] != null && expense['project_name'].toString().isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  _buildDetailRow(
+                    'Project',
+                    expense['project_name'].toString(),
+                    Icons.work,
+                  ),
+                ],
+
+                const SizedBox(height: 24),
+
+                // Close Button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: appFontColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      'Close',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, IconData icon, {bool isAmount = false}) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: appFontColor.withOpacity(0.6)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: GoogleFonts.inter(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black54,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: isAmount ? const Color(0xFFD1002C) : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
   }
 
   Future<void> _fetchDraftSummary() async {
@@ -2141,10 +2334,12 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                   var expense = expenseSheets[index];
                                   const state = "DRAFT";
 
-                                  // API returns: id, date, amount, project_name, remarks
+                                  // API returns: id, date, amount, project_name, remarks, name
                                   final date =
                                       expense['date']?.toString() ?? 'N/A';
                                   final amount = expense['amount'] ?? 0;
+                                  final name = expense['name'] ?? expense['remarks'] ?? 'Expense';
+                                  final expenseType = expense['x_expense_type'] ?? '';
 
                                   return Padding(
                                     padding: const EdgeInsets.symmetric(
@@ -2153,6 +2348,12 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                       capitalize(state),
                                       date,
                                       amount.toString(),
+                                      name: name,
+                                      expenseType: expenseType,
+                                      onTap: () {
+                                        // Show expense details dialog
+                                        _showExpenseDetailsDialog(expense);
+                                      },
                                     ),
                                   );
                                 },
@@ -2209,111 +2410,153 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
   }
 
   // Reusable widget for transaction items
-  Widget _buildTransactionItem_2(String status, String date, String amount) {
-    return Container(
-      decoration: BoxDecoration(
-        image: const DecorationImage(
-          image: AssetImage('assets/png/item_bg_yellow.png'),
-          fit: BoxFit.cover,
-        ),
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(25),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha((0.1 * 255).toInt()),
-            blurRadius: 4,
-            spreadRadius: 2,
+  Widget _buildTransactionItem_2(
+    String status,
+    String date,
+    String amount, {
+    String? name,
+    String? expenseType,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(25),
+      child: Container(
+        decoration: BoxDecoration(
+          image: const DecorationImage(
+            image: AssetImage('assets/png/item_bg_yellow.png'),
+            fit: BoxFit.cover,
           ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(30, 10, 15, 14),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  status,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: appFontColor,
-                  ),
-                ),
-              ],
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(25),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withAlpha((0.1 * 255).toInt()),
+              blurRadius: 4,
+              spreadRadius: 2,
             ),
-            const SizedBox(width: 5),
-            const SizedBox(
-              height: 30,
-              child: VerticalDivider(
-                color: Colors.grey,
-                thickness: 2,
-              ),
-            ),
-            const SizedBox(width: 5),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Date',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: appFontColor,
-                    ),
-                  ),
-                  Text(
-                    date,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(
-              height: 30,
-              child: VerticalDivider(
-                color: Colors.grey,
-                thickness: 2,
-              ),
-            ),
-            const SizedBox(width: 5),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Amount',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: appFontColor,
-                    ),
-                  ),
-                  Text(
-                    amount,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 0),
-            const CircleAvatar(
-              radius: 10,
-              backgroundImage: AssetImage('assets/png/tick-petty.png'),
-            ),
-            const SizedBox(width: 5),
           ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(30, 10, 15, 14),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Left icon
+              Icon(
+                _getExpenseTypeIcon(expenseType ?? ''),
+                size: 24,
+                color: appFontColor,
+              ),
+              const SizedBox(width: 8),
+              const SizedBox(
+                height: 30,
+                child: VerticalDivider(
+                  color: Colors.grey,
+                  thickness: 2,
+                ),
+              ),
+              const SizedBox(width: 5),
+              // Name/Description
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name ?? 'Expense',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    if (expenseType != null && expenseType.isNotEmpty)
+                      Text(
+                        expenseType.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: appFontColor.withOpacity(0.7),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(
+                height: 30,
+                child: VerticalDivider(
+                  color: Colors.grey,
+                  thickness: 2,
+                ),
+              ),
+              const SizedBox(width: 5),
+              // Date
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Date',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: appFontColor,
+                      ),
+                    ),
+                    Text(
+                      date,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(
+                height: 30,
+                child: VerticalDivider(
+                  color: Colors.grey,
+                  thickness: 2,
+                ),
+              ),
+              const SizedBox(width: 5),
+              // Amount
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Amount',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: appFontColor,
+                      ),
+                    ),
+                    Text(
+                      '-$amount',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFFD1002C),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right,
+                color: appFontColor,
+                size: 20,
+              ),
+            ],
+          ),
         ),
       ),
     );

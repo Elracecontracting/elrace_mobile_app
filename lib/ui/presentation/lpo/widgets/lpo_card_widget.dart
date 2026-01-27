@@ -135,14 +135,14 @@ class LpoCardWidget extends StatelessWidget {
   final String? state;
   final VoidCallback? onTap;
 
-  static final _amountFormat = NumberFormat('#,##0.00', 'en');
+  static final _amountFormat = NumberFormat('#,##0', 'en');
 
   String? _formatAmount(String? raw) {
     if (raw == null || raw.isEmpty) return null;
     final cleaned = raw.replaceAll(RegExp(r'[^0-9.,]'), '');
     final value = double.tryParse(cleaned.replaceAll(',', ''));
-    if (value == null) return '$raw AED';
-    return '${_amountFormat.format(value)} AED';
+    if (value == null) return raw;
+    return _amountFormat.format(value);
   }
 
   String? _formatDate(String? raw) {
@@ -157,200 +157,175 @@ class LpoCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final formattedAmount = _formatAmount(amount);
-    final formattedDate = _formatDate(date);
-    final hasVendor = vendorName != null && vendorName!.trim().isNotEmpty;
-    final hasProject = projectName != null && projectName!.trim().isNotEmpty;
-    final hasAmount = formattedAmount != null;
-    final hasDate = formattedDate != null && formattedDate.isNotEmpty;
-    final hasRequesterPhoto =
-        requestedByUserPhoto != null && requestedByUserPhoto!.isNotEmpty;
+
+    // Align header text (RQ/LPO number) with the start of the vendor/project text
+    // column (to the right of: logo + gap + divider + gap).
+    final headerStartPadding = 54.w + 14.w + 1.w + 14.w;
+
+    final codeText = (name ?? '').trim().isNotEmpty
+        ? name!.trim()
+        : (poId != null)
+            ? 'RCC/LPO/$poId'
+            : 'RCC/LPO';
+
+    final primaryTextRaw = (vendorName ?? '').trim().isNotEmpty
+        ? vendorName!.trim()
+        : (projectName ?? '').trim().isNotEmpty
+            ? projectName!.trim()
+            : '';
+
+    final secondaryTextRaw = (vendorName ?? '').trim().isNotEmpty &&
+            (projectName ?? '').trim().isNotEmpty
+        ? projectName!.trim()
+        : null;
+
+    final primaryText = primaryTextRaw.toUpperCase();
+    final secondaryText = secondaryTextRaw?.toUpperCase();
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
-        padding: const EdgeInsets.all(1),
+        margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22.r),
+          borderRadius: BorderRadius.circular(18.r),
+          border: Border.all(color: const Color(0xFFB6B9C0), width: 1),
           gradient: const LinearGradient(
-            colors: [Color(0xFF151544), Color(0xFF3535AA)],
+            colors: [Color(0xFFD8DADF), Color(0xFFC6C8CE)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-        ),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(21.r),
-            gradient: const LinearGradient(
-              colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.10),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-          ),
-          child: Column(
-            children: [
-              // Top row: Vendor logo and title section
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+        child: Stack(
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 48.h),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // LEFT: Vendor Logo
-                  Container(
-                    width: 62.w,
-                    height: 62.w,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.white,
-                      border: Border.all(color: Colors.grey.shade300, width: 2),
-                    ),
-                    alignment: Alignment.center,
-                    child: clientPhoto != null && clientPhoto!.isNotEmpty
-                        ? ClipOval(
-                            child: Image.network(
-                              clientPhoto!,
-                              fit: BoxFit.contain,
-                              headers: {
-                                'Accept': 'image/*',
-                                'Authorization':
-                                    'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
-                              },
-                              errorBuilder: (_, __, ___) =>
-                                  _buildInitialsAvatar(),
-                            ),
-                          )
-                        : _buildInitialsAvatar(),
-                  ),
-                  SizedBox(width: 16.w),
-                  // CENTER: Title + Vendor + Project
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        MarqueeText(
-                          text: name ?? 'RCC-PO-XXXX',
-                          style: GoogleFonts.koulen(
-                            fontSize: 22.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black,
-                            letterSpacing: 1.5,
-                          ),
-                          textAlign: TextAlign.center,
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Padding(
+                      padding: EdgeInsetsDirectional.only(start: headerStartPadding),
+                      child: Text(
+                        codeText,
+                        textAlign: TextAlign.left,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0E3A76),
+                          letterSpacing: 0.2,
                         ),
-                        if (hasVendor || hasProject) SizedBox(height: 8.h),
-                        if (hasVendor) _braceChip(vendorName!),
-                        if (hasVendor && hasProject) SizedBox(height: 6.h),
-                        if (hasProject) _braceChip(projectName!),
-                      ],
+                      ),
                     ),
                   ),
-                  SizedBox(width: 16.w),
-                  SizedBox(width: 62.w), // Balance right side
-                ],
-              ),
-              SizedBox(height: 14.h),
-              // Bottom row: only render if any detail exists
-              if (hasAmount || hasDate || hasRequesterPhoto)
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 8.w),
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: 18.w,
-                    runSpacing: 10.h,
+                  SizedBox(height: 10.h),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      if (hasAmount)
-                        Row(
+                      Container(
+                        width: 54.w,
+                        height: 54.w,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white,
+                          border:
+                              Border.all(color: const Color(0xFFE6E7EA), width: 2),
+                        ),
+                        alignment: Alignment.center,
+                        child: clientPhoto != null && clientPhoto!.isNotEmpty
+                            ? ClipOval(
+                                child: Image.network(
+                                  clientPhoto!,
+                                  fit: BoxFit.contain,
+                                  width: 54.w,
+                                  height: 54.w,
+                                  headers: {
+                                    'Accept': 'image/*',
+                                    'Authorization':
+                                        'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
+                                  },
+                                  errorBuilder: (_, __, ___) =>
+                                      _buildInitialsAvatar(),
+                                ),
+                              )
+                            : _buildInitialsAvatar(),
+                      ),
+                      SizedBox(width: 14.w),
+                      Container(
+                        width: 1,
+                        height: 54.h,
+                        color: Colors.white.withOpacity(0.85),
+                      ),
+                      SizedBox(width: 14.w),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Image.asset(
-                              'assets/png/icons/Coin.png',
-                              width: 24.w,
-                              height: 24.w,
-                              color: const Color(0xFF151544),
-                              errorBuilder: (_, __, ___) => Icon(
-                                Icons.attach_money,
-                                size: 24.w,
-                                color: const Color(0xFF151544),
-                              ),
-                            ),
-                            SizedBox(width: 6.w),
                             Text(
-                              formattedAmount,
-                              style: GoogleFonts.koulen(
-                                fontSize: 14.sp,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                          ],
-                        ),
-                      if (hasRequesterPhoto)
-                        Container(
-                          width: 40.w,
-                          height: 40.w,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 1),
-                            color: Colors.white,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            child: Image.network(
-                              requestedByUserPhoto!,
-                              fit: BoxFit.contain,
-                              width: 40.w,
-                              height: 40.w,
-                              headers: {
-                                'Accept': 'image/*',
-                                'Authorization':
-                                    'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
-                              },
-                              errorBuilder: (_, __, ___) => Icon(
-                                Icons.person,
-                                size: 34.w,
-                                color: appFontColor,
-                              ),
-                            ),
-                          ),
-                        ),
-                      if (hasDate)
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Image.asset(
-                              'assets/png/calender.png',
-                              width: 24.w,
-                              height: 24.w,
-                              color: const Color(0xFF151544),
-                              errorBuilder: (_, __, ___) => Icon(
-                                Icons.calendar_month,
-                                size: 24.w,
-                                color: const Color(0xFF151544),
-                              ),
-                            ),
-                            SizedBox(width: 6.w),
-                            Text(
-                              formattedDate,
+                              primaryText.isNotEmpty ? primaryText : '- ',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.inter(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black87,
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.black,
+                                height: 1.1,
                               ),
                             ),
+                            if (secondaryText != null)
+                              Padding(
+                                padding: EdgeInsets.only(top: 4.h),
+                                child: Text(
+                                  secondaryText,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11.5.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF6E6E6E),
+                                    height: 1.1,
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
+                      ),
                     ],
                   ),
+                ],
+              ),
+            ),
+            if (formattedAmount != null && formattedAmount.isNotEmpty)
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 12.h,
+                child: Center(
+                  child: Text(
+                    formattedAmount,
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 24.sp,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF0E3A76),
+                      letterSpacing: 0.3,
+                    ),
+                  ),
                 ),
-            ],
-          ),
+              ),
+          ],
         ),
       ),
     );

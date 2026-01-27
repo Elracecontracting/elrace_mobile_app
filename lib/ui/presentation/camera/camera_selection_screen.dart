@@ -11,6 +11,8 @@ import 'package:intl/intl.dart';
 import 'package:gal/gal.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 import '../../../utils/safe_insets.dart';
 
@@ -35,6 +37,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
   late Future<void> _initializeControllerFuture;
   String _currentDate = '';
   String _currentTime = '';
+  String _currentLocation = '';
   bool _isCapturing = false;
   Uint8List? _logoBytes;
 
@@ -66,6 +69,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
     _initializeCamera();
     _updateTime();
     _loadLogo();
+    _fetchLocation();
 
     // Listen to queue updates
     _queueCountSubscription = _imageQueueService.queueCount.listen((count) {
@@ -121,6 +125,79 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
       debugPrint('✓ Logo rcc2.png loaded: ${data.lengthInBytes} bytes');
     } catch (e) {
       debugPrint('✗ Error loading logo: $e');
+    }
+  }
+
+  Future<void> _fetchLocation() async {
+    try {
+      // Check if location services are enabled
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        debugPrint('Location services are disabled.');
+        return;
+      }
+
+      // Check location permission
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          debugPrint('Location permissions are denied');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        debugPrint('Location permissions are permanently denied');
+        return;
+      }
+
+      // Get current position
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+      );
+
+      // Get address from coordinates
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty && mounted) {
+        Placemark place = placemarks.first;
+        String locationText = '';
+        
+        // Show the specific area/neighborhood + emirate/city
+        // Priority: subLocality > thoroughfare > locality
+        if (place.subLocality != null && place.subLocality!.isNotEmpty) {
+          locationText = place.subLocality!;
+        } else if (place.thoroughfare != null && place.thoroughfare!.isNotEmpty) {
+          locationText = place.thoroughfare!;
+        } else if (place.locality != null && place.locality!.isNotEmpty) {
+          locationText = place.locality!;
+        }
+        
+        // Add emirate/city (locality or administrativeArea)
+        String emirate = '';
+        if (place.locality != null && place.locality!.isNotEmpty && place.locality != locationText) {
+          emirate = place.locality!;
+        } else if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
+          emirate = place.administrativeArea!;
+        }
+        
+        if (emirate.isNotEmpty && locationText.isNotEmpty) {
+          locationText = '$locationText, $emirate';
+        } else if (emirate.isNotEmpty) {
+          locationText = emirate;
+        }
+
+        setState(() {
+          _currentLocation = locationText;
+        });
+        debugPrint('✓ Location fetched: $_currentLocation');
+      }
+    } catch (e) {
+      debugPrint('✗ Error fetching location: $e');
     }
   }
 
@@ -181,6 +258,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
       // Capture current date/time at moment of capture
       final captureDate = _currentDate;
       final captureTime = _currentTime;
+      final captureLocation = _currentLocation;
 
       // Reset capturing flag immediately
       _isCapturing = false;
@@ -197,6 +275,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
         imagePath: file.path,
         currentDate: captureDate,
         currentTime: captureTime,
+        currentLocation: captureLocation,
         logoBytes: _logoBytes,
       );
 
@@ -643,21 +722,21 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
               ),
 
             /// ================================
-            /// DATE + TIME OVERLAY ON CAMERA (BOTTOM)
+            /// DATE + TIME + LOCATION OVERLAY ON CAMERA (BOTTOM)
             /// ================================
             Positioned(
               bottom: H * 0.15 + 40.h,
-              left: 20.w,
               right: 20.w,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
                     _currentTime,
                     style: GoogleFonts.inter(
-                      fontSize: 18.sp,
+                      fontSize: 16.sp,
                       color: Colors.white,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       shadows: [
                         Shadow(
                           color: Colors.black.withOpacity(0.5),
@@ -687,12 +766,13 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                       ],
                     ),
                   ),
+                  SizedBox(height: 2.h),
                   Text(
                     _currentDate,
                     style: GoogleFonts.inter(
-                      fontSize: 18.sp,
+                      fontSize: 16.sp,
                       color: Colors.white,
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w600,
                       shadows: [
                         Shadow(
                           color: Colors.black.withOpacity(0.5),
@@ -722,6 +802,45 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                       ],
                     ),
                   ),
+                  if (_currentLocation.isNotEmpty) ...[
+                    SizedBox(height: 4.h),
+                    Text(
+                      _currentLocation,
+                      style: GoogleFonts.inter(
+                        fontSize: 14.sp,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                        shadows: [
+                          Shadow(
+                            color: Colors.black.withOpacity(0.5),
+                            offset: const Offset(-1, -1),
+                            blurRadius: 2,
+                          ),
+                          Shadow(
+                            color: Colors.black.withOpacity(0.5),
+                            offset: const Offset(1, -1),
+                            blurRadius: 2,
+                          ),
+                          Shadow(
+                            color: Colors.black.withOpacity(0.5),
+                            offset: const Offset(1, 1),
+                            blurRadius: 2,
+                          ),
+                          Shadow(
+                            color: Colors.black.withOpacity(0.5),
+                            offset: const Offset(-1, 1),
+                            blurRadius: 2,
+                          ),
+                          Shadow(
+                            color: Colors.black.withOpacity(0.3),
+                            offset: const Offset(0, 0),
+                            blurRadius: 4,
+                          ),
+                        ],
+                      ),
+                      textAlign: TextAlign.right,
+                    ),
+                  ],
                 ],
               ),
             ),
