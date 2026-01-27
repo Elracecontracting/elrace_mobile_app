@@ -64,6 +64,12 @@ class FirebaseChatAuthService {
     try {
       // Step 1: Sign in to Firebase with custom token
       print('🔐 FirebaseChatAuth: Signing in with custom token...');
+      
+      // Debug: Log token info (first/last chars only for security)
+      final token = session.firebaseCustomToken!;
+      print('🔐 FirebaseChatAuth: Token length: ${token.length}');
+      print('🔐 FirebaseChatAuth: Token preview: ${token.substring(0, 20)}...${token.substring(token.length - 20)}');
+      
       final userCredential = await _auth.signInWithCustomToken(
         session.firebaseCustomToken!,
       );
@@ -93,6 +99,7 @@ class FirebaseChatAuthService {
         branchId: session.branchId,
         companyId: session.companyId,
         roleChatId: session.roleChatId,
+        title: session.roleName, // Use role name as chat title
       );
 
       // Step 4: Subscribe to FCM topic for role group

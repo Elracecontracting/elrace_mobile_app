@@ -51,11 +51,12 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyA1tiFBhPGNE78axJ9VGj29Ec8NlZsHJ2g',
-    appId: '1:822197568314:android:8319823f2c8a2012464603',
-    messagingSenderId: '822197568314',
-    projectId: 'elrace-578e7',
-    storageBucket: 'elrace-578e7.firebasestorage.app',
+    apiKey: 'AIzaSyCYyh1LsubgOP-iUdR6aPtZkWrMjMZjqVc',
+    appId: '1:392748487890:android:c475c90ac7c1dcf00f490b',
+    messagingSenderId: '392748487890',
+    projectId: 'elrace-new',
+    storageBucket: 'elrace-new.firebasestorage.app',
+    databaseURL: 'https://elrace-new-default-rtdb.firebaseio.com/',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(

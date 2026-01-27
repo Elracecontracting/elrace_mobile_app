@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../chat/chat.dart';
+import '../../resources/app_colors.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/chat_input_bar.dart';
 import 'widgets/typing_indicator.dart';
@@ -37,8 +38,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   final ImagePicker _imagePicker = ImagePicker();
   
   String? _currentUid;
-  bool _isLoading = false;
   bool _isRecording = false;
+  bool _isMuted = false;
   Timer? _typingTimer;
   
   @override
@@ -47,7 +48,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _currentUid = FirebaseAuth.instance.currentUser?.uid;
     _markAsRead();
+    _loadMuteStatus();
     _messageController.addListener(_onTextChanged);
+  }
+
+  Future<void> _loadMuteStatus() async {
+    final userChat = await ChatRepository.instance.getUserChat(widget.chatId);
+    if (mounted && userChat != null) {
+      setState(() => _isMuted = userChat.muted);
+    }
   }
 
   @override
@@ -86,6 +95,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor   : AppColors.white,
       appBar: _buildAppBar(),
       body: Column(
         children: [
@@ -93,7 +103,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           _buildTypingIndicator(),
           ChatInputBar(
             controller: _messageController,
-            isLoading: _isLoading,
+            isLoading: false, // Always false - optimistic UI
             isRecording: _isRecording,
             onSendText: _sendTextMessage,
             onPickImage: _pickImage,
@@ -109,6 +119,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
+      backgroundColor: AppColors.white,
+      elevation: 0.9,
+      scrolledUnderElevation: 0.6,
+      shadowColor: Colors.black.withValues(alpha: 0.06),
+      surfaceTintColor: Colors.transparent,
       titleSpacing: 0,
       title: Row(
         children: [
@@ -132,14 +147,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       actions: [
         PopupMenuButton<String>(
           onSelected: _onMenuAction,
+          color: Colors.white,
           itemBuilder: (context) => [
-            const PopupMenuItem(
+            PopupMenuItem(
               value: 'mute',
               child: Row(
                 children: [
-                  Icon(Icons.volume_off),
-                  SizedBox(width: 8),
-                  Text('كتم'),
+                  Icon(_isMuted ? Icons.volume_up : Icons.volume_off),
+                  const SizedBox(width: 8),
+                  Text(_isMuted ? 'Unmute' : 'Mute'),
                 ],
               ),
             ),
@@ -149,7 +165,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 children: [
                   Icon(Icons.info_outline),
                   SizedBox(width: 8),
-                  Text('معلومات'),
+                  Text('Info'),
                 ],
               ),
             ),
@@ -163,11 +179,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (widget.chatType == ChatType.dm) {
       return CircleAvatar(
         radius: 20,
-        backgroundColor: Colors.blue[100],
+        backgroundColor: AppColors.primaryBlackLight,
         child: Text(
           _getInitials(widget.title),
-          style: TextStyle(
-            color: Colors.blue[700],
+          style: const TextStyle(
+            color: AppColors.primaryColor,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -175,8 +191,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
     return CircleAvatar(
       radius: 20,
-      backgroundColor: Colors.purple[100],
-      child: Icon(Icons.group, color: Colors.purple[700], size: 20),
+      backgroundColor: AppColors.primaryBlackLight,
+      child: const Icon(Icons.group, color: AppColors.primaryColor, size: 20),
     );
   }
 
@@ -188,7 +204,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         if (status == null) return const SizedBox.shrink();
 
         return Text(
-          status.online ? 'متصل' : status.lastSeenText,
+          status.online ? 'Online' : status.lastSeenText,
           style: TextStyle(
             fontSize: 12,
             color: status.online ? Colors.green : Colors.grey[400],
@@ -208,7 +224,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
         if (snapshot.hasError) {
           return Center(
-            child: Text('خطأ: ${snapshot.error}'),
+            child: Text('Error: ${snapshot.error}'),
           );
         }
 
@@ -222,12 +238,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 Icon(Icons.chat_bubble_outline, size: 60, color: Colors.grey[400]),
                 const SizedBox(height: 16),
                 Text(
-                  'لا توجد رسائل',
+                  'No messages yet',
                   style: TextStyle(color: Colors.grey[600]),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'ابدأ المحادثة الآن!',
+                  'Start the conversation!',
                   style: TextStyle(color: Colors.grey[500], fontSize: 14),
                 ),
               ],
@@ -279,11 +295,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     String text;
 
     if (date.year == now.year && date.month == now.month && date.day == now.day) {
-      text = 'اليوم';
+      text = 'Today';
     } else if (date.year == now.year && 
                date.month == now.month && 
                date.day == now.day - 1) {
-      text = 'أمس';
+      text = 'Yesterday';
     } else {
       text = '${date.day}/${date.month}/${date.year}';
     }
@@ -322,9 +338,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void _onMenuAction(String action) {
     switch (action) {
       case 'mute':
-        ChatRepository.instance.toggleMute(widget.chatId, true);
+        final newMuteState = !_isMuted;
+        ChatRepository.instance.toggleMute(widget.chatId, newMuteState);
+        setState(() => _isMuted = newMuteState);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('تم كتم المحادثة')),
+          SnackBar(content: Text(newMuteState ? 'Chat muted' : 'Chat unmuted')),
         );
         break;
       case 'info':
@@ -340,15 +358,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _messageController.clear();
     PresenceService.instance.setTyping(widget.chatId, false);
     
-    setState(() => _isLoading = true);
+    // Optimistic UI - scroll immediately, no loading
+    _scrollToBottom();
 
     try {
       await ChatRepository.instance.sendText(widget.chatId, text);
-      _scrollToBottom();
     } catch (e) {
-      _showError('فشل إرسال الرسالة');
-    } finally {
-      setState(() => _isLoading = false);
+      _showError('Failed to send message');
     }
   }
 
@@ -361,18 +377,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
       if (image == null) return;
 
-      setState(() => _isLoading = true);
+      // Optimistic UI - scroll immediately
+      _scrollToBottom();
 
       await ChatRepository.instance.sendImage(
         widget.chatId,
         File(image.path),
       );
-      
-      _scrollToBottom();
     } catch (e) {
-      _showError('فشل إرسال الصورة');
-    } finally {
-      setState(() => _isLoading = false);
+      _showError('Failed to send image');
     }
   }
 
@@ -383,26 +396,23 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
       final file = File(result.files.single.path!);
       
-      setState(() => _isLoading = true);
+      // Optimistic UI - scroll immediately
+      _scrollToBottom();
 
       await ChatRepository.instance.sendFile(
         widget.chatId,
         file,
         mimeType: result.files.single.extension,
       );
-      
-      _scrollToBottom();
     } catch (e) {
-      _showError('فشل إرسال الملف');
-    } finally {
-      setState(() => _isLoading = false);
+      _showError('Failed to send file');
     }
   }
 
   Future<void> _startRecording() async {
     final permission = await Permission.microphone.request();
     if (!permission.isGranted) {
-      _showError('يرجى السماح بإذن الميكروفون');
+      _showError('Please allow microphone permission');
       return;
     }
 
@@ -410,7 +420,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (started) {
       setState(() => _isRecording = true);
     } else {
-      _showError('فشل بدء التسجيل');
+      _showError('Failed to start recording');
     }
   }
 
@@ -420,17 +430,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final result = await VoiceRecorderService.instance.stopRecording();
     
     if (result == null) {
-      _showError('فشل حفظ التسجيل');
+      _showError('Failed to save recording');
       return;
     }
 
     if (result.isTooShort) {
-      _showError('التسجيل قصير جداً');
+      _showError('Recording too short');
       return;
     }
 
     if (result.file != null) {
-      setState(() => _isLoading = true);
+      // Optimistic UI - scroll immediately
+      _scrollToBottom();
       
       try {
         await ChatRepository.instance.sendVoice(
@@ -438,11 +449,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           result.file!,
           durationMs: result.durationMs,
         );
-        _scrollToBottom();
       } catch (e) {
-        _showError('فشل إرسال الرسالة الصوتية');
-      } finally {
-        setState(() => _isLoading = false);
+        _showError('Failed to send voice message');
       }
     }
   }

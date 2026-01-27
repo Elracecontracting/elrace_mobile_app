@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../chat/chat.dart';
+import '../../resources/app_colors.dart';
 import 'chat_screen.dart';
 import 'new_chat_screen.dart';
 
@@ -34,7 +35,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     if (!_isChatAvailable || _currentUid == null) {
       return Scaffold(
         appBar: AppBar(
-          title: const Text('المحادثات'),
+          title: const Text('Chats'),
           centerTitle: true,
         ),
         body: Center(
@@ -48,7 +49,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'الدردشة غير متاحة',
+                'Chat not available',
                 style: TextStyle(
                   fontSize: 18,
                   color: Colors.grey[600],
@@ -56,7 +57,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'يرجى تسجيل الدخول مرة أخرى',
+                'Please login again',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[500],
@@ -69,8 +70,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }
 
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('المحادثات'),
+        backgroundColor: AppColors.primaryBlackLight,
+        foregroundColor: AppColors.primaryColor,
+        elevation: 0,
+        title: const Text(
+          'Chats',
+          style: TextStyle(
+            color: AppColors.primaryColor,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         centerTitle: true,
         actions: [
           IconButton(
@@ -93,7 +104,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 children: [
                   Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
                   const SizedBox(height: 16),
-                  Text('حدث خطأ: ${snapshot.error}'),
+                  Text('Error: ${snapshot.error}'),
                 ],
               ),
             );
@@ -113,7 +124,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'لا توجد محادثات',
+                    'No chats yet',
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.grey[600],
@@ -121,7 +132,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'ابدأ محادثة جديدة',
+                    'Start a new conversation',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[500],
@@ -148,6 +159,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _startNewChat,
+        backgroundColor: AppColors.primaryBlackLight,
+        foregroundColor: AppColors.primaryColor,
         child: const Icon(Icons.message),
       ),
     );
@@ -159,7 +172,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       MaterialPageRoute(
         builder: (context) => ChatScreen(
           chatId: userChat.chatId,
-          title: userChat.title ?? 'محادثة',
+          title: userChat.title ?? 'Chat',
           chatType: userChat.type,
           peerUid: userChat.peerUid,
         ),
@@ -212,7 +225,7 @@ class _ChatListTile extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  userChat.title ?? 'محادثة',
+                  userChat.title ?? 'Chat',
                   style: const TextStyle(fontWeight: FontWeight.w600),
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -254,11 +267,11 @@ class _ChatListTile extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: Colors.blue[100],
+                backgroundColor: AppColors.primaryBlackLight,
                 child: Text(
                   _getInitials(userChat.title ?? '?'),
-                  style: TextStyle(
-                    color: Colors.blue[700],
+                  style: const TextStyle(
+                    color: AppColors.primaryColor,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -286,15 +299,15 @@ class _ChatListTile extends StatelessWidget {
     // Group chat avatar
     return CircleAvatar(
       radius: 24,
-      backgroundColor: Colors.purple[100],
-      child: Icon(Icons.group, color: Colors.purple[700]),
+      backgroundColor: AppColors.primaryBlackLight,
+      child: const Icon(Icons.group, color: AppColors.primaryColor),
     );
   }
 
   Widget _buildLastMessage(LastMessage? lastMessage) {
     if (lastMessage == null) {
       return Text(
-        'لا توجد رسائل',
+        'No messages',
         style: TextStyle(color: Colors.grey[500]),
       );
     }
@@ -304,16 +317,16 @@ class _ChatListTile extends StatelessWidget {
 
     switch (lastMessage.type) {
       case 'image':
-        text = '📷 صورة';
+        text = '📷 Photo';
         break;
       case 'file':
-        text = '📎 ملف';
+        text = '📎 File';
         break;
       case 'audio':
-        text = '🎵 رسالة صوتية';
+        text = '🎵 Voice message';
         break;
       case 'video':
-        text = '🎬 فيديو';
+        text = '🎬 Video';
         break;
       default:
         text = lastMessage.text;
@@ -338,10 +351,10 @@ class _ChatListTile extends StatelessWidget {
     final now = DateTime.now();
     final diff = now.difference(dateTime);
 
-    if (diff.inMinutes < 1) return 'الآن';
-    if (diff.inHours < 1) return '${diff.inMinutes}د';
-    if (diff.inDays < 1) return '${diff.inHours}س';
-    if (diff.inDays < 7) return '${diff.inDays}ي';
+    if (diff.inMinutes < 1) return 'now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m';
+    if (diff.inDays < 1) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}d';
 
     return '${dateTime.day}/${dateTime.month}';
   }

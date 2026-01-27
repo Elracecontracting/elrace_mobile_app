@@ -59,8 +59,12 @@ class ChatModuleHelper {
       print('🔷 ChatModuleHelper: Session created:');
       print('   - Firebase UID: ${session.firebaseUid}');
       print('   - Odoo User ID: ${session.odooUserId}');
+      print('   - Employee ID: ${session.employeeId}');
       print('   - Role ID: ${session.roleId}');
+      print('   - Branch ID: ${session.branchId}');
+      print('   - Company ID: ${session.companyId}');
       print('   - Chat Available: ${session.isChatAvailable}');
+      print('   - Has Firebase Token: ${session.firebaseCustomToken != null}');
       
       if (!session.isChatAvailable) {
         print('⚠️ ChatModuleHelper: Chat not available - no Firebase custom token');

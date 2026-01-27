@@ -2,7 +2,8 @@
   "project_info": {
     "project_number": "392748487890",
     "project_id": "elrace-new",
-    "storage_bucket": "elrace-new.firebasestorage.app"
+    "storage_bucket": "elrace-new.firebasestorage.app",
+    "firebase_url": "https://elrace-new-default-rtdb.firebaseio.com/"
   },
   "client": [
     {

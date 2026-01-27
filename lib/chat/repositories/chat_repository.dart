@@ -146,8 +146,8 @@ class ChatRepository {
       groupByBranch: groupByBranch,
     );
 
-    // Generate default title if not provided
-    final groupTitle = title ?? 'Role $roleId${groupByBranch && branchId != null ? ' - Branch $branchId' : ''}';
+    // Generate default title - use provided title (role name) or fallback to role ID
+    final groupTitle = title ?? 'مجموعة $roleId${groupByBranch && branchId != null ? ' - فرع $branchId' : ''}';
 
     try {
       final batch = _firestore.batch();
@@ -217,6 +217,21 @@ class ChatRepository {
       return Chat.fromFirestore(doc);
     } catch (e) {
       print('❌ ChatRepository: Error getting chat: $e');
+      return null;
+    }
+  }
+
+  /// Get user's chat entry (for checking mute status, etc.)
+  Future<UserChat?> getUserChat(String chatId) async {
+    final uid = _currentUid;
+    if (uid == null) return null;
+    
+    try {
+      final doc = await _userChatsCollection(uid).doc(chatId).get();
+      if (!doc.exists) return null;
+      return UserChat.fromFirestore(doc);
+    } catch (e) {
+      print('❌ ChatRepository: Error getting user chat: $e');
       return null;
     }
   }

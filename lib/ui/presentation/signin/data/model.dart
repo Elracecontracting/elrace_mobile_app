@@ -97,6 +97,15 @@ class Data {
   final Map<String, dynamic>? certificate;
   final DefaultWidgets? defaultWidgets;
   final int? default_operating_unit_id;
+  
+  // Firebase Chat fields
+  final int? odoo_user_id;
+  final int? employee_id;
+  final String? firebase_uid;
+  final String? firebase_custom_token;
+  
+  // Attendance Manager field
+  final bool? is_attendance_manager;
 
   Data({
     this.uid,
@@ -132,6 +141,13 @@ class Data {
     this.certificate,
     this.defaultWidgets,
     this.default_operating_unit_id,
+    // Firebase Chat fields
+    this.odoo_user_id,
+    this.employee_id,
+    this.firebase_uid,
+    this.firebase_custom_token,
+    // Attendance Manager field
+    this.is_attendance_manager,
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
@@ -211,6 +227,13 @@ class Data {
             ? null
             : DefaultWidgets.fromJson(json["default_widgets"]),
         default_operating_unit_id: json["default_operating_unit_id"],
+        // Firebase Chat fields
+        odoo_user_id: json["odoo_user_id"],
+        employee_id: json["employee_id"],
+        firebase_uid: json["firebase_uid"]?.toString(),
+        firebase_custom_token: json["firebase_custom_token"]?.toString(),
+        // Attendance Manager field
+        is_attendance_manager: json["is_attendance_manager"],
       );
 
   Map<String, dynamic> toJson() => {
@@ -254,6 +277,13 @@ class Data {
         "certificate": certificate,
         "default_widgets": defaultWidgets?.toJson(),
         "default_operating_unit_id": default_operating_unit_id,
+        // Firebase Chat fields
+        "odoo_user_id": odoo_user_id,
+        "employee_id": employee_id,
+        "firebase_uid": firebase_uid,
+        "firebase_custom_token": firebase_custom_token,
+        // Attendance Manager field
+        "is_attendance_manager": is_attendance_manager,
       };
 }
 

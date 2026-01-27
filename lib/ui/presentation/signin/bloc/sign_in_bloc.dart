@@ -79,6 +79,14 @@ class SignInBloc extends Bloc<SignInEvent, SignInState> {
         await userRepo.setDeviceInfo(deviceName);
 
         log('loginResponseModel ${response.data}');
+        
+        // 🔍 DEBUG: Print full login response for chat debugging
+        print('');
+        print('🔷🔷🔷 FULL LOGIN RESPONSE DEBUG 🔷🔷🔷');
+        print('========================================');
+        _printJsonPretty(json);
+        print('========================================');
+        print('');
 
         if (loginResponseModel.result?.success == true) {
           emit(InitialSignedInST(loginResponse: loginResponseModel));
@@ -145,6 +153,16 @@ class SignInBloc extends Bloc<SignInEvent, SignInState> {
     } catch (e) {
       // Log but don't fail - chat is optional
       print('❌ SignInBloc: Error initializing chat module: $e');
+    }
+  }
+  
+  /// Helper to print JSON in a readable format
+  void _printJsonPretty(Map<String, dynamic> json) {
+    const encoder = JsonEncoder.withIndent('  ');
+    final prettyString = encoder.convert(json);
+    // Split and print line by line to avoid truncation
+    for (final line in prettyString.split('\n')) {
+      print(line);
     }
   }
 }

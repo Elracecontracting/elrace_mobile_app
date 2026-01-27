@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../chat/chat.dart';
+import '../../resources/app_colors.dart';
 import 'chat_screen.dart';
 
 /// Screen for searching users and starting a new DM chat
@@ -95,13 +96,13 @@ class _NewChatScreenState extends State<NewChatScreen> {
         _searchResults = filteredResults;
         _isSearching = false;
         if (filteredResults.isEmpty) {
-          _errorMessage = 'لا توجد نتائج';
+          _errorMessage = 'No results found';
         }
       });
     } catch (e) {
       setState(() {
         _isSearching = false;
-        _errorMessage = 'حدث خطأ في البحث';
+        _errorMessage = 'Search error';
       });
     }
   }
@@ -110,7 +111,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('محادثة جديدة'),
+        title: const Text('New Chat'),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(
@@ -119,7 +120,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
               controller: _searchController,
               focusNode: _searchFocusNode,
               decoration: InputDecoration(
-                hintText: 'ابحث عن مستخدم...',
+                hintText: 'Search for a user...',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
@@ -198,7 +199,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
           Icon(Icons.person_search, size: 80, color: Colors.grey[400]),
           const SizedBox(height: 24),
           Text(
-            'ابحث عن مستخدم',
+            'Search for a user',
             style: TextStyle(
               fontSize: 18,
               color: Colors.grey[600],
@@ -207,7 +208,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'يمكنك البحث بالاسم أو البريد الإلكتروني',
+            'You can search by name or email',
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey[500],
@@ -222,7 +223,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
     if (_currentUid == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('يرجى تسجيل الدخول أولاً'),
+          content: Text('Please login first'),
           backgroundColor: Colors.red,
         ),
       );
@@ -241,7 +242,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
       final chatId = await ChatRepository.instance.createOrGetDmChat(
         otherUid: user.uid,
         otherName: user.name,
-        currentUserName: _currentUser?.name ?? 'مستخدم',
+        currentUserName: _currentUser?.name ?? 'User',
         otherRoleId: user.roleId,
         otherBranchId: user.branchId,
         otherCompanyId: user.companyId,
@@ -273,7 +274,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('فشل بدء المحادثة: $e'),
+            content: Text('Failed to start chat: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -299,15 +300,15 @@ class _UserListTile extends StatelessWidget {
         children: [
           CircleAvatar(
             radius: 24,
-            backgroundColor: Colors.blue[100],
+            backgroundColor: AppColors.primaryBlackLight,
             backgroundImage: user.avatarUrl != null 
                 ? NetworkImage(user.avatarUrl!) 
                 : null,
             child: user.avatarUrl == null
                 ? Text(
                     _getInitials(user.name),
-                    style: TextStyle(
-                      color: Colors.blue[700],
+                    style: const TextStyle(
+                      color: AppColors.primaryColor,
                       fontWeight: FontWeight.bold,
                     ),
                   )
@@ -354,7 +355,7 @@ class _UserListTile extends StatelessWidget {
               Icon(Icons.work_outline, size: 12, color: Colors.grey[500]),
               const SizedBox(width: 4),
               Text(
-                'الدور: ${user.roleId}',
+                'Role: ${user.roleId}',
                 style: TextStyle(fontSize: 12, color: Colors.grey[500]),
               ),
               if (user.branchId != null) ...[
@@ -362,7 +363,7 @@ class _UserListTile extends StatelessWidget {
                 Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[500]),
                 const SizedBox(width: 4),
                 Text(
-                  'الفرع: ${user.branchId}',
+                  'Branch: ${user.branchId}',
                   style: TextStyle(fontSize: 12, color: Colors.grey[500]),
                 ),
               ],
@@ -371,7 +372,7 @@ class _UserListTile extends StatelessWidget {
         ],
       ),
       isThreeLine: true,
-      trailing: Icon(Icons.message, color: Theme.of(context).primaryColor),
+      trailing: const Icon(Icons.message, color: AppColors.primaryColor),
     );
   }
 

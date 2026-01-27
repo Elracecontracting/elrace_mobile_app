@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../chat/chat.dart';
+import '../../../resources/app_colors.dart';
 
 /// Chat input bar with text field and attachment buttons
 class ChatInputBar extends StatefulWidget {
@@ -99,7 +100,7 @@ class _ChatInputBarState extends State<ChatInputBar>
         bottom: MediaQuery.of(context).padding.bottom + 8,
       ),
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
@@ -138,7 +139,7 @@ class _ChatInputBarState extends State<ChatInputBar>
               maxLines: null,
               textCapitalization: TextCapitalization.sentences,
               decoration: const InputDecoration(
-                hintText: 'اكتب رسالة...',
+                hintText: 'Type a message...',
                 contentPadding: EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 12,
@@ -174,7 +175,7 @@ class _ChatInputBarState extends State<ChatInputBar>
 
   Widget _buildSendButton() {
     return Material(
-      color: Theme.of(context).primaryColor,
+      color: AppColors.white,
       borderRadius: BorderRadius.circular(24),
       child: InkWell(
         onTap: widget.onSendText,
@@ -185,7 +186,7 @@ class _ChatInputBarState extends State<ChatInputBar>
           alignment: Alignment.center,
           child: const Icon(
             Icons.send,
-            color: Colors.white,
+            color: AppColors.primaryColor,
             size: 22,
           ),
         ),
@@ -198,15 +199,15 @@ class _ChatInputBarState extends State<ChatInputBar>
       onLongPressStart: (_) => widget.onStartRecording(),
       onLongPressEnd: (_) => widget.onStopRecording(),
       child: Material(
-        color: Colors.grey[200],
+        color: AppColors.white,
         borderRadius: BorderRadius.circular(24),
         child: Container(
           width: 44,
           height: 44,
           alignment: Alignment.center,
-          child: Icon(
+          child: const Icon(
             Icons.mic,
-            color: Colors.grey[700],
+            color: AppColors.primaryColor,
             size: 24,
           ),
         ),
@@ -221,7 +222,7 @@ class _ChatInputBarState extends State<ChatInputBar>
         TextButton.icon(
           onPressed: widget.onCancelRecording,
           icon: const Icon(Icons.delete, color: Colors.red),
-          label: const Text('إلغاء', style: TextStyle(color: Colors.red)),
+          label: const Text('Cancel', style: TextStyle(color: Colors.red)),
         ),
         
         const Spacer(),
@@ -257,7 +258,7 @@ class _ChatInputBarState extends State<ChatInputBar>
         
         // Stop and send button
         Material(
-          color: Theme.of(context).primaryColor,
+          color: AppColors.white,
           borderRadius: BorderRadius.circular(24),
           child: InkWell(
             onTap: widget.onStopRecording,
@@ -268,7 +269,7 @@ class _ChatInputBarState extends State<ChatInputBar>
               alignment: Alignment.center,
               child: const Icon(
                 Icons.stop,
-                color: Colors.white,
+                color: AppColors.primaryColor,
                 size: 24,
               ),
             ),
@@ -312,6 +313,7 @@ class _AttachmentButton extends StatelessWidget {
       },
       offset: const Offset(0, -120),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      color: Colors.white,
       itemBuilder: (context) => [
         PopupMenuItem(
           value: 'image',
@@ -319,7 +321,7 @@ class _AttachmentButton extends StatelessWidget {
             children: [
               Icon(Icons.image, color: Colors.green[600]),
               const SizedBox(width: 12),
-              const Text('صورة'),
+              const Text('Image'),
             ],
           ),
         ),
@@ -329,7 +331,7 @@ class _AttachmentButton extends StatelessWidget {
             children: [
               Icon(Icons.insert_drive_file, color: Colors.blue[600]),
               const SizedBox(width: 12),
-              const Text('ملف'),
+              const Text('File'),
             ],
           ),
         ),

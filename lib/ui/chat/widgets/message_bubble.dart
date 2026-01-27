@@ -5,6 +5,7 @@ import 'package:just_audio/just_audio.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../chat/chat.dart';
+import '../../../resources/app_colors.dart';
 
 /// Message bubble widget for displaying a single message
 class MessageBubble extends StatelessWidget {
@@ -41,9 +42,9 @@ class MessageBubble extends StatelessWidget {
 
   Widget _buildBubble(BuildContext context) {
     final bgColor = isMe 
-        ? Theme.of(context).primaryColor 
-        : Colors.grey[200];
-    final textColor = isMe ? Colors.white : Colors.black87;
+        ? AppColors.primaryBlackLight 
+        : AppColors.chatReceiverColor;
+    final textColor = isMe ? AppColors.primaryColor : Colors.black87;
 
     return Container(
       decoration: BoxDecoration(
@@ -115,21 +116,42 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildReadReceipt() {
-    // Simple check based on status
-    if (message.status == MessageStatus.read) {
-      // Message was read by others
-      return Icon(
-        Icons.done_all,
-        size: 14,
-        color: Colors.blue[400],
-      );
-    } else {
-      // Message only marked as sent
-      return Icon(
-        Icons.done,
-        size: 14,
-        color: Colors.grey[400],
-      );
+    switch (message.status) {
+      case MessageStatus.sending:
+        // Clock icon for pending message
+        return Icon(
+          Icons.access_time,
+          size: 14,
+          color: Colors.grey[400],
+        );
+      case MessageStatus.failed:
+        // Error icon for failed message
+        return Icon(
+          Icons.error_outline,
+          size: 14,
+          color: Colors.red[400],
+        );
+      case MessageStatus.sent:
+        // Single check for sent
+        return Icon(
+          Icons.done,
+          size: 14,
+          color: Colors.grey[400],
+        );
+      case MessageStatus.delivered:
+        // Double check gray for delivered
+        return Icon(
+          Icons.done_all,
+          size: 14,
+          color: Colors.grey[400],
+        );
+      case MessageStatus.read:
+        // Double check blue for read
+        return Icon(
+          Icons.done_all,
+          size: 14,
+          color: Colors.blue[400],
+        );
     }
   }
 
@@ -214,7 +236,7 @@ class _ImageContent extends StatelessWidget {
               child: Text(
                 message.text!,
                 style: TextStyle(
-                  color: isMe ? Colors.white : Colors.black87,
+                  color: isMe ? AppColors.primaryColor : Colors.black87,
                   fontSize: 14,
                 ),
               ),
@@ -310,7 +332,7 @@ class _AudioContentState extends State<_AudioContent> {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = widget.isMe ? Colors.white : Colors.black87;
+    final textColor = widget.isMe ? AppColors.primaryColor : Colors.black87;
 
     return Padding(
       padding: const EdgeInsets.all(10),
@@ -325,7 +347,7 @@ class _AudioContentState extends State<_AudioContent> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: widget.isMe 
-                    ? Colors.white.withValues(alpha: 0.2) 
+                    ? AppColors.primaryColor.withValues(alpha: 0.2) 
                     : Colors.grey[300],
               ),
               child: Icon(
@@ -350,11 +372,11 @@ class _AudioContentState extends State<_AudioContent> {
                       overlayShape: const RoundSliderOverlayShape(
                         overlayRadius: 12,
                       ),
-                      activeTrackColor: widget.isMe ? Colors.white : Colors.blue,
+                      activeTrackColor: widget.isMe ? AppColors.primaryColor : AppColors.primaryColor,
                       inactiveTrackColor: widget.isMe 
-                          ? Colors.white.withValues(alpha: 0.3) 
+                          ? AppColors.primaryColor.withValues(alpha: 0.3) 
                           : Colors.grey[400],
-                      thumbColor: widget.isMe ? Colors.white : Colors.blue,
+                      thumbColor: widget.isMe ? AppColors.primaryColor : AppColors.primaryColor,
                     ),
                     child: Slider(
                       value: _position.inMilliseconds.toDouble(),
@@ -475,7 +497,7 @@ class _VideoContent extends StatelessWidget {
               child: Text(
                 message.text!,
                 style: TextStyle(
-                  color: isMe ? Colors.white : Colors.black87,
+                  color: isMe ? AppColors.primaryColor : Colors.black87,
                   fontSize: 14,
                 ),
               ),
@@ -528,7 +550,7 @@ class _FileContent extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 color: isMe 
-                    ? Colors.white.withValues(alpha: 0.2) 
+                    ? AppColors.primaryColor.withValues(alpha: 0.2) 
                     : Colors.grey[300],
               ),
               child: Icon(

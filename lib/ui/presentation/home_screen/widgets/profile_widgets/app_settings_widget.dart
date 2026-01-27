@@ -1,3 +1,4 @@
+import 'package:el_race/chat/chat.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
@@ -258,6 +259,11 @@ class AppSettingsWidget extends StatelessWidget {
                     if (provider.isProfileVisible) {
                       provider.hideProfileBox();
                     }
+
+                    // Cleanup chat module (Firebase signout, FCM unsubscribe, etc.)
+                    print('🧹 Cleaning up chat module...');
+                    await ChatModuleHelper.instance.cleanup();
+                    print('✅ Chat module cleaned up');
 
                     // Clear user preferences
                     print('🧹 Clearing preferences...');
