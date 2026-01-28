@@ -81,8 +81,8 @@ class UserRepository {
     });
   }
 
-  /// Search users by prefix using array_contains on search_keywords.
-  /// Supports pagination with limit and startAfter document.
+  /// Search users by fetching all and filtering client-side.
+  /// No Firestore index required.
   Future<UserSearchResult> searchUsers({
     required String query,
     int limit = 20,
@@ -96,36 +96,37 @@ class UserRepository {
     final searchTerm = query.toLowerCase().trim();
     
     try {
-      Query<Map<String, dynamic>> queryBuilder = _usersCollection
-          .where('search_keywords', arrayContains: searchTerm)
-          .orderBy('name')
-          .limit(limit + 1); // Fetch one extra to check if there's more
-
+      // Fetch all users (no complex query, no index needed)
+      Query<Map<String, dynamic>> queryBuilder = _usersCollection;
+      
+      // If company filter, use simple where (single field, no index needed)
       if (companyId != null) {
-        queryBuilder = _usersCollection
-            .where('company_id', isEqualTo: companyId)
-            .where('search_keywords', arrayContains: searchTerm)
-            .orderBy('name')
-            .limit(limit + 1);
-      }
-
-      if (startAfter != null) {
-        queryBuilder = queryBuilder.startAfterDocument(startAfter);
+        queryBuilder = queryBuilder.where('company_id', isEqualTo: companyId);
       }
 
       final snapshot = await queryBuilder.get();
       
-      final hasMore = snapshot.docs.length > limit;
-      final docs = hasMore 
-          ? snapshot.docs.sublist(0, limit) 
-          : snapshot.docs;
-
-      final users = docs.map((doc) => ChatUser.fromFirestore(doc)).toList();
+      // Filter client-side by name or email
+      final allUsers = snapshot.docs
+          .map((doc) => ChatUser.fromFirestore(doc))
+          .where((user) {
+            final name = user.name.toLowerCase();
+            final email = (user.email ?? '').toLowerCase();
+            return name.contains(searchTerm) || email.contains(searchTerm);
+          })
+          .toList();
+      
+      // Sort by name
+      allUsers.sort((a, b) => a.name.compareTo(b.name));
+      
+      // Apply limit
+      final hasMore = allUsers.length > limit;
+      final users = hasMore ? allUsers.sublist(0, limit) : allUsers;
 
       return UserSearchResult(
         users: users,
         hasMore: hasMore,
-        lastDocument: docs.isNotEmpty ? docs.last : null,
+        lastDocument: null, // Not using pagination with this approach
       );
     } catch (e) {
       print('❌ UserRepository: Error searching users: $e');

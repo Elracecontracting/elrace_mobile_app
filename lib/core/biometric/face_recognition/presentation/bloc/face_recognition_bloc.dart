@@ -5,12 +5,21 @@ import '../../domain/usecases/register_face_usecase.dart';
 import '../../domain/usecases/verify_face_usecase.dart';
 import '../../domain/repositories/face_recognition_repository.dart';
 import '../../data/services/liveness_service.dart';
+import '../../data/services/dual_verification_service.dart';
+import '../../data/services/firebase_face_service.dart';
+import '../../config/face_recognition_config.dart';
 import 'face_recognition_event.dart';
 import 'face_recognition_state.dart';
 
 /// BLoC for Face Recognition feature
 ///
 /// Handles all business logic and state management for face recognition
+///
+/// SECURITY ENHANCED (v2.0):
+/// - Dual verification (Local + Firebase)
+/// - Device binding enforcement
+/// - Anti-fraud detection
+/// - Comprehensive audit logging
 ///
 /// Architecture:
 /// UI -> Event -> BLoC -> UseCase -> Repository -> Data Source
@@ -22,6 +31,10 @@ class FaceRecognitionBloc
   final VerifyFaceUseCase _verifyFaceUseCase;
   final FaceRecognitionRepository _repository;
   final LivenessService? _livenessService;
+  
+  // NEW: Enhanced security services
+  late final DualVerificationService _dualVerificationService;
+  late final FirebaseFaceService _firebaseFaceService;
 
   CameraController? _cameraController;
 
@@ -31,12 +44,18 @@ class FaceRecognitionBloc
     required VerifyFaceUseCase verifyFaceUseCase,
     required FaceRecognitionRepository repository,
     LivenessService? livenessService,
+    DualVerificationService? dualVerificationService,
+    FirebaseFaceService? firebaseFaceService,
   })  : _initializeUseCase = initializeUseCase,
         _registerFaceUseCase = registerFaceUseCase,
         _verifyFaceUseCase = verifyFaceUseCase,
         _repository = repository,
         _livenessService = livenessService,
         super(FaceRecognitionInitial()) {
+    // Initialize enhanced security services
+    _dualVerificationService = dualVerificationService ?? DualVerificationService();
+    _firebaseFaceService = firebaseFaceService ?? FirebaseFaceService();
+    
     // Register event handlers
     on<InitializeFaceRecognition>(_onInitialize);
     on<InitializeCamera>(_onInitializeCamera);
@@ -46,6 +65,7 @@ class FaceRecognitionBloc
     on<StartLivenessChallenge>(_onStartLivenessChallenge);
     on<DeleteStoredEmbeddings>(_onDeleteEmbeddings);
     on<ResetFaceRecognition>(_onReset);
+    on<CheckDeviceBindingEvent>(_onCheckDeviceBinding);
   }
 
   /// Initialize face recognition system (load models)
@@ -64,7 +84,9 @@ class FaceRecognitionBloc
           errorType: FaceRecognitionErrorType.modelNotLoaded,
         ));
       },
-      (_) {
+      (_) async {
+        // Also initialize dual verification service
+        await _dualVerificationService.initialize();
         emit(FaceRecognitionInitial());
       },
     );
@@ -247,6 +269,47 @@ class FaceRecognitionBloc
     Emitter<FaceRecognitionState> emit,
   ) async {
     emit(FaceRecognitionInitial());
+  }
+
+  /// Check device binding status (NEW - Security Enhancement)
+  Future<void> _onCheckDeviceBinding(
+    CheckDeviceBindingEvent event,
+    Emitter<FaceRecognitionState> emit,
+  ) async {
+    emit(FaceRecognitionLoading(message: 'Checking device binding...'));
+
+    final deviceStatus = await _firebaseFaceService.checkDeviceBinding(event.userId);
+
+    String message;
+    bool isSameDevice = false;
+
+    switch (deviceStatus.status) {
+      case DeviceStatus.notRegistered:
+        message = 'لا يوجد تسجيل وجه لهذا المستخدم';
+        break;
+      case DeviceStatus.noDeviceBinding:
+        message = 'الوجه مسجل بدون ربط بجهاز';
+        isSameDevice = true;
+        break;
+      case DeviceStatus.sameDevice:
+        message = 'الجهاز الحالي هو نفس جهاز التسجيل ✅';
+        isSameDevice = true;
+        break;
+      case DeviceStatus.differentDevice:
+        message = 'الوجه مسجل على جهاز آخر ⚠️';
+        isSameDevice = false;
+        break;
+      case DeviceStatus.error:
+        message = 'خطأ في التحقق من الجهاز';
+        break;
+    }
+
+    emit(DeviceBindingCheckResult(
+      isSameDevice: isSameDevice,
+      registeredDeviceId: deviceStatus.registeredDeviceId,
+      currentDeviceId: deviceStatus.currentDeviceId,
+      message: message,
+    ));
   }
 
   /// Map domain failures to UI error types

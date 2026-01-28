@@ -11,6 +11,9 @@ import '../../repository/location_reop.dart';
 import 'package:el_race/core/biometric/face_recognition/data/services/face_embedding_storage_service.dart';
 import 'package:el_race/core/biometric/face_recognition/data/services/face_detector_service.dart';
 import 'package:el_race/core/biometric/face_recognition/data/services/facenet_service.dart';
+import 'package:el_race/core/biometric/face_recognition/data/services/dual_verification_service.dart';
+import 'package:el_race/core/biometric/face_recognition/data/services/firebase_face_service.dart';
+import 'package:el_race/core/biometric/face_recognition/config/face_recognition_config.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 part 'check_in_event.dart';
 part 'check_in_state.dart';
@@ -23,10 +26,14 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
       FaceEmbeddingStorageService();
   late final FaceDetectorService _faceDetectorService;
   late final FaceNetService _faceNetService;
+  late final DualVerificationService _dualVerificationService;
+  late final FirebaseFaceService _firebaseFaceService;
 
   CheckInBloc() : super(CheckInInitial()) {
     _faceDetectorService = FaceDetectorService();
     _faceNetService = FaceNetService();
+    _dualVerificationService = DualVerificationService();
+    _firebaseFaceService = FirebaseFaceService();
 
     // Initialize services
     _initializeServices();
@@ -38,11 +45,16 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
   Future<void> _initializeServices() async {
     await _faceDetectorService.initialize();
     await _faceNetService.initialize();
+    await _dualVerificationService.initialize();
   }
 
   /// Verify face before allowing check-in
-  /// This performs actual face recognition verification with embedding comparison
-  /// Now includes anti-spoofing check using multiple images
+  /// ENHANCED: Now uses Dual Verification (Local + Firebase)
+  /// Security features:
+  /// - Device binding enforcement
+  /// - Dual source verification
+  /// - Anti-spoofing checks
+  /// - Comprehensive audit logging
   Future<void> verifyFaceForCheckIn(
       VerifyFaceForCheckInET event, Emitter<CheckInState> emit) async {
     try {
@@ -148,16 +160,67 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
         return;
       }
 
-      // Step 4: Extract embedding from captured image and compare with stored
-      try {
-        // Get stored embeddings
+      // ========== ENHANCED DUAL VERIFICATION ==========
+      // Step 5: Check device binding FIRST (security priority)
+      if (FaceRecognitionConfig.enableDeviceBinding) {
+        final deviceStatus = await _firebaseFaceService.checkDeviceBinding(userId);
+        
+        if (deviceStatus.status == DeviceStatus.differentDevice) {
+          print('⛔ SECURITY: Device mismatch detected!');
+          print('   Registered on: ${deviceStatus.registeredDeviceId}');
+          print('   Current device: ${deviceStatus.currentDeviceId}');
+          
+          emit(FaceVerificationFailedST(
+              'الوجه مسجل على جهاز آخر. يرجى التواصل مع الإدارة.\n'
+              'Face registered on different device. Contact admin.'));
+          return;
+        }
+      }
+
+      // Step 6: Perform DUAL verification (Local + Firebase)
+      if (FaceRecognitionConfig.enableDualVerification) {
+        print('\n🔐 ===== DUAL VERIFICATION MODE =====');
+        
+        final dualResult = await _dualVerificationService.verifyFace(
+          userId: userId,
+          imageFile: imageFile,
+          requireBothSources: FaceRecognitionConfig.requireBothVerificationSources,
+          enforceDeviceBinding: FaceRecognitionConfig.enableDeviceBinding,
+          securityLevel: SecurityLevel.standard,
+        );
+
+        if (!dualResult.isVerified) {
+          print('❌ Dual verification FAILED: ${dualResult.message}');
+          
+          // Handle specific error types
+          if (dualResult.errorType == DualVerificationError.deviceMismatch) {
+            emit(const FaceVerificationFailedST(
+                'الوجه مسجل على جهاز آخر. يرجى التواصل مع الإدارة.'));
+          } else if (dualResult.errorType == DualVerificationError.noFirebaseData) {
+            emit(const FaceVerificationFailedST(
+                'بيانات الوجه غير موجودة. يرجى إعادة التسجيل.'));
+          } else {
+            emit(FaceVerificationFailedST(dualResult.message));
+          }
+          return;
+        }
+
+        print('✅ Dual verification PASSED!');
+        print('   Local: ${dualResult.localResult?.isVerified ?? false}');
+        print('   Firebase: ${dualResult.firebaseResult?.isVerified ?? false}');
+        print('   Method: ${dualResult.verificationMethod}');
+        
+        emit(const FaceVerificationSuccessST());
+      } else {
+        // Fallback to local-only verification (less secure)
+        print('⚠️ Using LOCAL-ONLY verification (Dual verification disabled)');
+        
         final storedEmbeddings = await _storageService.getEmbeddings(userId);
         if (storedEmbeddings.isEmpty) {
           emit(const FaceNotEnrolledST());
           return;
         }
 
-        // Extract embedding from current image using FaceNet
         final currentEmbedding = await _faceNetService.getEmbeddingFromFile(
           imageFile,
           face.boundingBox,
@@ -169,7 +232,6 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
           return;
         }
 
-        // Compare embeddings
         double bestDistance = double.infinity;
         for (final stored in storedEmbeddings) {
           final distance = _faceNetService.euclideanDistance(
@@ -181,26 +243,15 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
           }
         }
 
-        // Verification threshold:
-        // < 0.5 = Very strict (may reject valid users)
-        // 0.5-0.6 = Strict but fair (recommended)
-        // 0.6-0.7 = Balanced
-        // > 0.7 = Too lenient (security risk)
-        const verificationThreshold =
-            0.65; // Balanced: secure but not frustrating
+        final threshold = FaceRecognitionConfig.euclideanDistanceThreshold;
 
-        if (bestDistance > verificationThreshold) {
+        if (bestDistance > threshold) {
           emit(const FaceVerificationFailedST(
               'Face verification failed. Please try again'));
           return;
         }
 
         emit(const FaceVerificationSuccessST());
-      } catch (embeddingError) {
-        // DO NOT allow fallback - this is a security risk
-        emit(const FaceVerificationFailedST(
-            'Face verification error. Please try again'));
-        return;
       }
     } catch (e) {
       emit(FaceVerificationFailedST('Verification error: $e'));

@@ -1,6 +1,12 @@
 /// Enhanced Face Recognition Configuration
 ///
 /// Centralized configuration for all face recognition parameters
+/// 
+/// SECURITY UPDATE (v2.0):
+/// - Device binding ENABLED by default
+/// - Dual verification (Local + Firebase) ENABLED
+/// - Stricter thresholds for anti-fraud
+/// - Comprehensive audit logging
 class FaceRecognitionConfig {
   // ==================== ENROLLMENT CONFIG ====================
 
@@ -28,18 +34,34 @@ class FaceRecognitionConfig {
   /// Timeout for verification challenge (seconds)
   static const int verificationTimeoutSeconds = 6;
 
+  // ==================== DUAL VERIFICATION CONFIG (NEW) ====================
+
+  /// Enable dual verification (Local + Firebase)
+  /// When enabled, face must match BOTH local and Firebase data
+  static const bool enableDualVerification = true;
+
+  /// Require both local and Firebase verification to pass
+  /// If false, either passing is sufficient (less secure)
+  static const bool requireBothVerificationSources = true;
+
+  /// Enable Firebase face verification
+  static const bool enableFirebaseVerification = true;
+
+  /// Firebase cosine similarity threshold (stricter)
+  static const double firebaseCosineSimilarityThreshold = 0.65;
+
   // ==================== MATCHING CONFIG ====================
 
   /// Use cosine similarity (true) or Euclidean distance (false)
   static const bool useCosineSimilarity = true;
 
   /// Cosine similarity threshold (0.0 - 1.0, higher = stricter)
-  /// Recommended: 0.55 - 0.65
-  static const double cosineSimilarityThreshold = 0.55;
+  /// INCREASED from 0.55 to 0.65 for better security
+  static const double cosineSimilarityThreshold = 0.65;
 
   /// Euclidean distance threshold (lower = stricter)
-  /// Recommended: 0.8 - 1.0
-  static const double euclideanDistanceThreshold = 0.8;
+  /// DECREASED from 0.8 to 0.60 for better security
+  static const double euclideanDistanceThreshold = 0.60;
 
   // ==================== QUALITY CONFIG ====================
 
@@ -94,11 +116,28 @@ class FaceRecognitionConfig {
   /// Cooldown duration after max retries (seconds)
   static const int cooldownDurationSeconds = 60;
 
-  /// Enable device binding (optional security)
-  static const bool enableDeviceBinding = false;
+  /// Enable device binding (REQUIRED for production security)
+  /// When enabled, face can only be verified from registered device
+  static const bool enableDeviceBinding = true;
+
+  /// Block registration from different device if already registered
+  /// Requires admin approval for device transfer
+  static const bool blockCrossDeviceRegistration = true;
 
   /// Enable root/jailbreak detection warning
   static const bool enableRootDetection = true;
+
+  /// Enable security audit logging to Firebase
+  static const bool enableSecurityAuditLog = true;
+
+  /// Require liveness check for every verification
+  static const bool alwaysRequireLiveness = true;
+
+  /// Anti-spoofing: minimum head movement variation required
+  static const double minHeadMovementVariation = 0.3;
+
+  /// Anti-replay: minimum time between verifications (seconds)
+  static const int minTimeBetweenVerifications = 3;
 
   // ==================== STORAGE CONFIG ====================
 
@@ -134,15 +173,21 @@ class FaceRecognitionConfig {
         'activeChallenge': enableActiveChallenge,
         'timeout': verificationTimeoutSeconds,
         'minFaceSize': verificationMinFaceSize,
+        'dualVerification': enableDualVerification,
+        'requireBothSources': requireBothVerificationSources,
       },
       'matching': {
         'method': useCosineSimilarity ? 'cosine' : 'euclidean',
         'threshold': matchingThreshold,
+        'firebaseThreshold': firebaseCosineSimilarityThreshold,
       },
       'security': {
         'maxRetries': maxRetryAttempts,
         'cooldown': cooldownDurationSeconds,
         'deviceBinding': enableDeviceBinding,
+        'blockCrossDevice': blockCrossDeviceRegistration,
+        'auditLogging': enableSecurityAuditLog,
+        'alwaysLiveness': alwaysRequireLiveness,
       },
       'performance': {
         'warmIsolate': useWarmIsolate,

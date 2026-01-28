@@ -62,6 +62,7 @@ dependencies:
   firebase_database: ^11.3.0
   record: ^5.2.0
   just_audio: ^0.9.40
+  rxdart: ^0.28.0
   fl_chart: ^1.1.0
   flutter:
     sdk: flutter

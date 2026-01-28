@@ -7,6 +7,7 @@ import '../models/models.dart';
 import '../repositories/chat_repository.dart';
 import '../repositories/user_repository.dart';
 import 'presence_service.dart';
+import 'chat_notification_service.dart';
 
 /// Main service for Firebase chat authentication and setup.
 /// 
@@ -115,6 +116,11 @@ class FirebaseChatAuthService {
       print('🔔 FirebaseChatAuth: Storing FCM token...');
       await UserRepository.instance.storeFcmToken(firebaseUid);
 
+      // Step 7: Initialize chat notifications
+      print('🔔 FirebaseChatAuth: Setting up chat notifications...');
+      await ChatNotificationService.instance.initialize();
+      await ChatNotificationService.instance.startListening();
+
       _isSetupComplete = true;
       print('✅ FirebaseChatAuth: Setup complete!');
 
@@ -160,6 +166,9 @@ class FirebaseChatAuthService {
           await UserRepository.instance.unsubscribeFromRoleTopic(topicName);
         }
       }
+
+      // Dispose notification service
+      await ChatNotificationService.instance.dispose();
 
       // Dispose presence service
       await PresenceService.instance.dispose();

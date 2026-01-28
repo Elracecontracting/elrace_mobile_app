@@ -411,6 +411,11 @@ class ChatRepository {
       throw Exception('Not authenticated');
     }
 
+    // Verify file exists before attempting upload
+    if (!await file.exists()) {
+      throw Exception('File does not exist: ${file.path}');
+    }
+
     final clientMsgId = _uuid.v4();
     final messageRef = _chatsCollection.doc(chatId).collection('messages').doc();
     
@@ -420,6 +425,10 @@ class ChatRepository {
 
     try {
       // 1. Upload file to Storage
+      print('📤 ChatRepository: Uploading to path: $storagePath');
+      print('📤 ChatRepository: Storage bucket: ${_storage.bucket}');
+      print('📤 ChatRepository: File exists: ${await file.exists()}, size: $fileSize');
+      
       final ref = _storage.ref(storagePath);
       final metadata = SettableMetadata(
         contentType: mimeType ?? _getMimeType(fileName),
@@ -427,11 +436,21 @@ class ChatRepository {
       
       final uploadTask = ref.putFile(file, metadata);
       
+      // Listen to upload progress for debugging
+      uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
+        final progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        print('📤 ChatRepository: Upload progress: ${progress.toStringAsFixed(1)}%');
+      }, onError: (e) {
+        print('❌ ChatRepository: Upload stream error: $e');
+      });
+      
       // Wait for upload
-      await uploadTask;
+      final snapshot = await uploadTask;
+      print('📤 ChatRepository: Upload complete, state: ${snapshot.state}');
       
       // Get download URL
       final mediaUrl = await ref.getDownloadURL();
+      print('📤 ChatRepository: Download URL obtained: ${mediaUrl.substring(0, 50)}...');
 
       // 2. Create message document
       final message = Message(
@@ -476,6 +495,14 @@ class ChatRepository {
       await batch.commit();
 
       return message;
+    } on FirebaseException catch (e) {
+      print('❌ ChatRepository: Firebase error sending media:');
+      print('   Code: ${e.code}');
+      print('   Message: ${e.message}');
+      print('   Plugin: ${e.plugin}');
+      print('   Storage bucket: ${_storage.bucket}');
+      print('   Path attempted: $storagePath');
+      rethrow;
     } catch (e) {
       print('❌ ChatRepository: Error sending media: $e');
       rethrow;

@@ -8,6 +8,7 @@ import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_event.dart';
 import 'package:el_race/ui/widgets/custom_toast.dart';
 import 'package:el_race/utils/custom_navigate.dart';
+import 'package:el_race/utils/di.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart' show BlocProvider;
 import 'package:flutter_translate/flutter_translate.dart';
@@ -16,14 +17,36 @@ import 'package:http/http.dart' as http;
 import 'package:el_race/utils/api_logger.dart';
 
 class Util {
-  static fetchHomeScreenData(cxt) {
-    BlocProvider.of<HomeBloc>(cxt, listen: false)
-        .add(const FetchLastMonthAttendanceSummary());
+  static fetchHomeScreenData(BuildContext cxt) {
+    try {
+      // Ensure DI is initialized before accessing blocs
+      if (!sl.isRegistered<HomeBloc>()) {
+        print('⚠️ HomeBloc not registered, initializing DI...');
+        initDI();
+      }
 
-    BlocProvider.of<RequestsBloc>(cxt, listen: false)
-        .add(const FetchRequestsCount());
+      BlocProvider.of<HomeBloc>(cxt, listen: false)
+          .add(const FetchLastMonthAttendanceSummary());
 
-    BlocProvider.of<ContactBloc>(cxt, listen: false).add(GetEmployeeLisET());
+      BlocProvider.of<RequestsBloc>(cxt, listen: false)
+          .add(const FetchRequestsCount());
+
+      BlocProvider.of<ContactBloc>(cxt, listen: false).add(GetEmployeeLisET());
+    } catch (e) {
+      print('❌ Error in fetchHomeScreenData: $e');
+      // Try to re-initialize DI and retry once
+      try {
+        initDI();
+        BlocProvider.of<HomeBloc>(cxt, listen: false)
+            .add(const FetchLastMonthAttendanceSummary());
+        BlocProvider.of<RequestsBloc>(cxt, listen: false)
+            .add(const FetchRequestsCount());
+        BlocProvider.of<ContactBloc>(cxt, listen: false).add(GetEmployeeLisET());
+      } catch (retryError) {
+        print('❌ Retry also failed: $retryError');
+        // Silent fail - the home screen will try to load data itself
+      }
+    }
   }
 
   static Future<void> saveAndChangeLocale(

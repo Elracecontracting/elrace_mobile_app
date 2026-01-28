@@ -2,13 +2,17 @@ import 'dart:async';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/foundation.dart';
+import 'package:rxdart/rxdart.dart';
+
+import '../repositories/user_repository.dart';
 
 /// Service for managing user presence and typing indicators
 /// using Firebase Realtime Database.
 ///
 /// Realtime Database structure:
 /// - presence/{uid}: { online: bool, lastChanged: serverTimestamp }
-/// - typing/{chatId}/{uid}: true/false
+/// - typing/{chatId}/{uid}: { typing: true, timestamp: serverTimestamp }
 class PresenceService {
   static PresenceService? _instance;
   static PresenceService get instance => _instance ??= PresenceService._();
@@ -176,6 +180,41 @@ class PresenceService {
           .where((e) => e.value == true && e.key != _currentUid)
           .map((e) => e.key as String)
           .toSet();
+    }).handleError((error) {
+      // Silently ignore permission errors - typing is not critical
+      debugPrint('Typing subscription error (ignored): $error');
+      return <String>{};
+    });
+  }
+
+  /// Subscribe to typing status with user names
+  /// Returns a stream of TypingInfo with user names
+  Stream<TypingInfo> subscribeToTypingWithNames(String chatId) {
+    return subscribeToTyping(chatId).switchMap((typingUids) async* {
+      if (typingUids.isEmpty) {
+        yield TypingInfo.empty();
+        return;
+      }
+
+      // Fetch user names for typing users
+      final names = <String>[];
+      for (final uid in typingUids) {
+        final user = await UserRepository.instance.getUser(uid);
+        if (user != null) {
+          // Get first name only for cleaner display
+          final firstName = user.name.split(' ').first;
+          names.add(firstName);
+        }
+      }
+
+      yield TypingInfo(
+        typingUids: typingUids.toList(),
+        typingNames: names,
+        isTyping: names.isNotEmpty,
+      );
+    }).handleError((error) {
+      debugPrint('Typing with names error (ignored): $error');
+      return TypingInfo.empty();
     });
   }
 
@@ -227,4 +266,42 @@ class PresenceStatus {
 
   @override
   String toString() => 'PresenceStatus(online: $online, lastChanged: $lastChanged)';
+}
+
+/// Typing information including user names
+class TypingInfo {
+  final List<String> typingUids;
+  final List<String> typingNames;
+  final bool isTyping;
+
+  TypingInfo({
+    required this.typingUids,
+    required this.typingNames,
+    required this.isTyping,
+  });
+
+  factory TypingInfo.empty() => TypingInfo(
+    typingUids: [],
+    typingNames: [],
+    isTyping: false,
+  );
+
+  /// Get formatted text for display in chat list
+  /// Returns "Ahmed is typing..." or "Ahmed and Mohamed are typing..."
+  String get displayText {
+    if (typingNames.isEmpty) return '';
+    
+    if (typingNames.length == 1) {
+      return '${typingNames[0]} is typing...';
+    }
+    
+    if (typingNames.length == 2) {
+      return '${typingNames[0]} and ${typingNames[1]} are typing...';
+    }
+    
+    return '${typingNames[0]} and ${typingNames.length - 1} others are typing...';
+  }
+
+  @override
+  String toString() => 'TypingInfo(uids: $typingUids, names: $typingNames, isTyping: $isTyping)';
 }

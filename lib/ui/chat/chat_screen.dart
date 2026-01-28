@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../chat/chat.dart';
+import '../../chat/services/chat_notification_service.dart';
 import '../../resources/app_colors.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/chat_input_bar.dart';
@@ -50,6 +51,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _markAsRead();
     _loadMuteStatus();
     _messageController.addListener(_onTextChanged);
+    
+    // Set this chat as active to suppress notifications
+    ChatNotificationService.instance.setActiveChatId(widget.chatId);
+    // Cancel any pending notifications for this chat
+    ChatNotificationService.instance.cancelNotificationsForChat(widget.chatId);
   }
 
   Future<void> _loadMuteStatus() async {
@@ -67,6 +73,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _scrollController.dispose();
     _typingTimer?.cancel();
     PresenceService.instance.setTyping(widget.chatId, false);
+    
+    // Clear active chat when leaving
+    ChatNotificationService.instance.setActiveChatId(null);
     super.dispose();
   }
 
@@ -218,14 +227,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     return StreamBuilder<List<Message>>(
       stream: ChatRepository.instance.subscribeToMessages(widget.chatId),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
+        // Don't show loading - show empty state immediately for better UX
+        // Errors are silently ignored - messages will appear when available
         if (snapshot.hasError) {
-          return Center(
-            child: Text('Error: ${snapshot.error}'),
-          );
+          // Log error but don't show to user
+          debugPrint('Chat messages error: ${snapshot.error}');
         }
 
         final messages = snapshot.data ?? [];
@@ -321,16 +327,24 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildTypingIndicator() {
-    return StreamBuilder<Set<String>>(
-      stream: PresenceService.instance.subscribeToTyping(widget.chatId),
+    return StreamBuilder<TypingInfo>(
+      stream: PresenceService.instance.subscribeToTypingWithNames(widget.chatId),
       builder: (context, snapshot) {
-        final typingUsers = snapshot.data ?? {};
+        // Silently handle errors - typing is not critical
+        if (snapshot.hasError) {
+          return const SizedBox.shrink();
+        }
         
-        if (typingUsers.isEmpty) {
+        final typingInfo = snapshot.data;
+        
+        if (typingInfo == null || !typingInfo.isTyping) {
           return const SizedBox.shrink();
         }
 
-        return const TypingIndicatorWidget();
+        return TypingIndicatorWidget(
+          typingUserNames: typingInfo.typingNames,
+          isGroupChat: widget.chatType != ChatType.dm,
+        );
       },
     );
   }
@@ -410,13 +424,19 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _startRecording() async {
+    print('🎙️ ChatScreen: _startRecording called');
+    
     final permission = await Permission.microphone.request();
+    print('🎙️ ChatScreen: Microphone permission: ${permission.isGranted}');
+    
     if (!permission.isGranted) {
       _showError('Please allow microphone permission');
       return;
     }
 
     final started = await VoiceRecorderService.instance.startRecording();
+    print('🎙️ ChatScreen: Recording started: $started');
+    
     if (started) {
       setState(() => _isRecording = true);
     } else {

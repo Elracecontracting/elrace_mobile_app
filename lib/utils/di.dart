@@ -21,33 +21,64 @@ import '../ui/presentation/call_screen/data/repository.dart';
 
 final sl = GetIt.instance;
 
+/// Flag to track if DI has been initialized
+bool _diInitialized = false;
+
+/// Helper to safely register a singleton only if not already registered
+void _registerSingletonIfNeeded<T extends Object>(T instance) {
+  if (!sl.isRegistered<T>()) {
+    sl.registerSingleton<T>(instance);
+  }
+}
+
+/// Helper to safely register a lazy singleton only if not already registered
+void _registerLazySingletonIfNeeded<T extends Object>(T Function() factory) {
+  if (!sl.isRegistered<T>()) {
+    sl.registerLazySingleton<T>(factory);
+  }
+}
+
 Future<void> initDI() async {
+  // Prevent double initialization
+  if (_diInitialized && sl.isRegistered<HomeBloc>()) {
+    print('ℹ️ DI already initialized, skipping...');
+    return;
+  }
+
   try {
+    print('🔧 Initializing Dependency Injection...');
+
     // Register Repositories
-    sl.registerSingleton<UserRepo>(UserRepo());
-    sl.registerSingleton<ContactRepo>(ContactRepo());
-    sl.registerSingleton<AttendanceRepo>(AttendanceRepo());
-    sl.registerSingleton<LoginResponseModel>(LoginResponseModel());
+    _registerSingletonIfNeeded<UserRepo>(UserRepo());
+    _registerSingletonIfNeeded<ContactRepo>(ContactRepo());
+    _registerSingletonIfNeeded<AttendanceRepo>(AttendanceRepo());
+    _registerSingletonIfNeeded<LoginResponseModel>(LoginResponseModel());
 
     // Temporarily comment out problematic dependencies for iOS simulator
     // sl.registerLazySingleton<ProjectRepository>(() => ProjectRepositoryImpl(sl()));
-    sl.registerLazySingleton<INotesRepository>(() => NotesRepository());
-    sl.registerLazySingleton<IMediaRepository>(() => MediaRepository());
+    _registerLazySingletonIfNeeded<INotesRepository>(() => NotesRepository());
+    _registerLazySingletonIfNeeded<IMediaRepository>(() => MediaRepository());
 
     // Data sources
     // sl.registerLazySingleton<ProjectRemoteDataSource>(() => ProjectRemoteDataSource());
 
     // Register Blocs
-    sl.registerSingleton<SignInBloc>(SignInBloc());
-    sl.registerSingleton<ContactBloc>(ContactBloc());
-    sl.registerSingleton<CheckInBloc>(CheckInBloc());
-    sl.registerSingleton<CheckOutBloc>(CheckOutBloc());
-    sl.registerSingleton<AttendanceBloc>(AttendanceBloc());
-    sl.registerSingleton<HomeBloc>(HomeBloc());
-    sl.registerSingleton<RequestsBloc>(RequestsBloc());
-    sl.registerSingleton<ApprovalBloc>(ApprovalBloc());
-    sl.registerSingleton<NotesBloc>(NotesBloc(notesRepository: sl()));
-    sl.registerSingleton<MediaBloc>(MediaBloc(mediaRepository: sl()));
+    _registerSingletonIfNeeded<SignInBloc>(SignInBloc());
+    _registerSingletonIfNeeded<ContactBloc>(ContactBloc());
+    _registerSingletonIfNeeded<CheckInBloc>(CheckInBloc());
+    _registerSingletonIfNeeded<CheckOutBloc>(CheckOutBloc());
+    _registerSingletonIfNeeded<AttendanceBloc>(AttendanceBloc());
+    _registerSingletonIfNeeded<HomeBloc>(HomeBloc());
+    _registerSingletonIfNeeded<RequestsBloc>(RequestsBloc());
+    _registerSingletonIfNeeded<ApprovalBloc>(ApprovalBloc());
+    
+    // These depend on repositories, so check if they exist
+    if (!sl.isRegistered<NotesBloc>()) {
+      sl.registerSingleton<NotesBloc>(NotesBloc(notesRepository: sl()));
+    }
+    if (!sl.isRegistered<MediaBloc>()) {
+      sl.registerSingleton<MediaBloc>(MediaBloc(mediaRepository: sl()));
+    }
 
     // Temporarily comment out problematic bloc for iOS simulator
     // sl.registerFactory(() => ProjectListBloc(
@@ -58,8 +89,11 @@ Future<void> initDI() async {
     /// register usecases
     // sl.registerLazySingleton(() => GetProjectsUseCase(repository: sl()));
     // sl.registerLazySingleton(() => GetProjectAttachmentsUseCase(repository: sl()));
+
+    _diInitialized = true;
+    print('✅ DI initialization complete');
   } catch (e) {
-    print('Error in DI setup: $e');
+    print('❌ Error in DI setup: $e');
     // Continue with basic setup
   }
 }

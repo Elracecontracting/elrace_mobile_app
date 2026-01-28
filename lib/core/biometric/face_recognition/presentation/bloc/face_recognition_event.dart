@@ -85,3 +85,37 @@ class DeleteStoredEmbeddings extends FaceRecognitionEvent {
 
 /// Reset to initial state
 class ResetFaceRecognition extends FaceRecognitionEvent {}
+
+/// Check device binding status (NEW - Security Enhancement)
+class CheckDeviceBindingEvent extends FaceRecognitionEvent {
+  final String userId;
+
+  CheckDeviceBindingEvent(this.userId);
+
+  @override
+  List<Object?> get props => [userId];
+}
+
+/// Request device transfer (NEW - Security Enhancement)
+class RequestDeviceTransferEvent extends FaceRecognitionEvent {
+  final String userId;
+  final String reason;
+
+  RequestDeviceTransferEvent({
+    required this.userId,
+    required this.reason,
+  });
+
+  @override
+  List<Object?> get props => [userId, reason];
+}
+
+/// Sync local data with Firebase (NEW - Security Enhancement)
+class SyncWithFirebaseEvent extends FaceRecognitionEvent {
+  final String userId;
+
+  SyncWithFirebaseEvent(this.userId);
+
+  @override
+  List<Object?> get props => [userId];
+}

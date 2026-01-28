@@ -5,6 +5,7 @@ import '../../chat/chat.dart';
 import '../../resources/app_colors.dart';
 import 'chat_screen.dart';
 import 'new_chat_screen.dart';
+import 'widgets/typing_indicator.dart';
 
 /// Main chat list screen showing all user's conversations
 class ChatListScreen extends StatefulWidget {
@@ -219,39 +220,52 @@ class _ChatListTile extends StatelessWidget {
         final chat = chatSnapshot.data;
         final lastMessage = chat?.lastMessage;
 
-        return ListTile(
-          leading: _buildAvatar(),
-          title: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  userChat.title ?? 'Chat',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              if (lastMessage != null)
-                Text(
-                  _formatTime(lastMessage.createdAt),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[500],
+        return StreamBuilder<TypingInfo>(
+          stream: PresenceService.instance.subscribeToTypingWithNames(userChat.chatId),
+          builder: (context, typingSnapshot) {
+            final typingInfo = typingSnapshot.data;
+            final isTyping = typingInfo?.isTyping ?? false;
+
+            return ListTile(
+              leading: _buildAvatar(),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      userChat.title ?? 'Chat',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-            ],
-          ),
-          subtitle: Row(
-            children: [
-              Expanded(
-                child: _buildLastMessage(lastMessage),
+                  if (lastMessage != null)
+                    Text(
+                      _formatTime(lastMessage.createdAt),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[500],
+                      ),
+                    ),
+                ],
               ),
-              if (userChat.muted)
-                Icon(Icons.volume_off, size: 16, color: Colors.grey[400]),
-              if (userChat.pinned)
-                Icon(Icons.push_pin, size: 16, color: Colors.grey[400]),
-            ],
-          ),
-          onTap: onTap,
+              subtitle: Row(
+                children: [
+                  Expanded(
+                    child: isTyping
+                        ? TypingTextWidget(
+                            typingUserNames: typingInfo!.typingNames,
+                            isGroupChat: userChat.type != ChatType.dm,
+                          )
+                        : _buildLastMessage(lastMessage),
+                  ),
+                  if (userChat.muted)
+                    Icon(Icons.volume_off, size: 16, color: Colors.grey[400]),
+                  if (userChat.pinned)
+                    Icon(Icons.push_pin, size: 16, color: Colors.grey[400]),
+                ],
+              ),
+              onTap: onTap,
+            );
+          },
         );
       },
     );

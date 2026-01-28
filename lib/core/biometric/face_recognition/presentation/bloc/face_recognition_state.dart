@@ -132,5 +132,76 @@ enum FaceRecognitionErrorType {
   cameraError,
   storageError,
   verificationFailed,
+  deviceMismatch,        // NEW: Device binding violation
+  noFirebaseData,        // NEW: No data in Firebase
+  crossDeviceBlocked,    // NEW: Registration blocked from different device
   unknown,
+}
+
+// ==================== NEW SECURITY STATES ====================
+
+/// Device binding check result (NEW - Security Enhancement)
+class DeviceBindingCheckResult extends FaceRecognitionState {
+  final bool isSameDevice;
+  final String? registeredDeviceId;
+  final String? currentDeviceId;
+  final String message;
+
+  DeviceBindingCheckResult({
+    required this.isSameDevice,
+    this.registeredDeviceId,
+    this.currentDeviceId,
+    required this.message,
+  });
+
+  @override
+  List<Object?> get props => [isSameDevice, registeredDeviceId, currentDeviceId, message];
+}
+
+/// Device transfer requested (NEW - Security Enhancement)
+class DeviceTransferRequestedState extends FaceRecognitionState {
+  final bool success;
+  final String message;
+
+  DeviceTransferRequestedState({
+    required this.success,
+    required this.message,
+  });
+
+  @override
+  List<Object?> get props => [success, message];
+}
+
+/// Sync status (NEW - Security Enhancement)
+class SyncWithFirebaseResult extends FaceRecognitionState {
+  final bool success;
+  final String message;
+
+  SyncWithFirebaseResult({
+    required this.success,
+    required this.message,
+  });
+
+  @override
+  List<Object?> get props => [success, message];
+}
+
+/// Registration status across both storage systems (NEW - Security Enhancement)
+class RegistrationStatusResult extends FaceRecognitionState {
+  final bool hasLocalData;
+  final bool hasFirebaseData;
+  final bool isComplete;
+  final bool isSameDevice;
+  final String message;
+
+  RegistrationStatusResult({
+    required this.hasLocalData,
+    required this.hasFirebaseData,
+    required this.isComplete,
+    required this.isSameDevice,
+    required this.message,
+  });
+
+  @override
+  List<Object?> get props => [hasLocalData, hasFirebaseData, isComplete, isSameDevice, message];
 }

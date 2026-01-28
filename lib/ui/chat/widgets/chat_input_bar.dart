@@ -196,6 +196,7 @@ class _ChatInputBarState extends State<ChatInputBar>
 
   Widget _buildMicButton() {
     return GestureDetector(
+      onTap: widget.onStartRecording, // Allow tap to start recording
       onLongPressStart: (_) => widget.onStartRecording(),
       onLongPressEnd: (_) => widget.onStopRecording(),
       child: Material(

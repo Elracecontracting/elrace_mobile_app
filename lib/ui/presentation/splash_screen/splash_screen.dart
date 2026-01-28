@@ -121,8 +121,14 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     try {
+      // Check authentication first
+      final isAuthenticated = SharedPref.isUserAuthenticated();
+
+      // Fetch home screen data (with error handling inside the function)
+      // This won't throw - errors are handled internally
       Util.fetchHomeScreenData(context);
-      if (SharedPref.isUserAuthenticated()) {
+
+      if (isAuthenticated) {
         // Check if face registration is in progress or pending
         final isRegistrationInProgress =
             SharedPref().getPreferenceBoolean('isFaceRegistrationInProgress');
@@ -155,9 +161,13 @@ class _SplashScreenState extends State<SplashScreen> {
       }
     } catch (e) {
       print('❌ Error navigating from splash: $e');
-      // Fallback to login screen on error
+      // Fallback based on authentication status, not to login screen blindly
       if (mounted) {
-        Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
+        if (SharedPref.isUserAuthenticated()) {
+          Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
+        } else {
+          Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
+        }
       }
     }
   }
