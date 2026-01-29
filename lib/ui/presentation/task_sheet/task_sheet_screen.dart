@@ -32,15 +32,37 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
   }
 
   Future<void> fetchTasks() async {
-    final userId = SharedPref.getLoginData().result?.data?.uid;
-    final token = SharedPref.getLoginData().result?.token;
-    print("UID: ${SharedPref.getLoginData().result?.data?.uid}");
-    print("Token: ${SharedPref.getLoginData().result?.token}");
+    final loginData = SharedPref.getLoginData();
+    
+    // Debug: Print ALL available user ID fields
+    print('\n🔍 ===== TIME SHEET DEBUG =====');
+    print('LoginData exists: ${loginData != null}');
+    print('Result exists: ${loginData.result != null}');
+    print('Data exists: ${loginData.result?.data != null}');
+    print('\n📋 All User ID Fields:');
+    print('  uid: ${loginData.result?.data?.uid}');
+    print('  emp_id: ${loginData.result?.data?.emp_id}');
+    print('  emp_profile_id: ${loginData.result?.data?.emp_profile_id}');
+    print('  odoo_user_id: ${loginData.result?.data?.odoo_user_id}');
+    print('  employee_id: ${loginData.result?.data?.employee_id}');
+    print('  partnerId: ${loginData.result?.data?.partnerId}');
+    print('\n🔑 Token: ${loginData.result?.token != null ? 'exists (${loginData.result?.token?.length} chars)' : 'null'}');
+    print('================================\n');
+    
+    // Try multiple user ID fields in order of preference
+    final userId = loginData.result?.data?.uid ?? 
+                   loginData.result?.data?.odoo_user_id ?? 
+                   loginData.result?.data?.employee_id;
+    final token = loginData.result?.token;
 
     if (userId == null || token == null) {
       setState(() {
         isLoading = false;
-        errorMessage = "User ID or token is missing.";
+        errorMessage = "User ID or token is missing.\n"
+                      "UID: ${loginData.result?.data?.uid}\n"
+                      "odoo_user_id: ${loginData.result?.data?.odoo_user_id}\n"
+                      "employee_id: ${loginData.result?.data?.employee_id}\n"
+                      "Token: ${token != null ? 'exists' : 'null'}";
       });
       return;
     }

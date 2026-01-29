@@ -105,29 +105,32 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   }
 
   Widget _buildCustomWidget(WidgetModel widget) {
+    final bloc = HomeBloc.get(context);
+    final isReorderMode = bloc.isReorderMode;
+
     switch (widget.id) {
       case 'time_sheet':
-        return _buildTimeSheetWidget();
+        return _buildTimeSheetWidget(isReorderMode: isReorderMode);
       case 'petty_cash':
-        return _buildPettyCashWidget();
+        return _buildPettyCashWidget(isReorderMode: isReorderMode);
       case 'lpo':
-        return _buildLPOWidget();
+        return _buildLPOWidget(isReorderMode: isReorderMode);
       case 'documents':
-        return _buildDocumentsWidget();
+        return _buildDocumentsWidget(isReorderMode: isReorderMode);
       case 'my_notes':
-        return _buildMyNotesWidget();
+        return _buildMyNotesWidget(isReorderMode: isReorderMode);
       case 'todo_list':
-        return _buildTodoListWidget();
+        return _buildTodoListWidget(isReorderMode: isReorderMode);
       case 'projects':
-        return _buildProjectsWidget();
+        return _buildProjectsWidget(isReorderMode: isReorderMode);
       case 'my_request':
-        return _buildMyRequestWidget();
+        return _buildMyRequestWidget(isReorderMode: isReorderMode);
       case 'media':
-        return _buildMediaWidget();
+        return _buildMediaWidget(isReorderMode: isReorderMode);
       case 'my_report':
-        return _buildMyReportWidget();
+        return _buildMyReportWidget(isReorderMode: isReorderMode);
       case 'attendance':
-        return _buildAttendanceWidget();
+        return _buildAttendanceWidget(isReorderMode: isReorderMode);
       case 'prayer':
         return const ParayerWidget();
       // QR widget removed from home screen - only available in sidebar
@@ -136,14 +139,14 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     }
   }
 
-  Widget _buildTimeSheetWidget() {
+  Widget _buildTimeSheetWidget({bool isReorderMode = false}) {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
     final timesheetCount =
         widgetData?['timesheet_widget']?['record_to_show']?.toString() ?? '0';
 
     return GrayCardComponent(
-      onClick: () => Util.pushPage(const TaskSheetPage(), context),
+      onClick: isReorderMode ? null : () => Util.pushPage(const TaskSheetPage(), context),
       cardTitle: 'Timesheet',
       upperCaseTitle: false,
       backgroundImagePath: 'assets/png/t-sheet.png',
@@ -196,7 +199,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     );
   }
 
-  Widget _buildPettyCashWidget() {
+  Widget _buildPettyCashWidget({bool isReorderMode = false}) {
     return Directionality(
       textDirection: TextDirection.ltr,
       child: ClipRRect(
@@ -204,7 +207,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         child: Stack(
           children: [
             GrayCardComponent(
-              onClick: () => Util.pushPage(const PettyCashScreen(), context),
+              onClick: isReorderMode ? null : () => Util.pushPage(const PettyCashScreen(), context),
               cardTitle: translate('home.petty_cash'),
               titleColor: Colors.white,
               backgroundImagePath:
@@ -235,7 +238,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     );
   }
 
-  Widget _buildLPOWidget() {
+  Widget _buildLPOWidget({bool isReorderMode = false}) {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
     final lpoTotal =
@@ -243,7 +246,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
             '0';
 
     return GrayCardComponent(
-      onClick: () => Util.pushPage(const LpoListScreen(), context),
+      onClick: isReorderMode ? null : () => Util.pushPage(const LpoListScreen(), context),
       cardTitle: translate('home.lpo'),
       titleColor: Colors.white,
       backgroundImagePath: 'assets/newapp/Lpo_background_widget.png',
@@ -294,7 +297,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     );
   }
 
-  Widget _buildDocumentsWidget() {
+  Widget _buildDocumentsWidget({bool isReorderMode = false}) {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
     final docsCount =
@@ -304,7 +307,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     return Stack(
       children: [
         GrayCardComponent(
-          onClick: () => Util.pushPage(const MyDocumentsScreen(), context),
+          onClick: isReorderMode ? null : () => Util.pushPage(const MyDocumentsScreen(), context),
           cardTitle: translate('home.documents'),
           titleColor: Colors.white,
           backgroundImagePath:
@@ -369,7 +372,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     );
   }
 
-  Widget _buildMyNotesWidget() {
+  Widget _buildMyNotesWidget({bool isReorderMode = false}) {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
     final notesData = widgetData?['my_notes_widget']?['record_to_show'];
@@ -382,7 +385,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         GrayCardComponent(
           cardTitle: translate('home.my_notes'),
           backgroundImagePath: 'assets/png/blue_card.png',
-          onClick: () => Navigator.push(
+          onClick: isReorderMode ? null : () => Navigator.push(
             context,
             SlideRightPageRoute(child: const MyNotesScreen()),
           ),
@@ -409,7 +412,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     );
   }
 
-  Widget _buildTodoListWidget() {
+  Widget _buildTodoListWidget({bool isReorderMode = false}) {
     return Consumer<TasksProvider>(
       builder: (context, tasksProvider, child) {
         if (tasksProvider.status == TasksStatus.initial) {
@@ -432,7 +435,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               titleColor: Colors.white,
               backgroundImagePath:
                   'assets/newapp/task_managment_widget_backdround.png',
-              onClick: () {
+              onClick: isReorderMode ? null : () {
                 if (hasError) {
                   // Show error message in a snackbar when tapped
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -497,7 +500,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     );
   }
 
-  Widget _buildProjectsWidget() {
+  Widget _buildProjectsWidget({bool isReorderMode = false}) {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
     final projectsData = widgetData?['my_projects_widget']?['record_to_show'];
@@ -512,7 +515,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           GrayCardComponent(
             cardTitle: translate('home.projects'),
             backgroundImagePath: 'assets/newapp/blue_widget_background.png',
-            onClick: () => Util.pushPage(const MyProject(), context),
+            onClick: isReorderMode ? null : () => Util.pushPage(const MyProject(), context),
             childWidget: Directionality(
               textDirection: TextDirection.ltr,
               child: DefaultTextStyle(
@@ -593,7 +596,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     );
   }
 
-  Widget _buildMyRequestWidget() {
+  Widget _buildMyRequestWidget({bool isReorderMode = false}) {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
     final requestData = widgetData?['my_request_widget']?['record_to_show'];
@@ -609,7 +612,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           GrayCardComponent(
             cardTitle: translate('home.my_request'),
             backgroundImagePath: 'assets/newapp/blue_widget_background.png',
-            onClick: () => Util.pushPage(const MyRequestsPage(), context),
+            onClick: isReorderMode ? null : () => Util.pushPage(const MyRequestsPage(), context),
             childWidget: Directionality(
               textDirection: TextDirection.ltr,
               child: DefaultTextStyle(
@@ -668,7 +671,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     );
   }
 
-  Widget _buildMediaWidget() {
+  Widget _buildMediaWidget({bool isReorderMode = false}) {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
     final mediaData = widgetData?['media_widget']?['record_to_show'];
@@ -681,7 +684,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           // Keep base component untouched; hide its title for this card only.
           cardTitle: '',
           backgroundImagePath: 'assets/newapp/media_widget_background.png',
-          onClick: () => Util.pushPage(const MediaListScreen(), context),
+          onClick: isReorderMode ? null : () => Util.pushPage(const MediaListScreen(), context),
           childWidget: Directionality(
             textDirection: TextDirection.ltr,
             child: DefaultTextStyle(
@@ -730,7 +733,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     );
   }
 
-  Widget _buildMyReportWidget() {
+  Widget _buildMyReportWidget({bool isReorderMode = false}) {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
     final reportsCount =
@@ -741,7 +744,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       cardTitle: translate('home.my_report'),
       titleColor: Colors.white,
       backgroundImagePath: 'assets/newapp/my_report_widget_background.png',
-      onClick: () => Util.pushPage(const ReportAppHomeScreen(), context),
+      onClick: isReorderMode ? null : () => Util.pushPage(const ReportAppHomeScreen(), context),
       topPadding: true,
       childWidget: Directionality(
         textDirection: TextDirection.ltr,
@@ -794,7 +797,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     );
   }
 
-  Widget _buildAttendanceWidget() {
+  Widget _buildAttendanceWidget({bool isReorderMode = false}) {
     return BlocBuilder<HomeBloc, HomeState>(
       builder: (cxt, state) {
         var bloc = HomeBloc.get(cxt);
@@ -810,7 +813,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               GrayCardComponent(
                 cardTitle: translate('home.attendance'),
                 backgroundImagePath: 'assets/newapp/blue_widget_background.png',
-                onClick: () => Util.pushPage(const AttendancePage(), context),
+                onClick: isReorderMode ? null : () => Util.pushPage(const AttendancePage(), context),
                 childWidget: const SizedBox.shrink(),
               ),
               const Positioned.fill(
@@ -921,100 +924,77 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: activeWidgets.length,
                     onReorder: _reorderWidgets,
-                    proxyDecorator: (child, index, animation) {
-                      // Custom decorator to remove white frame and improve visual feedback
-                      return AnimatedBuilder(
-                        animation: animation,
-                        builder: (context, child) {
-                          final double elevation = Tween<double>(
-                            begin: 0.0,
-                            end: 8.0,
-                          ).evaluate(animation);
-                          final double scale = Tween<double>(
-                            begin: 1.0,
-                            end: 1.05,
-                          ).evaluate(animation);
+                        proxyDecorator: (child, index, animation) {
+                          // Custom decorator to remove white frame and improve visual feedback
+                          return AnimatedBuilder(
+                            animation: animation,
+                            builder: (context, child) {
+                              final double elevation = Tween<double>(
+                                begin: 0.0,
+                                end: 8.0,
+                              ).evaluate(animation);
+                              final double scale = Tween<double>(
+                                begin: 1.0,
+                                end: 1.05,
+                              ).evaluate(animation);
 
-                          return Transform.scale(
-                            scale: scale,
-                            child: Material(
-                              elevation: elevation + 6,
-                              color: Colors.transparent,
-                              shadowColor: Colors.black.withOpacity(0.35),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: child,
-                              ),
+                              return Transform.scale(
+                                scale: scale,
+                                child: Material(
+                                  elevation: elevation + 6,
+                                  color: Colors.transparent,
+                                  shadowColor: Colors.black.withOpacity(0.35),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: child,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: child,
+                          );
+                        },
+                        itemBuilder: (context, index) {
+                          final widget = activeWidgets[index];
+                          return TiltingCard(
+                            key: ValueKey(widget.id),
+                            child: Column(
+                              children: [
+                                _buildCustomWidget(widget),
+                                const SizedBox(height: 10),
+                              ],
                             ),
                           );
                         },
-                        child: child,
-                      );
-                    },
-                    itemBuilder: (context, index) {
-                      final widget = activeWidgets[index];
-                      return TiltingCard(
-                        key: ValueKey(widget.id),
-                        child: Column(
-                          children: [
-                            _buildCustomWidget(widget),
-                            const SizedBox(height: 10),
-                          ],
-                        ),
-                      );
-                    },
-                  )
-                else
-                  // عرض ListView العادي مع إمكانية Long Press
-                  ...activeWidgets.map((widget) {
-                    return InkWell(
-                      onLongPress: () {
-                        // Provide strong haptic feedback when entering reorder mode
-                        _vibrateEnterReorder();
-                        // تفعيل وضع إعادة الترتيب عند الضغط الطويل
-                        bloc.add(const ToggleReorderModeEvent());
-                      },
-                      splashColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                      focusColor: Colors.transparent,
-                      child: Column(
-                        children: [
-                          _buildCustomWidget(widget),
-                          const SizedBox(height: 10),
-                        ],
-                      ),
-                    );
-                  }),
+                      )
+                    else
+                      // عرض ListView العادي مع إمكانية Long Press
+                      ...activeWidgets.map((widget) {
+                        return InkWell(
+                          onLongPress: () {
+                            // Provide strong haptic feedback when entering reorder mode
+                            _vibrateEnterReorder();
+                            // تفعيل وضع إعادة الترتيب عند الضغط الطويل
+                            bloc.add(const ToggleReorderModeEvent());
+                          },
+                          splashColor: Colors.transparent,
+                          highlightColor: Colors.transparent,
+                          hoverColor: Colors.transparent,
+                          focusColor: Colors.transparent,
+                          child: Column(
+                            children: [
+                              _buildCustomWidget(widget),
+                              const SizedBox(height: 10),
+                            ],
+                          ),
+                        );
+                      }),
 
-                // زر إغلاق وضع إعادة الترتيب
-                if (bloc.isReorderMode)
-                  Padding(
-                    padding: EdgeInsets.symmetric(vertical: 10.h),
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        bloc.add(const ToggleReorderModeEvent());
-                      },
-                      icon: const Icon(Icons.check, color: Colors.white),
-                      label: Text(
-                        translate('common.close'),
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4CAF50),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 24.w,
-                          vertical: 12.h,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                      ),
-                    ),
-                  ),
+                // إضافة مساحة إضافية في الأسفل عندما يكون في وضع التعديل
+                if (bloc.isReorderMode) SizedBox(height: 100.h),
               ],
             ),
           ),

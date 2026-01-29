@@ -13,10 +13,12 @@ class VerifyFaceUseCase {
   Future<Either<FaceRecognitionFailure, FaceVerificationResult>> call({
     required CameraImage image,
     required String userId,
+    List<CameraImage>? allFrames, // 🆕 For multi-frame analysis
   }) async {
     return await repository.verifyFace(
       image: image,
       userId: userId,
+      allFrames: allFrames,
     );
   }
 }

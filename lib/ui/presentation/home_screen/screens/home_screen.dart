@@ -7,6 +7,7 @@ import 'package:el_race/core/biometric/face_recognition/presentation/screens/fac
 import 'package:el_race/core/biometric/face_recognition/data/services/facenet_service.dart';
 import 'package:el_race/core/biometric/face_recognition/data/services/face_detector_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/location_bloc/location_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/main_home_content_widget.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/main_screens.dart';
@@ -14,7 +15,9 @@ import 'package:el_race/ui/presentation/home_screen/widgets/timer_controller.dar
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:get/get.dart';
 import 'package:location/location.dart';
@@ -262,8 +265,8 @@ class _HomeScreenState extends State<HomeScreenPage>
   Widget build(BuildContext context) {
     // final screenWidth = MediaQuery.of(context).size.width;
     // final drawerWidth = screenWidth * 0.75; // 75% of screen width
-    return const Scaffold(
-      appBar: HeaderWidget(),
+    return Scaffold(
+      appBar: const HeaderWidget(),
       backgroundColor: lightGrey,
       extendBody:
           false, // Changed to false since bottomNavigationBar is commented out
@@ -274,9 +277,58 @@ class _HomeScreenState extends State<HomeScreenPage>
       body: Stack(
         children: [
           // Main Content
-          MainHomeContentWidget(),
+          const MainHomeContentWidget(),
           // Bottom Nav Arrow
           // ArraowVisibalityBottomNav(),
+          
+          // زر حفظ عائم (Floating Save Button)
+          BlocBuilder<HomeBloc, HomeState>(
+            buildWhen: (previous, current) => current is ReorderModeChanged,
+            builder: (context, state) {
+              final bloc = HomeBloc.get(context);
+              return bloc.isReorderMode
+                  ? Positioned(
+                      bottom: 90.h,
+                      right: 20.w,
+                      child: Material(
+                        elevation: 12,
+                        borderRadius: BorderRadius.circular(50),
+                        child: Container(
+                          width: 56.w,
+                          height: 56.w,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF4CAF50), Color(0xFF45A049)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF4CAF50).withOpacity(0.6),
+                                blurRadius: 24,
+                                offset: const Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              HapticFeedback.heavyImpact();
+                              bloc.add(const ToggleReorderModeEvent());
+                            },
+                            borderRadius: BorderRadius.circular(50),
+                            child: Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 32.sp,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink();
+            },
+          ),
         ],
       ),
     );

@@ -152,19 +152,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
             fontWeight: FontWeight.w700,
           ),
         ),
-        actions: [
-          IconButton(
-            tooltip: 'Search',
-            icon: const Icon(Icons.search),
-            onPressed: _openSearch,
-          ),
-          IconButton(
-            tooltip: 'New chat',
-            icon: const Icon(Icons.chat_bubble_outline),
-            onPressed: _startNewChat,
-          ),
-          const SizedBox(width: 4),
-        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(

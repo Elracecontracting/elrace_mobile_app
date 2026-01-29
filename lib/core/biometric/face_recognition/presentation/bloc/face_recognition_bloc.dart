@@ -191,59 +191,24 @@ class FaceRecognitionBloc
     StartMultiFrameVerification event,
     Emitter<FaceRecognitionState> emit,
   ) async {
-    emit(FaceRecognitionLoading(message: 'جاري فحص الرمش...'));
+    emit(FaceRecognitionLoading(message: 'Verifying face...'));
 
-    print('\n🔐 ===== MULTI-FRAME VERIFICATION WITH BLINK CHECK =====');
+    print('\n🔐 ===== FACE VERIFICATION (MULTI-FRAME ANTI-SPOOF) =====');
     print('📸 Total frames collected: ${event.frames.length}');
 
-    // Step 1: تحليل جميع الإطارات لاكتشاف الرمش
-    if (_livenessService == null) {
-      print('⚠️ Liveness service not available');
-      emit(FaceRecognitionError(
-        message: 'فشل فحص الحيوية - الخدمة غير متاحة',
-        errorType: FaceRecognitionErrorType.livenessCheckFailed,
-      ));
-      return;
-    }
-
     try {
-      final faces = <Face>[];
-      for (final frame in event.frames) {
-        final detectedFaces = await _repository.detectFaces(frame);
-        if (detectedFaces.isNotEmpty) {
-          faces.add(detectedFaces.first);
-        }
-      }
-
-      print('👁️ Analyzing ${faces.length} face frames for blink detection...');
-
-      // فحص الرمش السلبي
-      final livenessResult = await _livenessService.performPassiveAntiSpoofCheck(
-        faceSequence: faces,
-        minFrames: 5,
-      );
-
-      if (!livenessResult.passed) {
-        print('❌ Blink check FAILED: ${livenessResult.message}');
-        emit(FaceVerificationResult(
-          isVerified: false,
-          confidence: 0.0,
-          message: '🚫 لم يتم اكتشاف رمش العينين. الرجاء استخدام وجهك الحقيقي وليس صورة.',
-          hasLiveness: false,
-        ));
-        return;
-      }
-
-      print('✅ Blink detected! Proceeding with face verification...');
-
-      // Step 2: التحقق من الوجه باستخدام آخر إطار
+      // Use last frame for embedding, but pass all frames for anti-spoof analysis
+      print('🔍 Verifying face match with anti-spoof check...');
+      
       final result = await _verifyFaceUseCase(
         image: event.frames.last,
         userId: event.userId,
+        allFrames: event.frames, // 🆕 Pass all frames for variation analysis
       );
 
       result.fold(
         (failure) {
+          print('❌ Face verification failed: ${failure.message}');
           final errorType = _mapFailureToErrorType(failure);
           emit(FaceRecognitionError(
             message: failure.message,
@@ -251,20 +216,21 @@ class FaceRecognitionBloc
           ));
         },
         (verificationResult) {
+          print('✅ Face verification result: ${verificationResult.isVerified}, confidence: ${verificationResult.confidence}');
           emit(FaceVerificationResult(
             isVerified: verificationResult.isVerified,
             confidence: verificationResult.confidence,
             message: verificationResult.isVerified
-                ? '✅ تم التحقق من وجهك بنجاح!'
-                : 'فشل التحقق. حاول مرة أخرى.',
-            hasLiveness: true, // ✅ تم التحقق من الرمش
+                ? '✅ Face verified successfully!'
+                : 'Face not recognized. Please try again.',
+            hasLiveness: true,
           ));
         },
       );
     } catch (e) {
-      print('❌ Error in multi-frame verification: $e');
+      print('❌ Error in face verification: $e');
       emit(FaceRecognitionError(
-        message: 'حدث خطأ أثناء التحقق: $e',
+        message: 'Error during verification: $e',
         errorType: FaceRecognitionErrorType.unknown,
       ));
     }
@@ -375,8 +341,8 @@ class FaceRecognitionBloc
             isVerified: verificationResult.isVerified,
             confidence: verificationResult.confidence,
             message: verificationResult.isVerified
-                ? '✅ تم التحقق بنجاح! جميع التحديات مكتملة.'
-                : 'فشل التحقق من الوجه. حاول مرة أخرى.',
+                ? '✅ Verification successful! All challenges completed.'
+                : 'Face verification failed. Please try again.',
             hasLiveness: true,
           ));
         },
@@ -384,20 +350,20 @@ class FaceRecognitionBloc
     } catch (e) {
       print('❌ Error in active liveness: $e');
       emit(FaceRecognitionError(
-        message: 'حدث خطأ أثناء التحقق: $e',
+        message: 'Error during verification: $e',
         errorType: FaceRecognitionErrorType.unknown,
       ));
     }
   }
 
-  /// 🆕 التحقق من تحدي واحد
+  /// 🆕 Verify single challenge
   Future<void> _onVerifySingleChallenge(
     VerifySingleChallengeEvent event,
     Emitter<FaceRecognitionState> emit,
   ) async {
     if (_livenessService == null) {
       emit(FaceRecognitionError(
-        message: 'خدمة التحقق غير متاحة',
+        message: 'Verification service not available',
         errorType: FaceRecognitionErrorType.livenessCheckFailed,
       ));
       return;
@@ -470,13 +436,13 @@ class FaceRecognitionBloc
       }
     } catch (e) {
       emit(FaceRecognitionError(
-        message: 'حدث خطأ: $e',
+        message: 'Error occurred: $e',
         errorType: FaceRecognitionErrorType.unknown,
       ));
     }
   }
 
-  /// 🆕 طلب التحدي التالي
+  /// 🆕 Request next challenge
   Future<void> _onRequestNextChallenge(
     RequestNextChallengeEvent event,
     Emitter<FaceRecognitionState> emit,
@@ -537,7 +503,7 @@ class FaceRecognitionBloc
       return;
     }
 
-    emit(FaceRecognitionLoading(message: 'جاري التحقق من الحيوية...'));
+    emit(FaceRecognitionLoading(message: 'Verifying liveness...'));
 
     final result = await _livenessService.performActiveChallengeCheck(
       frameStream: event.frameStream,
@@ -547,7 +513,7 @@ class FaceRecognitionBloc
     if (result.passed) {
       emit(LivenessCheckComplete(
         passed: true,
-        message: '✅ تم التحقق من الحيوية بنجاح',
+        message: '✅ Liveness verified successfully',
       ));
     } else {
       // Emit current challenge if available for UI guidance
@@ -614,22 +580,22 @@ class FaceRecognitionBloc
 
     switch (deviceStatus.status) {
       case DeviceStatus.notRegistered:
-        message = 'لا يوجد تسجيل وجه لهذا المستخدم';
+        message = 'No face registration found for this user';
         break;
       case DeviceStatus.noDeviceBinding:
-        message = 'الوجه مسجل بدون ربط بجهاز';
+        message = 'Face registered without device binding';
         isSameDevice = true;
         break;
       case DeviceStatus.sameDevice:
-        message = 'الجهاز الحالي هو نفس جهاز التسجيل ✅';
+        message = 'Current device matches registration ✅';
         isSameDevice = true;
         break;
       case DeviceStatus.differentDevice:
-        message = 'الوجه مسجل على جهاز آخر ⚠️';
+        message = 'Face registered on a different device ⚠️';
         isSameDevice = false;
         break;
       case DeviceStatus.error:
-        message = 'خطأ في التحقق من الجهاز';
+        message = 'Device verification error';
         break;
     }
 

@@ -258,10 +258,13 @@ class _CheckInFaceVerificationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cameraSize = screenWidth * 0.65;
+
     return WillPopScope(
       onWillPop: () async => !_isProcessing || _verificationSuccess,
       child: Scaffold(
-        backgroundColor: AppColors.lightBlue,
+        backgroundColor: AppColors.white,
         body: MultiBlocListener(
           listeners: [
             // Listen to FaceRecognitionBloc for verification result
@@ -346,162 +349,202 @@ class _CheckInFaceVerificationScreenState
           child: SafeArea(
             child: Column(
               children: [
-                // Header
+                // Minimal Header - Same as Registration Screen
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
-                      IconButton(
-                        icon: Icon(Icons.arrow_back,
-                            color: AppColors.primaryColor),
-                        onPressed: _verificationSuccess || _isProcessing
+                      GestureDetector(
+                        onTap: _verificationSuccess || _isProcessing
                             ? null
                             : () => Navigator.of(context).pop(false),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              widget.isCheckIn
-                                  ? 'Verify Face to Check In'
-                                  : 'Verify Face to Check Out',
-                              style: TextStyle(
-                                color: AppColors.primaryColor,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'انظر للكاميرا وارمش بعينيك',
-                              style: TextStyle(
-                                color: AppColors.grey,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primaryColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(Icons.close,
+                              color: AppColors.primaryColor, size: 22),
                         ),
                       ),
+                      const Spacer(),
+                      const SizedBox(width: 38),
                     ],
                   ),
                 ),
 
-                // 🆕 تعليمات الرمش عند التحقق
-                if (_isProcessing && !_showTryAgainButton)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.visibility, color: AppColors.primaryColor, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            '👁️ ارمش بعينيك الآن',
-                            style: TextStyle(
-                              color: AppColors.primaryColor,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                const SizedBox(height: 20),
+
+                // Title Section - Clean & Centered
+                Text(
+                  widget.isCheckIn ? 'Verify for Check In' : 'Verify for Check Out',
+                  style: TextStyle(
+                    color: AppColors.primaryColor,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: -0.5,
                   ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Position your face in the circle',
+                  style: TextStyle(
+                    color: AppColors.grey,
+                    fontSize: 15,
+                  ),
+                ),
 
                 const Spacer(flex: 1),
 
-                // Camera Section with Modern UI
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 30),
-                  child: Center(
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Outer container for camera
-                        BlocBuilder<FaceRecognitionBloc, FaceRecognitionState>(
-                          builder: (context, state) {
-                            final size = MediaQuery.of(context).size.width - 60;
+                // Camera Preview - Same Style as Registration Screen
+                Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Pulsing outer rings when processing
+                      if (_isProcessing &&
+                          !_showTryAgainButton &&
+                          _pulseAnimation != null)
+                        AnimatedBuilder(
+                          animation: _pulseAnimation!,
+                          builder: (context, child) {
                             return Container(
-                              width: size,
-                              height: size,
+                              width: cameraSize + 40 + (30 * _pulseAnimation!.value),
+                              height: cameraSize + 40 + (30 * _pulseAnimation!.value),
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(size / 2),
+                                shape: BoxShape.circle,
                                 border: Border.all(
-                                  color:
-                                      AppColors.primaryColor.withOpacity(0.1),
-                                  width: 8,
+                                  color: AppColors.primaryColor.withOpacity(
+                                      0.4 * (1 - _pulseAnimation!.value)),
+                                  width: 3,
                                 ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: _isProcessing && !_showTryAgainButton
-                                        ? AppColors.primaryColor
-                                            .withOpacity(0.3)
-                                        : Colors.black.withOpacity(0.05),
-                                    blurRadius: 20,
-                                    spreadRadius: 5,
-                                  ),
-                                ],
-                              ),
-                              child: ClipOval(
-                                child: _buildCameraContent(state, size),
                               ),
                             );
                           },
                         ),
 
-                        // Animated scanning overlay
-                        if (_isProcessing && !_showTryAgainButton)
-                          BlocBuilder<FaceRecognitionBloc,
-                              FaceRecognitionState>(
-                            builder: (context, state) {
-                              final size =
-                                  MediaQuery.of(context).size.width - 60;
-                              return AnimatedBuilder(
-                                animation: _pulseAnimation!,
-                                builder: (context, child) {
-                                  return Container(
-                                    width: size,
-                                    height: size,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      gradient: RadialGradient(
-                                        colors: [
-                                          Colors.transparent,
-                                          AppColors.primaryColor.withOpacity(
-                                              0.05 * _pulseAnimation!.value),
-                                          AppColors.primaryColor.withOpacity(
-                                              0.1 * _pulseAnimation!.value),
-                                          AppColors.primaryColor.withOpacity(
-                                              0.05 * _pulseAnimation!.value),
-                                          Colors.transparent,
-                                        ],
-                                        stops: const [0.0, 0.2, 0.5, 0.8, 1.0],
-                                      ),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: AppColors.primaryColor
-                                              .withOpacity(0.5),
-                                          blurRadius: 10,
-                                          spreadRadius: 2,
-                                        ),
+                      // Second pulse ring (delayed)
+                      if (_isProcessing &&
+                          !_showTryAgainButton &&
+                          _pulseAnimation != null)
+                        AnimatedBuilder(
+                          animation: _pulseAnimation!,
+                          builder: (context, child) {
+                            final delayedValue = (_pulseAnimation!.value + 0.5) % 1.0;
+                            return Container(
+                              width: cameraSize + 40 + (30 * delayedValue),
+                              height: cameraSize + 40 + (30 * delayedValue),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.primaryColor
+                                      .withOpacity(0.3 * (1 - delayedValue)),
+                                  width: 2,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                      // Main camera container
+                      Container(
+                        width: cameraSize + 16,
+                        height: cameraSize + 16,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: _showTryAgainButton
+                                ? _faceCurrentlyVisible
+                                    ? [
+                                        AppColors.green.withOpacity(0.8),
+                                        AppColors.green.withOpacity(0.5)
+                                      ]
+                                    : [
+                                        AppColors.red.withOpacity(0.8),
+                                        AppColors.red.withOpacity(0.5)
+                                      ]
+                                : _isProcessing
+                                    ? [
+                                        AppColors.primaryColor,
+                                        AppColors.primaryColor.withOpacity(0.7)
+                                      ]
+                                    : [
+                                        AppColors.primaryColor.withOpacity(0.6),
+                                        AppColors.primaryColor.withOpacity(0.3)
                                       ],
-                                    ),
-                                  );
-                                },
-                              );
-                            },
                           ),
-                      ],
-                    ),
+                          boxShadow: _isProcessing && !_showTryAgainButton
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.primaryColor.withOpacity(0.3),
+                                    blurRadius: 20,
+                                    spreadRadius: 5,
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        padding: const EdgeInsets.all(3),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.white,
+                          ),
+                          padding: const EdgeInsets.all(5),
+                          child: ClipOval(
+                            child: Stack(
+                              children: [
+                                SizedBox(
+                                  width: cameraSize,
+                                  height: cameraSize,
+                                  child: _buildCameraContent(
+                                      context.read<FaceRecognitionBloc>().state,
+                                      cameraSize),
+                                ),
+                                // Scanning line effect
+                                if (_isProcessing &&
+                                    !_showTryAgainButton &&
+                                    _pulseAnimation != null)
+                                  AnimatedBuilder(
+                                    animation: _pulseAnimation!,
+                                    builder: (context, child) {
+                                      return Positioned(
+                                        top: _pulseAnimation!.value * cameraSize,
+                                        left: 0,
+                                        right: 0,
+                                        child: Container(
+                                          height: 3,
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                Colors.transparent,
+                                                AppColors.primaryColor.withOpacity(0.8),
+                                                AppColors.primaryColor,
+                                                AppColors.primaryColor.withOpacity(0.8),
+                                                Colors.transparent,
+                                              ],
+                                              stops: const [0.0, 0.2, 0.5, 0.8, 1.0],
+                                            ),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: AppColors.primaryColor.withOpacity(0.5),
+                                                blurRadius: 10,
+                                                spreadRadius: 2,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
@@ -509,7 +552,7 @@ class _CheckInFaceVerificationScreenState
 
                 const Spacer(flex: 1),
 
-                // Status Section
+                // Status Section - Minimal
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: Column(
@@ -539,8 +582,7 @@ class _CheckInFaceVerificationScreenState
                             ],
                           ),
                         ),
-                      ] else if (_showTryAgainButton &&
-                          !_faceCurrentlyVisible) ...[
+                      ] else if (_showTryAgainButton && !_faceCurrentlyVisible) ...[
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 10),
@@ -554,12 +596,15 @@ class _CheckInFaceVerificationScreenState
                               Icon(Icons.info_outline,
                                   color: Colors.orange.shade300, size: 18),
                               const SizedBox(width: 8),
-                              Text(
-                                'Face not detected or not matching',
-                                style: TextStyle(
-                                  color: Colors.orange.shade300,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
+                              Flexible(
+                                child: Text(
+                                  'Face not detected',
+                                  style: TextStyle(
+                                    color: Colors.orange.shade300,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ],
@@ -588,8 +633,7 @@ class _CheckInFaceVerificationScreenState
                             ),
                           ),
                         ),
-                      ] else if (_showTryAgainButton &&
-                          _faceCurrentlyVisible) ...[
+                      ] else if (_showTryAgainButton && _faceCurrentlyVisible) ...[
                         Text(
                           'Face detected! Retrying...',
                           style: TextStyle(
@@ -600,7 +644,7 @@ class _CheckInFaceVerificationScreenState
                         ),
                       ] else if (_isProcessing) ...[
                         Text(
-                          'Verifying your face...',
+                          'Scanning...',
                           style: TextStyle(
                             color: AppColors.primaryColor,
                             fontSize: 16,
@@ -609,7 +653,7 @@ class _CheckInFaceVerificationScreenState
                         ),
                       ] else ...[
                         Text(
-                          'Ready to verify',
+                          'Ready to scan',
                           style: TextStyle(
                             color: AppColors.grey,
                             fontSize: 15,
@@ -622,7 +666,7 @@ class _CheckInFaceVerificationScreenState
 
                 const SizedBox(height: 30),
 
-                // Minimal Tips
+                // Minimal Tips - Just Icons
                 if (!_showTryAgainButton && !_verificationSuccess)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 24),
@@ -633,8 +677,7 @@ class _CheckInFaceVerificationScreenState
                         const SizedBox(width: 24),
                         _buildMinimalTip(Icons.face_outlined, 'Face forward'),
                         const SizedBox(width: 24),
-                        _buildMinimalTip(
-                            Icons.visibility_outlined, 'Eyes open'),
+                        _buildMinimalTip(Icons.visibility_outlined, 'Eyes open'),
                       ],
                     ),
                   )
@@ -676,7 +719,7 @@ class _CheckInFaceVerificationScreenState
   Widget _buildCameraContent(FaceRecognitionState state, double size) {
     if (_permissionDenied) {
       return Container(
-        color: AppColors.lightBlue,
+        color: AppColors.white,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -697,7 +740,7 @@ class _CheckInFaceVerificationScreenState
 
     if (_cameraController == null || !_cameraController!.value.isInitialized) {
       return Container(
-        color: AppColors.lightBlue,
+        color: AppColors.white,
         child: Center(
           child: CircularProgressIndicator(
             color: AppColors.primaryColor,

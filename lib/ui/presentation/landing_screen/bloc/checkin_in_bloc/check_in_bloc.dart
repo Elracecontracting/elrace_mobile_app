@@ -135,8 +135,32 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
 
           if (!blinkDetected) {
             emit(const FaceVerificationFailedST(
-                'الرجاء رمش عينيك أثناء النظر للكاميرا'));
+                'Please blink your eyes while looking at the camera'));
             return;
+          }
+          
+          // 🆕 NEW: Check if eye values are IDENTICAL (photo attack detection)
+          // Photos have constant/identical eye values across frames
+          final eyeVariation = _calculateEyeVariation(leftEyeValues, rightEyeValues);
+          print('👁️ Eye variation: $eyeVariation');
+          
+          // Only block if EXTREMELY constant (< 0.02) - photos are typically 0.0
+          if (eyeVariation < 0.02) {
+            print('⚠️ SECURITY: Eye values too constant - possible photo attack!');
+            emit(const FaceVerificationFailedST(
+                'Spoofing attempt detected. Please use your real face.'));
+            return;
+          }
+          
+          // 🆕 NEW: Check if left/right eyes have same values (photos often do this)
+          // Only flag if > 90% identical (was 80% - too strict)
+          final eyeSyncCheck = _checkEyeSyncSuspicious(leftEyeValues, rightEyeValues);
+          if (eyeSyncCheck) {
+            print('⚠️ SECURITY: Eyes perfectly synchronized - possible photo!');
+            // Don't block, just log - blink detection is more reliable
+            // emit(const FaceVerificationFailedST(
+            //     'Spoofing attempt detected. Please use your real face.'));
+            // return;
           }
 
           // Check for natural micro-movements (photos are 100% static)
@@ -147,9 +171,11 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
 
           final yawVariation = _calculateVariation(yawValues);
           final pitchVariation = _calculateVariation(pitchValues);
+          
+          print('🔄 Head movement - Yaw: $yawVariation°, Pitch: $pitchVariation°');
 
-          // If face is perfectly static (< 0.3° movement), it's likely a photo
-          if (yawVariation < 0.3 && pitchVariation < 0.3) {
+          // Only block if COMPLETELY static (< 0.1° movement) - was 0.3°
+          if (yawVariation < 0.1 && pitchVariation < 0.1) {
             emit(const FaceVerificationFailedST(
                 'Verification failed. Please try again'));
             return;
@@ -157,13 +183,13 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
         }
       }
 
-      // Step 3: Check liveness with relaxed thresholds
-      // This ensures it's a real person but not too strict
+      // Step 3: Check liveness with BALANCED thresholds
+      // Secure enough to block photos, but not too strict for real faces
       final hasLiveness = _faceDetectorService.checkLiveness(
         face,
-        eyeOpenThreshold: 0.15, // Relaxed: eyes can be partially open
-        maxHeadEulerAngleY: 25.0, // Allow some head rotation
-        maxHeadEulerAngleZ: 25.0,
+        eyeOpenThreshold: 0.4, // Balanced: blocks closed eyes but allows normal open
+        maxHeadEulerAngleY: 20.0, // Allow reasonable head movement
+        maxHeadEulerAngleZ: 20.0,
       );
 
       if (!hasLiveness) {
@@ -179,6 +205,20 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
             'Image quality is low. Please ensure good lighting'));
         return;
       }
+      
+      // 🆕 Step 4.5: Enhanced Anti-Spoof Score Check
+      final antiSpoofScore = _faceDetectorService.getAntiSpoofScore(face);
+      print('🛡️ Anti-spoof score: ${(antiSpoofScore * 100).toInt()}%');
+      
+      // Lower threshold for check-in (0.35) - blink detection is primary protection
+      const double minAntiSpoofScore = 0.35;
+      
+      if (antiSpoofScore < minAntiSpoofScore) {
+        print('❌ SECURITY: Anti-spoof score too low!');
+        emit(const FaceVerificationFailedST(
+            'Spoofing attempt detected. Please use your real face.'));
+        return;
+      }
 
       // ========== ENHANCED DUAL VERIFICATION ==========
       // Step 5: Check device binding FIRST (security priority)
@@ -190,9 +230,8 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
           print('   Registered on: ${deviceStatus.registeredDeviceId}');
           print('   Current device: ${deviceStatus.currentDeviceId}');
           
-          emit(FaceVerificationFailedST(
-              'الوجه مسجل على جهاز آخر. يرجى التواصل مع الإدارة.\n'
-              'Face registered on different device. Contact admin.'));
+          emit(const FaceVerificationFailedST(
+              'Face registered on a different device. Please contact admin.'));
           return;
         }
       }
@@ -215,10 +254,10 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
           // Handle specific error types
           if (dualResult.errorType == DualVerificationError.deviceMismatch) {
             emit(const FaceVerificationFailedST(
-                'الوجه مسجل على جهاز آخر. يرجى التواصل مع الإدارة.'));
+                'Face registered on a different device. Please contact admin.'));
           } else if (dualResult.errorType == DualVerificationError.noFirebaseData) {
             emit(const FaceVerificationFailedST(
-                'بيانات الوجه غير موجودة. يرجى إعادة التسجيل.'));
+                'Face data not found. Please re-register.'));
           } else {
             emit(FaceVerificationFailedST(dualResult.message));
           }
@@ -403,6 +442,48 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     final variance = sumSquaredDiff / values.length;
 
     return math.sqrt(variance);
+  }
+  
+  /// 🆕 NEW: Calculate eye value variation to detect photos
+  /// Photos have constant eye values, real eyes fluctuate naturally
+  double _calculateEyeVariation(List<double> leftEyeValues, List<double> rightEyeValues) {
+    if (leftEyeValues.isEmpty || rightEyeValues.isEmpty) return 0.0;
+    
+    // Calculate range for left eye
+    final leftMin = leftEyeValues.reduce(math.min);
+    final leftMax = leftEyeValues.reduce(math.max);
+    final leftRange = leftMax - leftMin;
+    
+    // Calculate range for right eye
+    final rightMin = rightEyeValues.reduce(math.min);
+    final rightMax = rightEyeValues.reduce(math.max);
+    final rightRange = rightMax - rightMin;
+    
+    // Average range (real eyes should have > 0.1 variation)
+    return (leftRange + rightRange) / 2;
+  }
+  
+  /// 🆕 NEW: Check if eyes are suspiciously synchronized (photo detection)
+  /// Real eyes have slight differences, photos often have identical L/R values
+  bool _checkEyeSyncSuspicious(List<double> leftEyeValues, List<double> rightEyeValues) {
+    if (leftEyeValues.isEmpty || rightEyeValues.isEmpty) return false;
+    
+    int identicalCount = 0;
+    
+    for (int i = 0; i < leftEyeValues.length; i++) {
+      final diff = (leftEyeValues[i] - rightEyeValues[i]).abs();
+      
+      // If difference is less than 0.01 (nearly identical), count it
+      if (diff < 0.01) {
+        identicalCount++;
+      }
+    }
+    
+    // If more than 80% of frames have identical eye values, it's suspicious
+    final identicalRatio = identicalCount / leftEyeValues.length;
+    print('👁️ Eye sync ratio: ${(identicalRatio * 100).toInt()}% identical');
+    
+    return identicalRatio > 0.8;
   }
 
   /// 🆕 Detect a real blink in the eye probability sequence

@@ -168,16 +168,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 ],
               ),
             ),
-            const PopupMenuItem(
-              value: 'info',
-              child: Row(
-                children: [
-                  Icon(Icons.info_outline),
-                  SizedBox(width: 8),
-                  Text('Info'),
-                ],
-              ),
-            ),
           ],
         ),
       ],
@@ -358,9 +348,6 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(newMuteState ? 'Chat muted' : 'Chat unmuted')),
         );
-        break;
-      case 'info':
-        // TODO: Show chat info
         break;
     }
   }

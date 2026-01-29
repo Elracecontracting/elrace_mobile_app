@@ -250,49 +250,97 @@ class AppSettingsWidget extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () async {
-                  try {
-                    print('🚪 Logout button pressed');
+                  print('🚪 Logout button pressed');
+                  
+                  // Hide profile box first (before showing dialog)
+                  final provider =
+                      Provider.of<ProfileBoxProvider>(context, listen: false);
+                  if (provider.isProfileVisible) {
+                    provider.hideProfileBox();
+                  }
+                  
+                  // Wait a bit for the animation to complete
+                  await Future.delayed(const Duration(milliseconds: 300));
+                  
+                  // Use navKey.currentContext if available, otherwise fallback to context
+                  final dialogContext = navKey.currentContext ?? context;
+                  
+                  // Show confirmation dialog
+                  final shouldLogout = await showDialog<bool>(
+                    context: dialogContext,
+                    barrierDismissible: false,
+                    builder: (ctx) => AlertDialog(
+                      title: Text(
+                        translate('profile.logout_confirmation_title'),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      content: Text(translate('profile.logout_confirmation_message')),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: Text(
+                            translate('common.cancel'),
+                            style: const TextStyle(color: Colors.grey),
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xffBA1719),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: Text(
+                            translate('profile.logout'),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
 
-                    // Hide profile box first
-                    final provider =
-                        Provider.of<ProfileBoxProvider>(context, listen: false);
-                    if (provider.isProfileVisible) {
-                      provider.hideProfileBox();
+                  // If user confirmed, proceed with logout
+                  if (shouldLogout == true) {
+                    try {
+
+                      // Cleanup chat module (Firebase signout, FCM unsubscribe, etc.)
+                      print('🧹 Cleaning up chat module...');
+                      await ChatModuleHelper.instance.cleanup();
+                      print('✅ Chat module cleaned up');
+
+                      // Clear user preferences
+                      print('🧹 Clearing preferences...');
+                      await SharedPref().clearPreferences();
+                      // Update login state in Hive for background service
+                      await HiveService.setUserLoggedIn(false);
+                      print('✅ Preferences cleared');
+
+                      // Use global navigation key for navigation
+                      print('🧭 Navigating to sign in...');
+                      if (navKey.currentContext != null) {
+                        Navigator.pushAndRemoveUntil(
+                          navKey.currentContext!,
+                          MaterialPageRoute(
+                              builder: (context) => const SignInScreen()),
+                          (route) => false,
+                        );
+                      } else {
+                        // Fallback to local context
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const SignInScreen()),
+                          (route) => false,
+                        );
+                      }
+                      print('✅ Navigation completed');
+                    } catch (e) {
+                      print('❌ Logout error: $e');
                     }
-
-                    // Cleanup chat module (Firebase signout, FCM unsubscribe, etc.)
-                    print('🧹 Cleaning up chat module...');
-                    await ChatModuleHelper.instance.cleanup();
-                    print('✅ Chat module cleaned up');
-
-                    // Clear user preferences
-                    print('🧹 Clearing preferences...');
-                    await SharedPref().clearPreferences();
-                    // Update login state in Hive for background service
-                    await HiveService.setUserLoggedIn(false);
-                    print('✅ Preferences cleared');
-
-                    // Use global navigation key for navigation
-                    print('🧭 Navigating to sign in...');
-                    if (navKey.currentContext != null) {
-                      Navigator.pushAndRemoveUntil(
-                        navKey.currentContext!,
-                        MaterialPageRoute(
-                            builder: (context) => const SignInScreen()),
-                        (route) => false,
-                      );
-                    } else {
-                      // Fallback to local context
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const SignInScreen()),
-                        (route) => false,
-                      );
-                    }
-                    print('✅ Navigation completed');
-                  } catch (e) {
-                    print('❌ Logout error: $e');
                   }
                 },
                 child: Text(translate('profile.logout'),

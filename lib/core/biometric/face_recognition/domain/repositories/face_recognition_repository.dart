@@ -25,6 +25,7 @@ abstract class FaceRecognitionRepository {
   Future<Either<FaceRecognitionFailure, FaceVerificationResult>> verifyFace({
     required CameraImage image,
     required String userId,
+    List<CameraImage>? allFrames, // 🆕 For multi-frame anti-spoof analysis
   });
 
   /// Get all stored embeddings for a user

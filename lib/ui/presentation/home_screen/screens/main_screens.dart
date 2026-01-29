@@ -22,8 +22,6 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
-  DateTime? _lastBackPressTime;
-
   static const List<Widget> screens = [
     CallScreen(),
     HomeScreenPage(),
@@ -32,28 +30,45 @@ class _MainScreenState extends State<MainScreen> {
   ];
 
   Future<bool> _onWillPop() async {
-    final now = DateTime.now();
-    final backButtonHasNotBeenPressedOrSnackBarHasBeenClosed =
-        _lastBackPressTime == null ||
-            now.difference(_lastBackPressTime!) > const Duration(seconds: 2);
+    // Show confirmation dialog
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(
+          translate('common.exit_app_title'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: Text(translate('common.exit_app_message')),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(15),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(
+              translate('common.cancel'),
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text(
+              translate('common.exit'),
+              style: const TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
 
-    if (backButtonHasNotBeenPressedOrSnackBarHasBeenClosed) {
-      _lastBackPressTime = now;
-
-      // Show toast message
-      Fluttertoast.showToast(
-        msg: translate('common.press_back_again_to_exit'),
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-        backgroundColor: Colors.black87,
-        textColor: Colors.white,
-        fontSize: 16.0,
-      );
-
-      return false; // Don't exit
-    }
-
-    return true; // Exit the app
+    return shouldExit ?? false;
   }
 
   @override

@@ -350,10 +350,11 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
           // Trigger registration/verification with multiple frames for anti-spoofing
           if (mounted) {
             if (widget.isVerification) {
-              // 🆕 استخدام التحقق النشط مع التحديات المتعددة
-              print('🔍 Triggering ACTIVE LIVENESS verification...');
+              // 🆕 استخدام التحقق السلبي (رمش فقط) بدل التحديات المعقدة
+              // Passive liveness is more user-friendly for check-in/out
+              print('🔍 Triggering PASSIVE LIVENESS verification (blink only)...');
               context.read<FaceRecognitionBloc>().add(
-                    StartActiveLivenessVerification(
+                    StartMultiFrameVerification(
                       frames: capturedFrames,
                       userId: widget.userId,
                     ),
@@ -580,38 +581,12 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
                     ),
                   ),
                   
-                  // 🆕 واجهة التحديات النشطة
-                  if (widget.isVerification && _showChallengeUI) ...[
+                  // 🆕 واجهة التحديات النشطة (للتسجيل فقط)
+                  if (!widget.isVerification && _showChallengeUI) ...[
                     const SizedBox(height: 16),
                     _buildChallengeProgressIndicator(),
                     const SizedBox(height: 12),
                     _buildCurrentChallengeCard(),
-                  ]
-                  // 🆕 تعليمات بسيطة عند التحقق
-                  else if (widget.isVerification && _isProcessing) ...[
-                    const SizedBox(height: 12),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.visibility, color: AppColors.primaryColor, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            '👁️ انظر للكاميرا واتبع التعليمات',
-                            style: TextStyle(
-                              color: AppColors.primaryColor,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                   ],
 
                   const Spacer(flex: 1),

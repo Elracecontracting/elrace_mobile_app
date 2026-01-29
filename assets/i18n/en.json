@@ -74,6 +74,8 @@
     "mute_notifications": "Mute notifications",
     "dark_mode": "Dark Mode",
     "logout": "Logout",
+    "logout_confirmation_title": "Logout",
+    "logout_confirmation_message": "Are you sure you want to logout from the application?",
     "name_not_available": "Name not available",
     "job_id_not_available": "Job ID not available",
     "id_not_available": "ID not available",
@@ -104,7 +106,10 @@
     "save": "Save",
     "edit": "Edit",
     "undo": "Undo",
-    "press_back_again_to_exit": "Press back again to exit"
+    "press_back_again_to_exit": "Press back again to exit",
+    "exit_app_title": "Exit Application",
+    "exit_app_message": "Are you sure you want to exit the application?",
+    "exit": "Exit"
   },
   "notification": {
     "pending_approval": "Please be aware that this request will remain in pending status until it receives approval from all departments.",

@@ -66,18 +66,21 @@ class FaceDetectorService {
 
   /// Check if a face passes basic liveness checks
   ///
+  /// 🆕 ENHANCED v2.0 - Stricter Anti-Spoofing
+  /// 
   /// Liveness Detection Logic:
   /// 1. Check if eyes are open (leftEyeOpenProbability > threshold)
   /// 2. Optionally check for smile (smilingProbability)
-  /// 3. Check head pose angles (ensure face is frontal)
+  /// 3. Check head pose angles (ensure face is frontal but not TOO static)
+  /// 4. 🆕 Verify eye data is actually available (photos might return null/fixed values)
   ///
   /// Returns true if the face appears to be a live person
   bool checkLiveness(
     Face face, {
-    double eyeOpenThreshold = 0.5, // ⬆️ زيادة العتبة من 0.3 إلى 0.5 لمنع الصور
+    double eyeOpenThreshold = 0.55, // ⬆️ زيادة العتبة من 0.5 إلى 0.55 لمنع الصور
     double? smilingThreshold,
-    double maxHeadEulerAngleY = 15.0, // ⬇️ تقليل الزاوية المسموحة من 20 إلى 15
-    double maxHeadEulerAngleZ = 15.0, // ⬇️ تقليل الزاوية المسموحة من 20 إلى 15
+    double maxHeadEulerAngleY = 12.0, // ⬇️ تقليل الزاوية المسموحة من 15 إلى 12
+    double maxHeadEulerAngleZ = 12.0, // ⬇️ تقليل الزاوية المسموحة من 15 إلى 12
   }) {
     // Check if classification data is available
     if (face.leftEyeOpenProbability == null ||
@@ -87,11 +90,28 @@ class FaceDetectorService {
       return false; // ❌ رفض التحقق إذا لم تكن بيانات العينين متاحة
     }
 
-    // Check 1: Both eyes should be reasonably open
-    final leftEyeOpen = face.leftEyeOpenProbability! > eyeOpenThreshold;
-    final rightEyeOpen = face.rightEyeOpenProbability! > eyeOpenThreshold;
+    // 🆕 Enhanced Check: Verify eye values are in realistic range
+    // Photos often return constant values like 0.99 or exactly 1.0
+    final leftEye = face.leftEyeOpenProbability!;
+    final rightEye = face.rightEyeOpenProbability!;
+    
+    // Suspicious: both eyes at exactly same value (photos often do this)
+    if ((leftEye - rightEye).abs() < 0.001 && leftEye > 0.9) {
+      print('⚠️ SECURITY WARNING: Eyes have identical high values - suspicious!');
+      // Don't fail yet, but log as suspicious
+    }
+    
+    // Suspicious: perfect 1.0 values (unrealistic for real eyes)
+    if (leftEye >= 0.99 && rightEye >= 0.99) {
+      print('⚠️ SECURITY WARNING: Eyes show perfect 1.0 values - possible photo!');
+      // We'll rely on blink detection to catch this
+    }
 
-    print('👁️ Liveness Check - Left Eye: ${face.leftEyeOpenProbability!.toStringAsFixed(2)}, Right Eye: ${face.rightEyeOpenProbability!.toStringAsFixed(2)}');
+    // Check 1: Both eyes should be reasonably open
+    final leftEyeOpen = leftEye > eyeOpenThreshold;
+    final rightEyeOpen = rightEye > eyeOpenThreshold;
+
+    print('👁️ Liveness Check - Left Eye: ${leftEye.toStringAsFixed(3)}, Right Eye: ${rightEye.toStringAsFixed(3)}');
     print('👁️ Required threshold: $eyeOpenThreshold');
 
     if (!leftEyeOpen || !rightEyeOpen) {
@@ -123,6 +143,7 @@ class FaceDetectorService {
 
   /// Extract face quality metrics for better registration
   ///
+  /// 🆕 ENHANCED v2.0 - Better detection of photo attacks
   /// Returns a score from 0.0 to 1.0 indicating face quality
   /// Higher score = better quality for registration
   double getFaceQuality(Face face) {
@@ -133,6 +154,13 @@ class FaceDetectorService {
     final sizeScore = (faceArea / (640 * 480)).clamp(0.0, 1.0);
     qualityScore *= sizeScore;
 
+    // 🆕 ANTI-SPOOF: Reject if face is too large (screen-sized) - possible photo attack
+    // A face taking up more than 80% of frame might be a photo on a screen
+    if (sizeScore > 0.8) {
+      print('⚠️ ANTI-SPOOF: Face too large (${(sizeScore * 100).toInt()}%) - possible screen photo');
+      qualityScore *= 0.5; // Penalize significantly
+    }
+
     // Factor 2: Head pose (frontal is better)
     if (face.headEulerAngleY != null && face.headEulerAngleZ != null) {
       final yawScore =
@@ -140,6 +168,12 @@ class FaceDetectorService {
       final rollScore =
           1.0 - (face.headEulerAngleZ!.abs() / 90.0).clamp(0.0, 1.0);
       qualityScore *= (yawScore + rollScore) / 2;
+      
+      // 🆕 ANTI-SPOOF: Penalize perfectly centered poses (photos are often centered)
+      if (face.headEulerAngleY!.abs() < 0.5 && face.headEulerAngleZ!.abs() < 0.5) {
+        print('⚠️ ANTI-SPOOF: Head perfectly centered (yaw=${face.headEulerAngleY!.toStringAsFixed(2)}, roll=${face.headEulerAngleZ!.toStringAsFixed(2)})');
+        // Don't penalize quality, but log for anti-spoof tracking
+      }
     }
 
     // Factor 3: Eyes open (if available)
@@ -148,9 +182,76 @@ class FaceDetectorService {
       final eyeScore =
           (face.leftEyeOpenProbability! + face.rightEyeOpenProbability!) / 2;
       qualityScore *= eyeScore;
+      
+      // 🆕 ANTI-SPOOF: Penalize perfect eye values (unnatural for real people)
+      if (face.leftEyeOpenProbability! > 0.98 && face.rightEyeOpenProbability! > 0.98) {
+        print('⚠️ ANTI-SPOOF: Eyes too perfect (${face.leftEyeOpenProbability!.toStringAsFixed(3)}, ${face.rightEyeOpenProbability!.toStringAsFixed(3)})');
+        qualityScore *= 0.85; // Slight penalty for perfect values
+      }
     }
 
     return qualityScore.clamp(0.0, 1.0);
+  }
+  
+  /// 🆕 NEW: Enhanced anti-spoof scoring
+  /// 
+  /// Checks multiple indicators that suggest a photo/video attack:
+  /// - Eye values too perfect or identical
+  /// - Face size suggesting screen/photo
+  /// - Bounding box position suggesting photo layout
+  /// 
+  /// Returns score 0.0 (definitely fake) to 1.0 (likely real)
+  double getAntiSpoofScore(Face face) {
+    double score = 1.0;
+    
+    // Check 1: Eye probability analysis
+    if (face.leftEyeOpenProbability != null && face.rightEyeOpenProbability != null) {
+      final leftEye = face.leftEyeOpenProbability!;
+      final rightEye = face.rightEyeOpenProbability!;
+      
+      // Perfect eye values (>0.995) are suspicious - RELAXED
+      if (leftEye > 0.995 && rightEye > 0.995) {
+        score *= 0.85;
+        print('🔍 Anti-Spoof: Perfect eye values detected (-15%)');
+      }
+      
+      // BOTH identical AND perfect values are very suspicious - RELAXED
+      if ((leftEye - rightEye).abs() < 0.003 && leftEye > 0.98 && rightEye > 0.98) {
+        score *= 0.85;
+        print('🔍 Anti-Spoof: Identical perfect eye probabilities (-15%)');
+      }
+      
+      // Very low eye values with face still detected = closed eyes in photo
+      if (leftEye < 0.1 && rightEye < 0.1) {
+        score *= 0.4;
+        print('🔍 Anti-Spoof: Very low eye probabilities (-60%)');
+      }
+    }
+    
+    // Check 2: Head pose analysis
+    if (face.headEulerAngleY != null && face.headEulerAngleZ != null) {
+      // Perfectly centered face (< 0.3 degrees) is suspicious
+      if (face.headEulerAngleY!.abs() < 0.3 && face.headEulerAngleZ!.abs() < 0.3) {
+        score *= 0.85;
+        print('🔍 Anti-Spoof: Perfectly centered pose (-15%)');
+      }
+    }
+    
+    // Check 3: Face size analysis  
+    final faceArea = face.boundingBox.width * face.boundingBox.height;
+    final screenFraction = faceArea / (640 * 480);
+    
+    // VERY large face (>95% of frame) suggests photo on screen - RELAXED
+    if (screenFraction > 0.95) {
+      score *= 0.7;
+      print('🔍 Anti-Spoof: Face extremely large (${(screenFraction * 100).toInt()}%) (-30%)');
+    }
+    
+    // Check 4: Face contour stability (tracked faces in photos don't change contours)
+    // Note: This requires tracking across frames (done in LivenessService)
+    
+    print('🛡️ Anti-Spoof Score: ${(score * 100).toInt()}%');
+    return score.clamp(0.0, 1.0);
   }
 
   /// Convert CameraImage to InputImage for ML Kit processing

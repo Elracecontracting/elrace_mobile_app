@@ -138,6 +138,6 @@ class WidgetContainer extends StatelessWidget {
           ),
         ],
       ),
-    );
+      );
   }
 }

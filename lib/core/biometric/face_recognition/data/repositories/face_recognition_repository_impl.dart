@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:math' show sqrt;
 import 'package:camera/camera.dart';
 import 'package:dartz/dartz.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
@@ -219,10 +220,12 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
   Future<Either<FaceRecognitionFailure, FaceVerificationResult>> verifyFace({
     required CameraImage image,
     required String userId,
+    List<CameraImage>? allFrames, // 🆕 For multi-frame analysis
   }) async {
     try {
       print('\n🔐 ===== FACE VERIFICATION START =====');
       print('👤 User ID for verification: $userId');
+      print('📸 Analyzing ${allFrames?.length ?? 1} frame(s)');
 
       // Step 1: Check if user has registered embeddings
       print('🔍 Step 1: Checking for registered embeddings...');
@@ -252,34 +255,78 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
       }
 
       final face = detectResult.getOrElse(() => throw Exception());
-
-      // Step 3: 🔒 MANDATORY Liveness Check - CANNOT BE BYPASSED
-      bool hasLiveness = false;
-      print('🔒 Step 3: Starting MANDATORY liveness check...');
       
-      // ✅ فحص الحيوية إجباري - لا يمكن تجاوزه
+      // 🆕 Step 2.5: Multi-frame variation analysis for anti-spoofing
+      if (allFrames != null && allFrames.length >= 10) {
+        print('🎬 Step 2.5: Analyzing blink detection (anti-spoof)...');
+        final variationScore = await _analyzeFrameVariation(allFrames);
+        print('📊 Liveness score: ${(variationScore * 100).toInt()}%');
+        
+        // Must detect at least one natural blink
+        // Photos/videos don't have natural blinks
+        if (variationScore < 0.5) {
+          print('❌ SECURITY: No natural blink detected - PHOTO/VIDEO ATTACK');
+          print('   Real people blink naturally during capture');
+          return const Right(
+            FaceVerificationResult(
+              isVerified: false,
+              confidence: 0.0,
+              message: '🚫 Please blink naturally. Photos are not accepted.',
+              hasLiveness: false,
+            ),
+          );
+        }
+        print('✅ Natural blink detected - confirmed live person');
+      }
+
+      // Step 3: 🔒 Basic Liveness Check - RELAXED THRESHOLDS
+      bool hasLiveness = false;
+      print('🔒 Step 3: Starting liveness check (relaxed mode)...');
+      
+      // ✅ Basic liveness check with relaxed thresholds
       hasLiveness = _faceDetectorService.checkLiveness(
         face,
-        eyeOpenThreshold: 0.6, // ⬆️ عتبة أعلى للتحقق (0.6 بدلاً من 0.3)
-        maxHeadEulerAngleY: 12.0, // ⬇️ زاوية أصغر مسموحة (12 بدلاً من 20)
-        maxHeadEulerAngleZ: 12.0,
+        eyeOpenThreshold: 0.5, // Relaxed from 0.6
+        maxHeadEulerAngleY: 20.0, // Relaxed from 12.0
+        maxHeadEulerAngleZ: 20.0, // Relaxed from 12.0
       );
       
       print('🔒 Liveness result: ${hasLiveness ? "PASSED ✅" : "FAILED ❌"}');
       
       if (!hasLiveness) {
-        print('❌ SECURITY: Liveness check FAILED - possible photo attack');
+        print('❌ SECURITY: Liveness check FAILED - eyes closed or head turned away');
         return const Right(
           FaceVerificationResult(
             isVerified: false,
             confidence: 0.0,
             message:
-                '🚫 Please use your live face, not a photo. Keep your eyes open and look at the camera.',
+                '🚫 Please keep your eyes open and look at the camera.',
             hasLiveness: false,
           ),
         );
       }
       
+      // Step 3.5: Enhanced Anti-Spoof Score Check - RELAXED THRESHOLD
+      print('🛡️ Step 3.5: Running anti-spoof analysis (relaxed mode)...');
+      final antiSpoofScore = _faceDetectorService.getAntiSpoofScore(face);
+      
+      // Minimum anti-spoof score - RELAXED from 0.5 to 0.4
+      const double minAntiSpoofScore = 0.4;
+      
+      if (antiSpoofScore < minAntiSpoofScore) {
+        print('❌ SECURITY: Anti-spoof score too low: ${(antiSpoofScore * 100).toInt()}% < ${(minAntiSpoofScore * 100).toInt()}%');
+        return const Right(
+          FaceVerificationResult(
+            isVerified: false,
+            confidence: 0.0,
+            message:
+                '🚫 Please use your live face, not a photo.',
+            hasLiveness: false,
+          ),
+        );
+      }
+      
+      print('✅ Anti-spoof score: ${(antiSpoofScore * 100).toInt()}% - PASSED');
       print('✅ Liveness check PASSED - proceeding with verification');
 
       // Step 4: Crop face
@@ -331,6 +378,108 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
   }
 
   @override
+  /// 🆕 Analyze variation across multiple frames to detect static photos
+  /// Returns variation score 0.0 (static/photo) to 1.0 (natural movement)
+  Future<double> _analyzeFrameVariation(List<CameraImage> frames) async {
+    if (frames.length < 10) return 0.5; // Not enough data
+    
+    final List<double> leftEyeValues = [];
+    final List<double> rightEyeValues = [];
+    final List<double> faceXPositions = [];
+    final List<double> faceYPositions = [];
+    
+    // Sample 10-15 frames evenly distributed
+    final sampleSize = frames.length > 15 ? 15 : frames.length;
+    final step = frames.length ~/ sampleSize;
+    
+    for (int i = 0; i < frames.length; i += step) {
+      if (i >= frames.length) break;
+      
+      final detectResult = await _detectSingleFace(frames[i]);
+      if (detectResult.isRight()) {
+        final face = detectResult.getOrElse(() => throw Exception());
+        
+        if (face.leftEyeOpenProbability != null) {
+          leftEyeValues.add(face.leftEyeOpenProbability!);
+        }
+        if (face.rightEyeOpenProbability != null) {
+          rightEyeValues.add(face.rightEyeOpenProbability!);
+        }
+        
+        // Track face position
+        faceXPositions.add(face.boundingBox.left + face.boundingBox.width / 2);
+        faceYPositions.add(face.boundingBox.top + face.boundingBox.height / 2);
+      }
+    }
+    
+    if (leftEyeValues.length < 5) return 0.5; // Not enough samples
+    
+    print('   Eye values collected: ${leftEyeValues.length} samples');
+    
+    // 🆕 CRITICAL CHECK 1: BLINK DETECTION
+    // Real person MUST blink at least once during capture
+    // Look for: eyes closed (<0.4) then open again (>0.7)
+    bool blinkDetected = false;
+    bool hadClosedEyes = false;
+    bool hadOpenEyes = false;
+    
+    for (int i = 0; i < leftEyeValues.length; i++) {
+      final leftEye = leftEyeValues[i];
+      final rightEye = rightEyeValues[i];
+      final avgEye = (leftEye + rightEye) / 2;
+      
+      // Eyes closed
+      if (avgEye < 0.4) {
+        hadClosedEyes = true;
+        print('   Frame $i: Eyes closed (${avgEye.toStringAsFixed(3)})');
+      }
+      
+      // Eyes open
+      if (avgEye > 0.7) {
+        hadOpenEyes = true;
+        if (hadClosedEyes) {
+          blinkDetected = true;
+          print('   ✅ BLINK DETECTED at frame $i!');
+        }
+      }
+    }
+    
+    if (!blinkDetected) {
+      print('   ❌ NO BLINK DETECTED - Photo/Video or no natural blink!');
+      print('   Had closed eyes: $hadClosedEyes, Had open eyes: $hadOpenEyes');
+      return 0.0; // No blink = likely photo
+    }
+    
+    print('   ✅ Natural blink confirmed - real person');
+    
+    // 🆕 CHECK 2: Eye value variation (secondary check)
+    final leftEyeVariation = _calculateStdDev(leftEyeValues);
+    final rightEyeVariation = _calculateStdDev(rightEyeValues);
+    final avgEyeVariation = (leftEyeVariation + rightEyeVariation) / 2;
+    
+    print('   Left eye variation: ${leftEyeVariation.toStringAsFixed(4)}');
+    print('   Right eye variation: ${rightEyeVariation.toStringAsFixed(4)}');
+    print('   Average eye variation: ${avgEyeVariation.toStringAsFixed(4)}');
+    
+    // With blink detected, we're already confident it's real
+    // But still check for extremely low variation as safety
+    if (avgEyeVariation < 0.002) {
+      print('   ⚠️ WARNING: Despite blink, variation too low - suspicious');
+      return 0.5; // Suspicious but not definitive
+    }
+    
+    // Blink detected + reasonable variation = definitely real
+    return 1.0;
+  }
+  
+  /// Helper: Calculate standard deviation
+  double _calculateStdDev(List<double> values) {
+    if (values.isEmpty) return 0.0;
+    final mean = values.reduce((a, b) => a + b) / values.length;
+    final variance = values.map((v) => (v - mean) * (v - mean)).reduce((a, b) => a + b) / values.length;
+    return sqrt(variance);
+  }
+
   Future<Either<FaceRecognitionFailure, List<FaceEmbedding>>>
       getStoredEmbeddings(String userId) async {
     try {

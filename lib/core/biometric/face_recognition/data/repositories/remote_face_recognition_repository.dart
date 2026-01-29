@@ -33,6 +33,7 @@ class RemoteFaceRecognitionRepository implements FaceRecognitionRepository {
     required String userId,
     CameraLensDirection? lensDirection,
     int? sensorOrientation,
+    List<CameraImage>? allFrames,
   }) async {
     return const Left(VerificationFailure(
       'Remote biometric verification not implemented. Wire this to the bank-grade SDK.',

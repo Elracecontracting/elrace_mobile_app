@@ -74,6 +74,8 @@
     "mute_notifications": "كتم الإشعارات",
     "dark_mode": "الوضع الليلي",
     "logout": "تسجيل الخروج",
+    "logout_confirmation_title": "تسجيل الخروج",
+    "logout_confirmation_message": "هل أنت متأكد من رغبتك في تسجيل الخروج من التطبيق؟",
     "name_not_available": "الاسم غير متوفر",
     "job_id_not_available": "معرف الوظيفة غير متوفر",
     "id_not_available": "المعرف غير متوفر",
@@ -104,7 +106,10 @@
     "save": "حفظ",
     "edit": "تعديل",
     "undo": "تراجع",
-    "press_back_again_to_exit": "اضغط رجوع مرة أخرى للخروج"
+    "press_back_again_to_exit": "اضغط رجوع مرة أخرى للخروج",
+    "exit_app_title": "الخروج من التطبيق",
+    "exit_app_message": "هل أنت متأكد من رغبتك في الخروج من التطبيق؟",
+    "exit": "خروج"
   },
   "notification": {
     "pending_approval": "يرجى العلم أن هذا الطلب سيظل في حالة انتظار حتى يتم الموافقة عليه من جميع الأقسام.",

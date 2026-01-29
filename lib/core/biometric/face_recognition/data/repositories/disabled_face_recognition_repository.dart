@@ -35,6 +35,7 @@ class DisabledFaceRecognitionRepository implements FaceRecognitionRepository {
     required String userId,
     CameraLensDirection? lensDirection,
     int? sensorOrientation,
+    List<CameraImage>? allFrames,
   }) async {
     return const Left(VerificationFailure(
       'Local biometrics are disabled by feature flag.',

@@ -110,7 +110,6 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   /// Check-in مسموح من 5:00 AM حتى 11:59 AM بتوقيت دبي
   bool _isCheckInAllowed() {
     final dubaiTime = DateTime.now().toUtc().add(const Duration(hours: 4));
-
     // Check-in مسموح من الساعة 5 صباحاً حتى 11:59 صباحاً
     if (dubaiTime.hour >= 5 && dubaiTime.hour < 12) {
       return true;
