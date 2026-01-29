@@ -9,6 +9,7 @@ import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:el_race/ui/presentation/tasks_dashboard/screens/add_task.dart';
 import 'package:el_race/ui/presentation/tasks_dashboard/screens/task_details.dart';
+import 'package:el_race/ui/presentation/tasks_dashboard/screens/user_reports_screen.dart';
 import 'package:el_race/ui/presentation/todo_list/providers/todo_firebase_provider.dart';
 import 'package:el_race/ui/presentation/todo_list/data/todo_model.dart';
 
@@ -224,6 +225,7 @@ class _TotalTasksCard extends StatelessWidget {
     final progress = totalTasks > 0 ? completedTasks / totalTasks : 0.0;
 
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24.0),
         gradient: const LinearGradient(
@@ -240,12 +242,13 @@ class _TotalTasksCard extends StatelessWidget {
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 const Center(
                   child: Text(
@@ -257,23 +260,27 @@ class _TotalTasksCard extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text(
-                  '$totalTasks',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 50.0,
-                    fontWeight: FontWeight.bold,
+                const SizedBox(height: 8.0),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    '$totalTasks',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 50.0,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-                RichText(
-                  text: TextSpan(
+                const SizedBox(height: 6.0),
+                Text.rich(
+                  TextSpan(
                     children: [
                       const TextSpan(
                         text: 'Overdue ',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          height: 0.6,
                           fontSize: 12.0,
                         ),
                       ),
@@ -282,19 +289,20 @@ class _TotalTasksCard extends StatelessWidget {
                         style: const TextStyle(
                           color: Colors.red,
                           fontWeight: FontWeight.bold,
-                          height: 0.6,
                           fontSize: 12.0,
                         ),
                       ),
                     ],
                   ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 29.05, vertical: 12.0),
+            padding: const EdgeInsets.fromLTRB(16.0, 10.0, 16.0, 12.0),
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.only(
@@ -304,6 +312,7 @@ class _TotalTasksCard extends StatelessWidget {
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   '$completedTasks task completed',
@@ -311,24 +320,17 @@ class _TotalTasksCard extends StatelessWidget {
                     color: Colors.black,
                     fontSize: 12.0,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4.0),
-                Container(
-                  height: 5.0,
-                  width: 80.0,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2.0),
-                  ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: progress,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.circular(2.0),
-                      ),
-                    ),
+                const SizedBox(height: 6.0),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(3.0),
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    minHeight: 6.0,
+                    backgroundColor: Colors.grey.shade300,
+                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
                   ),
                 ),
               ],
@@ -349,12 +351,14 @@ class _PendingReportsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24.0),
+        color: Colors.white,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
+            blurRadius: 10.0,
             offset: const Offset(0, 4),
           ),
         ],
@@ -406,22 +410,32 @@ class _PendingReportsCard extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            height: 52,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(
-                bottom: Radius.circular(24),
+          InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const UserReportsScreen(),
+                ),
+              );
+            },
+            child: Container(
+              height: 52,
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(24),
+                ),
               ),
-            ),
-            child: const Center(
-              child: Text(
-                'View Reports',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+              child: const Center(
+                child: Text(
+                  'View Reports',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),

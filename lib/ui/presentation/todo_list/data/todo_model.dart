@@ -8,11 +8,16 @@ class TodoModel {
   final bool isCompleted;
   final bool isImportant;
   final bool isMyDay;
+  final DateTime? startDate;
   final DateTime? dueDate;
   final String? assignedTo;
   final String? assignedToName; // Name of the assigned member
+  final List<String>? followers; // Names of followers
+  final List<String>? attachments; // Attachment file paths/names
   final String? listId; // Firebase list ID (changed from int)
   final String? reportId; // Reference to Report
+  final int? teamId; // Team/Department ID from ERP
+  final String? department; // Department name
   final int sortOrder;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -25,11 +30,16 @@ class TodoModel {
     this.isCompleted = false,
     this.isImportant = false,
     this.isMyDay = false,
+    this.startDate,
     this.dueDate,
     this.assignedTo,
     this.assignedToName,
+    this.followers,
+    this.attachments,
     this.listId,
     this.reportId,
+    this.teamId,
+    this.department,
     this.sortOrder = 0,
     required this.createdAt,
     required this.updatedAt,
@@ -44,13 +54,20 @@ class TodoModel {
       isCompleted: (map['is_completed'] as int?) == 1,
       isImportant: (map['is_important'] as int?) == 1,
       isMyDay: (map['is_my_day'] as int?) == 1,
+      startDate: map['start_date'] != null
+          ? DateTime.parse(map['start_date'] as String)
+          : null,
       dueDate: map['due_date'] != null
           ? DateTime.parse(map['due_date'] as String)
           : null,
       assignedTo: map['assigned_to'] as String?,
       assignedToName: map['assigned_to_name'] as String?,
+      followers: map['followers'] != null ? List<String>.from(map['followers'] as List) : null,
+      attachments: map['attachments'] != null ? List<String>.from(map['attachments'] as List) : null,
       listId: map['list_id'] as String?,
       reportId: map['report_id'] as String?,
+      teamId: map['team_id'] as int?,
+      department: map['department'] as String?,
       sortOrder: map['sort_order'] as int? ?? 0,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
@@ -67,13 +84,20 @@ class TodoModel {
       isCompleted: data['is_completed'] as bool? ?? false,
       isImportant: data['is_important'] as bool? ?? false,
       isMyDay: data['is_my_day'] as bool? ?? false,
+      startDate: data['start_date'] != null
+          ? (data['start_date'] as Timestamp).toDate()
+          : null,
       dueDate: data['due_date'] != null
           ? (data['due_date'] as Timestamp).toDate()
           : null,
       assignedTo: data['assigned_to'] as String?,
       assignedToName: data['assigned_to_name'] as String?,
+      followers: data['followers'] != null ? List<String>.from(data['followers'] as List) : null,
+      attachments: data['attachments'] != null ? List<String>.from(data['attachments'] as List) : null,
       listId: data['list_id'] as String?,
       reportId: data['report_id'] as String?,
+      teamId: data['team_id'] as int?,
+      department: data['department'] as String?,
       sortOrder: data['sort_order'] as int? ?? 0,
       createdAt: data['created_at'] != null
           ? (data['created_at'] as Timestamp).toDate()
@@ -93,11 +117,16 @@ class TodoModel {
       'is_completed': isCompleted ? 1 : 0,
       'is_important': isImportant ? 1 : 0,
       'is_my_day': isMyDay ? 1 : 0,
+      'start_date': startDate?.toIso8601String(),
       'due_date': dueDate?.toIso8601String(),
       'assigned_to': assignedTo,
       'assigned_to_name': assignedToName,
+      'followers': followers,
+      'attachments': attachments,
       'list_id': listId,
       'report_id': reportId,
+      'team_id': teamId,
+      'department': department,
       'sort_order': sortOrder,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -112,11 +141,16 @@ class TodoModel {
       'is_completed': isCompleted,
       'is_important': isImportant,
       'is_my_day': isMyDay,
+      'start_date': startDate != null ? Timestamp.fromDate(startDate!) : null,
       'due_date': dueDate != null ? Timestamp.fromDate(dueDate!) : null,
       'assigned_to': assignedTo,
       'assigned_to_name': assignedToName,
+      'followers': followers ?? [],
+      'attachments': attachments ?? [],
       'list_id': listId,
       'report_id': reportId,
+      'team_id': teamId,
+      'department': department,
       'sort_order': sortOrder,
       'created_at': Timestamp.fromDate(createdAt),
       'updated_at': FieldValue.serverTimestamp(),
@@ -131,11 +165,16 @@ class TodoModel {
     bool? isCompleted,
     bool? isImportant,
     bool? isMyDay,
+    DateTime? startDate,
     DateTime? dueDate,
     String? assignedTo,
     String? assignedToName,
+    List<String>? followers,
+    List<String>? attachments,
     String? listId,
     String? reportId,
+    int? teamId,
+    String? department,
     int? sortOrder,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -148,11 +187,16 @@ class TodoModel {
       isCompleted: isCompleted ?? this.isCompleted,
       isImportant: isImportant ?? this.isImportant,
       isMyDay: isMyDay ?? this.isMyDay,
+      startDate: startDate ?? this.startDate,
       dueDate: dueDate ?? this.dueDate,
       assignedTo: assignedTo ?? this.assignedTo,
       assignedToName: assignedToName ?? this.assignedToName,
+      followers: followers ?? this.followers,
+      attachments: attachments ?? this.attachments,
       listId: listId ?? this.listId,
       reportId: reportId ?? this.reportId,
+      teamId: teamId ?? this.teamId,
+      department: department ?? this.department,
       sortOrder: sortOrder ?? this.sortOrder,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -169,11 +213,16 @@ class TodoModel {
       isCompleted: isCompleted,
       isImportant: isImportant,
       isMyDay: isMyDay,
+      startDate: startDate,
       dueDate: null,
       assignedTo: assignedTo,
       assignedToName: assignedToName,
+      followers: followers,
+      attachments: attachments,
       listId: listId,
       reportId: reportId,
+      teamId: teamId,
+      department: department,
       sortOrder: sortOrder,
       createdAt: createdAt,
       updatedAt: DateTime.now(),

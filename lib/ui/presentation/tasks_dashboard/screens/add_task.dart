@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dotted_border/dotted_border.dart';
@@ -8,7 +9,11 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/ui/presentation/tasks_dashboard/services/task_options_api_service.dart';
+import 'package:el_race/ui/presentation/tasks_dashboard/services/teams_api_service.dart';
+import 'package:el_race/ui/presentation/tasks_dashboard/models/team_model.dart';
 import 'package:el_race/ui/presentation/todo_list/services/team_members_api_service.dart';
+import 'package:el_race/ui/presentation/todo_list/data/todo_model.dart';
+import 'package:el_race/ui/presentation/todo_list/services/todo_firebase_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
@@ -24,15 +29,25 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   double _daysValue = 5;
   late TextEditingController _daysController;
   late TextEditingController _descriptionController;
+  late TextEditingController _titleController;
+  
+  // Dates
+  DateTime _startDate = DateTime.now();
+  
+  DateTime get _endDate => _startDate.add(Duration(days: _daysValue.toInt()));
+  
+  String _formatDate(DateTime date) {
+    return DateFormat('dd MMM yyyy').format(date).toUpperCase();
+  }
   
   // Projects from backend
   List<ProjectOption> _projects = [];
   ProjectOption? _selectedProject;
   bool _isLoadingProjects = true;
   
-  // Departments from backend
-  List<DepartmentOption> _departments = [];
-  DepartmentOption? _selectedDepartment;
+  // Departments from backend (teams API)
+  List<String> _departments = [];
+  String? _selectedDepartment;
   bool _isLoadingDepartments = true;
   
   // Team members from backend
@@ -44,12 +59,16 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   // Attachments
   List<File> _attachments = [];
   final ImagePicker _imagePicker = ImagePicker();
+  
+  // Submit state
+  bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
     _daysController = TextEditingController(text: _daysValue.toInt().toString());
     _descriptionController = TextEditingController();
+    _titleController = TextEditingController();
     _loadData();
   }
   
@@ -57,14 +76,14 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     // Load projects, departments, and members in parallel
     final results = await Future.wait([
       TaskOptionsApiService.getProjects(),
-      TaskOptionsApiService.getDepartments(),
+      TeamsApiService.getUniqueDepartments(),
       TeamMembersApiService.instance.getTeamMembers(),
     ]);
     
     if (mounted) {
       setState(() {
         _projects = results[0] as List<ProjectOption>;
-        _departments = results[1] as List<DepartmentOption>;
+        _departments = results[1] as List<String>;
         _allMembers = results[2] as List<TeamMember>;
         _isLoadingProjects = false;
         _isLoadingDepartments = false;
@@ -81,10 +100,105 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     }
   }
 
+  Future<void> _submitTask() async {
+    // Validate title
+    final title = _titleController.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Please enter a task title',
+            style: GoogleFonts.poppins(),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      // Get assigned member names
+      String? assignedToName;
+      if (_selectedMembers.isNotEmpty) {
+        assignedToName = _selectedMembers.map((m) => m.name).join(', ');
+      }
+
+      // Get follower names
+      List<String>? followers;
+      if (_selectedFollowers.isNotEmpty) {
+        followers = _selectedFollowers.map((m) => m.name).toList();
+      }
+
+      // Get attachment file names
+      List<String>? attachments;
+      if (_attachments.isNotEmpty) {
+        attachments = _attachments.map((f) => f.path.split('/').last).toList();
+      }
+
+      // Create the todo model
+      final todo = TodoModel(
+        title: title,
+        description: _descriptionController.text.trim().isNotEmpty 
+            ? _descriptionController.text.trim() 
+            : null,
+        department: _selectedDepartment,
+        startDate: _startDate,
+        dueDate: _endDate,
+        assignedToName: assignedToName,
+        followers: followers,
+        attachments: attachments,
+        isCompleted: false,
+        isImportant: false,
+        isMyDay: false,
+        sortOrder: 0,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      // Save to Firebase
+      await TodoFirebaseService.instance.insertTodo(todo);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Task created successfully!',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        
+        // Navigate back to previous screen
+        Navigator.of(context).pop(true);
+      }
+    } catch (e) {
+      print('❌ Error submitting task: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Failed to create task: $e',
+              style: GoogleFonts.poppins(),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSubmitting = false);
+      }
+    }
+  }
+
   @override
   void dispose() {
     _daysController.dispose();
     _descriptionController.dispose();
+    _titleController.dispose();
     super.dispose();
   }
 
@@ -125,7 +239,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               // Task Title
               _buildBorderedFieldWithLabel(
                 label: 'Task\nTitle',
-                child: _buildTextField(hint: ''),
+                child: _buildTextField(hint: 'Enter task title', controller: _titleController),
               ),
               const SizedBox(height: 20),
 
@@ -207,27 +321,40 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   ),
 
                   // Start Date
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'START DATE',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
+                  GestureDetector(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: _startDate,
+                        firstDate: DateTime.now(),
+                        lastDate: DateTime.now().add(const Duration(days: 365)),
+                      );
+                      if (picked != null) {
+                        setState(() => _startDate = picked);
+                      }
+                    },
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'START DATE',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '14 JAN 2026',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.grey[400],
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatDate(_startDate),
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey[400],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
 
                   // Divider
@@ -251,7 +378,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '19 JAN 2026',
+                        _formatDate(_endDate),
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -305,9 +432,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                     ],
                   ),
                   child: ElevatedButton(
-                    onPressed: () {
-                      // Submit task logic
-                    },
+                    onPressed: _isSubmitting ? null : _submitTask,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.transparent,
                       shadowColor: Colors.transparent,
@@ -315,15 +440,24 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    child: Text(
-                      'SUBMIT TASK',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                        letterSpacing: 1,
-                      ),
-                    ),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : Text(
+                            'SUBMIT TASK',
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                              letterSpacing: 1,
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -422,7 +556,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     );
   }
 
-  Widget _buildTextField({String hint = '', int maxLines = 1}) {
+  Widget _buildTextField({String hint = '', int maxLines = 1, TextEditingController? controller}) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -430,6 +564,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         border: Border.all(color: Colors.grey[300]!),
       ),
       child: TextField(
+        controller: controller,
         maxLines: maxLines,
         decoration: InputDecoration(
           hintText: hint,
@@ -577,14 +712,14 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     }
 
     return DropdownButtonHideUnderline(
-      child: DropdownButton2<DepartmentOption>(
+      child: DropdownButton2<String>(
         value: _selectedDepartment,
         isExpanded: true,
-        items: _departments.map((DepartmentOption dept) {
-          return DropdownMenuItem<DepartmentOption>(
+        items: _departments.map((String dept) {
+          return DropdownMenuItem<String>(
             value: dept,
             child: Text(
-              dept.name,
+              dept,
               style: GoogleFonts.poppins(
                 fontSize: 14,
                 color: Colors.grey[600],

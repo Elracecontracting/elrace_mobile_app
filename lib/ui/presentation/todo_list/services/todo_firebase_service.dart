@@ -106,7 +106,6 @@ class TodoFirebaseService {
 
     try {
       final snapshot = await _userTodosCollection(uid)
-          .orderBy('sort_order')
           .orderBy('created_at', descending: true)
           .get();
 
@@ -123,7 +122,6 @@ class TodoFirebaseService {
     if (uid == null) return Stream.value([]);
 
     return _userTodosCollection(uid)
-        .orderBy('sort_order')
         .orderBy('created_at', descending: true)
         .snapshots()
         .map((snapshot) =>
@@ -138,7 +136,6 @@ class TodoFirebaseService {
     try {
       final snapshot = await _userTodosCollection(uid)
           .where('is_completed', isEqualTo: false)
-          .orderBy('sort_order')
           .orderBy('created_at', descending: true)
           .get();
 
@@ -157,8 +154,7 @@ class TodoFirebaseService {
     try {
       final snapshot = await _userTodosCollection(uid)
           .where('is_my_day', isEqualTo: true)
-          .orderBy('is_completed')
-          .orderBy('sort_order')
+          .orderBy('created_at', descending: true)
           .get();
 
       return snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
@@ -176,8 +172,7 @@ class TodoFirebaseService {
     try {
       final snapshot = await _userTodosCollection(uid)
           .where('is_important', isEqualTo: true)
-          .orderBy('is_completed')
-          .orderBy('sort_order')
+          .orderBy('created_at', descending: true)
           .get();
 
       return snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
@@ -196,7 +191,6 @@ class TodoFirebaseService {
       final snapshot = await _userTodosCollection(uid)
           .where('due_date', isNull: false)
           .orderBy('due_date')
-          .orderBy('is_completed')
           .get();
 
       return snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
@@ -221,8 +215,7 @@ class TodoFirebaseService {
         query = query.where('assigned_to', isNull: false);
       }
 
-      final snapshot =
-          await query.orderBy('is_completed').orderBy('sort_order').get();
+      final snapshot = await query.orderBy('created_at', descending: true).get();
 
       return snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
     } catch (e) {
@@ -239,8 +232,7 @@ class TodoFirebaseService {
     try {
       final snapshot = await _userTodosCollection(uid)
           .where('list_id', isEqualTo: listId)
-          .orderBy('is_completed')
-          .orderBy('sort_order')
+          .orderBy('created_at', descending: true)
           .get();
 
       return snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
@@ -258,8 +250,7 @@ class TodoFirebaseService {
     try {
       final snapshot = await _userTodosCollection(uid)
           .where('report_id', isEqualTo: reportId)
-          .orderBy('is_completed')
-          .orderBy('sort_order')
+          .orderBy('created_at', descending: true)
           .get();
 
       return snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
@@ -520,7 +511,6 @@ class TodoFirebaseService {
 
     try {
       final snapshot = await _userTodoListsCollection(uid)
-          .orderBy('sort_order')
           .orderBy('created_at', descending: true)
           .get();
 
@@ -539,7 +529,6 @@ class TodoFirebaseService {
     if (uid == null) return Stream.value([]);
 
     return _userTodoListsCollection(uid)
-        .orderBy('sort_order')
         .orderBy('created_at', descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
