@@ -72,7 +72,7 @@ class _MainScreenState extends State<MainScreen> {
       },
       child: Scaffold(
         backgroundColor: Colors.white,
-        extendBody: false,
+        extendBody: true,
         bottomNavigationBar: const CustomBottomNavBar(),
         body: BlocBuilder<HomeBloc, HomeState>(
           builder: (context, state) => screens[bloc.currentIndex],
@@ -95,7 +95,7 @@ class CustomBottomNavBar extends StatelessWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.only(
-              left: 16.0, right: 16.0, bottom: 12.0, top: 10.0),
+              left: 16.0, right: 16.0, bottom: 20.0, top: 10.0),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(70.r),
             child: BackdropFilter(
@@ -103,7 +103,6 @@ class CustomBottomNavBar extends StatelessWidget {
               child: Container(
                 height: 60.h,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(70.r),
                   border: Border.all(
                       color: Colors.white.withOpacity(0.2), width: 1.0),
@@ -119,6 +118,13 @@ class CustomBottomNavBar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.center,
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
+                    // Chat button
+                    _buildNavItem(
+                      context,
+                      index: 3,
+                      isMain: isMain,
+                      icon: AppImages.chatIconNew,
+                    ),
                     _buildNavItem(
                       context,
                       index: 0,
@@ -127,23 +133,9 @@ class CustomBottomNavBar extends StatelessWidget {
                     ),
                     _buildNavItem(
                       context,
-                      isMain: isMain,
-                      index: 1,
-                      icon: AppImages.homeIcon,
-                    ),
-                    _buildNavItem(
-                      context,
                       index: 2,
                       isMain: isMain,
                       icon: AppImages.chatIcon,
-                    ),
-                    // Chat button for testing
-                    _buildNavItem(
-                      context,
-                      index: 3,
-                      isMain: isMain,
-                      icon: Icons.forum,
-                      isIconData: true,
                     ),
                   ],
                 ),

@@ -1,19 +1,72 @@
 import 'dart:math' as math;
 import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'face_detector_service.dart';
 
 /// Enhanced Liveness Detection Service with Multi-frame Analysis and Active Challenges
 ///
 /// Features:
-/// - Multi-frame analysis (10-20 frames over 1-2 seconds)
-/// - Active random challenges (blink, head turn, etc.)
+/// - Multi-frame analysis (15-20 frames over 3-5 seconds)
+/// - Active random challenges (blink, head turn, rapid eye movement)
 /// - Anti-spoofing: prevents photo/video replay attacks
 /// - Real-time feedback for user guidance
+/// - Challenge verification with strict thresholds
 class LivenessService {
   final FaceDetectorService _faceDetectorService;
+  
+  /// تتبع حالة التحديات
+  List<LivenessChallenge> _currentChallenges = [];
+  int _currentChallengeIndex = 0;
+  List<LivenessChallenge> _completedChallenges = [];
+  DateTime? _challengeStartTime;
 
   LivenessService(this._faceDetectorService);
+
+  /// إنشاء تحديات عشوائية للتحقق (3 تحديات)
+  List<LivenessChallenge> generateChallengeSequence() {
+    final random = math.Random();
+    
+    // التحديات الأساسية الثلاثة المطلوبة
+    final requiredChallenges = [
+      LivenessChallenge.blinkEyes,      // التحدي الأول: الرمش
+      LivenessChallenge.turnHeadLeft,   // التحدي الثاني: حركة الرأس
+      LivenessChallenge.rapidEyeMovement, // التحدي الثالث: حركة العين
+    ];
+    
+    // تبديل التحديات عشوائياً
+    requiredChallenges.shuffle(random);
+    
+    _currentChallenges = requiredChallenges;
+    _currentChallengeIndex = 0;
+    _completedChallenges = [];
+    _challengeStartTime = DateTime.now();
+    
+    return requiredChallenges;
+  }
+
+  /// الحصول على التحدي الحالي
+  LivenessChallenge? getCurrentChallenge() {
+    if (_currentChallengeIndex >= _currentChallenges.length) return null;
+    return _currentChallenges[_currentChallengeIndex];
+  }
+
+  /// الحصول على عدد التحديات المكتملة
+  int getCompletedCount() => _completedChallenges.length;
+
+  /// الحصول على التحديات المكتملة
+  List<LivenessChallenge> get completedChallenges => _completedChallenges;
+
+  /// الحصول على إجمالي التحديات
+  int getTotalChallenges() => _currentChallenges.length;
+
+  /// إعادة تعيين التحديات
+  void resetChallenges() {
+    _currentChallenges = [];
+    _currentChallengeIndex = 0;
+    _completedChallenges = [];
+    _challengeStartTime = null;
+  }
 
   /// Perform PASSIVE anti-spoofing check (no user interaction needed)
   ///
@@ -24,6 +77,7 @@ class LivenessService {
   /// 1. Natural micro-movements (photos are 100% static)
   /// 2. Eye probability consistency (real eyes have slight variations)
   /// 3. Face size consistency (video playback may have artifacts)
+  /// 4. 🆕 BLINK DETECTION - Must detect at least one real blink
   Future<LivenessResult> performPassiveAntiSpoofCheck({
     required List<Face> faceSequence,
     int minFrames = 5,
@@ -49,13 +103,32 @@ class LivenessService {
       rightEyeValues.add(face.rightEyeOpenProbability ?? 0.0);
     }
 
+    // 🆕 CRITICAL CHECK: Detect real blink (eyes open -> closed -> open)
+    // This is the most reliable way to detect a photo vs real face
+    final blinkDetected = _detectBlinkInSequence(leftEyeValues, rightEyeValues);
+    
+    print('👁️ Blink analysis:');
+    print('  - Left eye values: ${leftEyeValues.map((e) => e.toStringAsFixed(2)).join(", ")}');
+    print('  - Right eye values: ${rightEyeValues.map((e) => e.toStringAsFixed(2)).join(", ")}');
+    print('  - Blink detected: $blinkDetected');
+    
+    if (!blinkDetected) {
+      return LivenessResult(
+        passed: false,
+        reason: LivenessFailureReason.noBlinkDetected,
+        message: 'الرجاء رمش عينيك أثناء النظر للكاميرا',
+      );
+    }
+
     // Check 1: Head pose micro-movement (photos are perfectly static)
     final yawVariation = _calculateVariation(yawValues);
     final pitchVariation = _calculateVariation(pitchValues);
 
-    // Real face has at least 0.5° of natural movement
+    print('🔄 Head movement: yaw=$yawVariation, pitch=$pitchVariation');
+
+    // Real face has at least 0.3° of natural movement (lowered from 0.5)
     // Photo/video of photo has 0° movement
-    if (yawVariation < 0.5 && pitchVariation < 0.5) {
+    if (yawVariation < 0.3 && pitchVariation < 0.3) {
       return LivenessResult(
         passed: false,
         reason: LivenessFailureReason.staticFace,
@@ -67,34 +140,74 @@ class LivenessService {
     final leftEyeVariation = _calculateVariation(leftEyeValues);
     final rightEyeVariation = _calculateVariation(rightEyeValues);
 
-    // Real eyes have slight probability changes (0.01+), photos have 0
-    // But we're lenient - only flag if BOTH are perfectly static
-    if (leftEyeVariation < 0.005 && rightEyeVariation < 0.005) {
-      // This could be a photo, but give benefit of doubt
-      // Just log it, don't fail
-      print('⚠️ Warning: Very stable eye readings (possible photo)');
-    }
+    print('👁️ Eye variation: left=$leftEyeVariation, right=$rightEyeVariation');
 
-    // Check 3: Average eye openness (should be mostly open)
-    final avgLeftEye =
-        leftEyeValues.reduce((a, b) => a + b) / leftEyeValues.length;
-    final avgRightEye =
-        rightEyeValues.reduce((a, b) => a + b) / rightEyeValues.length;
-
-    if (avgLeftEye < 0.1 || avgRightEye < 0.1) {
-      return LivenessResult(
-        passed: false,
-        reason: LivenessFailureReason.eyesClosed,
-        message: 'Please open your eyes and look at the camera',
-      );
-    }
-
-    // All checks passed
+    // All checks passed (including blink)
+    print('✅ All liveness checks passed!');
     return LivenessResult(
       passed: true,
       reason: LivenessFailureReason.none,
-      message: 'Anti-spoof check passed',
+      message: 'Anti-spoof check passed - blink detected',
     );
+  }
+
+  /// 🆕 Detect a real blink in the eye probability sequence
+  /// A blink is: eyes open (>0.5) -> eyes closed (<0.3) -> eyes open (>0.5)
+  bool _detectBlinkInSequence(List<double> leftEyeValues, List<double> rightEyeValues) {
+    const double openThreshold = 0.5;  // Eye considered open
+    const double closedThreshold = 0.3; // Eye considered closed
+    
+    // Track state machine for blink detection
+    bool foundOpen = false;
+    bool foundClosed = false;
+    bool foundOpenAgain = false;
+    
+    for (int i = 0; i < leftEyeValues.length; i++) {
+      final leftEye = leftEyeValues[i];
+      final rightEye = rightEyeValues[i];
+      
+      // Both eyes should be in sync for a real blink
+      final avgEye = (leftEye + rightEye) / 2;
+      
+      if (!foundOpen) {
+        // Looking for initial open state
+        if (avgEye >= openThreshold) {
+          foundOpen = true;
+          print('  📍 Frame $i: Eyes OPEN (avg=$avgEye)');
+        }
+      } else if (!foundClosed) {
+        // Looking for closed state (the blink)
+        if (avgEye <= closedThreshold) {
+          foundClosed = true;
+          print('  📍 Frame $i: Eyes CLOSED (avg=$avgEye) - BLINK DETECTED!');
+        }
+      } else if (!foundOpenAgain) {
+        // Looking for eyes to open again after blink
+        if (avgEye >= openThreshold) {
+          foundOpenAgain = true;
+          print('  📍 Frame $i: Eyes OPEN again (avg=$avgEye) - BLINK COMPLETE!');
+          return true; // Complete blink detected!
+        }
+      }
+    }
+    
+    // Also check for partial blink (significant eye closure even without full sequence)
+    // This catches fast blinks that might not have all 3 states captured
+    if (foundOpen && foundClosed) {
+      final minEye = leftEyeValues.reduce(math.min);
+      final maxEye = leftEyeValues.reduce(math.max);
+      final eyeRange = maxEye - minEye;
+      
+      print('  📊 Eye range: min=$minEye, max=$maxEye, range=$eyeRange');
+      
+      // If there's significant eye movement (>0.3 range), consider it a blink
+      if (eyeRange >= 0.3) {
+        print('  ✅ Significant eye movement detected as blink');
+        return true;
+      }
+    }
+    
+    return false;
   }
 
   /// Perform multi-frame liveness check
@@ -297,6 +410,11 @@ class LivenessService {
     if (recentFrames.length < 5) return false; // Need at least 5 frames
 
     switch (challenge) {
+      case LivenessChallenge.blinkEyes:
+        final leftEyeValues = recentFrames.map((f) => f.leftEyeOpen).toList();
+        final rightEyeValues = recentFrames.map((f) => f.rightEyeOpen).toList();
+        return _detectBlinkInSequence(leftEyeValues, rightEyeValues);
+
       case LivenessChallenge.blinkTwice:
         return _detectBlinks(recentFrames) >= 2;
 
@@ -311,6 +429,9 @@ class LivenessService {
 
       case LivenessChallenge.lookDown:
         return _detectLookDirection(recentFrames, direction: 'down');
+
+      case LivenessChallenge.rapidEyeMovement:
+        return _detectRapidEyeMovement(recentFrames);
     }
   }
 
@@ -369,6 +490,167 @@ class LivenessService {
     }
 
     return false;
+  }
+
+  /// 🆕 Detect rapid eye movement (eyes moving left/right quickly)
+  /// This is detected via slight head movements that accompany eye movement
+  bool _detectRapidEyeMovement(List<_FrameAnalysis> frames) {
+    if (frames.length < 5) return false;
+
+    // Track yaw changes for rapid movement pattern
+    List<double> yawDiffs = [];
+    for (int i = 1; i < frames.length; i++) {
+      yawDiffs.add(frames[i].headYaw - frames[i - 1].headYaw);
+    }
+
+    // Count direction changes (rapid movement should have multiple changes)
+    int directionChanges = 0;
+    bool wasPositive = yawDiffs.isNotEmpty && yawDiffs.first > 0;
+
+    for (final diff in yawDiffs) {
+      if ((diff > 0) != wasPositive && diff.abs() > 1.0) {
+        directionChanges++;
+        wasPositive = diff > 0;
+      }
+    }
+
+    print('👁️ Rapid eye movement - Direction changes: $directionChanges');
+
+    // Need at least 2 direction changes for rapid movement
+    return directionChanges >= 2;
+  }
+
+  /// 🆕 التحقق من تحدي واحد باستخدام قائمة الإطارات
+  Future<ChallengeResult> verifySingleChallenge({
+    required LivenessChallenge challenge,
+    required List<Face> faceSequence,
+  }) async {
+    if (faceSequence.length < 5) {
+      return ChallengeResult(
+        passed: false,
+        challenge: challenge,
+        message: 'لم يتم جمع إطارات كافية',
+      );
+    }
+
+    // تحويل الوجوه إلى تحليلات
+    final frames = faceSequence.map((face) => _FrameAnalysis(
+          timestamp: DateTime.now(),
+          face: face,
+          headYaw: face.headEulerAngleY ?? 0.0,
+          headPitch: face.headEulerAngleX ?? 0.0,
+          headRoll: face.headEulerAngleZ ?? 0.0,
+          leftEyeOpen: face.leftEyeOpenProbability ?? 0.0,
+          rightEyeOpen: face.rightEyeOpenProbability ?? 0.0,
+        )).toList();
+
+    bool passed = false;
+    String message = '';
+
+    switch (challenge) {
+      case LivenessChallenge.blinkEyes:
+        // التحقق من الرمش الكامل
+        final leftEyeValues = frames.map((f) => f.leftEyeOpen).toList();
+        final rightEyeValues = frames.map((f) => f.rightEyeOpen).toList();
+        passed = _detectBlinkInSequence(leftEyeValues, rightEyeValues);
+        message = passed ? '✅ تم اكتشاف رمش العينين' : '❌ لم يتم اكتشاف رمش العينين';
+        break;
+
+      case LivenessChallenge.blinkTwice:
+        final blinkCount = _detectBlinks(frames);
+        passed = blinkCount >= 2;
+        message = passed ? '✅ تم اكتشاف رمشتين' : '❌ الرجاء الرمش مرتين';
+        break;
+
+      case LivenessChallenge.turnHeadLeft:
+        passed = _detectHeadTurn(frames, direction: 'left');
+        message = passed ? '✅ تم اكتشاف دوران الرأس لليسار' : '❌ الرجاء لف رأسك لليسار';
+        break;
+
+      case LivenessChallenge.turnHeadRight:
+        passed = _detectHeadTurn(frames, direction: 'right');
+        message = passed ? '✅ تم اكتشاف دوران الرأس لليمين' : '❌ الرجاء لف رأسك لليمين';
+        break;
+
+      case LivenessChallenge.lookUp:
+        passed = _detectLookDirection(frames, direction: 'up');
+        message = passed ? '✅ تم اكتشاف النظر للأعلى' : '❌ الرجاء النظر للأعلى';
+        break;
+
+      case LivenessChallenge.lookDown:
+        passed = _detectLookDirection(frames, direction: 'down');
+        message = passed ? '✅ تم اكتشاف النظر للأسفل' : '❌ الرجاء النظر للأسفل';
+        break;
+
+      case LivenessChallenge.rapidEyeMovement:
+        passed = _detectRapidEyeMovement(frames);
+        message = passed ? '✅ تم اكتشاف حركة العين السريعة' : '❌ حرك عينيك بسرعة يمين ويسار';
+        break;
+    }
+
+    if (passed) {
+      _completedChallenges.add(challenge);
+      _currentChallengeIndex++;
+    }
+
+    print('🎯 Challenge ${challenge.displayText}: $passed - $message');
+
+    return ChallengeResult(
+      passed: passed,
+      challenge: challenge,
+      message: message,
+    );
+  }
+
+  /// 🆕 التحقق من جميع التحديات باستخدام تسلسل الإطارات
+  Future<LivenessResult> verifyAllChallenges({
+    required List<Face> faceSequence,
+    int minFramesPerChallenge = 15,
+  }) async {
+    if (_currentChallenges.isEmpty) {
+      generateChallengeSequence();
+    }
+
+    print('\n🔐 ===== VERIFYING ALL LIVENESS CHALLENGES =====');
+    print('📸 Total frames: ${faceSequence.length}');
+    print('🎯 Challenges: ${_currentChallenges.map((c) => c.displayText).join(", ")}');
+
+    // تقسيم الإطارات على التحديات
+    final framesPerChallenge = faceSequence.length ~/ _currentChallenges.length;
+
+    for (int i = 0; i < _currentChallenges.length; i++) {
+      final challenge = _currentChallenges[i];
+      final startIdx = i * framesPerChallenge;
+      final endIdx = (i == _currentChallenges.length - 1)
+          ? faceSequence.length
+          : (i + 1) * framesPerChallenge;
+
+      final challengeFrames = faceSequence.sublist(startIdx, endIdx);
+
+      final result = await verifySingleChallenge(
+        challenge: challenge,
+        faceSequence: challengeFrames,
+      );
+
+      if (!result.passed) {
+        return LivenessResult(
+          passed: false,
+          reason: LivenessFailureReason.challengeFailed,
+          message: result.message,
+          currentChallenge: challenge,
+          completedChallenges: _completedChallenges,
+        );
+      }
+    }
+
+    print('✅ All challenges passed!');
+
+    return LivenessResult(
+      passed: true,
+      reason: LivenessFailureReason.none,
+      message: 'تم اجتياز جميع التحديات بنجاح',
+      completedChallenges: _completedChallenges,
+    );
   }
 
   /// Analyze collected frames for liveness indicators
@@ -461,16 +743,20 @@ class _FrameAnalysis {
 
 /// Liveness challenge types
 enum LivenessChallenge {
-  blinkTwice,
-  turnHeadLeft,
-  turnHeadRight,
-  lookUp,
-  lookDown,
+  blinkEyes,         // إغلاق وفتح العينين
+  blinkTwice,        // ارمش مرتين
+  turnHeadLeft,      // لف الرأس لليسار
+  turnHeadRight,     // لف الرأس لليمين
+  lookUp,            // انظر للأعلى
+  lookDown,          // انظر للأسفل
+  rapidEyeMovement,  // تحريك العين بسرعة
 }
 
 extension LivenessChallengeExtension on LivenessChallenge {
   String get displayText {
     switch (this) {
+      case LivenessChallenge.blinkEyes:
+        return 'أغلق عينيك ثم افتحهما';
       case LivenessChallenge.blinkTwice:
         return 'ارمش مرتين';
       case LivenessChallenge.turnHeadLeft:
@@ -481,8 +767,68 @@ extension LivenessChallengeExtension on LivenessChallenge {
         return 'انظر للأعلى';
       case LivenessChallenge.lookDown:
         return 'انظر للأسفل';
+      case LivenessChallenge.rapidEyeMovement:
+        return 'حرك عينيك بسرعة يمين ويسار';
     }
   }
+
+  String get englishText {
+    switch (this) {
+      case LivenessChallenge.blinkEyes:
+        return 'Close your eyes completely, then open them';
+      case LivenessChallenge.blinkTwice:
+        return 'Blink twice';
+      case LivenessChallenge.turnHeadLeft:
+        return 'Turn your head slowly to the left';
+      case LivenessChallenge.turnHeadRight:
+        return 'Turn your head slowly to the right';
+      case LivenessChallenge.lookUp:
+        return 'Look up';
+      case LivenessChallenge.lookDown:
+        return 'Look down';
+      case LivenessChallenge.rapidEyeMovement:
+        return 'Move your eyes quickly left and right';
+    }
+  }
+
+  String get instruction {
+    switch (this) {
+      case LivenessChallenge.blinkEyes:
+        return 'يرجى إغلاق عينيك تمامًا ثم فتحهما مرة أخرى بسرعة وبشكل طبيعي';
+      case LivenessChallenge.blinkTwice:
+        return 'ارمش بعينيك مرتين بشكل طبيعي';
+      case LivenessChallenge.turnHeadLeft:
+        return 'لف رأسك ببطء إلى اليسار';
+      case LivenessChallenge.turnHeadRight:
+        return 'لف رأسك ببطء إلى اليمين';
+      case LivenessChallenge.lookUp:
+        return 'انظر إلى الأعلى';
+      case LivenessChallenge.lookDown:
+        return 'انظر إلى الأسفل';
+      case LivenessChallenge.rapidEyeMovement:
+        return 'حرك عينيك بسرعة بين اليمين واليسار';
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case LivenessChallenge.blinkEyes:
+      case LivenessChallenge.blinkTwice:
+        return IconData(0xe3fc, fontFamily: 'MaterialIcons'); // visibility
+      case LivenessChallenge.turnHeadLeft:
+        return IconData(0xe5c4, fontFamily: 'MaterialIcons'); // arrow_back
+      case LivenessChallenge.turnHeadRight:
+        return IconData(0xe5c8, fontFamily: 'MaterialIcons'); // arrow_forward
+      case LivenessChallenge.lookUp:
+        return IconData(0xe5d8, fontFamily: 'MaterialIcons'); // arrow_upward
+      case LivenessChallenge.lookDown:
+        return IconData(0xe5db, fontFamily: 'MaterialIcons'); // arrow_downward
+      case LivenessChallenge.rapidEyeMovement:
+        return IconData(0xe5d2, fontFamily: 'MaterialIcons'); // swap_horiz
+    }
+  }
+
+  Duration get timeout => const Duration(seconds: 5);
 }
 
 /// Liveness check result
@@ -512,8 +858,24 @@ enum LivenessFailureReason {
   timeout,
   staticFace,
   noBlink,
+  noBlinkDetected, // 🆕 لم يتم اكتشاف رمش العينين
+  noHeadMovement,  // 🆕 لم يتم اكتشاف حركة الرأس
+  noEyeMovement,   // 🆕 لم يتم اكتشاف حركة العين
   eyesClosed,
   challengeFailed,
   insufficientFrames,
   error,
+}
+
+/// 🆕 نتيجة تحدي واحد
+class ChallengeResult {
+  final bool passed;
+  final LivenessChallenge challenge;
+  final String message;
+
+  ChallengeResult({
+    required this.passed,
+    required this.challenge,
+    required this.message,
+  });
 }

@@ -2,7 +2,8 @@ import 'package:el_race/report_module/data/models/report_detail_model.dart';
 import 'package:el_race/report_module/data/services/report_hive_service.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/report_detail.dart';
 import 'package:el_race/ui/presentation/todo_list/data/todo_model.dart';
-import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
+import 'package:el_race/ui/presentation/todo_list/providers/todo_firebase_provider.dart';
+import 'package:el_race/ui/presentation/todo_list/services/team_members_api_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
@@ -12,7 +13,7 @@ import 'package:provider/provider.dart';
 
 class AddTodoBottomSheet extends StatefulWidget {
   final TodoFilter filter;
-  final int? listId;
+  final String? listId;
   final TodoModel? todo;
 
   const AddTodoBottomSheet({
@@ -34,6 +35,11 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
   DateTime? _dueDate;
   bool _isLoading = false;
 
+  // Member assignment
+  TeamMember? _selectedMember;
+  List<TeamMember> _teamMembers = [];
+  bool _isLoadingMembers = false;
+
   bool get isEditing => widget.todo != null;
 
   @override
@@ -50,6 +56,35 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
     // If coming from planned, set due date to today by default
     if (widget.filter == TodoFilter.planned && _dueDate == null && !isEditing) {
       _dueDate = DateTime.now();
+    }
+
+    // Load team members
+    _loadTeamMembers();
+  }
+
+  Future<void> _loadTeamMembers() async {
+    setState(() => _isLoadingMembers = true);
+    try {
+      _teamMembers = await TeamMembersApiService.instance.getTeamMembers();
+
+      // If editing and has assigned member, find them
+      if (widget.todo?.assignedTo != null) {
+        final assignedId = int.tryParse(widget.todo!.assignedTo!);
+        if (assignedId != null) {
+          _selectedMember = _teamMembers.firstWhere(
+            (m) => m.id == assignedId,
+            orElse: () => TeamMember(
+              id: assignedId,
+              name: widget.todo!.assignedToName ?? 'Unknown',
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading team members: $e');
+    }
+    if (mounted) {
+      setState(() => _isLoadingMembers = false);
     }
   }
 
@@ -195,6 +230,19 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                     onTap: _selectDueDate,
                     onLongPress: _dueDate != null
                         ? () => setState(() => _dueDate = null)
+                        : null,
+                  ),
+                  // Assign to Member
+                  _buildOptionChip(
+                    icon: Icons.person_add_outlined,
+                    label: _selectedMember != null
+                        ? _selectedMember!.name
+                        : translate('todo.assigned_to_me'),
+                    isSelected: _selectedMember != null,
+                    selectedColor: const Color(0xFF4CAF50),
+                    onTap: _showMemberPicker,
+                    onLongPress: _selectedMember != null
+                        ? () => setState(() => _selectedMember = null)
                         : null,
                   ),
                 ],
@@ -420,6 +468,33 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
     }
   }
 
+  void _showMemberPicker() {
+    if (_isLoadingMembers) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Loading members...')),
+      );
+      return;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _MemberPickerSheet(
+        members: _teamMembers,
+        selectedMember: _selectedMember,
+        onMemberSelected: (member) {
+          setState(() => _selectedMember = member);
+          Navigator.pop(context);
+        },
+        onClear: () {
+          setState(() => _selectedMember = null);
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
   Future<void> _saveTodo() async {
     final title = _titleController.text.trim();
     if (title.isEmpty) {
@@ -434,7 +509,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
 
     setState(() => _isLoading = true);
 
-    final provider = context.read<TodoProvider>();
+    final provider = context.read<TodoFirebaseProvider>();
     bool success;
 
     if (isEditing) {
@@ -446,6 +521,8 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
         isImportant: _isImportant,
         isMyDay: _isMyDay,
         dueDate: _dueDate,
+        assignedTo: _selectedMember?.id.toString(),
+        assignedToName: _selectedMember?.name,
         updatedAt: DateTime.now(),
       );
       success = await provider.updateTodo(updatedTodo);
@@ -458,6 +535,8 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
         isImportant: _isImportant,
         isMyDay: _isMyDay,
         dueDate: _dueDate,
+        assignedTo: _selectedMember?.id.toString(),
+        assignedToName: _selectedMember?.name,
         listId: widget.listId,
       );
       success = newTodo != null;
@@ -493,7 +572,9 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
     );
 
     if (confirm == true && mounted) {
-      await context.read<TodoProvider>().deleteTodo(widget.todo!.id!);
+      await context
+          .read<TodoFirebaseProvider>()
+          .deleteTodo(widget.todo!.firebaseId!);
       if (mounted) Navigator.pop(context);
     }
   }
@@ -548,5 +629,212 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
         );
       }
     }
+  }
+}
+
+/// Bottom sheet for picking a team member
+class _MemberPickerSheet extends StatefulWidget {
+  final List<TeamMember> members;
+  final TeamMember? selectedMember;
+  final Function(TeamMember) onMemberSelected;
+  final VoidCallback onClear;
+
+  const _MemberPickerSheet({
+    required this.members,
+    required this.selectedMember,
+    required this.onMemberSelected,
+    required this.onClear,
+  });
+
+  @override
+  State<_MemberPickerSheet> createState() => _MemberPickerSheetState();
+}
+
+class _MemberPickerSheetState extends State<_MemberPickerSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  List<TeamMember> _filteredMembers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredMembers = widget.members;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterMembers(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredMembers = widget.members;
+      } else {
+        _filteredMembers = widget.members
+            .where((m) => m.name.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            margin: EdgeInsets.only(top: 12.h),
+            width: 40.w,
+            height: 4.h,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          SizedBox(height: 16.h),
+          // Title
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Select Team Member',
+                  style: GoogleFonts.inter(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1A1A53),
+                  ),
+                ),
+                if (widget.selectedMember != null)
+                  TextButton(
+                    onPressed: widget.onClear,
+                    child: Text(
+                      'Clear',
+                      style: GoogleFonts.inter(
+                        fontSize: 14.sp,
+                        color: Colors.red,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          SizedBox(height: 12.h),
+          // Search
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _filterMembers,
+              decoration: InputDecoration(
+                hintText: 'Search for member...',
+                hintStyle: GoogleFonts.inter(color: Colors.grey.shade400),
+                prefixIcon:
+                    Icon(Icons.search, color: Colors.grey.shade400, size: 22.w),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF1A1A53),
+                    width: 2,
+                  ),
+                ),
+                contentPadding: EdgeInsets.symmetric(vertical: 12.h),
+              ),
+            ),
+          ),
+          SizedBox(height: 12.h),
+          // Members list
+          Expanded(
+            child: _filteredMembers.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.people_outline,
+                          size: 60.w,
+                          color: Colors.grey.shade300,
+                        ),
+                        SizedBox(height: 12.h),
+                        Text(
+                          'No members found',
+                          style: GoogleFonts.inter(
+                            fontSize: 16.sp,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w),
+                    itemCount: _filteredMembers.length,
+                    itemBuilder: (context, index) {
+                      final member = _filteredMembers[index];
+                      final isSelected =
+                          widget.selectedMember?.id == member.id;
+
+                      return ListTile(
+                        onTap: () => widget.onMemberSelected(member),
+                        leading: CircleAvatar(
+                          backgroundColor: isSelected
+                              ? const Color(0xFF4CAF50)
+                              : const Color(0xFF1A1A53).withOpacity(0.1),
+                          child: Text(
+                            member.name.isNotEmpty
+                                ? member.name[0].toUpperCase()
+                                : '?',
+                            style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w600,
+                              color: isSelected
+                                  ? Colors.white
+                                  : const Color(0xFF1A1A53),
+                            ),
+                          ),
+                        ),
+                        title: Text(
+                          member.name,
+                          style: GoogleFonts.inter(
+                            fontSize: 15.sp,
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: const Color(0xFF1A1A53),
+                          ),
+                        ),
+                        subtitle: member.jobPosition != null
+                            ? Text(
+                                member.jobPosition!,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12.sp,
+                                  color: Colors.grey.shade600,
+                                ),
+                              )
+                            : null,
+                        trailing: isSelected
+                            ? Icon(
+                                Icons.check_circle,
+                                color: const Color(0xFF4CAF50),
+                                size: 24.w,
+                              )
+                            : null,
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
   }
 }

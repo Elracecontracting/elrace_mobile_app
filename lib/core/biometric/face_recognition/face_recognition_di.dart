@@ -70,7 +70,7 @@ class FaceRecognitionDI {
             0.6, // Stricter matching for check-in/out (lower = more strict)
         useCosineSimilarity: false, // true for cosine, false for Euclidean
         enableLivenessCheck:
-            true, // Enabled for enhanced security with liveness detection
+            true, // ✅ REQUIRED: Anti-spoofing enabled to prevent photo attacks
       ),
     );
 

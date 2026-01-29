@@ -127,6 +127,20 @@ class ChatModuleHelper {
       }
 
       final decoded = jsonDecode(loginJson) as Map<String, dynamic>;
+      
+      // If already initialized, try to reauthenticate first
+      if (_isInitialized && isChatEnabled) {
+        print('🔷 ChatModuleHelper: Already initialized, checking authentication...');
+        final isAuthenticated = await FirebaseChatAuthService.instance.reauthenticate();
+        if (isAuthenticated) {
+          print('✅ ChatModuleHelper: Reauthentication successful');
+          return _lastResult;
+        } else {
+          print('⚠️ ChatModuleHelper: Reauthentication failed, reinitializing...');
+          _isInitialized = false;
+        }
+      }
+      
       return await initializeFromLoginResponse(decoded);
     } catch (e) {
       print('❌ ChatModuleHelper: Error restoring session: $e');

@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/api_logger.dart';
 import 'package:el_race/utils/color_utils.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
@@ -17,6 +18,7 @@ import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 import '../../../widgets/custom_slider_button.dart';
+import 'attachment_viewer_screen.dart';
 
 class MyDocumentsScreen extends StatefulWidget {
   const MyDocumentsScreen({
@@ -78,6 +80,220 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
         titleStr.contains('family');
   }
 
+  void _debugPrintLong(String message) {
+    if (!kDebugMode) return;
+    const chunkSize = 800;
+    for (var i = 0; i < message.length; i += chunkSize) {
+      final end =
+          (i + chunkSize < message.length) ? i + chunkSize : message.length;
+      debugPrint(message.substring(i, end));
+    }
+  }
+
+  dynamic _firstAttachmentIdFrom(dynamic attachmentIds) {
+    if (attachmentIds is List && attachmentIds.isNotEmpty) {
+      final first = attachmentIds.first;
+      if (first is Map) {
+        return first['attachment_id'] ?? first['id'] ?? first['attachmentId'];
+      }
+      return first;
+    }
+    if (attachmentIds is Map) {
+      return attachmentIds['attachment_id'] ??
+          attachmentIds['id'] ??
+          attachmentIds['attachmentId'];
+    }
+    return null;
+  }
+
+  int? _firstAttachmentIdAsInt(Map<String, dynamic> document) {
+    final raw = _firstAttachmentIdFrom(document['attachment_ids']);
+    if (raw is int) return raw;
+    return int.tryParse(raw?.toString() ?? '');
+  }
+
+  Future<Map<String, dynamic>> _fetchAttachmentDetails(
+      {required int attachmentId}) async {
+    final token = SharedPref.getLoginData().result?.token ?? '';
+    final url = Uri.parse('https://erp.elrace.com/api/get_attachment_details');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    final body = jsonEncode({
+      'jsonrpc': '2.0',
+      'params': {
+        'attachment_id': attachmentId,
+      },
+    });
+
+    // Backend expects GET (with JSON body) for this endpoint.
+    final request = http.Request('GET', url)
+      ..headers.addAll(headers)
+      ..body = body;
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(response.body);
+    } catch (_) {
+      throw Exception(
+        'Failed to parse attachment details (HTTP ${response.statusCode}). '
+        'Body: ${response.body.substring(0, response.body.length < 400 ? response.body.length : 400)}',
+      );
+    }
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        decoded is Map
+            ? (decoded['error']?.toString() ??
+                decoded['result']?['message']?.toString() ??
+                'Failed to load attachment details (HTTP ${response.statusCode})')
+            : 'Failed to load attachment details (HTTP ${response.statusCode})',
+      );
+    }
+
+    if (decoded is! Map) {
+      throw Exception('Invalid attachment details response');
+    }
+
+    final result = decoded['result'];
+    if (result == null || result['status'] != 'success') {
+      throw Exception(
+        result?['message']?.toString() ??
+            decoded['error']?.toString() ??
+            'Failed to load attachment details',
+      );
+    }
+
+    final data = result['data'];
+    if (data is! Map) {
+      throw Exception('Invalid attachment details response');
+    }
+
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<void> _openDocumentAttachment(Map<String, dynamic> document) async {
+    final attachmentId = _firstAttachmentIdAsInt(document);
+    if (attachmentId == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('No attachment available for this document')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    var loaderVisible = true;
+    void dismissLoader() {
+      if (!loaderVisible) return;
+      loaderVisible = false;
+      if (!mounted) return;
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final details = await _fetchAttachmentDetails(attachmentId: attachmentId);
+      final publicUrl = (details['public_url'] ?? '').toString();
+      final name =
+          (details['attachment_name'] ?? document['name'] ?? 'Attachment')
+              .toString();
+      final type = (details['attachment_type'] ?? '').toString().toLowerCase();
+
+      if (publicUrl.isEmpty) {
+        throw Exception('Attachment URL is empty');
+      }
+      if (type.isNotEmpty && !type.contains('pdf')) {
+        throw Exception('Attachment is not a PDF ($type)');
+      }
+
+      dismissLoader();
+      if (!mounted) return;
+
+      await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => AttachmentViewerScreen(
+            publicUrl: publicUrl,
+            title: name,
+          ),
+        ),
+      );
+    } catch (e) {
+      dismissLoader();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  void _debugPrintBodyPreview(String body, {int maxChars = 4000}) {
+    if (!kDebugMode) return;
+    if (body.length <= maxChars) {
+      _debugPrintLong(body);
+      return;
+    }
+    _debugPrintLong(body.substring(0, maxChars));
+    debugPrint('... (truncated, length=${body.length})');
+  }
+
+  Future<void> _debugPrintDocumentTapApi(Map<String, dynamic> document) async {
+    if (!kDebugMode) return;
+
+    debugPrint('=========== MY DOCUMENT (TAP) START ===========');
+    debugPrint('Doc id: ${document['id']}');
+    _debugPrintLong(jsonEncode(document));
+
+    final attachmentId = _firstAttachmentIdFrom(document['attachment_ids']);
+    if (attachmentId == null) {
+      debugPrint('No attachment_ids found for this document.');
+      debugPrint('============ MY DOCUMENT (TAP) END ============');
+      return;
+    }
+
+    final token = SharedPref.getLoginData().result?.token ?? '';
+    final url = Uri.parse('https://erp.elrace.com/api/get_attachment_details');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    final body = jsonEncode({
+      'jsonrpc': '2.0',
+      'params': {
+        'attachment_id': attachmentId,
+      },
+    });
+
+    try {
+      final request = http.Request('GET', url)
+        ..headers.addAll(headers)
+        ..body = body;
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      debugPrint('----- get_attachment_details RESPONSE -----');
+      debugPrint('Status: ${response.statusCode}');
+      _debugPrintBodyPreview(response.body);
+      debugPrint('-----------------------------------------');
+    } catch (e) {
+      debugPrint('❌ get_attachment_details failed: $e');
+    } finally {
+      debugPrint('============ MY DOCUMENT (TAP) END ============');
+    }
+  }
+
   Future<void> _fetchMyDocuments({String? keyword}) async {
     setState(() {
       _loading = true;
@@ -114,6 +330,15 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
       final startTime = DateTime.now();
       final response = await http.post(url, headers: headers, body: body);
       final duration = DateTime.now().difference(startTime);
+
+      if (kDebugMode) {
+        debugPrint('=========== MY DOCUMENTS API RESPONSE START ===========');
+        debugPrint('URL: $url');
+        debugPrint('Status: ${response.statusCode}');
+        _debugPrintLong(response.body);
+        debugPrint('============ MY DOCUMENTS API RESPONSE END ============');
+      }
+
       final data = jsonDecode(response.body);
 
       // 📥 Log Response
@@ -124,20 +349,22 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
         duration: duration,
       );
 
-      // 🔍 Print full response for debugging
-      print('🔍 ====== FULL RESPONSE DATA ======');
-      print(jsonEncode(data));
-      print('🔍 ==================================');
+      if (kDebugMode) {
+        debugPrint('🔍 ====== MY DOCUMENTS PARSED JSON ======');
+        _debugPrintLong(jsonEncode(data));
+        debugPrint('🔍 ======================================');
+      }
 
       if (response.statusCode == 200 &&
           data['result'] != null &&
           data['result']['status'] == 'success') {
         final List list = (data['result']['data'] ?? []) as List;
 
-        // Print each document details
-        print('📄 Total documents: ${list.length}');
-        for (var i = 0; i < list.length; i++) {
-          print('📄 Document $i: ${jsonEncode(list[i])}');
+        if (kDebugMode) {
+          debugPrint('📄 My Documents: total=${list.length}');
+          for (var i = 0; i < list.length; i++) {
+            _debugPrintLong('📄 Document $i: ${jsonEncode(list[i])}');
+          }
         }
         final mapped = list.map<Map<String, dynamic>>((raw) {
           final map = raw as Map<String, dynamic>;
@@ -494,6 +721,12 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
                         return GestureDetector(
                           onTap: () {
+                            if (kDebugMode) {
+                              unawaited(_debugPrintDocumentTapApi(item));
+                            }
+                            unawaited(_openDocumentAttachment(item));
+                          },
+                          onLongPress: () {
                             _showDocumentDetailsDialog(context, item);
                           },
                           child: Container(
@@ -583,6 +816,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     showDialog(
       context: context,
       builder: (BuildContext context) {
+        final hasAttachment = _firstAttachmentIdAsInt(document) != null;
         return Dialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
@@ -670,8 +904,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                   const SizedBox(height: 20),
 
                 // View Attachment Button
-                if (document['attachment'] != null &&
-                    document['attachment'] != false)
+                if (hasAttachment)
                   Center(
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
@@ -685,13 +918,8 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                         ),
                       ),
                       onPressed: () {
-                        // TODO: Implement view attachment
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Opening attachment...'),
-                          ),
-                        );
+                        unawaited(_openDocumentAttachment(document));
                       },
                       icon: const Icon(Icons.attach_file, color: Colors.white),
                       label: Text(
@@ -703,8 +931,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                       ),
                     ),
                   ),
-                if (document['attachment'] == null ||
-                    document['attachment'] == false)
+                if (!hasAttachment)
                   const Center(
                     child: Text(
                       'No attachment available',

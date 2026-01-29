@@ -1,4 +1,4 @@
-import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
+import 'package:el_race/ui/presentation/todo_list/providers/todo_firebase_provider.dart';
 import 'package:el_race/ui/presentation/todo_list/widgets/add_todo_bottom_sheet.dart';
 import 'package:el_race/ui/presentation/todo_list/widgets/todo_item_widget.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
@@ -12,7 +12,7 @@ import 'package:provider/provider.dart';
 class TodoCategoryScreen extends StatefulWidget {
   final TodoFilter filter;
   final String title;
-  final int? listId;
+  final String? listId;
 
   const TodoCategoryScreen({
     super.key,
@@ -31,7 +31,7 @@ class _TodoCategoryScreenState extends State<TodoCategoryScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context
-          .read<TodoProvider>()
+          .read<TodoFirebaseProvider>()
           .setFilter(widget.filter, listId: widget.listId);
     });
   }
@@ -67,7 +67,7 @@ class _TodoCategoryScreenState extends State<TodoCategoryScreen> {
           const SizedBox(height: 16),
           // Todos List
           Expanded(
-            child: Consumer<TodoProvider>(
+            child: Consumer<TodoFirebaseProvider>(
               builder: (context, provider, child) {
                 if (provider.isLoading) {
                   return const Center(
@@ -91,7 +91,7 @@ class _TodoCategoryScreenState extends State<TodoCategoryScreen> {
                   itemBuilder: (context, index) {
                     final todo = provider.todos[index];
                     return Dismissible(
-                      key: ValueKey(todo.id),
+                      key: ValueKey(todo.firebaseId ?? todo.id),
                       direction: DismissDirection.endToStart,
                       background: Container(
                         alignment: Alignment.centerRight,
@@ -111,7 +111,7 @@ class _TodoCategoryScreenState extends State<TodoCategoryScreen> {
                         return await _confirmDelete(context);
                       },
                       onDismissed: (direction) {
-                        provider.deleteTodo(todo.id!);
+                        provider.deleteTodo(todo.firebaseId!);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(translate('todo.task_deleted')),
@@ -126,6 +126,7 @@ class _TodoCategoryScreenState extends State<TodoCategoryScreen> {
                                   isMyDay: todo.isMyDay,
                                   dueDate: todo.dueDate,
                                   assignedTo: todo.assignedTo,
+                                  assignedToName: todo.assignedToName,
                                   listId: todo.listId,
                                 );
                               },
@@ -134,12 +135,12 @@ class _TodoCategoryScreenState extends State<TodoCategoryScreen> {
                         );
                       },
                       child: TodoItemWidget(
-                        key: ValueKey('todo_item_${todo.id}'),
+                        key: ValueKey('todo_item_${todo.firebaseId ?? todo.id}'),
                         todo: todo,
                         onToggleComplete: () =>
-                            provider.toggleComplete(todo.id!),
+                            provider.toggleComplete(todo.firebaseId!),
                         onToggleImportant: () =>
-                            provider.toggleImportant(todo.id!),
+                            provider.toggleImportant(todo.firebaseId!),
                         onTap: () => _showEditTodo(todo),
                       ),
                     );
@@ -182,7 +183,7 @@ class _TodoCategoryScreenState extends State<TodoCategoryScreen> {
             overflow: TextOverflow.ellipsis,
           ),
         ),
-        Consumer<TodoProvider>(
+        Consumer<TodoFirebaseProvider>(
           builder: (context, provider, child) {
             final count = provider.todos.where((t) => !t.isCompleted).length;
             if (count == 0) return const SizedBox.shrink();

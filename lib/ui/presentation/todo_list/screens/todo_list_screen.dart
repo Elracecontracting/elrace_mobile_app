@@ -1,5 +1,5 @@
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
+import 'package:el_race/ui/presentation/todo_list/providers/todo_firebase_provider.dart';
 import 'package:el_race/ui/presentation/todo_list/screens/todo_category_screen.dart';
 import 'package:el_race/ui/presentation/todo_list/screens/todo_search_screen.dart';
 import 'package:el_race/ui/presentation/todo_list/widgets/add_list_dialog.dart';
@@ -23,7 +23,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<TodoProvider>().initialize();
+      context.read<TodoFirebaseProvider>().initialize();
     });
   }
 
@@ -47,7 +47,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
           const SizedBox(height: 24),
           // Categories List
           Expanded(
-            child: Consumer<TodoProvider>(
+            child: Consumer<TodoFirebaseProvider>(
               builder: (context, provider, child) {
                 return SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
@@ -103,10 +103,10 @@ class _TodoListScreenState extends State<TodoListScreen> {
                                 onTap: () => _navigateToCategory(
                                   TodoFilter.customList,
                                   list.name,
-                                  listId: list.id,
+                                  listId: list.firebaseId,
                                 ),
-                                onLongPress: () =>
-                                    _showListOptions(list.id!, list.name),
+                                onLongPress: () => _showListOptions(
+                                    list.firebaseId!, list.name),
                               ),
                             )),
                       ],
@@ -321,7 +321,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
   }
 
-  void _navigateToCategory(TodoFilter filter, String title, {int? listId}) {
+  void _navigateToCategory(TodoFilter filter, String title, {String? listId}) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -341,7 +341,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
   }
 
-  void _showListOptions(int listId, String listName) {
+  void _showListOptions(String listId, String listName) {
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -374,7 +374,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
   }
 
-  void _showEditListDialog(int listId, String currentName) {
+  void _showEditListDialog(String listId, String currentName) {
     showDialog(
       context: context,
       builder: (context) => AddListDialog(
@@ -384,7 +384,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
     );
   }
 
-  void _confirmDeleteList(int listId) {
+  void _confirmDeleteList(String listId) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -398,7 +398,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              context.read<TodoProvider>().deleteTodoList(listId);
+              context.read<TodoFirebaseProvider>().deleteTodoList(listId);
             },
             child: Text(
               translate('common.delete'),

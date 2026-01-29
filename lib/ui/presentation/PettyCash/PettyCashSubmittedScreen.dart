@@ -770,7 +770,7 @@ class _PettyCashSubmittedScreenState extends State<PettyCashSubmittedScreen> {
               Text(
                 '-$amountText',
                 style: GoogleFonts.inter(
-                  fontSize: 30,
+                  fontSize: 18,
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFFD1002C),
                   height: 1.0,

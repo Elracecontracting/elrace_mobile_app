@@ -7,6 +7,11 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:el_race/utils/color_utils.dart';
+import 'package:el_race/ui/presentation/tasks_dashboard/services/task_options_api_service.dart';
+import 'package:el_race/ui/presentation/todo_list/services/team_members_api_service.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
+import 'dart:io';
 
 class AddTaskScreen extends StatefulWidget {
   const AddTaskScreen({Key? key}) : super(key: key);
@@ -19,14 +24,61 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   double _daysValue = 5;
   late TextEditingController _daysController;
   late TextEditingController _descriptionController;
-  String _selectedProject = 'Alfoua - Abu Dhabi Police';
-  String _selectedDepartment = 'Media Department';
+  
+  // Projects from backend
+  List<ProjectOption> _projects = [];
+  ProjectOption? _selectedProject;
+  bool _isLoadingProjects = true;
+  
+  // Departments from backend
+  List<DepartmentOption> _departments = [];
+  DepartmentOption? _selectedDepartment;
+  bool _isLoadingDepartments = true;
+  
+  // Team members from backend
+  List<TeamMember> _allMembers = [];
+  List<TeamMember> _selectedMembers = [];
+  List<TeamMember> _selectedFollowers = [];
+  bool _isLoadingMembers = true;
+  
+  // Attachments
+  List<File> _attachments = [];
+  final ImagePicker _imagePicker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
     _daysController = TextEditingController(text: _daysValue.toInt().toString());
     _descriptionController = TextEditingController();
+    _loadData();
+  }
+  
+  Future<void> _loadData() async {
+    // Load projects, departments, and members in parallel
+    final results = await Future.wait([
+      TaskOptionsApiService.getProjects(),
+      TaskOptionsApiService.getDepartments(),
+      TeamMembersApiService.instance.getTeamMembers(),
+    ]);
+    
+    if (mounted) {
+      setState(() {
+        _projects = results[0] as List<ProjectOption>;
+        _departments = results[1] as List<DepartmentOption>;
+        _allMembers = results[2] as List<TeamMember>;
+        _isLoadingProjects = false;
+        _isLoadingDepartments = false;
+        _isLoadingMembers = false;
+        
+        // Set default selections
+        if (_projects.isNotEmpty) {
+          _selectedProject = _projects.first;
+        }
+        if (_departments.isNotEmpty) {
+          _selectedDepartment = _departments.first;
+        }
+      });
+    }
   }
 
   @override
@@ -80,48 +132,30 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               // Project Name
               _buildBorderedFieldWithLabel(
                 label: 'Project\nName',
-                child: _buildDropdown(
-                  value: _selectedProject,
-                  items: ['Alfoua - Abu Dhabi Police', 'Other Project'],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedProject = value!;
-                    });
-                  },
-                ),
+                child: _isLoadingProjects
+                    ? _buildDropdownShimmer()
+                    : _buildProjectDropdown(),
               ),
               const SizedBox(height: 20),
 
               // Task Department
               _buildBorderedFieldWithLabel(
                 label: 'Task\nDepartment',
-                child: _buildDropdown(
-                  value: _selectedDepartment,
-                  items: ['Media Department', 'Development', 'Marketing'],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedDepartment = value!;
-                    });
-                  },
-                ),
+                child: _isLoadingDepartments
+                    ? _buildDropdownShimmer()
+                    : _buildDepartmentDropdown(),
               ),
               const SizedBox(height: 20),
 
               // Add Member
               _buildSectionLabel('Add Member'),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  _buildAddButton(),
-                  const SizedBox(width: 12),
-                  _buildMemberAvatar('Diao', 'assets/png/avatar1.png'),
-                  const SizedBox(width: 12),
-                  _buildMemberAvatar('Mostafa', 'assets/png/avatar2.png'),
-                  const SizedBox(width: 12),
-                  _buildMemberAvatar('Thoer', 'assets/png/avatar3.png'),
-                  const SizedBox(width: 12),
-                  _buildMemberAvatar('Sara', 'assets/png/avatar4.png'),
-                ],
+              _buildMembersSection(
+                selectedMembers: _selectedMembers,
+                onAdd: () => _showMemberPicker(isFollower: false),
+                onRemove: (member) {
+                  setState(() => _selectedMembers.remove(member));
+                },
               ),
               const SizedBox(height: 20),
 
@@ -235,25 +269,19 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 child:             _buildSectionLabel('Following By'),
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  _buildAddButton(),
-                  const SizedBox(width: 12),
-                  _buildMemberAvatar('Ahmed', 'assets/png/avatar5.png'),
-                  const SizedBox(width: 12),
-                  _buildMemberAvatar('Hassan', 'assets/png/avatar6.png'),
-                  const SizedBox(width: 12),
-                  _buildMemberAvatar('M.Soliman', 'assets/png/avatar7.png'),
-                  const SizedBox(width: 12),
-                  _buildMemberAvatar('M.Kadry', 'assets/png/avatar8.png'),
-                ],
+              _buildMembersSection(
+                selectedMembers: _selectedFollowers,
+                onAdd: () => _showMemberPicker(isFollower: true),
+                onRemove: (member) {
+                  setState(() => _selectedFollowers.remove(member));
+                },
               ),
               const SizedBox(height: 20),
 
               // Attachments
               _buildSectionLabel('Attachments'),
               const SizedBox(height: 12),
-              _buildAddButton(),
+              _buildAttachmentsSection(),
               const SizedBox(height: 30),
 
               // Submit Button
@@ -453,6 +481,158 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     );
   }
 
+  Widget _buildProjectDropdown() {
+    if (_projects.isEmpty) {
+      return Container(
+        height: 50,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Center(
+          child: Text(
+            'No projects available',
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[400]),
+          ),
+        ),
+      );
+    }
+
+    return DropdownButtonHideUnderline(
+      child: DropdownButton2<ProjectOption>(
+        value: _selectedProject,
+        isExpanded: true,
+        items: _projects.map((ProjectOption project) {
+          return DropdownMenuItem<ProjectOption>(
+            value: project,
+            child: Text(
+              project.name,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            _selectedProject = value;
+          });
+        },
+        buttonStyleData: ButtonStyleData(
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+        ),
+        iconStyleData: const IconStyleData(
+          icon: Icon(Icons.keyboard_arrow_down),
+          iconSize: 24,
+          iconEnabledColor: Colors.black54,
+        ),
+        dropdownStyleData: DropdownStyleData(
+          maxHeight: 300,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+          ),
+          offset: const Offset(0, -5),
+          scrollbarTheme: ScrollbarThemeData(
+            radius: const Radius.circular(40),
+            thickness: WidgetStateProperty.all(6),
+            thumbVisibility: WidgetStateProperty.all(true),
+          ),
+        ),
+        menuItemStyleData: const MenuItemStyleData(
+          height: 48,
+          padding: EdgeInsets.symmetric(horizontal: 16),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDepartmentDropdown() {
+    if (_departments.isEmpty) {
+      return Container(
+        height: 50,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Center(
+          child: Text(
+            'No departments available',
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[400]),
+          ),
+        ),
+      );
+    }
+
+    return DropdownButtonHideUnderline(
+      child: DropdownButton2<DepartmentOption>(
+        value: _selectedDepartment,
+        isExpanded: true,
+        items: _departments.map((DepartmentOption dept) {
+          return DropdownMenuItem<DepartmentOption>(
+            value: dept,
+            child: Text(
+              dept.name,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            _selectedDepartment = value;
+          });
+        },
+        buttonStyleData: ButtonStyleData(
+          height: 50,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+        ),
+        iconStyleData: const IconStyleData(
+          icon: Icon(Icons.keyboard_arrow_down),
+          iconSize: 24,
+          iconEnabledColor: Colors.black54,
+        ),
+        dropdownStyleData: DropdownStyleData(
+          maxHeight: 300,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            color: Colors.white,
+          ),
+          offset: const Offset(0, -5),
+          scrollbarTheme: ScrollbarThemeData(
+            radius: const Radius.circular(40),
+            thickness: WidgetStateProperty.all(6),
+            thumbVisibility: WidgetStateProperty.all(true),
+          ),
+        ),
+        menuItemStyleData: const MenuItemStyleData(
+          height: 48,
+          padding: EdgeInsets.symmetric(horizontal: 16),
+        ),
+      ),
+    );
+  }
+
   Widget _buildDropdown({
     required String value,
     required List<String> items,
@@ -591,6 +771,416 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  /// Build members section with add button and selected members
+  Widget _buildMembersSection({
+    required List<TeamMember> selectedMembers,
+    required VoidCallback onAdd,
+    required Function(TeamMember) onRemove,
+  }) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          // Add button
+          if (_isLoadingMembers)
+            Row(
+              children: List.generate(
+                3,
+                (index) => Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Column(
+                    children: [
+                      _ShimmerWidget(
+                        child: Container(
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      _ShimmerWidget(
+                        child: Container(
+                          width: 30,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            )
+          else ...[
+            GestureDetector(
+              onTap: onAdd,
+              child: Column(
+                children: [
+                  DottedBorder(
+                    borderType: BorderType.Circle,
+                    color: Colors.black,
+                    strokeWidth: 2,
+                    dashPattern: const [6, 4],
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                      ),
+                      child: const Icon(Icons.add, size: 25, color: Colors.black),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Add',
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      color: Colors.black,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Selected members
+            ...selectedMembers.map((member) => Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: _buildSelectedMemberAvatar(member, onRemove),
+                )),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Build avatar for a selected member with remove option
+  Widget _buildSelectedMemberAvatar(TeamMember member, Function(TeamMember) onRemove) {
+    return GestureDetector(
+      onLongPress: () => onRemove(member),
+      child: Column(
+        children: [
+          Stack(
+            children: [
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.grey[300]!, width: 2),
+                  color: const Color(0xFF1A1A53).withOpacity(0.1),
+                ),
+                child: Center(
+                  child: Text(
+                    member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
+                    style: GoogleFonts.poppins(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1A1A53),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                right: 0,
+                top: 0,
+                child: GestureDetector(
+                  onTap: () => onRemove(member),
+                  child: Container(
+                    width: 18,
+                    height: 18,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.red,
+                    ),
+                    child: const Icon(Icons.close, size: 12, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            width: 50,
+            child: Text(
+              member.name.split(' ').first,
+              style: GoogleFonts.poppins(
+                fontSize: 10,
+                color: Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Show member picker bottom sheet
+  void _showMemberPicker({required bool isFollower}) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _MemberPickerSheet(
+        members: _allMembers,
+        selectedMembers: isFollower ? _selectedFollowers : _selectedMembers,
+        onMemberSelected: (member) {
+          setState(() {
+            if (isFollower) {
+              if (!_selectedFollowers.any((m) => m.id == member.id)) {
+                _selectedFollowers.add(member);
+              }
+            } else {
+              if (!_selectedMembers.any((m) => m.id == member.id)) {
+                _selectedMembers.add(member);
+              }
+            }
+          });
+        },
+      ),
+    );
+  }
+
+  /// Build attachments section
+  Widget _buildAttachmentsSection() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          // Add button
+          GestureDetector(
+            onTap: _pickAttachment,
+            child: Column(
+              children: [
+                DottedBorder(
+                  borderType: BorderType.Circle,
+                  color: Colors.black,
+                  strokeWidth: 2,
+                  dashPattern: const [6, 4],
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white,
+                    ),
+                    child: const Icon(Icons.add, size: 25, color: Colors.black),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Add',
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Attachments
+          ..._attachments.asMap().entries.map((entry) {
+            final index = entry.key;
+            final file = entry.value;
+            return Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: _buildAttachmentPreview(file, index),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  /// Build attachment preview
+  Widget _buildAttachmentPreview(File file, int index) {
+    final extension = file.path.split('.').last.toLowerCase();
+    final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].contains(extension);
+    final isPdf = extension == 'pdf';
+
+    return Stack(
+      children: [
+        Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[300]!),
+            color: isPdf ? Colors.red.withOpacity(0.1) : Colors.grey[100],
+          ),
+          child: isImage
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.file(file, fit: BoxFit.cover),
+                )
+              : Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      isPdf ? Icons.picture_as_pdf : Icons.insert_drive_file,
+                      color: isPdf ? Colors.red : Colors.grey[600],
+                      size: 24,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      extension.toUpperCase(),
+                      style: GoogleFonts.poppins(
+                        fontSize: 8,
+                        fontWeight: FontWeight.w600,
+                        color: isPdf ? Colors.red : Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+        Positioned(
+          right: 0,
+          top: 0,
+          child: GestureDetector(
+            onTap: () {
+              setState(() => _attachments.removeAt(index));
+            },
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.red,
+              ),
+              child: const Icon(Icons.close, size: 12, color: Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Pick attachment (image or file)
+  Future<void> _pickAttachment() async {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Text(
+              'Add Attachment',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.photo_library, color: Colors.blue),
+              ),
+              title: Text('Pick from Gallery', style: GoogleFonts.poppins()),
+              subtitle: Text('Select images from your gallery', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+              onTap: () async {
+                Navigator.pop(context);
+                final XFile? image = await _imagePicker.pickImage(
+                  source: ImageSource.gallery,
+                );
+                if (image != null) {
+                  setState(() => _attachments.add(File(image.path)));
+                }
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.camera_alt, color: Colors.green),
+              ),
+              title: Text('Take Photo', style: GoogleFonts.poppins()),
+              subtitle: Text('Capture a new photo', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+              onTap: () async {
+                Navigator.pop(context);
+                final XFile? image = await _imagePicker.pickImage(
+                  source: ImageSource.camera,
+                );
+                if (image != null) {
+                  setState(() => _attachments.add(File(image.path)));
+                }
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.picture_as_pdf, color: Colors.red),
+              ),
+              title: Text('Pick PDF File', style: GoogleFonts.poppins()),
+              subtitle: Text('Select a PDF document', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+              onTap: () async {
+                Navigator.pop(context);
+                final result = await FilePicker.platform.pickFiles(
+                  type: FileType.custom,
+                  allowedExtensions: ['pdf'],
+                );
+                if (result != null && result.files.single.path != null) {
+                  setState(() => _attachments.add(File(result.files.single.path!)));
+                }
+              },
+            ),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.folder_open, color: Colors.orange),
+              ),
+              title: Text('Pick Any File', style: GoogleFonts.poppins()),
+              subtitle: Text('Select any document', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+              onTap: () async {
+                Navigator.pop(context);
+                final result = await FilePicker.platform.pickFiles();
+                if (result != null && result.files.single.path != null) {
+                  setState(() => _attachments.add(File(result.files.single.path!)));
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
     );
   }
 
@@ -740,6 +1330,82 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     }
   }
 
+  /// Shimmer effect for dropdown loading
+  Widget _buildDropdownShimmer() {
+    return _ShimmerWidget(
+      child: Container(
+        height: 50,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 14,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Simple shimmer box with animation
+  Widget _buildShimmerBox({
+    double? width,
+    double height = 14,
+    double borderRadius = 4,
+  }) {
+    return _ShimmerWidget(
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: Colors.grey[300],
+          borderRadius: BorderRadius.circular(borderRadius),
+        ),
+      ),
+    );
+  }
+
+  /// Shimmer for member avatar loading
+  Widget _buildMemberAvatarShimmer() {
+    return Row(
+      children: List.generate(
+        3,
+        (index) => Padding(
+          padding: EdgeInsets.only(right: 8.w),
+          child: _ShimmerWidget(
+            child: Container(
+              width: 40.w,
+              height: 40.w,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _formatBulletList() {
     final text = _descriptionController.text;
     if (text.isEmpty) return;
@@ -780,6 +1446,273 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     _descriptionController.text = formattedLines;
     _descriptionController.selection = TextSelection.fromPosition(
       TextPosition(offset: formattedLines.length),
+    );
+  }
+}
+
+/// Bottom sheet for picking team members
+class _MemberPickerSheet extends StatefulWidget {
+  final List<TeamMember> members;
+  final List<TeamMember> selectedMembers;
+  final Function(TeamMember) onMemberSelected;
+
+  const _MemberPickerSheet({
+    required this.members,
+    required this.selectedMembers,
+    required this.onMemberSelected,
+  });
+
+  @override
+  State<_MemberPickerSheet> createState() => _MemberPickerSheetState();
+}
+
+class _MemberPickerSheetState extends State<_MemberPickerSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  List<TeamMember> _filteredMembers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _filteredMembers = widget.members;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _filterMembers(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredMembers = widget.members;
+      } else {
+        _filteredMembers = widget.members
+            .where((m) => m.name.toLowerCase().contains(query.toLowerCase()))
+            .toList();
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.7,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      ),
+      child: Column(
+        children: [
+          // Handle bar
+          Container(
+            margin: EdgeInsets.only(top: 12.h),
+            width: 40.w,
+            height: 4.h,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          SizedBox(height: 16.h),
+          // Title
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Select Team Member',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1A1A53),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text(
+                    'Done',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      color: const Color(0xFF1A1A53),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          SizedBox(height: 12.h),
+          // Search
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 20.w),
+            child: TextField(
+              controller: _searchController,
+              onChanged: _filterMembers,
+              decoration: InputDecoration(
+                hintText: 'Search for member...',
+                hintStyle: GoogleFonts.poppins(color: Colors.grey.shade400),
+                prefixIcon:
+                    Icon(Icons.search, color: Colors.grey.shade400, size: 22.w),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(0xFF1A1A53),
+                    width: 2,
+                  ),
+                ),
+                contentPadding: EdgeInsets.symmetric(vertical: 12.h),
+              ),
+            ),
+          ),
+          SizedBox(height: 12.h),
+          // Members list
+          Expanded(
+            child: _filteredMembers.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.people_outline,
+                          size: 60.w,
+                          color: Colors.grey.shade300,
+                        ),
+                        SizedBox(height: 12.h),
+                        Text(
+                          'No members found',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16.sp,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 12.w),
+                    itemCount: _filteredMembers.length,
+                    itemBuilder: (context, index) {
+                      final member = _filteredMembers[index];
+                      final isSelected =
+                          widget.selectedMembers.any((m) => m.id == member.id);
+
+                      return ListTile(
+                        onTap: () {
+                          widget.onMemberSelected(member);
+                          setState(() {}); // Refresh to show selection
+                        },
+                        leading: CircleAvatar(
+                          backgroundColor: isSelected
+                              ? const Color(0xFF4CAF50)
+                              : const Color(0xFF1A1A53).withOpacity(0.1),
+                          child: Text(
+                            member.name.isNotEmpty
+                                ? member.name[0].toUpperCase()
+                                : '?',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600,
+                              color: isSelected
+                                  ? Colors.white
+                                  : const Color(0xFF1A1A53),
+                            ),
+                          ),
+                        ),
+                        title: Text(
+                          member.name,
+                          style: GoogleFonts.poppins(
+                            fontSize: 15.sp,
+                            fontWeight:
+                                isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: const Color(0xFF1A1A53),
+                          ),
+                        ),
+                        subtitle: member.jobPosition != null
+                            ? Text(
+                                member.jobPosition!,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12.sp,
+                                  color: Colors.grey.shade600,
+                                ),
+                              )
+                            : null,
+                        trailing: isSelected
+                            ? Icon(
+                                Icons.check_circle,
+                                color: const Color(0xFF4CAF50),
+                                size: 24.w,
+                              )
+                            : null,
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Shimmer animation widget
+class _ShimmerWidget extends StatefulWidget {
+  final Widget child;
+  
+  const _ShimmerWidget({required this.child});
+  
+  @override
+  State<_ShimmerWidget> createState() => _ShimmerWidgetState();
+}
+
+class _ShimmerWidgetState extends State<_ShimmerWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat();
+    _animation = Tween<double>(begin: -2, end: 2).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return ShaderMask(
+          blendMode: BlendMode.srcATop,
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              colors: const [
+                Color(0xFFE0E0E0),
+                Color(0xFFF5F5F5),
+                Color(0xFFE0E0E0),
+              ],
+              stops: const [0.0, 0.5, 1.0],
+              begin: Alignment(_animation.value - 1, 0),
+              end: Alignment(_animation.value + 1, 0),
+            ).createShader(bounds);
+          },
+          child: widget.child,
+        );
+      },
     );
   }
 }

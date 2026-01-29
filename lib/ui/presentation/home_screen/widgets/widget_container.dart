@@ -1,6 +1,7 @@
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/custom_swipe_button.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/list_view_widgets.dart';
+import 'package:el_race/ui/presentation/home_screen/widgets/my_actions_section.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:flutter/material.dart';
@@ -79,29 +80,54 @@ class WidgetContainer extends StatelessWidget {
                     child: Container(
                       width: double.infinity,
                       margin: EdgeInsets.only(top: 6.h),
-                      padding: EdgeInsets.symmetric(
-                          vertical: 32.h, horizontal: 35.w),
-                      decoration: BoxDecoration(
+                      child: ClipRRect(
                         borderRadius: BorderRadius.circular(23.r),
-                        image: const DecorationImage(
-                          image: AssetImage(
-                              'assets/png/gray_card.png'), // ✅ Update to your image path
-                          fit: BoxFit.fill,
+                        child: Stack(
+                          children: [
+                            const Positioned.fill(
+                              child: Image(
+                                image: AssetImage(
+                                  'assets/newapp/widgets_background.png',
+                                ),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            const Positioned.fill(
+                              child: IgnorePointer(
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Image(
+                                    image: AssetImage(
+                                      'assets/newapp/vector_curved_forswip_widget.png',
+                                    ),
+                                    fit: BoxFit.fitHeight,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Padding(
+                              padding: EdgeInsets.symmetric(
+                                  vertical: 32.h, horizontal: 35.w),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  // Swipe button
+                                  IgnorePointer(
+                                    ignoring: !SharedPref.isUserAuthenticated(),
+                                    child: const CustomSwipeButton(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Swipe button
-                          IgnorePointer(
-                            ignoring: !SharedPref.isUserAuthenticated(),
-                            child: const CustomSwipeButton(),
-                          ),
-                        ],
                       ),
                     ),
                   ),
                 ),
+
+                SizedBox(height: 14.h),
+                const MyActionsSection(),
 
                 SizedBox(height: 10.w),
                 const ListViewWidgets(),

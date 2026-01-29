@@ -253,22 +253,34 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
 
       final face = detectResult.getOrElse(() => throw Exception());
 
-      // Step 3: Check liveness (if enabled)
-      bool hasLiveness = true;
-      if (_enableLivenessCheck) {
-        hasLiveness = _faceDetectorService.checkLiveness(face);
-        if (!hasLiveness) {
-          return const Right(
-            FaceVerificationResult(
-              isVerified: false,
-              confidence: 0.0,
-              message:
-                  'Liveness check failed. Please ensure you are a real person.',
-              hasLiveness: false,
-            ),
-          );
-        }
+      // Step 3: 🔒 MANDATORY Liveness Check - CANNOT BE BYPASSED
+      bool hasLiveness = false;
+      print('🔒 Step 3: Starting MANDATORY liveness check...');
+      
+      // ✅ فحص الحيوية إجباري - لا يمكن تجاوزه
+      hasLiveness = _faceDetectorService.checkLiveness(
+        face,
+        eyeOpenThreshold: 0.6, // ⬆️ عتبة أعلى للتحقق (0.6 بدلاً من 0.3)
+        maxHeadEulerAngleY: 12.0, // ⬇️ زاوية أصغر مسموحة (12 بدلاً من 20)
+        maxHeadEulerAngleZ: 12.0,
+      );
+      
+      print('🔒 Liveness result: ${hasLiveness ? "PASSED ✅" : "FAILED ❌"}');
+      
+      if (!hasLiveness) {
+        print('❌ SECURITY: Liveness check FAILED - possible photo attack');
+        return const Right(
+          FaceVerificationResult(
+            isVerified: false,
+            confidence: 0.0,
+            message:
+                '🚫 Please use your live face, not a photo. Keep your eyes open and look at the camera.',
+            hasLiveness: false,
+          ),
+        );
       }
+      
+      print('✅ Liveness check PASSED - proceeding with verification');
 
       // Step 4: Crop face
       final croppedFace = await ImagePreprocessingHelper.cropFace(image, face);
@@ -338,6 +350,11 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
     } catch (e) {
       return Left(StorageFailure('Failed to delete embeddings: $e'));
     }
+  }
+
+  @override
+  Future<List<Face>> detectFaces(CameraImage image) async {
+    return await _faceDetectorService.detectFaces(image);
   }
 
   @override

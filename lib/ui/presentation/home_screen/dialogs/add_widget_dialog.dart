@@ -97,17 +97,53 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
   Widget _buildTimeSheetPreview() {
     return GrayCardComponent(
       onClick: null,
-      mainIcon: 'assets/png/time_sheet.png',
-      cardTitle: translate('home.time_sheet'),
-      backgroundImagePath: 'assets/png/gray_card.png',
-      topPadding: true,
-      topPaddingValue: 40,
-      childWidget: Padding(
-        padding: EdgeInsets.only(left: 150.w),
-        child: Image.asset(
-          'assets/png/time_sheet.png',
-          width: SizeConfig().getWidth(140),
-          height: SizeConfig().getHeight(140),
+      cardTitle: 'Timesheet',
+      upperCaseTitle: false,
+      backgroundImagePath: 'assets/png/t-sheet.png',
+      childAlignment: Alignment.bottomRight,
+      childPadding: EdgeInsets.only(
+        right: 24.w,
+        bottom: 18.h,
+      ),
+      childWidget: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: 18.w,
+            vertical: 10.h,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.55),
+            borderRadius: BorderRadius.circular(28.r),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.85),
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Labors',
+                style: GoogleFonts.koulen(
+                  color: Colors.black,
+                  fontSize: 16.w,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 1.1,
+                ),
+              ),
+              SizedBox(width: 28.w),
+              Text(
+                '250',
+                style: GoogleFonts.koulen(
+                  color: Colors.black,
+                  fontSize: 18.w,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

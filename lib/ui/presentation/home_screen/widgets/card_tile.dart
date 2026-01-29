@@ -153,84 +153,111 @@ class GrayCardComponent extends StatelessWidget {
     this.mainIcon,
     this.onClick,
     required this.cardTitle,
-    required this.backgroundImagePath,
+    this.backgroundImagePath,
     required this.childWidget,
+    this.upperCaseTitle = true,
+    this.childAlignment = Alignment.topLeft,
+    this.childPadding,
     this.topPadding = false,
     this.topPaddingValue = 60,
+    this.titleColor,
   });
   final double? topPaddingValue;
   final bool topPadding;
   final String? mainIcon;
-  final String backgroundImagePath;
+  final String? backgroundImagePath;
   final VoidCallback? onClick;
   final String cardTitle;
   final Widget childWidget;
+  final Color? titleColor;
+  final bool upperCaseTitle;
+  final Alignment childAlignment;
+  final EdgeInsets? childPadding;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onClick,
-      child: SizedBox(
-        width: double.infinity,
-        height: AppDimen.homeWidgetCardHeight.w,
-        child: Container(
-          width: double.infinity,
-          height: AppDimen.homeWidgetCardHeight.w,
-          decoration: BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage(backgroundImagePath),
-              fit: BoxFit.fill,
-            ),
-          ),
-          child: Stack(
-            children: [
-              Positioned(
-                left: 36.w,
-                top: 16,
-                child: SizedBox(
-                  height: SizeConfig().getHeight(43),
-                  child: Row(
-                    children: [
-                      // SizedBox(
-                      //   width: SizeConfig().getWidth(40.26),
-                      //   height: SizeConfig().getHeight(40.31),
-                      //   child: Image.asset(
-                      //     mainIcon,
-                      //     width: SizeConfig().getWidth(40),
-                      //     height: SizeConfig().getHeight(40),
-                      //   ),
-                      // ),
-                      // const SizedBox(width: 10),
-                      Text(
-                        cardTitle.toUpperCase(),
-                        style: GoogleFonts.koulen(
-                          color: const Color(0xFF151544),
-                          fontSize: 24.w,
-                          fontWeight: FontWeight.w400,
-                          letterSpacing: 1.9,
-                        ),
-                      ),
-                    ],
+    final borderRadius = BorderRadius.circular(23.r);
+
+    return SizedBox(
+      width: double.infinity,
+      height: AppDimen.homeWidgetCardHeight.w,
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: Material(
+          color: Colors.white,
+          child: InkWell(
+            onTap: onClick,
+            child: backgroundImagePath != null 
+              ? Ink.image(
+                  image: AssetImage(backgroundImagePath!),
+                  fit: BoxFit.cover,
+                  child: _buildContent(),
+                )
+              : Ink(
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
                   ),
+                  child: _buildContent(),
                 ),
-              ),
-              Positioned(
-                top: topPadding ? topPaddingValue : 30.h,
-                left: 37.w,
-                child: DefaultTextStyle(
-                  style: GoogleFonts.nunito(
-                    fontSize: 12.w,
-                    color: Colors.black,
-                  ),
-                  child: Column(
-                    children: [childWidget],
-                  ),
-                ),
-              ),
-            ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildContent() {
+    return Stack(
+      children: [
+        Positioned(
+          left: 36.w,
+          top: 16,
+          child: SizedBox(
+            height: SizeConfig().getHeight(43),
+            child: Row(
+              children: [
+                // SizedBox(
+                //   width: SizeConfig().getWidth(40.26),
+                //   height: SizeConfig().getHeight(40.31),
+                //   child: Image.asset(
+                //     mainIcon,
+                //     width: SizeConfig().getWidth(40),
+                //     height: SizeConfig().getHeight(40),
+                //   ),
+                // ),
+                // const SizedBox(width: 10),
+                Text(
+                  upperCaseTitle ? cardTitle.toUpperCase() : cardTitle,
+                  style: GoogleFonts.koulen(
+                    color: titleColor ?? const Color(0xFF151544),
+                    fontSize: 24.w,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 1.9,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: Padding(
+            padding: childPadding ??
+                EdgeInsets.only(
+                  left: 37.w,
+                  top: topPadding ? (topPaddingValue ?? 60) : 30.h,
+                ),
+            child: Align(
+              alignment: childAlignment,
+              child: DefaultTextStyle(
+                style: GoogleFonts.nunito(
+                  fontSize: 12.w,
+                  color: Colors.black,
+                ),
+                child: childWidget,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

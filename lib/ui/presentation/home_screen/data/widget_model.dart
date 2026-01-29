@@ -1,15 +1,15 @@
 class WidgetModel {
   final String id;
   final String title;
-  final String iconPath;
-  final String backgroundPath;
+  final String? iconPath;
+  final String? backgroundPath;
   final bool isActive;
 
   const WidgetModel({
     required this.id,
     required this.title,
-    required this.iconPath,
-    required this.backgroundPath,
+    this.iconPath,
+    this.backgroundPath,
     this.isActive = false,
   });
 
@@ -52,13 +52,10 @@ class WidgetModel {
 
 List<WidgetModel> getAvailableWidgets() {
   return [
-    // Time Sheet widget hidden
-    // const WidgetModel(
-    //   id: 'time_sheet',
-    //   title: 'Time Sheet',
-    //   iconPath: 'assets/png/time_sheet.png',
-    //   backgroundPath: 'assets/png/time_sheet_bg.png',
-    // ),
+    const WidgetModel(
+      id: 'time_sheet',
+      title: 'Time Sheet',
+    ),
     const WidgetModel(
       id: 'petty_cash',
       title: 'Petty Cash',

@@ -1,4 +1,4 @@
-import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
+import 'package:el_race/ui/presentation/todo_list/providers/todo_firebase_provider.dart';
 import 'package:el_race/ui/presentation/todo_list/widgets/add_todo_bottom_sheet.dart';
 import 'package:el_race/ui/presentation/todo_list/widgets/todo_item_widget.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
@@ -33,7 +33,7 @@ class _TodoSearchScreenState extends State<TodoSearchScreen> {
     _searchController.dispose();
     _focusNode.dispose();
     // Clear search when leaving
-    context.read<TodoProvider>().clearSearch();
+    context.read<TodoFirebaseProvider>().clearSearch();
     super.dispose();
   }
 
@@ -50,7 +50,7 @@ class _TodoSearchScreenState extends State<TodoSearchScreen> {
           const SizedBox(height: 16),
           // Search results
           Expanded(
-            child: Consumer<TodoProvider>(
+            child: Consumer<TodoFirebaseProvider>(
               builder: (context, provider, child) {
                 if (provider.searchQuery.isEmpty) {
                   return _buildEmptySearchState();
@@ -76,9 +76,10 @@ class _TodoSearchScreenState extends State<TodoSearchScreen> {
                     final todo = provider.todos[index];
                     return TodoItemWidget(
                       todo: todo,
-                      onToggleComplete: () => provider.toggleComplete(todo.id!),
+                      onToggleComplete: () =>
+                          provider.toggleComplete(todo.firebaseId!),
                       onToggleImportant: () =>
-                          provider.toggleImportant(todo.id!),
+                          provider.toggleImportant(todo.firebaseId!),
                       onTap: () => _showEditTodo(todo),
                     );
                   },
@@ -111,7 +112,7 @@ class _TodoSearchScreenState extends State<TodoSearchScreen> {
                 controller: _searchController,
                 focusNode: _focusNode,
                 onChanged: (value) {
-                  context.read<TodoProvider>().search(value);
+                  context.read<TodoFirebaseProvider>().search(value);
                 },
                 decoration: InputDecoration(
                   hintText: translate('todo.search_hint'),
@@ -133,7 +134,7 @@ class _TodoSearchScreenState extends State<TodoSearchScreen> {
                           ),
                           onPressed: () {
                             _searchController.clear();
-                            context.read<TodoProvider>().clearSearch();
+                            context.read<TodoFirebaseProvider>().clearSearch();
                           },
                         )
                       : null,

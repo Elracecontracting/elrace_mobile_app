@@ -162,6 +162,7 @@ flutter:
     - assets/mp3/
     - assets/gif/
     - assets/newapp/
+    - assets/newapp/newicon/
     - assets/fonts/arbicsupport.ttf
     - assets/mobilefacenet.tflite
     - AssetManifest.json

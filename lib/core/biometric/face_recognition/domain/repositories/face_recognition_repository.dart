@@ -1,5 +1,6 @@
 import 'package:dartz/dartz.dart';
 import 'package:camera/camera.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import '../entities/face_embedding.dart';
 import '../entities/face_verification_result.dart';
 
@@ -35,6 +36,9 @@ abstract class FaceRecognitionRepository {
 
   /// Check if the detected face has liveness (real person, not photo)
   Future<Either<FaceRecognitionFailure, bool>> checkLiveness(CameraImage image);
+
+  /// Detect faces in image (for multi-frame analysis)
+  Future<List<Face>> detectFaces(CameraImage image);
 }
 
 /// Base class for all face recognition failures

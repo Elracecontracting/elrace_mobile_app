@@ -1,4 +1,6 @@
+import 'package:el_race/ui/presentation/home_screen/screens/main_screens.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -30,6 +32,7 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
+      bottomNavigationBar: const CustomBottomNavBar(isMain: false),
       body: BlocConsumer<NotesBloc, NotesState>(
         listener: (context, state) {
           if (state is NotesError) {
@@ -50,9 +53,15 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
           }
         },
         builder: (context, state) {
-          return SingleChildScrollView(
-            padding: EdgeInsets.symmetric(horizontal: 14.w),
-            child: Column(
+          return Builder(
+            builder: (context) {
+              return SingleChildScrollView(
+                padding: EdgeInsets.only(
+                  left: 14.w,
+                  right: 14.w,
+                  bottom: kBottomNavigationBarHeight + context.systemBottomInset + 16,
+                ),
+                child: Column(
               children: [
                 NotesHeaderWidget(
                   onAddPressed: () {
@@ -176,6 +185,8 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
                   ),
               ],
             ),
+              );
+            },
           );
         },
       ),

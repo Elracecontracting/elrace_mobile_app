@@ -140,11 +140,18 @@ class _HeaderWidgetState extends State<HeaderWidget> {
               top: SizeConfig().getHeight(40.w),
               start: SizeConfig().getWidth(10),
               //left: SizeConfig().getWidth(15),
-              child: Image.asset(
-                'assets/gif/el-race-logo.gif',
-                fit: BoxFit.cover,
-                height: SizeConfig().getHeight(55),
-                width: SizeConfig().getWidth(110),
+              child: GestureDetector(
+                onTap: () {
+                  // Navigate to home screen
+                  final bloc = HomeBloc.get(context);
+                  bloc.add(ChangeCurrentIndex(index: 1));
+                },
+                child: Image.asset(
+                  'assets/gif/el-race-logo.gif',
+                  fit: BoxFit.cover,
+                  height: SizeConfig().getHeight(55),
+                  width: SizeConfig().getWidth(110),
+                ),
               ),
             ),
             SafeArea(
@@ -191,6 +198,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                             color: Colors.black.withOpacity(0.7),
                           ),
                         ),
+
                         SizedBox(width: SizeConfig().getWidth(10)),
                         // Old Search Icon (hidden by flag)
                         widget.hidden

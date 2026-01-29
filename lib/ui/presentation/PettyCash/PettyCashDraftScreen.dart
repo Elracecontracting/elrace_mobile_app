@@ -1,15 +1,19 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:cunning_document_scanner/cunning_document_scanner.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashAddExpense.dart';
-import 'package:el_race/ui/presentation/PettyCash/PettyCashPopUpScreen.dart';
 import 'package:el_race/utils/api_logger.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 
 import 'package:el_race/ui/widgets/header_widget.dart';
+import 'package:el_race/ui/presentation/My_task/screens/report_detail/camera_screen.dart';
 
 class PettyCashDraftScreen extends StatefulWidget {
   const PettyCashDraftScreen({super.key});
@@ -25,8 +29,153 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
   double draftExpensesTotal = 0.0;
   int draftExpensesCount = 0;
   List<Map<String, dynamic>> draftExpenses = [];
+  final List<File> _draftAttachments = [];
 
   final NumberFormat _amountFormat = NumberFormat('#,##0');
+
+  void _openAddExpenseDialog() {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: true,
+        barrierColor: Colors.black.withOpacity(0.20),
+        pageBuilder: (_, __, ___) => const PettyCashAddExpense(),
+        transitionsBuilder: (_, animation, __, child) {
+          final fade = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
+          final scale = Tween<double>(begin: 0.98, end: 1.0).animate(fade);
+          return FadeTransition(
+            opacity: fade,
+            child: ScaleTransition(scale: scale, child: child),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showAttachmentSourcePicker() {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withOpacity(0.35),
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+          child: Container(
+            width: 260,
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF5B5E63).withOpacity(0.96),
+                  const Color(0xFF3F4247).withOpacity(0.96),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _AttachmentSourceTile(
+                  icon: Icons.camera_alt_outlined,
+                  label: 'camera',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _addCameraAttachment();
+                  },
+                ),
+                _AttachmentSourceTile(
+                  icon: Icons.document_scanner_outlined,
+                  label: 'scan',
+                  onTap: () {
+                    Navigator.pop(context);
+                    _scanDocumentAttachment();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBottomAddExpenseButton() {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(5 , 0, 5, 5),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(32),
+          onTap: _openAddExpenseDialog,
+          child: Container(
+            height: 40,width: 200,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(32),
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF6E6E6E),
+                  const Color(0xFF4E4E4E),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '+ ADD EXPENSE',
+              style: GoogleFonts.inter(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                letterSpacing: 0.8,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addCameraAttachment() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const CustomCameraScreen(onePicture: false),
+      ),
+    );
+
+    if (!mounted) return;
+    if (result is List<XFile> && result.isNotEmpty) {
+      setState(() {
+        _draftAttachments.addAll(result.map((x) => File(x.path)));
+      });
+    }
+  }
+
+  Future<void> _scanDocumentAttachment() async {
+    try {
+      final pictures = await CunningDocumentScanner.getPictures(
+        noOfPages: 20,
+        isGalleryImportAllowed: true,
+      );
+
+      if (!mounted) return;
+      if (pictures == null || pictures.isEmpty) return;
+
+      setState(() {
+        _draftAttachments.addAll(pictures.map((p) => File(p)));
+      });
+    } on PlatformException {
+      // ignore
+    }
+  }
 
   @override
   void initState() {
@@ -172,109 +321,117 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
       appBar: const HeaderWidget(),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _fetchDraftSummary,
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 16, 0, 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.hourglass_empty,
-                            size: 24,
-                            color: Colors.black87,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'DRAFT',
-                            style: GoogleFonts.inter(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.black87,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(0, 6, 0, 8),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF6E6E6E),
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            child: Text(
-                              'TOTAL ${draftExpenses.length}',
-                              style: GoogleFonts.inter(
-                                fontSize: 11.5,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
+          : Stack(
+              children: [
+                RefreshIndicator(
+                  onRefresh: _fetchDraftSummary,
+                  child: CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(0, 16, 0, 12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.hourglass_empty,
+                                size: 24,
+                                color: Colors.black87,
                               ),
-                            ),
-                          ),
-                          const Spacer(),
-                          InkWell(
-                            borderRadius: BorderRadius.circular(18),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const PettyCashPopUpScreen()),
-                              );
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: Colors.black.withOpacity(0.25), width: 1),
+                              const SizedBox(width: 8),
+                              Text(
+                                'DRAFT',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.black87,
+                                ),
                               ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.attach_file, size: 16, color: Colors.black87),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Add Attachments',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 11.5,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  if (draftExpenses.isEmpty)
-                    const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(vertical: 34),
-                        child: Center(
-                          child: Text(
-                            'No record found.',
-                            style: TextStyle(color: Colors.grey),
+                            ],
                           ),
                         ),
                       ),
-                    )
-                  else
-                    ..._buildDraftContent(),
-                  const SliverToBoxAdapter(child: SizedBox(height: 20)),
-                ],
-              ),
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF6E6E6E),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Text(
+                                  'TOTAL ${draftExpenses.length}',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                              const Spacer(),
+                              InkWell(
+                                borderRadius: BorderRadius.circular(18),
+                                onTap: _showAttachmentSourcePicker,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(18),
+                                    border: Border.all(
+                                        color: Colors.black.withOpacity(0.25),
+                                        width: 1),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.attach_file,
+                                          size: 16, color: Colors.black87),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Add Attachments',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      if (draftExpenses.isEmpty)
+                        const SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 34),
+                            child: Center(
+                              child: Text(
+                                'No record found.',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        ..._buildDraftContent(),
+                      const SliverToBoxAdapter(child: SizedBox(height: 120)),
+                    ],
+                  ),
+                ),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: _buildBottomAddExpenseButton(),
+                ),
+              ],
             ),
     );
   }
@@ -303,57 +460,6 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
             child: _buildDraftBulletRow(e),
           );
         },
-      ),
-      SliverToBoxAdapter(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(0, 22, 0, 10),
-          child: Center(
-            child: InkWell(
-              borderRadius: BorderRadius.circular(26),
-              onTap: () {
-                Navigator.of(context).push(
-                  PageRouteBuilder(
-                    opaque: false,
-                    barrierDismissible: true,
-                    barrierColor: Colors.black.withOpacity(0.20),
-                    pageBuilder: (_, __, ___) => const PettyCashAddExpense(),
-                    transitionsBuilder: (_, animation, __, child) {
-                      final fade = CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeOutCubic,
-                      );
-                      final scale = Tween<double>(begin: 0.98, end: 1.0)
-                          .animate(fade);
-                      return FadeTransition(
-                        opacity: fade,
-                        child: ScaleTransition(scale: scale, child: child),
-                      );
-                    },
-                  ),
-                );
-              },
-              child: Container(
-                width: 240,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF6E6E6E),
-                  borderRadius: BorderRadius.circular(26),
-                ),
-                child: Center(
-                  child: Text(
-                    '+ ADD EXPENSE',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
       ),
     ];
   }
@@ -504,6 +610,56 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _AttachmentSourceTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _AttachmentSourceTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: onTap,
+      child: SizedBox(
+        width: 92,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 62,
+              height: 62,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                icon,
+                size: 34,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

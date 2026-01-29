@@ -53,6 +53,20 @@ class StartFaceVerification extends FaceRecognitionEvent {
   List<Object?> get props => [image, userId];
 }
 
+/// Start multi-frame verification with blink detection
+class StartMultiFrameVerification extends FaceRecognitionEvent {
+  final List<CameraImage> frames;
+  final String userId;
+
+  StartMultiFrameVerification({
+    required this.frames,
+    required this.userId,
+  });
+
+  @override
+  List<Object?> get props => [frames, userId];
+}
+
 /// Check liveness of detected face
 class CheckFaceLiveness extends FaceRecognitionEvent {
   final CameraImage image;
@@ -72,6 +86,44 @@ class StartLivenessChallenge extends FaceRecognitionEvent {
   @override
   List<Object?> get props => [];
 }
+
+/// 🆕 بدء التحقق النشط مع التحديات المتعددة
+class StartActiveLivenessVerification extends FaceRecognitionEvent {
+  final List<CameraImage> frames;
+  final String userId;
+  final bool skipChallenges; // للتخطي إذا كان المستخدم موثوقًا
+
+  StartActiveLivenessVerification({
+    required this.frames,
+    required this.userId,
+    this.skipChallenges = false,
+  });
+
+  @override
+  List<Object?> get props => [frames, userId, skipChallenges];
+}
+
+/// 🆕 التحقق من تحدي واحد
+class VerifySingleChallengeEvent extends FaceRecognitionEvent {
+  final List<CameraImage> frames;
+  final int challengeIndex;
+  final String userId;
+
+  VerifySingleChallengeEvent({
+    required this.frames,
+    required this.challengeIndex,
+    required this.userId,
+  });
+
+  @override
+  List<Object?> get props => [frames, challengeIndex, userId];
+}
+
+/// 🆕 طلب التحديات التالية
+class RequestNextChallengeEvent extends FaceRecognitionEvent {}
+
+/// 🆕 إعادة تعيين التحديات
+class ResetChallengesEvent extends FaceRecognitionEvent {}
 
 /// Delete stored embeddings
 class DeleteStoredEmbeddings extends FaceRecognitionEvent {

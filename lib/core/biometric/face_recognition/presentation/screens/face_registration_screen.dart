@@ -55,6 +55,16 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
   bool _isMonitoringForFace = false;
   bool _faceCurrentlyVisible = false;
 
+  // 🆕 متغيرات التحديات
+  String _currentChallengeText = '';
+  String _currentChallengeInstruction = '';
+  int _currentChallengeIndex = 0;
+  int _totalChallenges = 3;
+  List<String> _completedChallenges = [];
+  int _currentChallengeIcon = 0xe3fc; // visibility icon
+  bool _showChallengeUI = false;
+  String _challengeStatusMessage = '';
+
   @override
   void initState() {
     super.initState();
@@ -307,7 +317,7 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
 
     try {
       int frameCount = 0;
-      const int requiredFrames = 5; // Capture 5 frames for anti-spoof check
+      const int requiredFrames = 20; // 🆕 جمع 20 إطار للتحديات (~3-4 ثانية)
       final List<CameraImage> capturedFrames = [];
       bool registrationTriggered = false;
 
@@ -340,10 +350,11 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
           // Trigger registration/verification with multiple frames for anti-spoofing
           if (mounted) {
             if (widget.isVerification) {
-              print('🔍 Triggering verification with anti-spoof check...');
+              // 🆕 استخدام التحقق النشط مع التحديات المتعددة
+              print('🔍 Triggering ACTIVE LIVENESS verification...');
               context.read<FaceRecognitionBloc>().add(
-                    StartFaceVerification(
-                      image: capturedFrames.last,
+                    StartActiveLivenessVerification(
+                      frames: capturedFrames,
                       userId: widget.userId,
                     ),
                   );
@@ -423,6 +434,10 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
               if (state.isVerified) {
                 print('✅ Face verification SUCCESS');
                 _registrationSuccess = true;
+                setState(() {
+                  _showChallengeUI = false;
+                  _challengeStatusMessage = '✅ تم التحقق بنجاح!';
+                });
 
                 // Call callback if provided
                 if (widget.isVerification &&
@@ -440,14 +455,59 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
                 setState(() {
                   _isProcessing = false;
                   _showTryAgainButton = true;
+                  _showChallengeUI = false;
+                  _challengeStatusMessage = state.message;
                 });
               }
-            } else if (state is FaceRecognitionError) {
+            } 
+            // 🆕 حالة عرض التحدي الحالي
+            else if (state is LivenessChallengeInProgress) {
+              print('🎯 Challenge: ${state.challengeText}');
+              setState(() {
+                _showChallengeUI = true;
+                _currentChallengeText = state.challengeText;
+                _currentChallengeInstruction = state.challengeInstruction;
+                _currentChallengeIndex = state.currentChallengeIndex;
+                _totalChallenges = state.totalChallenges;
+                _completedChallenges = state.completedChallenges;
+                _currentChallengeIcon = state.iconCodePoint;
+                _isProcessing = true;
+              });
+            }
+            // 🆕 نجاح تحدي واحد
+            else if (state is SingleChallengeSuccess) {
+              print('✅ Challenge passed: ${state.challengeName}');
+              setState(() {
+                _challengeStatusMessage = state.message;
+              });
+            }
+            // 🆕 فشل تحدي واحد
+            else if (state is SingleChallengeFailed) {
+              print('❌ Challenge failed: ${state.challengeName}');
+              setState(() {
+                _isProcessing = false;
+                _showTryAgainButton = true;
+                _showChallengeUI = false;
+                _challengeStatusMessage = state.message;
+              });
+            }
+            // 🆕 اكتمال فحص الحيوية
+            else if (state is LivenessCheckComplete) {
+              print('🏁 Liveness check complete: ${state.passed}');
+              if (state.passed) {
+                setState(() {
+                  _challengeStatusMessage = state.message;
+                });
+              }
+            }
+            else if (state is FaceRecognitionError) {
               print('❌ Face registration ERROR: ${state.message}');
               _registrationTimeoutTimer?.cancel(); // Cancel timeout on error
               setState(() {
                 _isProcessing = false;
                 _showTryAgainButton = true;
+                _showChallengeUI = false;
+                _challengeStatusMessage = state.message;
               });
               // Start monitoring for face to auto-retry
               Future.delayed(const Duration(milliseconds: 500), () {
@@ -497,9 +557,9 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
                   Text(
                     widget.isVerification
                         ? (widget.title.isEmpty
-                            ? 'Verify Your Face'
+                            ? 'التحقق من هويتك'
                             : widget.title)
-                        : 'Face Registration',
+                        : 'تسجيل الوجه',
                     style: TextStyle(
                       color: AppColors.primaryColor,
                       fontSize: 26,
@@ -511,14 +571,48 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
                   Text(
                     widget.isVerification
                         ? (widget.subtitle.isEmpty
-                            ? 'Look at the camera to verify'
+                            ? 'اتبع التعليمات للتحقق'
                             : widget.subtitle)
-                        : 'Position your face within the circle',
+                        : 'ضع وجهك داخل الدائرة',
                     style: TextStyle(
                       color: AppColors.grey,
                       fontSize: 15,
                     ),
                   ),
+                  
+                  // 🆕 واجهة التحديات النشطة
+                  if (widget.isVerification && _showChallengeUI) ...[
+                    const SizedBox(height: 16),
+                    _buildChallengeProgressIndicator(),
+                    const SizedBox(height: 12),
+                    _buildCurrentChallengeCard(),
+                  ]
+                  // 🆕 تعليمات بسيطة عند التحقق
+                  else if (widget.isVerification && _isProcessing) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.visibility, color: AppColors.primaryColor, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            '👁️ انظر للكاميرا واتبع التعليمات',
+                            style: TextStyle(
+                              color: AppColors.primaryColor,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
 
                   const Spacer(flex: 1),
 
@@ -714,12 +808,17 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
                                 Icon(Icons.info_outline,
                                     color: Colors.orange.shade300, size: 18),
                                 const SizedBox(width: 8),
-                                Text(
-                                  'Face not detected',
-                                  style: TextStyle(
-                                    color: Colors.orange.shade300,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w500,
+                                Flexible(
+                                  child: Text(
+                                    _challengeStatusMessage.isNotEmpty
+                                        ? _challengeStatusMessage
+                                        : 'لم يتم اكتشاف الوجه',
+                                    style: TextStyle(
+                                      color: Colors.orange.shade300,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                               ],
@@ -740,7 +839,7 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
                                 ),
                               ),
                               child: const Text(
-                                'Try Again',
+                                'حاول مرة أخرى',
                                 style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w600,
@@ -751,16 +850,19 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
                         ] else if (_showTryAgainButton &&
                             _faceCurrentlyVisible) ...[
                           Text(
-                            'Face detected! Retrying...',
+                            'تم اكتشاف الوجه! جاري المحاولة...',
                             style: TextStyle(
                               color: AppColors.green,
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
+                        ] else if (_isProcessing && _showChallengeUI) ...[
+                          // عند عرض التحديات - لا نعرض نص إضافي
+                          const SizedBox.shrink(),
                         ] else if (_isProcessing) ...[
                           Text(
-                            'Scanning...',
+                            'جاري المسح...',
                             style: TextStyle(
                               color: AppColors.primaryColor,
                               fontSize: 16,
@@ -769,7 +871,7 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
                           ),
                         ] else ...[
                           Text(
-                            'Ready to scan',
+                            'جاهز للمسح',
                             style: TextStyle(
                               color: AppColors.grey,
                               fontSize: 15,
@@ -783,19 +885,19 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
                   const SizedBox(height: 30),
 
                   // Minimal Tips - Just Icons
-                  if (!_showTryAgainButton)
+                  if (!_showTryAgainButton && !_showChallengeUI)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 24),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           _buildMinimalTip(
-                              Icons.lightbulb_outline, 'Good light'),
+                              Icons.lightbulb_outline, 'إضاءة جيدة'),
                           const SizedBox(width: 24),
-                          _buildMinimalTip(Icons.face_outlined, 'Face forward'),
+                          _buildMinimalTip(Icons.face_outlined, 'وجه للأمام'),
                           const SizedBox(width: 24),
                           _buildMinimalTip(
-                              Icons.visibility_outlined, 'Eyes open'),
+                              Icons.visibility_outlined, 'عيون مفتوحة'),
                         ],
                       ),
                     )
@@ -832,6 +934,170 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
           ),
         ),
       ],
+    );
+  }
+
+  /// 🆕 مؤشر تقدم التحديات
+  Widget _buildChallengeProgressIndicator() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(_totalChallenges, (index) {
+              final isCompleted = index < _completedChallenges.length;
+              final isCurrent = index == _currentChallengeIndex;
+              
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                child: Row(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      width: isCurrent ? 32 : 24,
+                      height: isCurrent ? 32 : 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isCompleted
+                            ? AppColors.green
+                            : isCurrent
+                                ? AppColors.primaryColor
+                                : AppColors.grey.withOpacity(0.3),
+                        boxShadow: isCurrent
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.primaryColor.withOpacity(0.4),
+                                  blurRadius: 8,
+                                  spreadRadius: 2,
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Center(
+                        child: isCompleted
+                            ? const Icon(Icons.check, color: Colors.white, size: 16)
+                            : Text(
+                                '${index + 1}',
+                                style: TextStyle(
+                                  color: isCurrent ? Colors.white : AppColors.grey,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: isCurrent ? 14 : 12,
+                                ),
+                              ),
+                      ),
+                    ),
+                    if (index < _totalChallenges - 1)
+                      Container(
+                        width: 20,
+                        height: 2,
+                        color: isCompleted
+                            ? AppColors.green
+                            : AppColors.grey.withOpacity(0.3),
+                      ),
+                  ],
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'التحدي ${_currentChallengeIndex + 1} من $_totalChallenges',
+            style: TextStyle(
+              color: AppColors.grey,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 🆕 بطاقة التحدي الحالي
+  Widget _buildCurrentChallengeCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryColor.withOpacity(0.15),
+            AppColors.primaryColor.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.primaryColor.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          // أيقونة التحدي
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primaryColor.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              IconData(_currentChallengeIcon, fontFamily: 'MaterialIcons'),
+              color: AppColors.primaryColor,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 12),
+          
+          // عنوان التحدي
+          Text(
+            _currentChallengeText,
+            style: TextStyle(
+              color: AppColors.primaryColor,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          
+          // تعليمات التحدي
+          Text(
+            _currentChallengeInstruction,
+            style: TextStyle(
+              color: AppColors.grey,
+              fontSize: 14,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          
+          // رسالة الحالة
+          if (_challengeStatusMessage.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: _challengeStatusMessage.contains('✅')
+                    ? AppColors.green.withOpacity(0.2)
+                    : Colors.orange.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                _challengeStatusMessage,
+                style: TextStyle(
+                  color: _challengeStatusMessage.contains('✅')
+                      ? AppColors.green
+                      : Colors.orange,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:camera/camera.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import '../../domain/usecases/initialize_face_recognition_usecase.dart';
 import '../../domain/usecases/register_face_usecase.dart';
 import '../../domain/usecases/verify_face_usecase.dart';
@@ -61,6 +62,11 @@ class FaceRecognitionBloc
     on<InitializeCamera>(_onInitializeCamera);
     on<StartFaceRegistration>(_onRegisterFace);
     on<StartFaceVerification>(_onVerifyFace);
+    on<StartMultiFrameVerification>(_onMultiFrameVerify); // 🆕 فحص الرمش متعدد الإطارات
+    on<StartActiveLivenessVerification>(_onActiveLivenessVerify); // 🆕 فحص التحديات النشطة
+    on<VerifySingleChallengeEvent>(_onVerifySingleChallenge); // 🆕 التحقق من تحدي واحد
+    on<RequestNextChallengeEvent>(_onRequestNextChallenge); // 🆕 طلب التحدي التالي
+    on<ResetChallengesEvent>(_onResetChallenges); // 🆕 إعادة تعيين التحديات
     on<CheckFaceLiveness>(_onCheckLiveness);
     on<StartLivenessChallenge>(_onStartLivenessChallenge);
     on<DeleteStoredEmbeddings>(_onDeleteEmbeddings);
@@ -180,6 +186,327 @@ class FaceRecognitionBloc
     );
   }
 
+  /// 🆕 Multi-frame verification with BLINK detection
+  Future<void> _onMultiFrameVerify(
+    StartMultiFrameVerification event,
+    Emitter<FaceRecognitionState> emit,
+  ) async {
+    emit(FaceRecognitionLoading(message: 'جاري فحص الرمش...'));
+
+    print('\n🔐 ===== MULTI-FRAME VERIFICATION WITH BLINK CHECK =====');
+    print('📸 Total frames collected: ${event.frames.length}');
+
+    // Step 1: تحليل جميع الإطارات لاكتشاف الرمش
+    if (_livenessService == null) {
+      print('⚠️ Liveness service not available');
+      emit(FaceRecognitionError(
+        message: 'فشل فحص الحيوية - الخدمة غير متاحة',
+        errorType: FaceRecognitionErrorType.livenessCheckFailed,
+      ));
+      return;
+    }
+
+    try {
+      final faces = <Face>[];
+      for (final frame in event.frames) {
+        final detectedFaces = await _repository.detectFaces(frame);
+        if (detectedFaces.isNotEmpty) {
+          faces.add(detectedFaces.first);
+        }
+      }
+
+      print('👁️ Analyzing ${faces.length} face frames for blink detection...');
+
+      // فحص الرمش السلبي
+      final livenessResult = await _livenessService.performPassiveAntiSpoofCheck(
+        faceSequence: faces,
+        minFrames: 5,
+      );
+
+      if (!livenessResult.passed) {
+        print('❌ Blink check FAILED: ${livenessResult.message}');
+        emit(FaceVerificationResult(
+          isVerified: false,
+          confidence: 0.0,
+          message: '🚫 لم يتم اكتشاف رمش العينين. الرجاء استخدام وجهك الحقيقي وليس صورة.',
+          hasLiveness: false,
+        ));
+        return;
+      }
+
+      print('✅ Blink detected! Proceeding with face verification...');
+
+      // Step 2: التحقق من الوجه باستخدام آخر إطار
+      final result = await _verifyFaceUseCase(
+        image: event.frames.last,
+        userId: event.userId,
+      );
+
+      result.fold(
+        (failure) {
+          final errorType = _mapFailureToErrorType(failure);
+          emit(FaceRecognitionError(
+            message: failure.message,
+            errorType: errorType,
+          ));
+        },
+        (verificationResult) {
+          emit(FaceVerificationResult(
+            isVerified: verificationResult.isVerified,
+            confidence: verificationResult.confidence,
+            message: verificationResult.isVerified
+                ? '✅ تم التحقق من وجهك بنجاح!'
+                : 'فشل التحقق. حاول مرة أخرى.',
+            hasLiveness: true, // ✅ تم التحقق من الرمش
+          ));
+        },
+      );
+    } catch (e) {
+      print('❌ Error in multi-frame verification: $e');
+      emit(FaceRecognitionError(
+        message: 'حدث خطأ أثناء التحقق: $e',
+        errorType: FaceRecognitionErrorType.unknown,
+      ));
+    }
+  }
+
+  /// 🆕 Active Liveness Verification with Multiple Challenges
+  /// التحقق النشط مع التحديات المتعددة (رمش، حركة رأس، حركة عين)
+  Future<void> _onActiveLivenessVerify(
+    StartActiveLivenessVerification event,
+    Emitter<FaceRecognitionState> emit,
+  ) async {
+    print('\n🔐 ===== ACTIVE LIVENESS VERIFICATION =====');
+    print('📸 Total frames: ${event.frames.length}');
+    print('👤 User ID: ${event.userId}');
+    print('⏭️ Skip challenges: ${event.skipChallenges}');
+
+    if (_livenessService == null) {
+      print('⚠️ Liveness service not available');
+      emit(FaceRecognitionError(
+        message: 'خدمة التحقق من الحيوية غير متاحة',
+        errorType: FaceRecognitionErrorType.livenessCheckFailed,
+      ));
+      return;
+    }
+
+    try {
+      // إنشاء تسلسل التحديات
+      final challenges = _livenessService.generateChallengeSequence();
+      print('🎯 Generated ${challenges.length} challenges');
+
+      // إرسال أول تحدي للعرض
+      if (challenges.isNotEmpty) {
+        final firstChallenge = challenges.first;
+        emit(LivenessChallengeInProgress(
+          challengeText: firstChallenge.displayText,
+          challengeInstruction: firstChallenge.instruction,
+          currentChallengeIndex: 0,
+          totalChallenges: challenges.length,
+          completedChallenges: const [],
+          iconCodePoint: firstChallenge.icon.codePoint,
+        ));
+      }
+
+      // جمع الوجوه من الإطارات
+      final faces = <Face>[];
+      for (final frame in event.frames) {
+        final detectedFaces = await _repository.detectFaces(frame);
+        if (detectedFaces.isNotEmpty) {
+          faces.add(detectedFaces.first);
+        }
+      }
+
+      print('👁️ Collected ${faces.length} face frames');
+
+      if (faces.length < 15) {
+        emit(FaceRecognitionError(
+          message: 'لم يتم جمع إطارات كافية. حاول مرة أخرى.',
+          errorType: FaceRecognitionErrorType.livenessCheckFailed,
+        ));
+        return;
+      }
+
+      // التحقق من جميع التحديات
+      final livenessResult = await _livenessService.verifyAllChallenges(
+        faceSequence: faces,
+        minFramesPerChallenge: 5,
+      );
+
+      if (!livenessResult.passed) {
+        print('❌ Active liveness FAILED: ${livenessResult.message}');
+        
+        // إظهار التحدي الفاشل
+        if (livenessResult.currentChallenge != null) {
+          emit(SingleChallengeFailed(
+            challengeName: livenessResult.currentChallenge!.displayText,
+            challengeIndex: livenessResult.completedChallenges.length,
+            totalChallenges: challenges.length,
+            message: livenessResult.message,
+          ));
+        }
+        
+        emit(FaceVerificationResult(
+          isVerified: false,
+          confidence: 0.0,
+          message: livenessResult.message,
+          hasLiveness: false,
+        ));
+        return;
+      }
+
+      print('✅ All challenges passed! Verifying face...');
+
+      // التحقق من الوجه
+      final result = await _verifyFaceUseCase(
+        image: event.frames.last,
+        userId: event.userId,
+      );
+
+      result.fold(
+        (failure) {
+          emit(FaceRecognitionError(
+            message: failure.message,
+            errorType: _mapFailureToErrorType(failure),
+          ));
+        },
+        (verificationResult) {
+          emit(FaceVerificationResult(
+            isVerified: verificationResult.isVerified,
+            confidence: verificationResult.confidence,
+            message: verificationResult.isVerified
+                ? '✅ تم التحقق بنجاح! جميع التحديات مكتملة.'
+                : 'فشل التحقق من الوجه. حاول مرة أخرى.',
+            hasLiveness: true,
+          ));
+        },
+      );
+    } catch (e) {
+      print('❌ Error in active liveness: $e');
+      emit(FaceRecognitionError(
+        message: 'حدث خطأ أثناء التحقق: $e',
+        errorType: FaceRecognitionErrorType.unknown,
+      ));
+    }
+  }
+
+  /// 🆕 التحقق من تحدي واحد
+  Future<void> _onVerifySingleChallenge(
+    VerifySingleChallengeEvent event,
+    Emitter<FaceRecognitionState> emit,
+  ) async {
+    if (_livenessService == null) {
+      emit(FaceRecognitionError(
+        message: 'خدمة التحقق غير متاحة',
+        errorType: FaceRecognitionErrorType.livenessCheckFailed,
+      ));
+      return;
+    }
+
+    try {
+      final currentChallenge = _livenessService.getCurrentChallenge();
+      if (currentChallenge == null) {
+        emit(LivenessCheckComplete(
+          passed: true,
+          message: 'جميع التحديات مكتملة',
+        ));
+        return;
+      }
+
+      emit(FaceRecognitionLoading(
+        message: 'جاري التحقق من ${currentChallenge.displayText}...',
+      ));
+
+      // جمع الوجوه
+      final faces = <Face>[];
+      for (final frame in event.frames) {
+        final detectedFaces = await _repository.detectFaces(frame);
+        if (detectedFaces.isNotEmpty) {
+          faces.add(detectedFaces.first);
+        }
+      }
+
+      final result = await _livenessService.verifySingleChallenge(
+        challenge: currentChallenge,
+        faceSequence: faces,
+      );
+
+      if (result.passed) {
+        emit(SingleChallengeSuccess(
+          challengeName: currentChallenge.displayText,
+          challengeIndex: event.challengeIndex,
+          totalChallenges: _livenessService.getTotalChallenges(),
+          message: result.message,
+        ));
+
+        // التحقق إذا كانت جميع التحديات مكتملة
+        final nextChallenge = _livenessService.getCurrentChallenge();
+        if (nextChallenge == null) {
+          // جميع التحديات مكتملة - التحقق من الوجه
+          emit(LivenessCheckComplete(
+            passed: true,
+            message: '✅ جميع التحديات مكتملة!',
+          ));
+        } else {
+          // عرض التحدي التالي
+          emit(LivenessChallengeInProgress(
+            challengeText: nextChallenge.displayText,
+            challengeInstruction: nextChallenge.instruction,
+            currentChallengeIndex: _livenessService.getCompletedCount(),
+            totalChallenges: _livenessService.getTotalChallenges(),
+            completedChallenges: _livenessService.completedChallenges
+                .map((c) => c.displayText)
+                .toList(),
+            iconCodePoint: nextChallenge.icon.codePoint,
+          ));
+        }
+      } else {
+        emit(SingleChallengeFailed(
+          challengeName: currentChallenge.displayText,
+          challengeIndex: event.challengeIndex,
+          totalChallenges: _livenessService.getTotalChallenges(),
+          message: result.message,
+        ));
+      }
+    } catch (e) {
+      emit(FaceRecognitionError(
+        message: 'حدث خطأ: $e',
+        errorType: FaceRecognitionErrorType.unknown,
+      ));
+    }
+  }
+
+  /// 🆕 طلب التحدي التالي
+  Future<void> _onRequestNextChallenge(
+    RequestNextChallengeEvent event,
+    Emitter<FaceRecognitionState> emit,
+  ) async {
+    if (_livenessService == null) return;
+
+    final nextChallenge = _livenessService.getCurrentChallenge();
+    if (nextChallenge != null) {
+      emit(LivenessChallengeInProgress(
+        challengeText: nextChallenge.displayText,
+        challengeInstruction: nextChallenge.instruction,
+        currentChallengeIndex: _livenessService.getCompletedCount(),
+        totalChallenges: _livenessService.getTotalChallenges(),
+        completedChallenges: _livenessService.completedChallenges
+            .map((c) => c.displayText)
+            .toList(),
+        iconCodePoint: nextChallenge.icon.codePoint,
+      ));
+    }
+  }
+
+  /// 🆕 إعادة تعيين التحديات
+  Future<void> _onResetChallenges(
+    ResetChallengesEvent event,
+    Emitter<FaceRecognitionState> emit,
+  ) async {
+    _livenessService?.resetChallenges();
+    emit(FaceRecognitionInitial());
+  }
+
   /// Check liveness
   Future<void> _onCheckLiveness(
     CheckFaceLiveness event,
@@ -227,10 +554,12 @@ class FaceRecognitionBloc
       if (result.currentChallenge != null) {
         emit(LivenessChallengeInProgress(
           challengeText: result.currentChallenge!.displayText,
+          challengeInstruction: result.currentChallenge!.instruction,
           currentChallengeIndex: result.completedChallenges.length,
           totalChallenges: result.completedChallenges.length + 1,
           completedChallenges:
               result.completedChallenges.map((c) => c.displayText).toList(),
+          iconCodePoint: result.currentChallenge!.icon.codePoint,
         ));
       }
 

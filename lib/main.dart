@@ -14,7 +14,7 @@ import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
 import 'package:el_race/ui/presentation/qr_code/bloc/qr_code_bloc.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
 import 'package:el_race/ui/presentation/splash_screen/splash_screen.dart';
-import 'package:el_race/ui/presentation/todo_list/providers/todo_provider.dart';
+import 'package:el_race/ui/presentation/todo_list/providers/todo_firebase_provider.dart';
 import 'package:el_race/ui/presentation/qr_survey/providers/qr_survey_data_provider.dart';
 import 'package:el_race/ui/presentation/qr_survey/services/qr_survey_api_service.dart';
 import 'package:el_race/ui/presentation/qr_survey/screens/qr_code_wrapper.dart';
@@ -348,7 +348,8 @@ class MyApp extends StatelessWidget {
           ChangeNotifierProvider(create: (_) => SliderProvider()),
           ChangeNotifierProvider(create: (_) => ProfileBoxProvider()),
           ChangeNotifierProvider(create: (_) => ReportProvider()),
-          ChangeNotifierProvider(create: (_) => TodoProvider()..initialize()),
+          ChangeNotifierProvider(
+              create: (_) => TodoFirebaseProvider()..initialize()),
           ChangeNotifierProvider(create: (_) => QrSurveyDataProvider()),
           ChangeNotifierProvider(create: (_) => AnnouncementsProvider()),
           ChangeNotifierProvider(

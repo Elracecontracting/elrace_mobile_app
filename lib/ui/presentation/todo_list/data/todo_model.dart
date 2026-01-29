@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class TodoModel {
-  final int? id;
+  final int? id; // Local SQLite ID (deprecated)
+  final String? firebaseId; // Firebase document ID
   final String title;
   final String? description;
   final bool isCompleted;
@@ -7,7 +10,8 @@ class TodoModel {
   final bool isMyDay;
   final DateTime? dueDate;
   final String? assignedTo;
-  final int? listId;
+  final String? assignedToName; // Name of the assigned member
+  final String? listId; // Firebase list ID (changed from int)
   final String? reportId; // Reference to Report
   final int sortOrder;
   final DateTime createdAt;
@@ -15,6 +19,7 @@ class TodoModel {
 
   const TodoModel({
     this.id,
+    this.firebaseId,
     required this.title,
     this.description,
     this.isCompleted = false,
@@ -22,6 +27,7 @@ class TodoModel {
     this.isMyDay = false,
     this.dueDate,
     this.assignedTo,
+    this.assignedToName,
     this.listId,
     this.reportId,
     this.sortOrder = 0,
@@ -32,6 +38,7 @@ class TodoModel {
   factory TodoModel.fromMap(Map<String, dynamic> map) {
     return TodoModel(
       id: map['id'] as int?,
+      firebaseId: map['firebase_id'] as String?,
       title: map['title'] as String,
       description: map['description'] as String?,
       isCompleted: (map['is_completed'] as int?) == 1,
@@ -41,7 +48,8 @@ class TodoModel {
           ? DateTime.parse(map['due_date'] as String)
           : null,
       assignedTo: map['assigned_to'] as String?,
-      listId: map['list_id'] as int?,
+      assignedToName: map['assigned_to_name'] as String?,
+      listId: map['list_id'] as String?,
       reportId: map['report_id'] as String?,
       sortOrder: map['sort_order'] as int? ?? 0,
       createdAt: DateTime.parse(map['created_at'] as String),
@@ -49,9 +57,37 @@ class TodoModel {
     );
   }
 
+  /// Create from Firestore document
+  factory TodoModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
+    final data = doc.data()!;
+    return TodoModel(
+      firebaseId: doc.id,
+      title: data['title'] as String? ?? '',
+      description: data['description'] as String?,
+      isCompleted: data['is_completed'] as bool? ?? false,
+      isImportant: data['is_important'] as bool? ?? false,
+      isMyDay: data['is_my_day'] as bool? ?? false,
+      dueDate: data['due_date'] != null
+          ? (data['due_date'] as Timestamp).toDate()
+          : null,
+      assignedTo: data['assigned_to'] as String?,
+      assignedToName: data['assigned_to_name'] as String?,
+      listId: data['list_id'] as String?,
+      reportId: data['report_id'] as String?,
+      sortOrder: data['sort_order'] as int? ?? 0,
+      createdAt: data['created_at'] != null
+          ? (data['created_at'] as Timestamp).toDate()
+          : DateTime.now(),
+      updatedAt: data['updated_at'] != null
+          ? (data['updated_at'] as Timestamp).toDate()
+          : DateTime.now(),
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       if (id != null) 'id': id,
+      if (firebaseId != null) 'firebase_id': firebaseId,
       'title': title,
       'description': description,
       'is_completed': isCompleted ? 1 : 0,
@@ -59,6 +95,7 @@ class TodoModel {
       'is_my_day': isMyDay ? 1 : 0,
       'due_date': dueDate?.toIso8601String(),
       'assigned_to': assignedTo,
+      'assigned_to_name': assignedToName,
       'list_id': listId,
       'report_id': reportId,
       'sort_order': sortOrder,
@@ -67,8 +104,28 @@ class TodoModel {
     };
   }
 
+  /// Convert to Firestore data
+  Map<String, dynamic> toFirestore() {
+    return {
+      'title': title,
+      'description': description,
+      'is_completed': isCompleted,
+      'is_important': isImportant,
+      'is_my_day': isMyDay,
+      'due_date': dueDate != null ? Timestamp.fromDate(dueDate!) : null,
+      'assigned_to': assignedTo,
+      'assigned_to_name': assignedToName,
+      'list_id': listId,
+      'report_id': reportId,
+      'sort_order': sortOrder,
+      'created_at': Timestamp.fromDate(createdAt),
+      'updated_at': FieldValue.serverTimestamp(),
+    };
+  }
+
   TodoModel copyWith({
     int? id,
+    String? firebaseId,
     String? title,
     String? description,
     bool? isCompleted,
@@ -76,7 +133,8 @@ class TodoModel {
     bool? isMyDay,
     DateTime? dueDate,
     String? assignedTo,
-    int? listId,
+    String? assignedToName,
+    String? listId,
     String? reportId,
     int? sortOrder,
     DateTime? createdAt,
@@ -84,6 +142,7 @@ class TodoModel {
   }) {
     return TodoModel(
       id: id ?? this.id,
+      firebaseId: firebaseId ?? this.firebaseId,
       title: title ?? this.title,
       description: description ?? this.description,
       isCompleted: isCompleted ?? this.isCompleted,
@@ -91,6 +150,7 @@ class TodoModel {
       isMyDay: isMyDay ?? this.isMyDay,
       dueDate: dueDate ?? this.dueDate,
       assignedTo: assignedTo ?? this.assignedTo,
+      assignedToName: assignedToName ?? this.assignedToName,
       listId: listId ?? this.listId,
       reportId: reportId ?? this.reportId,
       sortOrder: sortOrder ?? this.sortOrder,
@@ -103,6 +163,7 @@ class TodoModel {
   TodoModel clearDueDate() {
     return TodoModel(
       id: id,
+      firebaseId: firebaseId,
       title: title,
       description: description,
       isCompleted: isCompleted,
@@ -110,6 +171,7 @@ class TodoModel {
       isMyDay: isMyDay,
       dueDate: null,
       assignedTo: assignedTo,
+      assignedToName: assignedToName,
       listId: listId,
       reportId: reportId,
       sortOrder: sortOrder,
@@ -121,9 +183,10 @@ class TodoModel {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    return other is TodoModel && other.id == id;
+    return other is TodoModel &&
+        (other.firebaseId == firebaseId || other.id == id);
   }
 
   @override
-  int get hashCode => id.hashCode;
+  int get hashCode => firebaseId?.hashCode ?? id.hashCode;
 }

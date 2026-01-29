@@ -35,7 +35,7 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
   @override
   Widget build(BuildContext context) {
     final sliderProvider = Provider.of<SliderProvider>(context);
-    final bottomPadding = context.systemBottomInset + 20.h;
+    final bottomPadding = kBottomNavigationBarHeight + context.systemBottomInset + 50.h;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -76,7 +76,7 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
                           ),
                           color: lightGrey,
                         ),
-                        child: Center(
+                        child: const Center(
                           child: CircularProgressIndicator(
                             color: buttonDark,
                             strokeWidth: 2,
@@ -151,7 +151,7 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
                                           placeholder: (context, url) =>
                                               Container(
                                             color: lightGrey,
-                                            child: Center(
+                                            child: const Center(
                                               child: CircularProgressIndicator(
                                                 color: buttonDark,
                                                 strokeWidth: 2,

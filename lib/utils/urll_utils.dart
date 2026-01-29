@@ -8,4 +8,5 @@ class UrlUtil {
   static const String mediaAttachmentsApi = 'media_attachments';
   static const String prepareShareApi = 'prepare_share';
   static const String qrCodeApi = 'qr_code/';
+  static const String myActionsApi = 'my_actions';
 }

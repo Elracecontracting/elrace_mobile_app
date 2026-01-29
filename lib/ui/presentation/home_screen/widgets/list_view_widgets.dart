@@ -20,6 +20,7 @@ import 'package:el_race/ui/presentation/tasks_dashboard/screens/tasks_dashboard_
 import 'package:el_race/utils/custom_navigate.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/orientation_helper.dart';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -59,9 +60,9 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     final widgets = await WidgetService.getActiveWidgets();
     if (mounted) {
       setState(() {
-        // Filter out time_sheet and my_notes widgets
+        // Filter out my_notes widget
         activeWidgets = widgets
-            .where((w) => w.id != 'time_sheet' && w.id != 'my_notes')
+            .where((w) => w.id != 'my_notes')
             .toList();
         isLoading = false;
       });
@@ -142,67 +143,94 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         widgetData?['timesheet_widget']?['record_to_show']?.toString() ?? '0';
 
     return GrayCardComponent(
-        onClick: () => Util.pushPage(const TaskSheetPage(), context),
-        mainIcon: 'assets/png/time_sheet.png',
-        cardTitle: translate('home.time_sheet'),
-        backgroundImagePath: 'assets/png/gray_card.png',
-        topPadding: true,
-        topPaddingValue: 40,
-        childWidget: Directionality(
-          textDirection: TextDirection.ltr,
-          child: Stack(
+      onClick: () => Util.pushPage(const TaskSheetPage(), context),
+      cardTitle: 'Timesheet',
+      upperCaseTitle: false,
+      backgroundImagePath: 'assets/png/t-sheet.png',
+      childAlignment: Alignment.bottomRight,
+      childPadding: EdgeInsets.only(
+        right: 24.w,
+        bottom: 18.h,
+      ),
+      childWidget: Directionality(
+        textDirection: TextDirection.ltr,
+        child: Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: 8.w,
+            vertical: 0.h,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.02),
+            borderRadius: BorderRadius.circular(28.r),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.85),
+              width: 1.2,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Padding(
-                padding: EdgeInsets.only(
-                  left: 190.w,
-                ),
-                child: Image.asset(
-                  'assets/png/time_sheet.png',
-                  width: SizeConfig().getWidth(140),
-                  height: SizeConfig().getHeight(130),
+              Text(
+                'Labors',
+                style: GoogleFonts.koulen(
+                  color: Colors.black,
+                  fontSize: 13.w,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 1.1,
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.only(top: 100.h),
-                child: SizedBox(
-                  width: SizeConfig().getWidth(190),
-                  height: SizeConfig().getHeight(85),
-                  child: Column(
-                    children: [
-                      CustomBulletPoint(
-                        text: translate('home.No_of_Labors'),
-                        textColor: Colors.black,
-                        countColor: Colors.black,
-                        count: timesheetCount,
-                        containerColor: Colors.white,
-                      ),
-                    ],
-                  ),
+              SizedBox(width: 28.w),
+              Text(
+                timesheetCount,
+                style: GoogleFonts.koulen(
+                  color: Colors.black,
+                  fontSize: 15.w,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: 1.1,
                 ),
               ),
             ],
           ),
-          // childWidget: Padding(
-          //   padding: EdgeInsets.only(
-          //     left: 210.w,
-          //   ),
-          //   child: Image.asset(
-          //     'assets/png/time_sheet.png',
-          //     width: SizeConfig().getWidth(140),
-          //     height: SizeConfig().getHeight(140),
-          //   ),
-          // ),
-        ));
+        ),
+      ),
+    );
   }
 
   Widget _buildPettyCashWidget() {
     return Directionality(
       textDirection: TextDirection.ltr,
-      child: GrayCardComponent(
-        onClick: () => Util.pushPage(const PettyCashScreen(), context),
-        cardTitle: translate('home.petty_cash'),
-        backgroundImagePath: 'assets/newapp/petty_cash_background.png',
-        childWidget: const SizedBox.shrink(),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(23.r),
+        child: Stack(
+          children: [
+            GrayCardComponent(
+              onClick: () => Util.pushPage(const PettyCashScreen(), context),
+              cardTitle: translate('home.petty_cash'),
+              titleColor: Colors.white,
+              backgroundImagePath:
+                  'assets/newapp/petty_cach_widget_background.png',
+              childWidget: const SizedBox.shrink(),
+            ),
+            Positioned.fill(
+              child: IgnorePointer(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Transform.translate(
+                    offset: Offset(-12.w, 30.h),
+                    child: Opacity(
+                      opacity: 0.28,
+                      child: Image.asset(
+                        'assets/newapp/d_for_petty_Cach.png',
+                        height: 30.h,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -216,43 +244,40 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
 
     return GrayCardComponent(
       onClick: () => Util.pushPage(const LpoListScreen(), context),
-      mainIcon: 'assets/png/time_sheet.png',
       cardTitle: translate('home.lpo'),
-      backgroundImagePath: 'assets/png/gray_card.png',
+      titleColor: Colors.white,
+      backgroundImagePath: 'assets/newapp/Lpo_background_widget.png',
       topPadding: true,
       childWidget: Directionality(
         textDirection: TextDirection.ltr,
-        child: Stack(
-          children: [
-            Padding(
-              padding: EdgeInsets.only(
-                left: 210.w,
-              ),
-              child: Image.asset(
-                'assets/png/lpo.png',
-                width: SizeConfig().getWidth(140),
-                height: SizeConfig().getHeight(140),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.only(top: 80.h),
-              child: SizedBox(
-                width: SizeConfig().getWidth(190),
-                height: SizeConfig().getHeight(85),
-                child: Column(
-                  children: [
-                    CustomBulletPoint(
-                      text: translate('home.No_of_LPO'),
-                      textColor: Colors.black,
-                      countColor: Colors.black,
-                      count: lpoTotal,
-                      containerColor: Colors.white,
-                    ),
-                  ],
+        child: SizedBox(
+          width: SizeConfig().getWidth(190),
+          height: SizeConfig().getHeight(115),
+          child: Align(
+            alignment: Alignment.bottomLeft,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  translate('home.lpo').toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
+                SizedBox(width: 16.w),
+                Text(
+                  lpoTotal,
+                  style: GoogleFonts.inter(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
 
@@ -281,39 +306,63 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         GrayCardComponent(
           onClick: () => Util.pushPage(const MyDocumentsScreen(), context),
           cardTitle: translate('home.documents'),
-          backgroundImagePath: 'assets/png/gray_card.png',
+          titleColor: Colors.white,
+          backgroundImagePath:
+              'assets/newapp/my_document_widet_background_new.png',
           childWidget: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
                 padding: EdgeInsets.only(top: 40.h),
-                child: SizedBox(
-                  width: SizeConfig()
-                      .getWidth(MediaQuery.of(context).size.width - 80),
-                  height: SizeConfig().getHeight(80),
-                  child: Center(
-                      child: Image.asset(
-                    'assets/newapp/simple_cards.png',
-                    width: double.infinity,
-                    fit: BoxFit.contain,
-                  )),
-                ),
+                child: const SizedBox(),
               ),
             ],
           ),
         ),
         Positioned(
-          right: 6.w,
-          top: 30.h,
-          child: Image.asset('assets/png/icons/doc_icon.png'),
-        ),
-        Positioned(
           right: 10.w,
           top: 10.w,
-          child: CountWidget(
-            count: docsCount,
-            countColor: Colors.black,
-            containerColor: Colors.white,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16.r),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+              child: Container(
+                width: 30.w,
+                height: 30.w,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(100.r),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white.withOpacity(0.26),
+                      Colors.white.withOpacity(0.08),
+                    ],
+                  ),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.35),
+                    width: 1,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.14),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  docsCount.toUpperCase(),
+                  style: GoogleFonts.koulen(
+                    color: Colors.white,
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.09,
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ],
@@ -379,8 +428,10 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         return Stack(
           children: [
             GrayCardComponent(
-              cardTitle: translate('home.todo_list'),
-              backgroundImagePath: 'assets/png/blue_card.png',
+              cardTitle: "Task Managment",
+              titleColor: Colors.white,
+              backgroundImagePath:
+                  'assets/newapp/task_managment_widget_backdround.png',
               onClick: () {
                 if (hasError) {
                   // Show error message in a snackbar when tapped
@@ -429,21 +480,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                         )
                       : const SizedBox.shrink(),
             ),
-            Positioned(
-              right: 6.w,
-              top: 30.h,
-              child: Opacity(
-                opacity: 0.20,
-                child: Image.asset(
-                  'assets/png/notes_icon.png',
-                  errorBuilder: (_, __, ___) => Icon(
-                    Icons.check_box_outlined,
-                    size: 80.w,
-                    color: Colors.white.withOpacity(0.2),
-                  ),
-                ),
-              ),
-            ),
+            /*
             Positioned(
               right: 10.w,
               top: 10.w,
@@ -453,6 +490,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                 containerColor: hasError ? Colors.red.shade100 : Colors.white,
               ),
             ),
+            */
           ],
         );
       },
@@ -467,45 +505,90 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     final delayedProjects =
         projectsData?['delayed_projects']?.toString() ?? '0';
 
-    return GrayCardComponent(
-      cardTitle: translate('home.projects'),
-      backgroundImagePath: 'assets/newapp/projects_background.png',
-      onClick: () => Util.pushPage(const MyProject(), context),
-      childWidget: Directionality(
-        textDirection: TextDirection.ltr,
-        child: DefaultTextStyle(
-          style: TextStyle(
-            fontSize: 10.sp,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-          ),
-          child: Padding(
-            padding: EdgeInsets.only(top: 80.h),
-            child: SizedBox(
-              width: SizeConfig().getWidth(190),
-              height: SizeConfig().getHeight(85),
-              child: Column(
-                children: [
-                  CustomBulletPoint(
-                    text: translate('home.In_progress'),
-                    textColor: Colors.black,
-                    countColor: Colors.black,
-                    count: totalProjects,
-                    containerColor: Colors.white,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(23.r),
+      child: Stack(
+        children: [
+          GrayCardComponent(
+            cardTitle: translate('home.projects'),
+            backgroundImagePath: 'assets/newapp/blue_widget_background.png',
+            onClick: () => Util.pushPage(const MyProject(), context),
+            childWidget: Directionality(
+              textDirection: TextDirection.ltr,
+              child: DefaultTextStyle(
+                style: TextStyle(
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+                child: Padding(
+                  padding: EdgeInsets.only(top: 80.h),
+                  child: SizedBox(
+                    width: SizeConfig().getWidth(190),
+                    height: SizeConfig().getHeight(85),
+                    child: Column(
+                      children: [
+                        CustomBulletPoint(
+                          text: translate('home.In_progress'),
+                          textColor: Colors.black,
+                          countColor: Colors.black,
+                          count: totalProjects,
+                          containerColor: Colors.white,
+                        ),
+                        SizedBox(height: 4.h),
+                        CustomBulletPoint(
+                          text: translate('home.Delay'),
+                          textColor: Colors.black,
+                          countColor: Colors.black,
+                          count: delayedProjects,
+                          containerColor: Colors.white,
+                        ),
+                      ],
+                    ),
                   ),
-                  SizedBox(height: 4.h),
-                  CustomBulletPoint(
-                    text: translate('home.Delay'),
-                    textColor: Colors.black,
-                    countColor: Colors.black,
-                    count: delayedProjects,
-                    containerColor: Colors.white,
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Stack(
+                  alignment: Alignment.centerRight,
+                  children: [
+                    Transform.translate(
+                      offset: Offset(50.w, 40.h),
+                      child: Opacity(
+                        opacity: 0.16,
+                        child: Image.asset(
+                          'assets/newapp/Ellipse 106.png',
+                          height: 260.h,
+                          fit: BoxFit.contain,
+                          color: const Color(0xFF9ED3FF),
+                          colorBlendMode: BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
+                    Transform.translate(
+                      offset: Offset(10.w, 5.h),
+                      child: Opacity(
+                        opacity: 0.16,
+                        child: Image.asset(
+                          'assets/newapp/Ellipse 105.png',
+                          height: 230.h,
+                          fit: BoxFit.contain,
+                          color: const Color(0xFF9ED3FF),
+                          colorBlendMode: BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -519,44 +602,68 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     final waitingApproval =
         requestData?['waiting_for_approval_count']?.toString() ?? '0';
 
-    return GrayCardComponent(
-      cardTitle: translate('home.my_request'),
-      backgroundImagePath: 'assets/newapp/requests_background.png',
-      onClick: () => Util.pushPage(const MyRequestsPage(), context),
-      childWidget: Directionality(
-        textDirection: TextDirection.ltr,
-        child: DefaultTextStyle(
-          style: TextStyle(
-            fontSize: 10.sp,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-          ),
-          child: Padding(
-            padding: EdgeInsets.only(top: 80.h),
-            child: SizedBox(
-              width: SizeConfig().getWidth(190),
-              height: SizeConfig().getHeight(80),
-              child: Column(
-                children: [
-                  CustomBulletPoint(
-                    text: translate('home.total'),
-                    textColor: Colors.black,
-                    countColor: Colors.black,
-                    containerColor: Colors.white,
-                    count: totalRequests,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(23.r),
+      child: Stack(
+        children: [
+          GrayCardComponent(
+            cardTitle: translate('home.my_request'),
+            backgroundImagePath: 'assets/newapp/blue_widget_background.png',
+            onClick: () => Util.pushPage(const MyRequestsPage(), context),
+            childWidget: Directionality(
+              textDirection: TextDirection.ltr,
+              child: DefaultTextStyle(
+                style: TextStyle(
+                  fontSize: 10.sp,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+                child: Padding(
+                  padding: EdgeInsets.only(top: 80.h),
+                  child: SizedBox(
+                    width: SizeConfig().getWidth(190),
+                    height: SizeConfig().getHeight(80),
+                    child: Column(
+                      children: [
+                        CustomBulletPoint(
+                          text: translate('home.total'),
+                          textColor: Colors.black,
+                          countColor: Colors.black,
+                          containerColor: Colors.white,
+                          count: totalRequests,
+                        ),
+                        CustomBulletPoint(
+                          text: translate('home.waiting'),
+                          textColor: Colors.black,
+                          countColor: Colors.black,
+                          containerColor: Colors.white,
+                          count: waitingApproval,
+                        ),
+                      ],
+                    ),
                   ),
-                  CustomBulletPoint(
-                    text: translate('home.waiting'),
-                    textColor: Colors.black,
-                    countColor: Colors.black,
-                    containerColor: Colors.white,
-                    count: waitingApproval,
-                  ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: Opacity(
+                  opacity: 0.16,
+                  child: Image.asset(
+                    'assets/newapp/R.png',
+                    height: 220.h,
+                    fit: BoxFit.contain,
+                    color: const Color(0xFF9ED3FF),
+                    colorBlendMode: BlendMode.srcIn,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -566,40 +673,60 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
     final mediaData = widgetData?['media_widget']?['record_to_show'];
     final mediaCount = mediaData?['media_count']?.toString() ?? '0';
-    final filesCount = mediaData?['files']?.toString() ?? '0';
+    // final filesCount = mediaData?['files']?.toString() ?? '0';
 
-    return GrayCardComponent(
-      cardTitle: translate('home.media'),
-      backgroundImagePath: 'assets/newapp/media_background.png',
-      onClick: () => Util.pushPage(const MediaListScreen(), context),
-      childWidget: Directionality(
-        textDirection: TextDirection.ltr,
-        child: DefaultTextStyle(
-          style: TextStyle(
-            fontSize: 10.sp,
-            fontWeight: FontWeight.w500,
-            color: Colors.black,
-          ),
-          child: Padding(
-            padding: EdgeInsets.only(top: 80.h),
-            child: SizedBox(
-              width: SizeConfig().getWidth(190),
-              height: SizeConfig().getHeight(80),
-              child: Column(
-                children: [
-                  CustomBulletPoint(
-                    text: translate('home.videos'),
-                    textColor: Colors.black,
-                    countColor: Colors.black,
-                    count: mediaCount,
-                    containerColor: Colors.white,
+    return Stack(
+      children: [
+        GrayCardComponent(
+          // Keep base component untouched; hide its title for this card only.
+          cardTitle: '',
+          backgroundImagePath: 'assets/newapp/media_widget_background.png',
+          onClick: () => Util.pushPage(const MediaListScreen(), context),
+          childWidget: Directionality(
+            textDirection: TextDirection.ltr,
+            child: DefaultTextStyle(
+              style: TextStyle(
+                fontSize: 10.sp,
+                fontWeight: FontWeight.w500,
+                color: Colors.white,
+              ),
+              child: Padding(
+                padding: EdgeInsets.only(top: 80.h),
+                child: SizedBox(
+                  width: SizeConfig().getWidth(190),
+                  height: SizeConfig().getHeight(80),
+                  child: const Column(
+                    children: [
+                      /*
+                      CustomBulletPoint(
+                        text: translate('home.videos'),
+                        textColor: Colors.black,
+                        countColor: Colors.black,
+                        count: mediaCount,
+                        containerColor: Colors.white,
+                      ),
+                      */
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
         ),
-      ),
+        Positioned(
+          left: 36.w,
+          top: 16,
+          child: Text(
+            translate('home.media').toUpperCase(),
+            style: GoogleFonts.koulen(
+              color: Colors.white,
+              fontSize: 24.w,
+              fontWeight: FontWeight.w400,
+              letterSpacing: 1.9,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -612,7 +739,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     return GrayCardComponent(
       mainIcon: 'assets/png/my_documents.png',
       cardTitle: translate('home.my_report'),
-      backgroundImagePath: 'assets/newapp/reports_background.png',
+      titleColor: Colors.white,
+      backgroundImagePath: 'assets/newapp/my_report_widget_background.png',
       onClick: () => Util.pushPage(const ReportAppHomeScreen(), context),
       topPadding: true,
       childWidget: Directionality(
@@ -621,7 +749,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           style: TextStyle(
             fontSize: 10.sp,
             fontWeight: FontWeight.w500,
-            color: Colors.black,
+            color: Colors.white,
           ),
           child: Padding(
             padding: EdgeInsets.only(top: 85.h),
@@ -630,7 +758,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                 children: [
                   CustomBulletPoint(
                     text: translate('home.No_Of_Reports'),
-                    textColor: Colors.black,
+                    textColor: Colors.white,
                     countColor: Colors.white,
                     count: reportsCount,
                     containerColor: const Color(0xff1A1A53),
@@ -670,48 +798,90 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     return BlocBuilder<HomeBloc, HomeState>(
       builder: (cxt, state) {
         var bloc = HomeBloc.get(cxt);
-        return Stack(
-          alignment: Alignment.centerRight,
-          children: [
-            GrayCardComponent(
-              cardTitle: translate('home.attendance'),
-              backgroundImagePath: 'assets/png/attendace_new_bg.png',
-              onClick: () => Util.pushPage(const AttendancePage(), context),
-              childWidget: Directionality(
-                textDirection: TextDirection.ltr,
-                child: DefaultTextStyle(
-                  style: TextStyle(
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black,
+        final monthAbbrev = bloc.monthName.length >= 3
+            ? bloc.monthName.substring(0, 3).toUpperCase()
+            : bloc.monthName.toUpperCase();
+
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(23.r),
+          child: Stack(
+            alignment: Alignment.centerRight,
+            children: [
+              GrayCardComponent(
+                cardTitle: translate('home.attendance'),
+                backgroundImagePath: 'assets/newapp/blue_widget_background.png',
+                onClick: () => Util.pushPage(const AttendancePage(), context),
+                childWidget: const SizedBox.shrink(),
+              ),
+              const Positioned.fill(
+                child: IgnorePointer(
+                  child: Align(
+                    alignment: Alignment.centerRight,
+                    child: Opacity(
+                      opacity: 1,
+                      child: Image(
+                        image: AssetImage(
+                          'assets/newapp/finger-print_svgrepo.com.png',
+                        ),
+                        fit: BoxFit.contain,
+                        color: Color(0xFFFFFFFF),
+                        colorBlendMode: BlendMode.srcIn,
+                      ),
+                    ),
                   ),
-                  child: Padding(
-                    padding: EdgeInsets.only(top: 80.h),
-                    child: SizedBox(
-                      // width: SizeConfig().getWidth(190),
-                      height: SizeConfig().getHeight(85),
-                      child: Column(
+                ),
+              ),
+              Positioned(
+                right: 12.w,
+                top: 10.h,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(20.r),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12.w,
+                        vertical: 6.h,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20.r),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            Colors.white.withOpacity(0.26),
+                            Colors.white.withOpacity(0.08),
+                          ],
+                        ),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.35),
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.14),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          CustomBulletPoint(
-                            isAttendance: true,
-                            //bulletColor: const Color(0xFF009859),
-                            text: translate('home.attendance'),
-                            textColor: Colors.black,
-                            countColor: Colors.white,
-                            count: bloc.attendedDays.toString(),
-                            containerColor: const Color(0xff1A1A53),
+                          Icon(
+                            Icons.calendar_month_outlined,
+                            size: 16.sp,
+                            color: const Color(0xFF151544),
                           ),
-                          SizedBox(
-                            height: 4.h,
-                          ),
-                          CustomBulletPoint(
-                            isAttendance: true,
-                            // bulletColor: Color(0xFFBA1719),
-                            text: translate('home.absent'),
-                            textColor: Colors.black,
-                            countColor: Colors.white,
-                            count: '2',
-                            containerColor: const Color(0xff1A1A53),
+                          SizedBox(width: 6.w),
+                          Text(
+                            monthAbbrev,
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF151544),
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
                           ),
                         ],
                       ),
@@ -719,33 +889,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                   ),
                 ),
               ),
-            ),
-            Positioned(
-              right: 30.w,
-              top: 10.w,
-              child: Row(
-                children: [
-                  Image.asset(
-                    'assets/png/date_attendance.png',
-                    width: 20.w,
-                    height: 20.w,
-                  ),
-                  const SizedBox(
-                    width: 2,
-                  ),
-                  Text(
-                    bloc.monthName,
-                    style: GoogleFonts.aBeeZee(
-                      color: Colors.white,
-                      fontSize: 17.sp,
-                      fontWeight: FontWeight.w400,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );

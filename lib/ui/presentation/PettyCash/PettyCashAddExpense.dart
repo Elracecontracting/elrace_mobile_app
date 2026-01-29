@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/utils/color_utils.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_translate/flutter_translate.dart';
@@ -158,9 +159,9 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(translate('pettycash.select_petty_cash_holder'),
+                        const Text('Select Petty Cash Holder',
                             style:
-                                const TextStyle(fontWeight: FontWeight.bold)),
+                                TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                         const SizedBox(height: 16),
                         TextField(
                           onChanged: (value) {
@@ -176,7 +177,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                           },
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.search, size: 18),
-                            hintText: translate('pettycash.search_user'),
+                            hintText: 'Search user...',
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 10),
                             border: OutlineInputBorder(
@@ -381,15 +382,17 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
   @override
   Widget build(BuildContext context) {
     const labelStyle = TextStyle(
-      fontSize: 22,
+      fontSize: 18,
       fontWeight: FontWeight.w800,
       color: Colors.black,
+      height: 1.1,
     );
 
     TextStyle fieldTextStyle(bool isPlaceholder) => TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w800,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
           color: isPlaceholder ? Colors.black.withOpacity(0.45) : Colors.black,
+          height: 1.1,
         );
 
     InputDecoration pillDecoration({String? hintText, Widget? suffixIcon}) {
@@ -398,7 +401,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
         hintStyle: fieldTextStyle(true),
         filled: false,
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         suffixIcon: suffixIcon,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(28),
@@ -419,8 +422,8 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
+          Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, height: 1.1)),
+          const SizedBox(height: 6),
           child,
         ],
       );
@@ -504,26 +507,86 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
 
                           labeledField(
                             label: 'Expense type',
-                            child: DropdownButtonFormField<String>(
-                              value: isExpenseTypePlaceholder ? null : selectedExpenseType,
-                              items: expenseTypes
-                                  .map((t) => DropdownMenuItem<String>(
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton2<String>(
+                                value:
+                                    isExpenseTypePlaceholder ? null : selectedExpenseType,
+                                isExpanded: true,
+                                hint: Center(
+                                  child: Text(
+                                    'Car petrol',
+                                    style: fieldTextStyle(true),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                items: expenseTypes
+                                    .map(
+                                      (t) => DropdownMenuItem<String>(
                                         value: t,
-                                        child: Text(t.trim(), style: fieldTextStyle(false)),
-                                      ))
-                                  .toList(),
-                              onChanged: (v) {
-                                if (v == null) return;
-                                setState(() {
-                                  selectedExpenseType = v;
-                                });
-                              },
-                              decoration: pillDecoration(
-                                hintText: isExpenseTypePlaceholder ? 'Car petrol' : null,
-                                suffixIcon: const Icon(Icons.arrow_drop_down, color: Colors.black54),
+                                        child: Text(
+                                          t.trim(),
+                                          style: fieldTextStyle(false),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                selectedItemBuilder: (context) {
+                                  return expenseTypes
+                                      .map(
+                                        (t) => Center(
+                                          child: Text(
+                                            t.trim(),
+                                            style: fieldTextStyle(false),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      )
+                                      .toList();
+                                },
+                                onChanged: (v) {
+                                  if (v == null) return;
+                                  setState(() {
+                                    selectedExpenseType = v;
+                                  });
+                                },
+                                buttonStyleData: ButtonStyleData(
+                                  height: 48,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 18),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(28),
+                                    border: Border.all(
+                                      color: Colors.black.withOpacity(0.25),
+                                      width: 1,
+                                    ),
+                                  ),
+                                ),
+                                iconStyleData: const IconStyleData(
+                                  icon: Icon(Icons.keyboard_arrow_down),
+                                  iconSize: 22,
+                                  iconEnabledColor: Colors.black54,
+                                ),
+                                dropdownStyleData: DropdownStyleData(
+                                  maxHeight: 260,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(14),
+                                    color: Colors.white,
+                                  ),
+                                  offset: const Offset(0, -6),
+                                  scrollbarTheme: ScrollbarThemeData(
+                                    radius: const Radius.circular(40),
+                                    thickness: WidgetStateProperty.all(6),
+                                    thumbVisibility:
+                                        WidgetStateProperty.all(true),
+                                  ),
+                                ),
+                                menuItemStyleData: const MenuItemStyleData(
+                                  height: 44,
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 16),
+                                ),
                               ),
-                              icon: const SizedBox.shrink(),
-                              isExpanded: true,
                             ),
                           ),
 
@@ -532,6 +595,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                             label: translate('pettycash.description'),
                             child: TextField(
                               maxLines: 3,
+                              style: fieldTextStyle(false),
                               onChanged: (value) => setState(() => description = value),
                               decoration: pillDecoration(hintText: translate('pettycash.description')),
                             ),
@@ -556,7 +620,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                                     )
                                   : const Text(
                                       '+ ADD EXPENSE',
-                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: Colors.white),
+                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
                                     ),
                             ),
                           ),

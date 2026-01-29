@@ -252,7 +252,7 @@ class InvoiceAndRfqCard extends StatelessWidget {
 
     // Calculate safe bottom padding for devices with navigation bars
     final totalBottomPadding =
-        kBottomNavigationBarHeight + context.systemBottomInset + 16;
+        kBottomNavigationBarHeight + context.systemBottomInset + 60;
 
     return Expanded(
       child: ListView.separated(

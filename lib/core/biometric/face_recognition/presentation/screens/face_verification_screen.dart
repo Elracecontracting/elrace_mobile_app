@@ -105,22 +105,37 @@ class _FaceVerificationScreenState extends State<FaceVerificationScreen>
     _startAutoVerification();
   }
 
+  // 🔒 جمع إطارات متعددة لفحص الرمش
+  final List<CameraImage> _collectedFrames = [];
+  int _frameCollectionTarget = 15; // جمع 15 إطار (~1.5 ثانية)
+
   void _captureAndVerify() async {
     if (_isProcessing || _cameraController == null) return;
 
     setState(() => _isProcessing = true);
+    _collectedFrames.clear();
 
     try {
+      // 📸 جمع إطارات متعددة لفحص الرمش
       await _cameraController!.startImageStream((CameraImage image) async {
-        await _cameraController!.stopImageStream();
-
-        if (mounted) {
-          context.read<FaceRecognitionBloc>().add(
-                StartFaceVerification(
-                  image: image,
-                  userId: widget.userId,
-                ),
-              );
+        if (_collectedFrames.length < _frameCollectionTarget) {
+          _collectedFrames.add(image);
+          print('📸 Collected frame ${_collectedFrames.length}/$_frameCollectionTarget');
+        }
+        
+        if (_collectedFrames.length >= _frameCollectionTarget) {
+          await _cameraController!.stopImageStream();
+          
+          if (mounted) {
+            print('✅ All frames collected, starting multi-frame verification...');
+            // إرسال جميع الإطارات للتحقق من الرمش
+            context.read<FaceRecognitionBloc>().add(
+                  StartMultiFrameVerification(
+                    frames: List.from(_collectedFrames),
+                    userId: widget.userId,
+                  ),
+                );
+          }
         }
       });
     } catch (e) {
@@ -336,13 +351,16 @@ class _FaceVerificationScreenState extends State<FaceVerificationScreen>
                         ),
                         const SizedBox(height: 10),
                         _buildInstructionRow(
-                            Icons.visibility, 'Keep your eyes open'),
+                            Icons.remove_red_eye, '👁️ Blink naturally during scan'),
                         const SizedBox(height: 6),
                         _buildInstructionRow(
-                            Icons.face, 'Look directly at the camera'),
+                            Icons.block, '🚫 Use your LIVE face, NOT a photo'),
                         const SizedBox(height: 6),
                         _buildInstructionRow(
-                            Icons.light_mode, 'Ensure good lighting'),
+                            Icons.face, '📷 Look directly at the camera'),
+                        const SizedBox(height: 6),
+                        _buildInstructionRow(
+                            Icons.light_mode, '💡 Ensure good lighting'),
                       ],
                     ),
                   ),

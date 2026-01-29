@@ -449,63 +449,20 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                 height: buttonHeight,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(40),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFFFFFFFF),
+                      Color.fromARGB(255, 102, 110, 132),
+                    ],
+                  ),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(40),
                   child: Stack(
                     clipBehavior: Clip.hardEdge,
                     children: [
-                      // Base background image
-                      Positioned.fill(
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            image: DecorationImage(
-                              image: AssetImage(
-                                  'assets/newapp/check_in_background.png'),
-                              fit: BoxFit.cover,
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      // Inner shadow overlay
-                      Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(40),
-                          ),
-                        ),
-                      ),
-
-                      // Gradient overlay that appears with opacity based on swipe progress
-                      Positioned.fill(
-                        child: Opacity(
-                          opacity: _isVisualCheckedIn
-                              ? 1.0
-                              : (dragOffset / (buttonWidth - knobSize))
-                                  .clamp(0.0, 1.0),
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(40)),
-                              gradient: LinearGradient(
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                                colors: [
-                                  Color(0xFF151544),
-                                  Color(0xFF151544),
-                                  Color(0xFF151544),
-                                  Color(0xFF151544),
-                                  Color(0xFF151544),
-                                  Color(0xFF3535AA),
-                                ],
-                                stops: [0.0, 0.2, 0.4, 0.6, 0.8, 1.0],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
                       // Center text with dynamic color and opacity transition
                       Center(
                         child: Stack(
@@ -539,7 +496,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                                 translate(
                                     'custom_swipe_button.swipe_to_check_out'),
                                 style: GoogleFonts.akatab(
-                                  color: const Color(0xFFFFFFFF),
+                                  color: const Color(0xFF151544),
                                   fontSize: 18.sp,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 0.5,
@@ -696,15 +653,11 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                         decoration: BoxDecoration(
                           color: Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color(0xFF1E1E50),
-                            width: 1,
-                          ),
                         ),
                         child: Text(
                           _checkInDisplayTime,
                           style: GoogleFonts.inter(
-                            color: const Color(0xFF1E1E50),
+                            color: Colors.white,
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w500,
                           ),
@@ -718,15 +671,11 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                         decoration: BoxDecoration(
                           color: Colors.transparent,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color(0xFF1E1E50),
-                            width: 1,
-                          ),
                         ),
                         child: Text(
                           _checkOutDisplayTime,
                           style: GoogleFonts.inter(
-                            color: const Color(0xFF1E1E50),
+                            color: Colors.white,
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w500,
                           ),
@@ -750,11 +699,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                           height: 15.w,
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
-                            image: DecorationImage(
-                              image:
-                                  AssetImage('assets/newapp/green_polit.png'),
-                              fit: BoxFit.cover,
-                            ),
+                            color: Color(0xFF78DBAD),
                           ),
                         ),
 
@@ -762,7 +707,14 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                           child: Container(
                             height: 3,
                             decoration: BoxDecoration(
-                              color: Colors.white,
+                              gradient: const LinearGradient(
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                                colors: [
+                                  Color(0xFF78DBAD),
+                                  Color(0xFF008FC7),
+                                ],
+                              ),
                               borderRadius: BorderRadius.circular(1.5),
                               boxShadow: [
                                 BoxShadow(
@@ -781,10 +733,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                           height: 15.w,
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
-                            image: DecorationImage(
-                              image: AssetImage('assets/newapp/red_polit.png'),
-                              fit: BoxFit.cover,
-                            ),
+                            color: Color(0xFF008FC7),
                           ),
                         ),
                       ],

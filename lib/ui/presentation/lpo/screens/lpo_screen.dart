@@ -2,10 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/ui/presentation/home_screen/screens/main_screens.dart';
 import 'package:el_race/ui/presentation/lpo/widgets/lpo_card_widget.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/api_logger.dart';
 import 'package:el_race/utils/color_utils.dart';
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -376,6 +378,7 @@ class _LpoListScreenState extends State<LpoListScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
+      bottomNavigationBar: const CustomBottomNavBar(isMain: false),
       body: CustomScrollView(
         controller: _scrollController,
         physics: const BouncingScrollPhysics(),
@@ -450,50 +453,55 @@ class _LpoListScreenState extends State<LpoListScreen> {
                             ),
                           ),
                         )
-                      : SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final item = _items[index];
-                              final poId = item['id'] as int?;
-                              final name = (item['name'] ?? '').toString();
-                              final vendor =
-                                  (item['partner_id'] ?? '').toString();
-                              final project =
-                                  (item['project'] ?? '').toString();
-                              final dateStr =
-                                  (item['date_order'] ?? '').toString();
-                              final amount =
-                                  (item['amount_total'] ?? '').toString();
-                              final clientPhoto = item['client_photo'];
-                              final requestedByPhoto =
-                                  item['requested_by_user_photo'];
-                              final requestedBy =
-                                  (item['requested_by'] ?? '').toString();
-                              final requesterManager =
-                                  (item['requester_manager'] ?? '').toString();
-                              final state = (item['state'] ?? '').toString();
-                              final attachments =
-                                  (item['attachments'] ?? []) as List;
+                      : SliverPadding(
+                          padding: EdgeInsets.only(
+                            bottom: kBottomNavigationBarHeight + context.systemBottomInset + 16,
+                          ),
+                          sliver: SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final item = _items[index];
+                                final poId = item['id'] as int?;
+                                final name = (item['name'] ?? '').toString();
+                                final vendor =
+                                    (item['partner_id'] ?? '').toString();
+                                final project =
+                                    (item['project'] ?? '').toString();
+                                final dateStr =
+                                    (item['date_order'] ?? '').toString();
+                                final amount =
+                                    (item['amount_total'] ?? '').toString();
+                                final clientPhoto = item['client_photo'];
+                                final requestedByPhoto =
+                                    item['requested_by_user_photo'];
+                                final requestedBy =
+                                    (item['requested_by'] ?? '').toString();
+                                final requesterManager =
+                                    (item['requester_manager'] ?? '').toString();
+                                final state = (item['state'] ?? '').toString();
+                                final attachments =
+                                    (item['attachments'] ?? []) as List;
 
-                              return LpoCardWidget(
-                                poId: poId,
-                                name: name,
-                                vendorName: vendor,
-                                projectName: project,
-                                date: dateStr,
-                                amount: amount,
-                                clientPhoto: clientPhoto,
-                                requestedByUserPhoto: requestedByPhoto,
-                                requestedBy: requestedBy,
-                                requesterManager: requesterManager,
-                                state: state,
-                                attachments: attachments,
-                                onTap: poId != null
-                                    ? () => Util.openLpoPdfReport(context, poId)
-                                    : null,
-                              );
-                            },
-                            childCount: _items.length,
+                                return LpoCardWidget(
+                                  poId: poId,
+                                  name: name,
+                                  vendorName: vendor,
+                                  projectName: project,
+                                  date: dateStr,
+                                  amount: amount,
+                                  clientPhoto: clientPhoto,
+                                  requestedByUserPhoto: requestedByPhoto,
+                                  requestedBy: requestedBy,
+                                  requesterManager: requesterManager,
+                                  state: state,
+                                  attachments: attachments,
+                                  onTap: poId != null
+                                      ? () => Util.openLpoPdfReport(context, poId)
+                                      : null,
+                                );
+                              },
+                              childCount: _items.length,
+                            ),
                           ),
                         ),
 

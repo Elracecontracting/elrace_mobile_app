@@ -20,10 +20,47 @@ class MediaListScreen extends StatefulWidget {
   State<MediaListScreen> createState() => _MediaListScreenState();
 }
 
+enum _MediaFilterTab {
+  videos,
+  photos,
+  view360,
+}
+
 class _MediaListScreenState extends State<MediaListScreen> {
   final TextEditingController _searchController = TextEditingController();
   Timer? _debounce;
   final bool _showSearch = false;
+  _MediaFilterTab _activeTab = _MediaFilterTab.videos;
+  final GlobalKey _videosTabKey = GlobalKey();
+  final GlobalKey _photosTabKey = GlobalKey();
+  final GlobalKey _view360TabKey = GlobalKey();
+
+  void _setActiveTab(_MediaFilterTab tab) {
+    if (_activeTab == tab) return;
+    setState(() => _activeTab = tab);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final BuildContext? ctx;
+      switch (tab) {
+        case _MediaFilterTab.videos:
+          ctx = _videosTabKey.currentContext;
+          break;
+        case _MediaFilterTab.photos:
+          ctx = _photosTabKey.currentContext;
+          break;
+        case _MediaFilterTab.view360:
+          ctx = _view360TabKey.currentContext;
+          break;
+      }
+      if (ctx == null) return;
+      Scrollable.ensureVisible(
+        ctx,
+        alignment: 0.5,
+        duration: const Duration(milliseconds: 260),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -95,23 +132,42 @@ class _MediaListScreenState extends State<MediaListScreen> {
                           (() {
                             final q =
                                 _searchController.text.trim().toLowerCase();
-                            final list = q.isEmpty
-                                ? state.mediaList
-                                : state.mediaList.where((m) {
-                                    final name = m.name.toLowerCase();
-                                    final typeLabel =
-                                        m.isImage ? 'image' : 'video';
-                                    final id = m.id.toLowerCase();
-                                    final url = (m.url).toLowerCase();
-                                    final s3 = (m.xWebUrl ?? '').toLowerCase();
-                                    final ext = m.fileExtension.toLowerCase();
-                                    return name.contains(q) ||
-                                        typeLabel.contains(q) ||
-                                        id.contains(q) ||
-                                        url.contains(q) ||
-                                        s3.contains(q) ||
-                                        ext.contains(q);
-                                  }).toList();
+                            bool matchesTab(MediaModel m) {
+                              switch (_activeTab) {
+                                case _MediaFilterTab.videos:
+                                  return m.isVideo;
+                                case _MediaFilterTab.photos:
+                                  return m.isImage;
+                                case _MediaFilterTab.view360:
+                                  final v = m.view360;
+                                  if (v == null) return false;
+                                  if (v is bool) return v;
+                                  if (v is String) {
+                                    return v.trim().toLowerCase() == 'true' ||
+                                        v.trim().isNotEmpty;
+                                  }
+                                  // Any non-null payload is treated as available 360-view.
+                                  return true;
+                              }
+                            }
+
+                            final list = state.mediaList.where((m) {
+                              if (!matchesTab(m)) return false;
+                              if (q.isEmpty) return true;
+
+                              final name = m.name.toLowerCase();
+                              final typeLabel = m.isImage ? 'image' : 'video';
+                              final id = m.id.toLowerCase();
+                              final url = (m.url).toLowerCase();
+                              final s3 = (m.xWebUrl ?? '').toLowerCase();
+                              final ext = m.fileExtension.toLowerCase();
+                              return name.contains(q) ||
+                                  typeLabel.contains(q) ||
+                                  id.contains(q) ||
+                                  url.contains(q) ||
+                                  s3.contains(q) ||
+                                  ext.contains(q);
+                            }).toList();
 
                             return list.isEmpty
                                 ? _buildEmptyState()
@@ -163,25 +219,125 @@ class _MediaListScreenState extends State<MediaListScreen> {
   }
 
   Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
       children: [
-        Image.asset('assets/png/camera.png', width: 24.w, height: 24.w),
-        const SizedBox(width: 8),
-        if (!_showSearch)
-          Text(
-            translate('home.media'),
-            style: GoogleFonts.koulen(
-              fontSize: 22.sp,
-              fontWeight: FontWeight.w400,
-              color: appFontColor,
-              letterSpacing: 1.5,
-            ),
-            overflow: TextOverflow.ellipsis,
-          )
-        else
-          Expanded(child: _buildInlineSearchField()),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Image.asset('assets/png/camera.png', width: 24.w, height: 24.w),
+            const SizedBox(width: 8),
+            if (!_showSearch)
+              Text(
+                translate('home.media'),
+                style: GoogleFonts.koulen(
+                  fontSize: 22.sp,
+                  fontWeight: FontWeight.w400,
+                  color: appFontColor,
+                  letterSpacing: 1.5,
+                ),
+                overflow: TextOverflow.ellipsis,
+              )
+            else
+              Expanded(child: _buildInlineSearchField()),
+          ],
+        ),
+        SizedBox(height: 10.h),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12.w),
+          child: _buildFilterTabs(),
+        ),
+        SizedBox(height: 14.h),
       ],
+    );
+  }
+
+  Widget _buildFilterTabs() {
+    const unfocusedStart = Color(0xFFD6D6D6);
+    const unfocusedEnd = Color(0xFFADB2BD);
+    // Provided as #1B1F26B8 (RRGGBBAA) -> Flutter uses AARRGGBB.
+    const focusedStart = Color(0xB81B1F26);
+    const focusedEnd = Color(0xFF717171);
+
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    // Make tabs slightly smaller so a portion of the next tab is visible.
+    final contentWidth =
+        screenWidth - 24.w; // header has 12.w horizontal padding
+    final tabWidth = contentWidth * 0.40;
+    final effectiveTabWidth = tabWidth < 120.w ? 120.w : tabWidth;
+
+    Widget buildTab({
+      required _MediaFilterTab tab,
+      required Widget child,
+      required Key tabKey,
+    }) {
+      final bool isActive = _activeTab == tab;
+
+      return InkWell(
+        borderRadius: BorderRadius.circular(22.r),
+        onTap: () {
+          _setActiveTab(tab);
+        },
+        child: Container(
+          key: tabKey,
+          width: effectiveTabWidth,
+          height: 44.h,
+          padding: EdgeInsets.symmetric(horizontal: 18.w),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22.r),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: isActive
+                  ? const [focusedStart, focusedEnd]
+                  : const [unfocusedStart, unfocusedEnd],
+            ),
+          ),
+          alignment: Alignment.center,
+          child: child,
+        ),
+      );
+    }
+
+    Text label(String text) {
+      return Text(
+        text,
+        style: GoogleFonts.koulen(
+          fontSize: 16.sp,
+          fontWeight: FontWeight.w400,
+          color: Colors.white,
+          letterSpacing: 1.2,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
+        children: [
+          buildTab(
+              tab: _MediaFilterTab.videos,
+              tabKey: _videosTabKey,
+              child: label('VIDEOS')),
+          SizedBox(width: 10.w),
+          buildTab(
+              tab: _MediaFilterTab.photos,
+              tabKey: _photosTabKey,
+              child: label('PHOTOS')),
+          SizedBox(width: 10.w),
+          buildTab(
+              tab: _MediaFilterTab.view360,
+              tabKey: _view360TabKey,
+              child: Image.asset(
+                'assets/newapp/newicon/360 degrees.png',
+                width: 22.w,
+                height: 22.w,
+                fit: BoxFit.contain,
+              )),
+        ],
+      ),
     );
   }
 

@@ -18,21 +18,78 @@ class ChatListScreen extends StatefulWidget {
 class _ChatListScreenState extends State<ChatListScreen> {
   String? _currentUid;
   bool _isChatAvailable = false;
+  bool _isInitializing = false;
+
+  final TextEditingController _localSearchController = TextEditingController();
+  String _localSearchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _initializeChat();
+
+    _localSearchController.addListener(() {
+      final q = _localSearchController.text.trim().toLowerCase();
+      if (q == _localSearchQuery) return;
+      setState(() => _localSearchQuery = q);
+    });
   }
 
-  void _initializeChat() {
+  @override
+  void dispose() {
+    _localSearchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _initializeChat() async {
     _currentUid = FirebaseAuth.instance.currentUser?.uid;
     _isChatAvailable = ChatModuleHelper.instance.isChatEnabled;
-    setState(() {});
+    
+    // If chat is not available but user is authenticated, try to restore session
+    if (!_isChatAvailable && !_isInitializing) {
+      setState(() => _isInitializing = true);
+      
+      try {
+        print('🔷 ChatListScreen: Chat not available, attempting to restore session...');
+        final result = await ChatModuleHelper.instance.restoreFromStoredSession();
+        
+        if (result != null && result.chatEnabled) {
+          _currentUid = FirebaseAuth.instance.currentUser?.uid;
+          _isChatAvailable = true;
+          print('✅ ChatListScreen: Chat session restored successfully');
+        } else {
+          print('⚠️ ChatListScreen: Failed to restore chat session: ${result?.error}');
+        }
+      } catch (e) {
+        print('❌ ChatListScreen: Error restoring chat session: $e');
+      } finally {
+        if (mounted) {
+          setState(() => _isInitializing = false);
+        }
+      }
+    } else {
+      setState(() {});
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    // Show loading indicator while initializing chat
+    if (_isInitializing) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Chats'),
+          centerTitle: true,
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
     if (!_isChatAvailable || _currentUid == null) {
       return Scaffold(
         appBar: AppBar(
@@ -58,10 +115,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Please login again',
+                'Unable to initialize chat service',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[500],
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _initializeChat,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
             ],
@@ -71,25 +137,44 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: AppColors.primaryBlackLight,
-        foregroundColor: AppColors.primaryColor,
-        elevation: 0,
-        title: const Text(
+        backgroundColor: colorScheme.surface,
+        foregroundColor: colorScheme.onSurface,
+        elevation: 0.5,
+        scrolledUnderElevation: 0.6,
+        shadowColor: Colors.black.withValues(alpha: 0.06),
+        surfaceTintColor: Colors.transparent,
+        titleSpacing: 16,
+        title: Text(
           'Chats',
-          style: TextStyle(
-            color: AppColors.primaryColor,
-            fontWeight: FontWeight.w600,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w700,
           ),
         ),
-        centerTitle: true,
         actions: [
           IconButton(
+            tooltip: 'Search',
             icon: const Icon(Icons.search),
             onPressed: _openSearch,
           ),
+          IconButton(
+            tooltip: 'New chat',
+            icon: const Icon(Icons.chat_bubble_outline),
+            onPressed: _startNewChat,
+          ),
+          const SizedBox(width: 4),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(60),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: _ChatSearchBar(
+              controller: _localSearchController,
+              onOpenGlobalSearch: _openSearch,
+            ),
+          ),
+        ),
       ),
       body: StreamBuilder<List<UserChat>>(
         stream: ChatRepository.instance.subscribeToUserChats(_currentUid!),
@@ -113,7 +198,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
           final chats = snapshot.data ?? [];
 
-          if (chats.isEmpty) {
+          final filteredChats = _localSearchQuery.isEmpty
+              ? chats
+              : chats
+                  .where((c) => (c.title ?? '').toLowerCase().contains(_localSearchQuery))
+                  .toList();
+
+          if (filteredChats.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -125,7 +216,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No chats yet',
+                    chats.isEmpty ? 'No chats yet' : 'No results',
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.grey[600],
@@ -133,7 +224,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Start a new conversation',
+                    chats.isEmpty
+                        ? 'Start a new conversation'
+                        : 'Try a different search term',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey[500],
@@ -145,10 +238,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
           }
 
           return ListView.separated(
-            itemCount: chats.length,
-            separatorBuilder: (_, __) => const Divider(height: 1),
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            itemCount: filteredChats.length,
+            separatorBuilder: (_, __) => Divider(
+              height: 1,
+              indent: 88,
+              endIndent: 16,
+              color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
+            ),
             itemBuilder: (context, index) {
-              final userChat = chats[index];
+              final userChat = filteredChats[index];
               return _ChatListTile(
                 userChat: userChat,
                 currentUid: _currentUid!,
@@ -160,8 +259,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _startNewChat,
-        backgroundColor: AppColors.primaryBlackLight,
-        foregroundColor: AppColors.primaryColor,
+        backgroundColor: AppColors.primaryColor,
+        foregroundColor: Colors.white,
         child: const Icon(Icons.message),
       ),
     );
@@ -214,11 +313,16 @@ class _ChatListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return StreamBuilder<Chat?>(
       stream: ChatRepository.instance.subscribeToChat(userChat.chatId),
       builder: (context, chatSnapshot) {
         final chat = chatSnapshot.data;
         final lastMessage = chat?.lastMessage;
+
+        final hasUnread = userChat.hasUnread(lastMessage?.createdAt);
 
         return StreamBuilder<TypingInfo>(
           stream: PresenceService.instance.subscribeToTypingWithNames(userChat.chatId),
@@ -226,44 +330,92 @@ class _ChatListTile extends StatelessWidget {
             final typingInfo = typingSnapshot.data;
             final isTyping = typingInfo?.isTyping ?? false;
 
-            return ListTile(
-              leading: _buildAvatar(),
-              title: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      userChat.title ?? 'Chat',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  if (lastMessage != null)
-                    Text(
-                      _formatTime(lastMessage.createdAt),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[500],
+            return InkWell(
+              onTap: onTap,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                child: Row(
+                  children: [
+                    _buildAvatar(),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  userChat.title ?? 'Chat',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: hasUnread ? FontWeight.w800 : FontWeight.w700,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                              if (lastMessage != null)
+                                Text(
+                                  _formatTime(lastMessage.createdAt),
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    color: hasUnread
+                                        ? AppColors.primaryColor
+                                        : colorScheme.onSurfaceVariant,
+                                    fontWeight: hasUnread ? FontWeight.w700 : FontWeight.w500,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: isTyping
+                                    ? TypingTextWidget(
+                                        typingUserNames: typingInfo!.typingNames,
+                                        isGroupChat: userChat.type != ChatType.dm,
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: const Color(0xFF25D366),
+                                          fontStyle: FontStyle.italic,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      )
+                                    : DefaultTextStyle.merge(
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: colorScheme.onSurfaceVariant,
+                                          fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
+                                        ),
+                                        child: _buildLastMessage(lastMessage),
+                                      ),
+                              ),
+                              const SizedBox(width: 8),
+                              if (userChat.muted)
+                                Icon(Icons.volume_off, size: 16, color: colorScheme.onSurfaceVariant),
+                              if (userChat.pinned)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 6),
+                                  child: Icon(Icons.push_pin, size: 16, color: colorScheme.onSurfaceVariant),
+                                ),
+                              if (hasUnread)
+                                Padding(
+                                  padding: const EdgeInsets.only(left: 8),
+                                  child: Container(
+                                    width: 10,
+                                    height: 10,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF25D366),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                ],
+                  ],
+                ),
               ),
-              subtitle: Row(
-                children: [
-                  Expanded(
-                    child: isTyping
-                        ? TypingTextWidget(
-                            typingUserNames: typingInfo!.typingNames,
-                            isGroupChat: userChat.type != ChatType.dm,
-                          )
-                        : _buildLastMessage(lastMessage),
-                  ),
-                  if (userChat.muted)
-                    Icon(Icons.volume_off, size: 16, color: Colors.grey[400]),
-                  if (userChat.pinned)
-                    Icon(Icons.push_pin, size: 16, color: Colors.grey[400]),
-                ],
-              ),
-              onTap: onTap,
             );
           },
         );
@@ -320,9 +472,10 @@ class _ChatListTile extends StatelessWidget {
 
   Widget _buildLastMessage(LastMessage? lastMessage) {
     if (lastMessage == null) {
-      return Text(
+      return const Text(
         'No messages',
-        style: TextStyle(color: Colors.grey[500]),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       );
     }
 
@@ -348,7 +501,6 @@ class _ChatListTile extends StatelessWidget {
 
     return Text(
       text,
-      style: TextStyle(color: Colors.grey[600]),
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
     );
@@ -371,5 +523,43 @@ class _ChatListTile extends StatelessWidget {
     if (diff.inDays < 7) return '${diff.inDays}d';
 
     return '${dateTime.day}/${dateTime.month}';
+  }
+}
+
+class _ChatSearchBar extends StatelessWidget {
+  final TextEditingController controller;
+  final VoidCallback onOpenGlobalSearch;
+
+  const _ChatSearchBar({
+    required this.controller,
+    required this.onOpenGlobalSearch,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return TextField(
+      controller: controller,
+      decoration: InputDecoration(
+        hintText: 'Search chats',
+        prefixIcon: Icon(Icons.search, color: colorScheme.onSurfaceVariant),
+        suffixIcon: IconButton(
+          tooltip: 'Search users',
+          onPressed: onOpenGlobalSearch,
+          icon: Icon(Icons.person_search, color: colorScheme.onSurfaceVariant),
+        ),
+        filled: true,
+        fillColor: colorScheme.surfaceContainerHighest,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      style: theme.textTheme.bodyMedium,
+      textInputAction: TextInputAction.search,
+    );
   }
 }

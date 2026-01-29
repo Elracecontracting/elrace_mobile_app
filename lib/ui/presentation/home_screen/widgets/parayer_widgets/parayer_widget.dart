@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:adhan/adhan.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
@@ -9,7 +11,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 
 class ParayerWidget extends StatefulWidget {
@@ -24,6 +28,9 @@ class _ParayerWidgetState extends State<ParayerWidget>
   DateTime? _lastNextTime;
   Prayer? _lastNextPrayer;
   PrayerTimes? _lastPrayerTimes;
+
+  String? _locationLabel;
+  bool _isFetchingLocation = false;
 
   String _prayerKey(Prayer p) {
     switch (p) {
@@ -69,8 +76,183 @@ class _ParayerWidgetState extends State<ParayerWidget>
     return DateFormat('hh:mm a', locale).format(dt);
   }
 
+  Widget _prayerIcon({required Prayer prayer, required Color color}) {
+    switch (prayer) {
+      case Prayer.fajr:
+        return SvgPicture.asset(
+          'assets/newapp/newicon/fajar_new.svg',
+          width: 20.w,
+          height: 14.w,
+          fit: BoxFit.cover,
+          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+        );
+      case Prayer.dhuhr:
+        return SvgPicture.asset(
+          'assets/newapp/newicon/duhur.svg',
+          width: 30.w,
+          height: 14.w,
+          fit: BoxFit.cover,
+          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+        );
+      case Prayer.isha:
+        return Image.asset(
+          'assets/newapp/Ellipse 107.png',
+          width: 14.w,
+          height: 14.w,
+          color: color,
+          colorBlendMode: BlendMode.srcIn,
+          filterQuality: FilterQuality.high,
+        );
+      case Prayer.maghrib:
+        return SvgPicture.asset(
+          'assets/newapp/newicon/maghrib.svg',
+          width: 14.w,
+          height: 14.w,
+          fit: BoxFit.contain,
+          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+        );
+      case Prayer.asr:
+        return SvgPicture.asset(
+          'assets/newapp/newicon/asr_new.svg',
+          width: 14.w,
+          height: 14.w,
+          fit: BoxFit.cover,
+          colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
+        );
+      default:
+        return Icon(Icons.wb_sunny_outlined, size: 14.w, color: color);
+    }
+  }
+
+  Widget _labelWithIcon({
+    required Widget label,
+    required Widget icon,
+    Alignment iconAlignment = Alignment.center,
+  }) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        label,
+        Positioned(
+          left: 15,
+          right: 15,
+          bottom: -14.h,
+          child: IgnorePointer(
+            child: Align(
+              alignment: iconAlignment,
+              child: icon,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sunriseIcon({required Color color}) {
+    return Icon(Icons.wb_twilight_outlined, size: 14.w, color: color);
+  }
+
+  Future<void> _loadLocationLabel() async {
+    if (_isFetchingLocation) return;
+    _isFetchingLocation = true;
+
+    try {
+      // Best effort: try to fetch a position (permission-safe).
+      Position? pos;
+      try {
+        pos = await Geolocator.getLastKnownPosition();
+      } catch (_) {}
+
+      if (pos == null) {
+        try {
+          final permission = await Geolocator.checkPermission();
+          if (permission == LocationPermission.denied) {
+            await Geolocator.requestPermission();
+          }
+          pos = await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.low,
+            timeLimit: const Duration(seconds: 4),
+          );
+        } catch (_) {
+          // Ignore, will fallback.
+        }
+      }
+
+      if (pos == null) {
+        if (!mounted) return;
+        setState(() {
+          _locationLabel ??= '...';
+        });
+        return;
+      }
+
+      final label = await _reverseGeocodeCity(
+        latitude: pos.latitude,
+        longitude: pos.longitude,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _locationLabel = label ?? _locationLabel ?? '...';
+      });
+    } finally {
+      _isFetchingLocation = false;
+    }
+  }
+
+  Future<String?> _reverseGeocodeCity({
+    required double latitude,
+    required double longitude,
+  }) async {
+    try {
+      final uri = Uri.https('nominatim.openstreetmap.org', '/reverse', {
+        'format': 'jsonv2',
+        'lat': latitude.toString(),
+        'lon': longitude.toString(),
+        'zoom': '12',
+        'addressdetails': '1',
+      });
+
+      final res = await http.get(
+        uri,
+        headers: const {
+          'User-Agent': 'el_race_app/1.0 (Flutter; reverse geocoding)',
+          'Accept': 'application/json',
+        },
+      ).timeout(const Duration(seconds: 4));
+
+      if (res.statusCode != 200) return null;
+
+      final body = jsonDecode(res.body);
+      final address = body is Map ? body['address'] : null;
+      if (address is! Map) return null;
+
+      String? pick(String key) {
+        final v = address[key];
+        if (v is String && v.trim().isNotEmpty) return v.trim();
+        return null;
+      }
+
+      return pick('city') ??
+          pick('town') ??
+          pick('village') ??
+          pick('municipality') ??
+          pick('county') ??
+          pick('state') ??
+          pick('country');
+    } catch (_) {
+      return null;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_locationLabel == null && !_isFetchingLocation) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _loadLocationLabel();
+      });
+    }
+
     return BlocBuilder<HomeBloc, HomeState>(
       buildWhen: (previous, current) =>
           current is PrayerTimesLoading ||
@@ -134,8 +316,8 @@ class _ParayerWidgetState extends State<ParayerWidget>
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(12.r),
                       image: const DecorationImage(
-                        image:
-                            AssetImage('assets/png/prayer_time_background.png'),
+                        image: AssetImage(
+                            'assets/newapp/newicon/Prayer_widget_packground.png'),
                         fit: BoxFit.fill,
                       ),
                     ),
@@ -166,6 +348,25 @@ class _ParayerWidgetState extends State<ParayerWidget>
                                       color: Colors.white,
                                     )),
                                 const Spacer(),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.location_on_outlined,
+                                      color: Colors.white,
+                                      size: 18.sp,
+                                    ),
+                                    SizedBox(width: 4.w),
+                                    Text(
+                                      _locationLabel ?? '...',
+                                      style: GoogleFonts.kanit(
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                                 if (error != null)
                                   Padding(
                                     padding: EdgeInsets.only(right: 6.w),
@@ -211,31 +412,71 @@ class _ParayerWidgetState extends State<ParayerWidget>
                                   Positioned(
                                       bottom: 40.h,
                                       left: -1.w,
-                                      child: LabelWidget(
-                                          name: translate('home.Fajr'),
-                                          time: _fmt(aladhanTimes?['fajr'] ??
-                                              pt?.fajr ??
-                                              DateTime.now()),
-                                          textColor: nextPrayer == Prayer.fajr
+                                      child: _labelWithIcon(
+                                        label: LabelWidget(
+                                            name: translate('home.Fajr'),
+                                            time: _fmt(aladhanTimes?['fajr'] ??
+                                                pt?.fajr ??
+                                                DateTime.now()),
+                                            textColor: nextPrayer == Prayer.fajr
+                                                ? const Color(0xFFFFD700)
+                                                : Colors.white),
+                                        icon: _prayerIcon(
+                                          prayer: Prayer.fajr,
+                                          color: nextPrayer == Prayer.fajr
                                               ? const Color(0xFFFFD700)
-                                              : Colors.white)),
+                                              : Colors.white,
+                                        ),
+                                        iconAlignment: Alignment.centerRight,
+                                      )),
                                   Positioned(
-                                      bottom: 85.w,
-                                      left: 60.w,
-                                      child: LabelWidget(
-                                          name: translate('home.Dhuhr'),
-                                          time: _fmt(aladhanTimes?['dhuhr'] ??
-                                              pt?.dhuhr ??
-                                              DateTime.now()),
-                                          textColor: nextPrayer == Prayer.dhuhr
-                                              ? const Color(0xFFFFD700)
-                                              : Colors.white)),
+                                    bottom: 80.h,
+                                    left: 60.w,
+                                    child: _labelWithIcon(
+                                      label: LabelWidget(
+                                        name: "Shuruk",
+                                        time: _fmt(
+                                          aladhanTimes?['sunrise'] ??
+                                              aladhanTimes?['shurooq'] ??
+                                              pt?.sunrise ??
+                                              DateTime.now(),
+                                        ),
+                                        textColor: Colors.white,
+                                      ),
+                                      icon: _sunriseIcon(color: Colors.white),
+                                      iconAlignment: Alignment.center,
+                                    ),
+                                  ),
                                   Positioned(
-                                      bottom: 95.w,
+                                      bottom: 110.w,
                                       left: 0,
                                       right: 0,
                                       child: Center(
-                                        child: LabelWidget(
+                                        child: _labelWithIcon(
+                                          label: LabelWidget(
+                                              name: translate('home.Dhuhr'),
+                                              time: _fmt(
+                                                  aladhanTimes?['dhuhr'] ??
+                                                      pt?.dhuhr ??
+                                                      DateTime.now()),
+                                              textColor:
+                                                  nextPrayer == Prayer.dhuhr
+                                                      ? const Color(0xFFFFD700)
+                                                      : Colors.white),
+                                          icon: _prayerIcon(
+                                            prayer: Prayer.dhuhr,
+                                            color: nextPrayer == Prayer.dhuhr
+                                                ? const Color(0xFFFFD700)
+                                                : Colors.white,
+                                          ),
+                                          iconAlignment: Alignment.center,
+                                        ),
+                                      )),
+                                  Positioned(
+                                      bottom: 95.w,
+                                      right: 70.w,
+                                      child: _labelWithIcon(
+                                        label: LabelWidget(
                                             name: translate('home.Asr'),
                                             time: _fmt(aladhanTimes?['asr'] ??
                                                 pt?.asr ??
@@ -243,30 +484,56 @@ class _ParayerWidgetState extends State<ParayerWidget>
                                             textColor: nextPrayer == Prayer.asr
                                                 ? const Color(0xFFFFD700)
                                                 : Colors.white),
+                                        icon: _prayerIcon(
+                                          prayer: Prayer.asr,
+                                          color: nextPrayer == Prayer.asr
+                                              ? const Color(0xFFFFD700)
+                                              : Colors.white,
+                                        ),
+                                        iconAlignment: Alignment.centerLeft,
                                       )),
                                   Positioned(
-                                      bottom: 85.w,
-                                      right: 50.w,
-                                      child: LabelWidget(
-                                          name: translate('home.Maghrib'),
-                                          time: _fmt(aladhanTimes?['maghrib'] ??
-                                              pt?.maghrib ??
-                                              DateTime.now()),
-                                          textColor:
-                                              nextPrayer == Prayer.maghrib
-                                                  ? const Color(0xFFFFD700)
-                                                  : Colors.white)),
-                                  Positioned(
-                                      bottom: 35.h,
-                                      right: 0.w,
-                                      child: LabelWidget(
-                                          name: translate('home.Isha'),
-                                          time: _fmt(aladhanTimes?['isha'] ??
-                                              pt?.isha ??
-                                              DateTime.now()),
-                                          textColor: nextPrayer == Prayer.isha
+                                      bottom: 68.w,
+                                      right: 5.w,
+                                      child: _labelWithIcon(
+                                        label: LabelWidget(
+                                            name: translate('home.Maghrib'),
+                                            time: _fmt(
+                                                aladhanTimes?['maghrib'] ??
+                                                    pt?.maghrib ??
+                                                    DateTime.now()),
+                                            textColor:
+                                                nextPrayer == Prayer.maghrib
+                                                    ? const Color(0xFFFFD700)
+                                                    : Colors.white),
+                                        icon: _prayerIcon(
+                                          prayer: Prayer.maghrib,
+                                          color: nextPrayer == Prayer.maghrib
                                               ? const Color(0xFFFFD700)
-                                              : Colors.white)),
+                                              : Colors.white,
+                                        ),
+                                        iconAlignment: Alignment.centerLeft,
+                                      )),
+                                  Positioned(
+                                      bottom: 25.h,
+                                      right: -20.w,
+                                      child: _labelWithIcon(
+                                        label: LabelWidget(
+                                            name: translate('home.Isha'),
+                                            time: _fmt(aladhanTimes?['isha'] ??
+                                                pt?.isha ??
+                                                DateTime.now()),
+                                            textColor: nextPrayer == Prayer.isha
+                                                ? const Color(0xFFFFD700)
+                                                : Colors.white),
+                                        icon: _prayerIcon(
+                                          prayer: Prayer.isha,
+                                          color: nextPrayer == Prayer.isha
+                                              ? const Color(0xFFFFD700)
+                                              : Colors.white,
+                                        ),
+                                        iconAlignment: Alignment.centerLeft,
+                                      )),
                                   Positioned(
                                     bottom: 18.h,
                                     right: 0,

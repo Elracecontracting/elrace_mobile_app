@@ -17,7 +17,18 @@ class WidgetService {
 
     try {
       final List<dynamic> decoded = jsonDecode(activeWidgetsJson);
-      return decoded.map((json) => WidgetModel.fromJson(json)).toList();
+      List<WidgetModel> widgets = decoded.map((json) => WidgetModel.fromJson(json)).toList();
+      
+      // Add time_sheet if not present (migration)
+      if (!widgets.any((w) => w.id == 'time_sheet')) {
+        final timeSheetWidget = getAvailableWidgets().firstWhere(
+          (w) => w.id == 'time_sheet',
+        );
+        widgets.insert(0, timeSheetWidget.copyWith(isActive: true));
+        await saveActiveWidgets(widgets);
+      }
+      
+      return widgets;
     } catch (e) {
       return [];
     }
@@ -25,7 +36,7 @@ class WidgetService {
 
   static Future<void> _initializeDefaultWidgets() async {
     final defaultWidgets = [
-      // 'time_sheet', // Hidden
+      'time_sheet',
       'petty_cash',
       'lpo',
       'documents',

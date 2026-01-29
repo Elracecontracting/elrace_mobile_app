@@ -74,24 +74,29 @@ class FaceDetectorService {
   /// Returns true if the face appears to be a live person
   bool checkLiveness(
     Face face, {
-    double eyeOpenThreshold = 0.3,
+    double eyeOpenThreshold = 0.5, // ⬆️ زيادة العتبة من 0.3 إلى 0.5 لمنع الصور
     double? smilingThreshold,
-    double maxHeadEulerAngleY = 20.0, // Max yaw (left-right rotation)
-    double maxHeadEulerAngleZ = 20.0, // Max roll (tilt)
+    double maxHeadEulerAngleY = 15.0, // ⬇️ تقليل الزاوية المسموحة من 20 إلى 15
+    double maxHeadEulerAngleZ = 15.0, // ⬇️ تقليل الزاوية المسموحة من 20 إلى 15
   }) {
     // Check if classification data is available
     if (face.leftEyeOpenProbability == null ||
         face.rightEyeOpenProbability == null) {
       // If classification is disabled, we can't check liveness
-      return false;
+      print('⚠️ SECURITY WARNING: Eye classification data not available!');
+      return false; // ❌ رفض التحقق إذا لم تكن بيانات العينين متاحة
     }
 
     // Check 1: Both eyes should be reasonably open
     final leftEyeOpen = face.leftEyeOpenProbability! > eyeOpenThreshold;
     final rightEyeOpen = face.rightEyeOpenProbability! > eyeOpenThreshold;
 
+    print('👁️ Liveness Check - Left Eye: ${face.leftEyeOpenProbability!.toStringAsFixed(2)}, Right Eye: ${face.rightEyeOpenProbability!.toStringAsFixed(2)}');
+    print('👁️ Required threshold: $eyeOpenThreshold');
+
     if (!leftEyeOpen || !rightEyeOpen) {
-      return false; // Eyes are closed or barely open
+      print('❌ Liveness FAILED: Eyes not sufficiently open');
+      return false; // Eyes are closed or barely open - possible photo attack
     }
 
     // Check 2: Optional smile check (for interactive liveness)

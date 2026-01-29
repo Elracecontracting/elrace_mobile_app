@@ -126,11 +126,23 @@ class TodoItemWidget extends StatelessWidget {
   }
 
   bool _hasMetaInfo() {
-    return todo.dueDate != null || todo.isMyDay || todo.description != null;
+    return todo.dueDate != null ||
+        todo.isMyDay ||
+        todo.description != null ||
+        todo.assignedToName != null;
   }
 
   Widget _buildMetaInfo() {
     final List<Widget> items = [];
+
+    // Assigned to member
+    if (todo.assignedToName != null && todo.assignedToName!.isNotEmpty) {
+      items.add(_buildMetaChip(
+        icon: Icons.person_outline,
+        label: todo.assignedToName!,
+        color: const Color(0xFF9C27B0),
+      ));
+    }
 
     // My Day indicator
     if (todo.isMyDay) {

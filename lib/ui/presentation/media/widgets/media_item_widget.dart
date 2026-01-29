@@ -24,25 +24,31 @@ class MediaItemWidget extends StatelessWidget {
     this.onLongPress,
   });
 
-  Widget _buildImageThumbnail() {
-    String imageUrl = media.previewUrl;
-    // Use a consistent inner padding and show a thin border around thumbnail
-    final double pad = 6.w;
-    final borderRadius = BorderRadius.circular(8.r);
+  Widget _buildThumbnail() {
+    final String imageUrl = media.previewUrl;
+    final borderRadius = BorderRadius.circular(18.r);
+    const borderColor = Color(0xB8484848);
+
+    Widget placeholder() {
+      return Container(
+        color: Colors.black.withOpacity(0.04),
+        alignment: Alignment.center,
+        child: Icon(
+          media.isVideo ? Icons.play_circle_outline : Icons.image_outlined,
+          size: 44.sp,
+          color: appFontColor.withOpacity(0.55),
+        ),
+      );
+    }
 
     Widget buildAssetImage() {
       return Image.asset(
         imageUrl,
         width: double.infinity,
+        height: double.infinity,
         fit: BoxFit.cover,
         filterQuality: FilterQuality.high,
-        errorBuilder: (context, error, stackTrace) {
-          return Icon(
-            Icons.image,
-            size: 30.sp,
-            color: Colors.blue,
-          );
-        },
+        errorBuilder: (context, error, stackTrace) => placeholder(),
       );
     }
 
@@ -50,23 +56,23 @@ class MediaItemWidget extends StatelessWidget {
       return Image.network(
         imageUrl,
         width: double.infinity,
+        height: double.infinity,
         fit: BoxFit.cover,
         filterQuality: FilterQuality.high,
-        errorBuilder: (context, error, stackTrace) {
-          return Icon(
-            Icons.image,
-            size: 30.sp,
-            color: Colors.blue,
-          );
-        },
+        errorBuilder: (context, error, stackTrace) => placeholder(),
         loadingBuilder: (context, child, loadingProgress) {
           if (loadingProgress == null) return child;
           return Center(
-            child: CircularProgressIndicator(
-              value: loadingProgress.expectedTotalBytes != null
-                  ? loadingProgress.cumulativeBytesLoaded /
-                      loadingProgress.expectedTotalBytes!
-                  : null,
+            child: SizedBox(
+              width: 22.w,
+              height: 22.w,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
             ),
           );
         },
@@ -77,147 +83,150 @@ class MediaItemWidget extends StatelessWidget {
         ? buildAssetImage()
         : buildNetworkImage();
 
-    return Padding(
-      padding: EdgeInsets.all(pad),
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(color: appFontColor.withOpacity(0.12), width: 1),
-          borderRadius: borderRadius,
-        ),
-        clipBehavior: Clip.hardEdge,
-        child: ClipRRect(borderRadius: borderRadius, child: inner),
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: borderRadius,
+        border: Border.all(color: borderColor, width: 1),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ClipRRect(
+        borderRadius: borderRadius,
+        child: inner,
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: appFontColor.withOpacity(0.9), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Image area
-          ClipRRect(
-            borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(11.r),
-                topRight: Radius.circular(11.r)),
-            child: SizedBox(
-              width: double.infinity,
-              height: 130.h,
-              child: _buildImageThumbnail(),
-            ),
-          ),
+    final borderRadius = BorderRadius.circular(22.r);
+    const borderColor = Color(0xB8484848);
 
-          // Content — use the same inner padding as thumbnail
-          Padding(
-            padding:
-                EdgeInsets.only(left: 12.w, right: 12.w, top: 8.w, bottom: 8.w),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Texts
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: borderRadius,
+        onTap: onTap,
+        onLongPress: onLongPress,
+        child: Container(
+          decoration: BoxDecoration(
+            color: const Color(0xFFE6E6E6),
+            borderRadius: borderRadius,
+            border: Border.all(color: borderColor, width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: EdgeInsets.only(top: 10.h, right: 14.w, left: 14.w),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'Uploaded on ${DateFormat('dd/MM/yyyy').format(media.dateCreated)}',
+                    style: GoogleFonts.koulen(
+                      fontSize: 11.sp,
+                      color: const Color(0xFF6E6E6E),
+                      letterSpacing: 0.8,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 170.h,
+                  child: Stack(
                     children: [
-                      Text(
-                        media.displayName,
-                        style: GoogleFonts.koulen(
-                          fontSize: 15.sp,
-                          fontWeight: FontWeight.w600,
-                          color: appFontColor,
-                          letterSpacing: 1.0,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (media.client != null && media.client!.isNotEmpty) ...[
-                        SizedBox(height: 3.h),
-                        Text(
-                          media.client!,
-                          style: GoogleFonts.koulen(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
-                            color: appFontColor,
-                            letterSpacing: 1.0,
+                      Positioned.fill(child: _buildThumbnail()),
+                      if (media.isVideo)
+                        Positioned.fill(
+                          child: Center(
+                            child: Icon(
+                              Icons.play_circle_fill,
+                              size: 56.sp,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                      SizedBox(height: 4.h),
-                      Row(
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.only(
+                  left: 16.w,
+                  right: 12.w,
+                  bottom: 14.h,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
-                            size: 14.sp,
-                            color: const Color(0xFFB0B0B0),
+                          Text(
+                            media.displayName,
+                            style: GoogleFonts.koulen(
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.w400,
+                              color: appFontColor,
+                              letterSpacing: 1.0,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          SizedBox(width: 4.w),
-                          Flexible(
-                            child: Text(
-                              DateFormat('dd/MM/yyyy')
-                                  .format(media.dateCreated),
+                          if (media.client != null &&
+                              media.client!.trim().isNotEmpty) ...[
+                            SizedBox(height: 2.h),
+                            Text(
+                              media.client!,
                               style: GoogleFonts.koulen(
                                 fontSize: 12.sp,
-                                color: const Color(0xffB0B0B0),
+                                fontWeight: FontWeight.w400,
+                                color: appFontColor.withOpacity(0.75),
+                                letterSpacing: 0.8,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                          ),
+                          ],
                         ],
                       ),
-                    ],
-                  ),
-                ),
-
-                // Action icons (view and share) — horizontal row
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    GestureDetector(
-                      onTap: onTap,
-                      child: Icon(
-                        Icons.visibility_outlined,
-                        size: 26.sp,
-                        color: appFontColor,
-                      ),
                     ),
-                    SizedBox(width: 15.w),
-                    GestureDetector(
+                    InkWell(
+                      customBorder: const CircleBorder(),
                       onTap: () async {
-                        // Always share as link directly
                         await _shareMediaAsLink(context);
                       },
                       child: SizedBox(
-                        width: 26.w,
-                        height: 26.h,
-                        child: Image.asset(
-                          'assets/png/icons/Capa_1.png',
-                          fit: BoxFit.contain,
-                          filterQuality: FilterQuality.high,
+                        width: 42.w,
+                        height: 42.w,
+                        child: Center(
+                          child: Image.asset(
+                            'assets/newapp/newicon/media_share_icon.png',
+                            width: 40.w,
+                            height: 24.h,
+                            fit: BoxFit.contain,
+                          ),
                         ),
                       ),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -259,7 +268,7 @@ class MediaItemWidget extends StatelessWidget {
       }
 
       // Trim whitespace and encode URL to handle spaces
-      shareableUrl = shareableUrl?.trim() ?? '';
+      shareableUrl = shareableUrl.trim();
 
       // Parse and properly encode the URL to replace spaces with %20
       try {
@@ -275,7 +284,7 @@ class MediaItemWidget extends StatelessWidget {
       } catch (e) {
         print('⚠️ Could not parse URL for encoding: $e');
         // Fallback: simple space replacement
-        shareableUrl = shareableUrl?.replaceAll(' ', '%20') ?? '';
+        shareableUrl = shareableUrl!.replaceAll(' ', '%20');
       }
 
       if (shareableUrl.isEmpty) {

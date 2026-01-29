@@ -182,7 +182,7 @@ class _CheckInFaceVerificationScreenState
 
     try {
       int frameCount = 0;
-      const int requiredFrames = 3; // Capture 3 frames for liveness check
+      const int requiredFrames = 15; // 🆕 جمع 15 إطار لفحص الرمش (~1.5 ثانية)
       final List<CameraImage> capturedFrames = [];
       bool verificationTriggered = false;
 
@@ -212,12 +212,12 @@ class _CheckInFaceVerificationScreenState
             print('⚠️ Error stopping stream: $e');
           }
 
-          // Trigger verification
+          // 🆕 Trigger multi-frame verification with blink check
           if (mounted) {
-            print('🎯 Starting face verification via BLoC...');
+            print('🎯 Starting MULTI-FRAME face verification with BLINK CHECK...');
             context.read<FaceRecognitionBloc>().add(
-                  StartFaceVerification(
-                    image: capturedFrames.last,
+                  StartMultiFrameVerification(
+                    frames: capturedFrames,
                     userId: widget.userId,
                   ),
                 );
@@ -376,7 +376,7 @@ class _CheckInFaceVerificationScreenState
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              'Position your face within the frame',
+                              'انظر للكاميرا وارمش بعينيك',
                               style: TextStyle(
                                 color: AppColors.grey,
                                 fontSize: 14,
@@ -388,6 +388,34 @@ class _CheckInFaceVerificationScreenState
                     ],
                   ),
                 ),
+
+                // 🆕 تعليمات الرمش عند التحقق
+                if (_isProcessing && !_showTryAgainButton)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.visibility, color: AppColors.primaryColor, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            '👁️ ارمش بعينيك الآن',
+                            style: TextStyle(
+                              color: AppColors.primaryColor,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
 
                 const Spacer(flex: 1),
 

@@ -119,6 +119,26 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
         }
 
         if (faceSequence.length >= 3) {
+          // 🆕 Check for BLINK first - most reliable anti-spoofing
+          final leftEyeValues = faceSequence
+              .map((f) => f.leftEyeOpenProbability ?? 0.0)
+              .toList();
+          final rightEyeValues = faceSequence
+              .map((f) => f.rightEyeOpenProbability ?? 0.0)
+              .toList();
+
+          final blinkDetected = _detectBlinkInSequence(leftEyeValues, rightEyeValues);
+          
+          print('👁️ Blink check - Left eyes: $leftEyeValues');
+          print('👁️ Blink check - Right eyes: $rightEyeValues');
+          print('👁️ Blink detected: $blinkDetected');
+
+          if (!blinkDetected) {
+            emit(const FaceVerificationFailedST(
+                'الرجاء رمش عينيك أثناء النظر للكاميرا'));
+            return;
+          }
+
           // Check for natural micro-movements (photos are 100% static)
           final yawValues =
               faceSequence.map((f) => f.headEulerAngleY ?? 0.0).toList();
@@ -383,5 +403,57 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
     final variance = sumSquaredDiff / values.length;
 
     return math.sqrt(variance);
+  }
+
+  /// 🆕 Detect a real blink in the eye probability sequence
+  /// A blink is: eyes open (>0.5) -> eyes closed (<0.3) -> eyes open (>0.5)
+  bool _detectBlinkInSequence(List<double> leftEyeValues, List<double> rightEyeValues) {
+    const double openThreshold = 0.5;  // Eye considered open
+    const double closedThreshold = 0.3; // Eye considered closed
+    
+    // Track state machine for blink detection
+    bool foundOpen = false;
+    bool foundClosed = false;
+    bool foundOpenAgain = false;
+    
+    for (int i = 0; i < leftEyeValues.length; i++) {
+      final leftEye = leftEyeValues[i];
+      final rightEye = rightEyeValues[i];
+      
+      // Both eyes should be in sync for a real blink
+      final avgEye = (leftEye + rightEye) / 2;
+      
+      if (!foundOpen) {
+        // Looking for initial open state
+        if (avgEye >= openThreshold) {
+          foundOpen = true;
+        }
+      } else if (!foundClosed) {
+        // Looking for closed state (the blink)
+        if (avgEye <= closedThreshold) {
+          foundClosed = true;
+        }
+      } else if (!foundOpenAgain) {
+        // Looking for eyes to open again after blink
+        if (avgEye >= openThreshold) {
+          foundOpenAgain = true;
+          return true; // Complete blink detected!
+        }
+      }
+    }
+    
+    // Also check for partial blink (significant eye closure even without full sequence)
+    if (foundOpen && foundClosed) {
+      final minEye = leftEyeValues.reduce(math.min);
+      final maxEye = leftEyeValues.reduce(math.max);
+      final eyeRange = maxEye - minEye;
+      
+      // If there's significant eye movement (>0.3 range), consider it a blink
+      if (eyeRange >= 0.3) {
+        return true;
+      }
+    }
+    
+    return false;
   }
 }

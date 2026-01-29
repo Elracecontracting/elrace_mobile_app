@@ -427,14 +427,30 @@ class ChatRepository {
       // 1. Upload file to Storage
       print('📤 ChatRepository: Uploading to path: $storagePath');
       print('📤 ChatRepository: Storage bucket: ${_storage.bucket}');
+      print('📤 ChatRepository: Current user UID: $currentUid');
       print('📤 ChatRepository: File exists: ${await file.exists()}, size: $fileSize');
+      
+      // Check Firebase Auth state
+      final authUser = FirebaseAuth.instance.currentUser;
+      if (authUser == null) {
+        throw Exception('Firebase Auth: No user signed in. Cannot upload to Storage.');
+      }
+      print('📤 ChatRepository: Auth user email: ${authUser.email}, isAnonymous: ${authUser.isAnonymous}');
       
       final ref = _storage.ref(storagePath);
       final metadata = SettableMetadata(
         contentType: mimeType ?? _getMimeType(fileName),
+        customMetadata: {
+          'uploadedBy': currentUid,
+          'chatId': chatId,
+        },
       );
       
-      final uploadTask = ref.putFile(file, metadata);
+      // Read file bytes and use putData for better compatibility
+      final fileBytes = await file.readAsBytes();
+      print('📤 ChatRepository: Read ${fileBytes.length} bytes, starting upload...');
+      
+      final uploadTask = ref.putData(fileBytes, metadata);
       
       // Listen to upload progress for debugging
       uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {

@@ -89,24 +89,89 @@ class FaceRecognitionError extends FaceRecognitionState {
 /// Liveness challenge in progress
 class LivenessChallengeInProgress extends FaceRecognitionState {
   final String challengeText;
+  final String challengeInstruction;
   final int currentChallengeIndex;
   final int totalChallenges;
   final List<String> completedChallenges;
+  final int iconCodePoint; // لعرض الأيقونة
 
   LivenessChallengeInProgress({
     required this.challengeText,
+    required this.challengeInstruction,
     required this.currentChallengeIndex,
     required this.totalChallenges,
     this.completedChallenges = const [],
+    this.iconCodePoint = 0xe3fc, // visibility icon default
   });
 
   @override
   List<Object?> get props => [
         challengeText,
+        challengeInstruction,
         currentChallengeIndex,
         totalChallenges,
-        completedChallenges
+        completedChallenges,
+        iconCodePoint,
       ];
+}
+
+/// 🆕 حالة انتظار التحدي التالي
+class WaitingForNextChallenge extends FaceRecognitionState {
+  final String previousChallengeResult;
+  final int nextChallengeIndex;
+  final int totalChallenges;
+  final List<String> completedChallenges;
+
+  WaitingForNextChallenge({
+    required this.previousChallengeResult,
+    required this.nextChallengeIndex,
+    required this.totalChallenges,
+    required this.completedChallenges,
+  });
+
+  @override
+  List<Object?> get props => [
+        previousChallengeResult,
+        nextChallengeIndex,
+        totalChallenges,
+        completedChallenges,
+      ];
+}
+
+/// 🆕 حالة نجاح تحدي واحد
+class SingleChallengeSuccess extends FaceRecognitionState {
+  final String challengeName;
+  final int challengeIndex;
+  final int totalChallenges;
+  final String message;
+
+  SingleChallengeSuccess({
+    required this.challengeName,
+    required this.challengeIndex,
+    required this.totalChallenges,
+    required this.message,
+  });
+
+  @override
+  List<Object?> get props => [challengeName, challengeIndex, totalChallenges, message];
+}
+
+/// 🆕 حالة فشل تحدي واحد
+class SingleChallengeFailed extends FaceRecognitionState {
+  final String challengeName;
+  final int challengeIndex;
+  final int totalChallenges;
+  final String message;
+
+  SingleChallengeFailed({
+    required this.challengeName,
+    required this.challengeIndex,
+    required this.totalChallenges,
+    required this.message,
+  });
+
+  @override
+  List<Object?> get props => [challengeName, challengeIndex, totalChallenges, message];
 }
 
 /// Liveness check completed
