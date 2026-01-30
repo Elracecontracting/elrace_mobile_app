@@ -674,7 +674,12 @@ class _MediaListScreenState extends State<MediaListScreen> {
             SizedBox(height: 16.h),
             ElevatedButton(
               onPressed: () {
-                context.read<MediaBloc>().add(const FetchMediaList());
+                // Retry based on current tab
+                if (_activeTab == _MediaFilterTab.videos) {
+                  context.read<MediaBloc>().add(const FetchMediaList());
+                } else {
+                  context.read<MediaBloc>().add(const FetchContents());
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: appFontColor,

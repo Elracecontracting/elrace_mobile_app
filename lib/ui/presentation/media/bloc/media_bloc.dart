@@ -47,14 +47,21 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
   ) async {
     try {
       emit(MediaLoading());
+      print('📡 MediaBloc: Fetching contents...');
       final contents = await mediaRepository.getContents();
       if (contents != null) {
+        print('✅ MediaBloc: Contents loaded successfully');
+        print('   Photos: ${contents.photos.length}');
+        print('   360 Views: ${contents.view360.length}');
         emit(ContentsLoaded(contents));
       } else {
-        emit(const MediaError('Failed to fetch contents'));
+        print('❌ MediaBloc: Contents is null');
+        emit(const MediaError('Failed to fetch contents. Please check your connection.'));
       }
-    } catch (e) {
-      emit(MediaError(e.toString()));
+    } catch (e, stackTrace) {
+      print('❌ MediaBloc: Error fetching contents: $e');
+      print('Stack trace: $stackTrace');
+      emit(MediaError('Error loading contents: ${e.toString()}'));
     }
   }
 

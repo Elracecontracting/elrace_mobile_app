@@ -180,11 +180,19 @@ class MediaRepository implements IMediaRepository {
         if (token != null) "Authorization": "Bearer $token"
       };
 
+      final body = jsonEncode({"jsonrpc": "2.0", "params": {}});
       final url = Uri.parse("${UrlUtil.baseUrl}${UrlUtil.getContentsApi}");
       
       log('📡 Calling get_contents API: $url');
+      log('📤 Request body: $body');
 
-      final response = await http.get(url, headers: headers);
+      // Use GET request with body (similar to other API calls in this app)
+      final request = http.Request('GET', url)
+        ..headers.addAll(headers)
+        ..body = body;
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
       log('📥 get_contents API Response: ${response.statusCode}');
       log('📦 Response body: ${response.body}');
@@ -193,14 +201,19 @@ class MediaRepository implements IMediaRepository {
         final json = jsonDecode(response.body);
         
         if (json['result'] != null && json['result']['status'] == 'success') {
+          log('✅ get_contents: Successfully parsed response');
           return ContentsResponse.fromJson(json);
         } else {
-          log('⚠️ get_contents: Invalid response format');
+          log('⚠️ get_contents: Invalid response format or status not success');
+          log('⚠️ Result: ${json['result']}');
         }
+      } else {
+        log('❌ get_contents: HTTP ${response.statusCode}');
       }
       return null;
-    } catch (e) {
+    } catch (e, stackTrace) {
       log('❌ Error in getContents: $e');
+      log('Stack trace: $stackTrace');
       return null;
     }
   }

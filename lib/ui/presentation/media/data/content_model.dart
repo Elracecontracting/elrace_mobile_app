@@ -77,27 +77,35 @@ class ContentsResponse {
   });
 
   factory ContentsResponse.fromJson(Map<String, dynamic> json) {
-    final data = json['result']?['data'] ?? json['data'] ?? json;
-    
-    List<ContentModel> photosList = [];
-    List<ContentModel> view360List = [];
+    try {
+      final data = json['result']?['data'] ?? json['data'] ?? json;
+      
+      List<ContentModel> photosList = [];
+      List<ContentModel> view360List = [];
 
-    if (data['photos'] != null) {
-      photosList = (data['photos'] as List)
-          .map((item) => ContentModel.fromJson(item))
-          .toList();
+      if (data['photos'] != null && data['photos'] is List) {
+        photosList = (data['photos'] as List)
+            .map((item) => ContentModel.fromJson(item))
+            .toList();
+      }
+
+      if (data['360_view'] != null && data['360_view'] is List) {
+        view360List = (data['360_view'] as List)
+            .map((item) => ContentModel.fromJson(item))
+            .toList();
+      }
+
+      print('✅ ContentsResponse parsed: ${photosList.length} photos, ${view360List.length} 360 views');
+
+      return ContentsResponse(
+        photos: photosList,
+        view360: view360List,
+      );
+    } catch (e) {
+      print('❌ Error parsing ContentsResponse: $e');
+      print('📦 JSON data: $json');
+      rethrow;
     }
-
-    if (data['360_view'] != null) {
-      view360List = (data['360_view'] as List)
-          .map((item) => ContentModel.fromJson(item))
-          .toList();
-    }
-
-    return ContentsResponse(
-      photos: photosList,
-      view360: view360List,
-    );
   }
 
   /// Get all content items combined
