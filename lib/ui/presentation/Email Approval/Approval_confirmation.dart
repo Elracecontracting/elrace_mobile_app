@@ -1733,8 +1733,15 @@ class _ApprovalConfirmationScreenState
       );
     }
 
+    // حساب الارتفاع المناسب بناءً على عدد الصفوف
+    final dynamicTableHeight = rows.isEmpty 
+        ? 120.w // ارتفاع صغير للجدول الفارغ
+        : (rows.length == 1 
+            ? 140.w // ارتفاع أصغر لصف واحد
+            : tableHeight); // الارتفاع الكامل للصفوف المتعددة
+
     return SizedBox(
-      height: tableHeight,
+      height: dynamicTableHeight,
       child: Column(
         children: [
           Expanded(

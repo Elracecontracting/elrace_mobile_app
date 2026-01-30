@@ -419,7 +419,7 @@ class _PettyCashSubmittedScreenState extends State<PettyCashSubmittedScreen> {
                         );
                       },
                     ),
-                  const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
                 ],
               ),
             ),

@@ -348,7 +348,6 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
             },
             child: Column(
               children: [
-                // Content body - this will scroll behind the tabs
                 body(),
               ],
             ),

@@ -35,7 +35,7 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
   @override
   Widget build(BuildContext context) {
     final sliderProvider = Provider.of<SliderProvider>(context);
-    final bottomPadding = kBottomNavigationBarHeight + context.systemBottomInset + 50.h;
+    final bottomPadding = kBottomNavigationBarHeight + context.systemBottomInset + 75.h;
 
     return RefreshIndicator(
       onRefresh: () async {

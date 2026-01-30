@@ -24,7 +24,7 @@ class AllApprovalsOverview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final totalBottomPadding =
-        kBottomNavigationBarHeight + context.systemBottomInset + 16;
+        kBottomNavigationBarHeight + context.systemBottomInset + 100.h;
 
     return Expanded(
       child: SingleChildScrollView(
@@ -32,7 +32,7 @@ class AllApprovalsOverview extends StatelessWidget {
         padding: EdgeInsets.only(
           left: 18.w,
           right: 18.w,
-          top: 112.w,
+          top: 120.w,
           bottom: totalBottomPadding,
         ),
         child: Column(

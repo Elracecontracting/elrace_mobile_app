@@ -146,30 +146,43 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const HeaderWidget(),
-      body: Column(
-        children: [
-          SizedBox(height: 12.w),
-          // Title
-          Center(
-            child: Text(
-              'DELAYED REQUESTS',
-              style: GoogleFonts.koulen(
-                fontSize: 26.sp,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF1A1A1A),
-                letterSpacing: 1.5,
-              ),
+      body: CustomScrollView(
+        slivers: [
+          const SliverAppBar(
+            pinned: false,
+            floating: true,
+            snap: true,
+            elevation: 0,
+            backgroundColor: Colors.white,
+            surfaceTintColor: Colors.white,
+            automaticallyImplyLeading: false,
+            flexibleSpace: HeaderWidget(),
+          ),
+          SliverToBoxAdapter(
+            child: Column(
+              children: [
+                SizedBox(height: 12.w),
+                // Title
+                Center(
+                  child: Text(
+                    'DELAYED REQUESTS',
+                    style: GoogleFonts.koulen(
+                      fontSize: 26.sp,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF1A1A1A),
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16.w),
+                // Category tabs
+                _buildCategoryTabs(),
+                SizedBox(height: 12.w),
+              ],
             ),
           ),
-          SizedBox(height: 16.w),
-          // Category tabs
-          _buildCategoryTabs(),
-          SizedBox(height: 12.w),
           // Content
-          Expanded(
-            child: _buildContent(),
-          ),
+          _buildSliverContent(),
         ],
       ),
     );
@@ -247,47 +260,51 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildSliverContent() {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFF0B2D5E),
+      return const SliverFillRemaining(
+        child: Center(
+          child: CircularProgressIndicator(
+            color: Color(0xFF0B2D5E),
+          ),
         ),
       );
     }
 
     if (_error.isNotEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 48.w,
-              color: Colors.red[400],
-            ),
-            SizedBox(height: 16.w),
-            Text(
-              'Failed to load delayed requests',
-              style: GoogleFonts.nunito(
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
+      return SliverFillRemaining(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 48.w,
+                color: Colors.red[400],
               ),
-            ),
-            SizedBox(height: 8.w),
-            TextButton(
-              onPressed: _fetchDelayedApprovals,
-              child: Text(
-                'Retry',
+              SizedBox(height: 16.w),
+              Text(
+                'Failed to load delayed requests',
                 style: GoogleFonts.nunito(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0B2D5E),
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
                 ),
               ),
-            ),
-          ],
+              SizedBox(height: 8.w),
+              TextButton(
+                onPressed: _fetchDelayedApprovals,
+                child: Text(
+                  'Retry',
+                  style: GoogleFonts.nunito(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0B2D5E),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -295,34 +312,36 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
     final items = _getFilteredItems();
 
     if (items.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.check_circle_outline,
-              size: 64.w,
-              color: Colors.green[400],
-            ),
-            SizedBox(height: 16.w),
-            Text(
-              'No delayed requests',
-              style: GoogleFonts.nunito(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w700,
-                color: Colors.grey[700],
+      return SliverFillRemaining(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                size: 64.w,
+                color: Colors.green[400],
               ),
-            ),
-            SizedBox(height: 8.w),
-            Text(
-              'All requests are on track!',
-              style: GoogleFonts.nunito(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
-                color: Colors.grey[500],
+              SizedBox(height: 16.w),
+              Text(
+                'No delayed requests',
+                style: GoogleFonts.nunito(
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey[700],
+                ),
               ),
-            ),
-          ],
+              SizedBox(height: 8.w),
+              Text(
+                'All requests are on track!',
+                style: GoogleFonts.nunito(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[500],
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -330,32 +349,29 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
     final totalBottomPadding =
         kBottomNavigationBarHeight + context.systemBottomInset + 16;
 
-    return RefreshIndicator(
-      onRefresh: _fetchDelayedApprovals,
-      color: const Color(0xFF0B2D5E),
-      child: ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
+    return SliverPadding(
+      padding: EdgeInsets.only(
+        top: 8.w,
+        bottom: totalBottomPadding,
+      ),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final item = items[index];
+            return DelayedRequestCard(
+              reqNo: item['reqNo'] ?? '',
+              requestType: item['requestType'] ?? '',
+              employeeName: item['employeeName'] ?? '',
+              empCode: item['empCode'] ?? '',
+              employeeImageUrl: item['employeeImageUrl'] ?? '',
+              daysDelayed: item['daysDelayed'] ?? 0,
+              onTap: () {
+                // TODO: Navigate to detail screen if needed
+              },
+            );
+          },
+          childCount: items.length,
         ),
-        padding: EdgeInsets.only(
-          top: 8.w,
-          bottom: totalBottomPadding,
-        ),
-        itemCount: items.length,
-        itemBuilder: (context, index) {
-          final item = items[index];
-          return DelayedRequestCard(
-            reqNo: item['reqNo'] ?? '',
-            requestType: item['requestType'] ?? '',
-            employeeName: item['employeeName'] ?? '',
-            empCode: item['empCode'] ?? '',
-            employeeImageUrl: item['employeeImageUrl'] ?? '',
-            daysDelayed: item['daysDelayed'] ?? 0,
-            onTap: () {
-              // TODO: Navigate to detail screen if needed
-            },
-          );
-        },
       ),
     );
   }

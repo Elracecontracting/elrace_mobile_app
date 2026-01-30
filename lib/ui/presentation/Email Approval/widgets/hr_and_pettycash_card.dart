@@ -399,13 +399,13 @@ class HrAndPettycashCard extends StatelessWidget {
 
     // Calculate safe bottom padding for devices with navigation bars
     final totalBottomPadding =
-        kBottomNavigationBarHeight + context.systemBottomInset + 16;
+        kBottomNavigationBarHeight + context.systemBottomInset + 100.h;
 
     return Expanded(
       child: ListView.separated(
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 5) +
-            EdgeInsets.only(bottom: totalBottomPadding, top: 100.w),
+            EdgeInsets.only(bottom: totalBottomPadding, top: 120.w),
         itemCount: approvalItems.length,
         separatorBuilder: (context, index) => const SizedBox(height: 1),
         itemBuilder: (context, index) {

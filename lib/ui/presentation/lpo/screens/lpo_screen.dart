@@ -378,7 +378,6 @@ class _LpoListScreenState extends State<LpoListScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
-      bottomNavigationBar: const CustomBottomNavBar(isMain: false),
       body: CustomScrollView(
         controller: _scrollController,
         physics: const BouncingScrollPhysics(),

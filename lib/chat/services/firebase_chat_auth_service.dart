@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:math' show min, max;
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -23,7 +25,12 @@ class FirebaseChatAuthService {
   static FirebaseChatAuthService get instance => 
       _instance ??= FirebaseChatAuthService._();
   
-  FirebaseChatAuthService._();
+  FirebaseChatAuthService._() {
+    // Enable Firebase Auth persistence (automatic session storage)
+    _auth.setPersistence(Persistence.LOCAL).catchError((error) {
+      print('⚠️ FirebaseChatAuth: Could not set persistence: $error');
+    });
+  }
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
@@ -63,30 +70,47 @@ class FirebaseChatAuthService {
     }
 
     try {
-      // Step 1: Sign in to Firebase with custom token
-      print('🔐 FirebaseChatAuth: Signing in with custom token...');
-      
-      // Debug: Log token info (first/last chars only for security)
-      final token = session.firebaseCustomToken!;
-      print('🔐 FirebaseChatAuth: Token length: ${token.length}');
-      print('🔐 FirebaseChatAuth: Token preview: ${token.substring(0, 20)}...${token.substring(token.length - 20)}');
-      
-      final userCredential = await _auth.signInWithCustomToken(
-        session.firebaseCustomToken!,
-      );
+      // Check if already signed in with correct UID
+      final currentUser = _auth.currentUser;
+      if (currentUser != null && currentUser.uid == session.firebaseUid) {
+        print('✅ FirebaseChatAuth: Already signed in as ${currentUser.uid}');
+        print('⏭️ FirebaseChatAuth: Skipping sign-in, proceeding to setup...');
+      } else {
+        // Step 1: Sign in to Firebase with custom token
+        print('🔐 FirebaseChatAuth: Signing in with custom token...');
+        
+        // Clean and fix token format issues
+        String token = _cleanFirebaseToken(session.firebaseCustomToken!);
+        
+        // Debug: Log token info (first/last chars only for security)
+        print('🔐 FirebaseChatAuth: Token length: ${token.length}');
+        print('🔐 FirebaseChatAuth: Token preview: ${token.substring(0, min(20, token.length))}...${token.substring(max(0, token.length - 20))}');
+        
+        // Validate token format (should be JWT: xxx.yyy.zzz)
+        if (!token.contains('.') || token.split('.').length != 3) {
+          print('❌ FirebaseChatAuth: Invalid token format - not a valid JWT');
+          return ChatSetupResult.failed(
+            'Invalid Firebase token format from backend. Please contact support.',
+          );
+        }
+        
+        final userCredential = await _auth.signInWithCustomToken(token);
 
-      final firebaseUid = userCredential.user?.uid;
-      if (firebaseUid == null) {
-        return ChatSetupResult.failed('Firebase sign-in succeeded but no UID returned');
+        final firebaseUid = userCredential.user?.uid;
+        if (firebaseUid == null) {
+          return ChatSetupResult.failed('Firebase sign-in succeeded but no UID returned');
+        }
+
+        // Verify UID matches expected (log warning if mismatch)
+        if (firebaseUid != session.firebaseUid) {
+          print('⚠️ FirebaseChatAuth: UID mismatch! Expected: ${session.firebaseUid}, Got: $firebaseUid');
+          print('⚠️ FirebaseChatAuth: Using actual UID from Firebase: $firebaseUid');
+        }
+
+        print('✅ FirebaseChatAuth: Signed in as $firebaseUid');
       }
 
-      // Verify UID matches expected (log warning if mismatch)
-      if (firebaseUid != session.firebaseUid) {
-        print('⚠️ FirebaseChatAuth: UID mismatch! Expected: ${session.firebaseUid}, Got: $firebaseUid');
-        print('⚠️ FirebaseChatAuth: Using actual UID from Firebase: $firebaseUid');
-      }
-
-      print('✅ FirebaseChatAuth: Signed in as $firebaseUid');
+      final firebaseUid = _auth.currentUser!.uid;
 
       // Step 2: Create/update user profile in Firestore
       print('📝 FirebaseChatAuth: Upserting user profile...');
@@ -138,16 +162,44 @@ class FirebaseChatAuthService {
   }
 
   /// Re-authenticate with existing session (e.g., on app resume if token expired).
+  /// 
+  /// Returns true if already authenticated with valid token,
+  /// or if reauthentication succeeded. Returns false if token expired
+  /// and needs fresh token from backend.
   Future<bool> reauthenticate() async {
+    // Check if user is already signed in with correct UID
+    if (_auth.currentUser != null && _currentSession != null) {
+      if (_auth.currentUser!.uid == _currentSession!.firebaseUid) {
+        print('✅ FirebaseChatAuth: User already authenticated as ${_auth.currentUser!.uid}');
+        return true;
+      } else {
+        print('⚠️ FirebaseChatAuth: UID mismatch. Current: ${_auth.currentUser!.uid}, Expected: ${_currentSession!.firebaseUid}');
+      }
+    }
+    
+    // Try to reauthenticate with stored token
     if (_currentSession == null || !_currentSession!.isChatAvailable) {
+      print('⚠️ FirebaseChatAuth: No session or token available for reauthentication');
       return false;
     }
 
     try {
-      await _auth.signInWithCustomToken(_currentSession!.firebaseCustomToken!);
+      print('🔄 FirebaseChatAuth: Attempting reauthentication with stored token...');
+      final cleanToken = _cleanFirebaseToken(_currentSession!.firebaseCustomToken!);
+      await _auth.signInWithCustomToken(cleanToken);
+      print('✅ FirebaseChatAuth: Reauthentication successful');
       return true;
+    } on FirebaseAuthException catch (e) {
+      print('❌ FirebaseChatAuth: Reauthentication failed - ${e.code}: ${e.message}');
+      
+      // Token expired or invalid - need fresh token from backend
+      if (e.code == 'invalid-custom-token' || e.code == 'custom-token-expired') {
+        print('⚠️ FirebaseChatAuth: Token expired. Need fresh token from backend.');
+      }
+      
+      return false;
     } catch (e) {
-      print('❌ FirebaseChatAuth: Reauthentication failed: $e');
+      print('❌ FirebaseChatAuth: Reauthentication error: $e');
       return false;
     }
   }
@@ -212,6 +264,97 @@ class FirebaseChatAuthService {
 
   /// Check if user is signed in to Firebase
   bool get isSignedIn => _auth.currentUser != null;
+  
+  /// Clean and fix Firebase custom token format issues.
+  /// 
+  /// This handles common issues from backend:
+  /// - Extra spaces in JWT parts
+  /// - Newlines and whitespace
+  /// - Malformed base64 padding
+  /// - URL encoding issues
+  String _cleanFirebaseToken(String rawToken) {
+    try {
+      print('🧹 Cleaning token...');
+      
+      // Remove all whitespace (spaces, newlines, tabs)
+      String token = rawToken.replaceAll(RegExp(r'\s+'), '');
+      
+      print('🔍 Original length: ${rawToken.length}, Cleaned length: ${token.length}');
+      
+      // Split JWT into parts (header.payload.signature)
+      final parts = token.split('.');
+      if (parts.length != 3) {
+        print('⚠️ Token does not have 3 parts, returning as-is');
+        return token;
+      }
+      
+      // Try to decode and re-encode each part to fix base64 issues
+      final List<String> fixedParts = [];
+      
+      for (int i = 0; i < parts.length; i++) {
+        String part = parts[i];
+        
+        // Don't modify signature (part 2)
+        if (i == 2) {
+          fixedParts.add(part);
+          continue;
+        }
+        
+        try {
+          // For header and payload, try to decode and validate
+          // Add padding if needed
+          String padded = part;
+          while (padded.length % 4 != 0) {
+            padded += '=';
+          }
+          
+          // Try to decode to verify it's valid base64
+          final decoded = base64Url.decode(padded);
+          
+          // For debugging: check the JSON content
+          if (i == 0) {
+            final headerJson = utf8.decode(decoded);
+            print('🔍 Token header: $headerJson');
+            
+            // Check if header has spaces in JSON (the actual problem)
+            if (headerJson.contains(': ')) {
+              print('⚠️ Header contains spaces after colons, attempting fix...');
+              
+              // Parse and re-encode without spaces
+              try {
+                final headerMap = jsonDecode(headerJson) as Map<String, dynamic>;
+                final fixedHeader = jsonEncode(headerMap);
+                print('✅ Fixed header: $fixedHeader');
+                
+                // Re-encode to base64url
+                final fixedBytes = utf8.encode(fixedHeader);
+                final fixedBase64 = base64Url.encode(fixedBytes).replaceAll('=', '');
+                fixedParts.add(fixedBase64);
+                continue;
+              } catch (e) {
+                print('⚠️ Could not fix header: $e');
+              }
+            }
+          }
+          
+          // If no fix needed or fix failed, use original
+          fixedParts.add(part);
+        } catch (e) {
+          print('⚠️ Could not process part $i: $e');
+          fixedParts.add(part);
+        }
+      }
+      
+      final fixedToken = fixedParts.join('.');
+      print('✅ Token cleaned: ${fixedToken.length} chars');
+      
+      return fixedToken;
+    } catch (e) {
+      print('❌ Error cleaning token: $e');
+      print('⚠️ Returning original token');
+      return rawToken.trim();
+    }
+  }
 }
 
 // ============== Push Notification Trigger Notes ==============

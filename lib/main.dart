@@ -254,9 +254,15 @@ void main() async {
       // جدولة إشعارات التذكير حسب حالة check in/out
       await CheckInReminderNotificationService().scheduleCheckOutReminders();
       debugPrint('✅ Check-out reminder notifications scheduled');
+
+      // اختبار: إرسال إشعار تجريبي عند التشغيل
+      // await CheckInReminderNotificationService().sendTestNotification(isCheckIn: false);
     } else {
       await CheckInReminderNotificationService().scheduleCheckInReminders();
       debugPrint('✅ Check-in reminder notifications scheduled');
+
+      // اختبار: إرسال إشعار تجريبي عند التشغيل
+      // await CheckInReminderNotificationService().sendTestNotification(isCheckIn: true);
     }
   } catch (e) {
     print('❌ Error scheduling notifications: $e');

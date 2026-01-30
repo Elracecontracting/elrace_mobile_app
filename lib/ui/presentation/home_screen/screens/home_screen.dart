@@ -288,7 +288,7 @@ class _HomeScreenState extends State<HomeScreenPage>
               final bloc = HomeBloc.get(context);
               return bloc.isReorderMode
                   ? Positioned(
-                      bottom: 90.h,
+                      bottom: 120.h,
                       right: 20.w,
                       child: Material(
                         elevation: 12,

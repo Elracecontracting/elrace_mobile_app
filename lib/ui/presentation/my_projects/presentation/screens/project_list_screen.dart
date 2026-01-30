@@ -283,6 +283,8 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
               }
             },
           ),
+          // Bottom padding
+          SliverPadding(padding: EdgeInsets.only(bottom: 100.h)),
         ],
       ),
     );

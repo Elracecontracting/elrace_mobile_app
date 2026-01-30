@@ -18,6 +18,11 @@ import 'package:el_race/ui/presentation/todo_list/services/todo_firebase_service
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
+import 'package:provider/provider.dart';
+import 'package:el_race/report_module/data/provider/reports_provider.dart';
+import 'package:el_race/report_module/data/models/folder_model.dart';
+import 'package:el_race/report_module/data/models/report_model.dart';
+import 'package:el_race/core/utils/shared_pref.dart';
 
 class AddTaskScreen extends StatefulWidget {
   const AddTaskScreen({Key? key}) : super(key: key);
@@ -61,6 +66,14 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   List<File> _attachments = [];
   final ImagePicker _imagePicker = ImagePicker();
   
+  // Linked Report (optional)
+  List<FolderModel> _folders = [];
+  List<ReportModel> _reportsForSelectedFolder = [];
+  FolderModel? _selectedFolder;
+  ReportModel? _selectedReport;
+  bool _isLoadingFolders = true;
+  bool _isLoadingReports = false;
+  
   // Submit state
   bool _isSubmitting = false;
 
@@ -98,6 +111,65 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           _selectedDepartment = _departments.first;
         }
       });
+    }
+    
+    // Load folders for report linking
+    await _loadFolders();
+  }
+  
+  Future<void> _loadFolders() async {
+    try {
+      final reportsProvider = Provider.of<ReportProvider>(context, listen: false);
+      
+      // Initialize provider if not already initialized
+      final loginData = SharedPref.getLoginDataOrNull();
+      if (loginData != null) {
+        final baseUrl = loginData.result?.data?.webBaseUrl ?? 'https://erp.elrace.com';
+        await reportsProvider.init(base: baseUrl);
+      }
+      
+      await reportsProvider.fetchAllFolders();
+      
+      if (mounted) {
+        setState(() {
+          _folders = reportsProvider.folders;
+          _isLoadingFolders = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading folders: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingFolders = false;
+        });
+      }
+    }
+  }
+  
+  Future<void> _loadReportsForFolder(String folderId) async {
+    setState(() {
+      _isLoadingReports = true;
+      _selectedReport = null;
+      _reportsForSelectedFolder = [];
+    });
+    
+    try {
+      final reportsProvider = Provider.of<ReportProvider>(context, listen: false);
+      await reportsProvider.fetchAllReports(folderID: folderId);
+      
+      if (mounted) {
+        setState(() {
+          _reportsForSelectedFolder = reportsProvider.reports;
+          _isLoadingReports = false;
+        });
+      }
+    } catch (e) {
+      print('❌ Error loading reports: $e');
+      if (mounted) {
+        setState(() {
+          _isLoadingReports = false;
+        });
+      }
     }
   }
 
@@ -158,6 +230,12 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         attachments = _attachments.map((f) => f.path.split('/').last).toList();
       }
 
+      // Get linked report ID if selected
+      String? linkedReportId;
+      if (_selectedReport != null) {
+        linkedReportId = _selectedReport!.id;
+      }
+
       // Create the todo model
       final todo = TodoModel(
         title: title,
@@ -172,6 +250,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         followers: followers,
         followedUpBy: followedUpBy,
         attachments: attachments,
+        reportId: linkedReportId,
         isCompleted: false,
         isImportant: false,
         isMyDay: false,
@@ -293,6 +372,28 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 onRemove: (member) {
                   setState(() => _selectedMembers.remove(member));
                 },
+              ),
+              const SizedBox(height: 20),
+
+              // Linked Report (Optional)
+              _buildBorderedFieldWithLabel(
+                label: 'Linked Report\n(Optional)',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Folder Selection
+                    _isLoadingFolders
+                        ? _buildDropdownShimmer()
+                        : _buildFolderDropdown(),
+                    if (_selectedFolder != null) ...[
+                      const SizedBox(height: 12),
+                      // Report Selection
+                      _isLoadingReports
+                          ? _buildDropdownShimmer()
+                          : _buildReportDropdown(),
+                    ],
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
 
@@ -432,7 +533,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               _buildSectionLabel('Attachments'),
               const SizedBox(height: 12),
               _buildAttachmentsSection(),
-              const SizedBox(height: 30),
+              const SizedBox(height: 50),
 
               // Submit Button
               Center(
@@ -788,6 +889,225 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           padding: EdgeInsets.symmetric(horizontal: 16),
         ),
       ),
+    );
+  }
+
+  Widget _buildFolderDropdown() {
+    if (_folders.isEmpty) {
+      return Container(
+        height: 50,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Center(
+          child: Text(
+            'No projects available',
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[400]),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Select Project',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonHideUnderline(
+          child: DropdownButton2<FolderModel>(
+            value: _selectedFolder,
+            hint: Text(
+              'Choose a project...',
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[400]),
+            ),
+            isExpanded: true,
+            items: _folders.map((FolderModel folder) {
+              return DropdownMenuItem<FolderModel>(
+                value: folder,
+                child: Text(
+                  folder.name,
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedFolder = value;
+                _selectedReport = null;
+                _reportsForSelectedFolder = [];
+              });
+              if (value != null) {
+                _loadReportsForFolder(value.id);
+              }
+            },
+            buttonStyleData: ButtonStyleData(
+              height: 50,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+            ),
+            iconStyleData: const IconStyleData(
+              icon: Icon(Icons.keyboard_arrow_down),
+              iconSize: 24,
+              iconEnabledColor: Colors.black54,
+            ),
+            dropdownStyleData: DropdownStyleData(
+              maxHeight: 300,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+              ),
+              offset: const Offset(0, -5),
+              scrollbarTheme: ScrollbarThemeData(
+                radius: const Radius.circular(40),
+                thickness: WidgetStateProperty.all(6),
+                thumbVisibility: WidgetStateProperty.all(true),
+              ),
+            ),
+            menuItemStyleData: const MenuItemStyleData(
+              height: 48,
+              padding: EdgeInsets.symmetric(horizontal: 16),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReportDropdown() {
+    if (_reportsForSelectedFolder.isEmpty) {
+      return Container(
+        height: 50,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Center(
+          child: Text(
+            'No reports in this project',
+            style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[400]),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Select Report',
+          style: GoogleFonts.poppins(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[600],
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonHideUnderline(
+          child: DropdownButton2<ReportModel>(
+            value: _selectedReport,
+            hint: Text(
+              'Choose a report...',
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[400]),
+            ),
+            isExpanded: true,
+            items: _reportsForSelectedFolder.map((ReportModel report) {
+              return DropdownMenuItem<ReportModel>(
+                value: report,
+                child: Row(
+                  children: [
+                    Icon(Icons.description_outlined, size: 18, color: Colors.grey[500]),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        report.name,
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedReport = value;
+              });
+            },
+            buttonStyleData: ButtonStyleData(
+              height: 50,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              ),
+            ),
+            iconStyleData: const IconStyleData(
+              icon: Icon(Icons.keyboard_arrow_down),
+              iconSize: 24,
+              iconEnabledColor: Colors.black54,
+            ),
+            dropdownStyleData: DropdownStyleData(
+              maxHeight: 300,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+              ),
+              offset: const Offset(0, -5),
+              scrollbarTheme: ScrollbarThemeData(
+                radius: const Radius.circular(40),
+                thickness: WidgetStateProperty.all(6),
+                thumbVisibility: WidgetStateProperty.all(true),
+              ),
+            ),
+            menuItemStyleData: const MenuItemStyleData(
+              height: 48,
+              padding: EdgeInsets.symmetric(horizontal: 16),
+            ),
+          ),
+        ),
+        if (_selectedReport != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                Icon(Icons.link, size: 16, color: Colors.green[600]),
+                const SizedBox(width: 4),
+                Text(
+                  'Task will be linked to this report',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: Colors.green[600],
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 

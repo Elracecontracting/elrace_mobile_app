@@ -110,7 +110,7 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
     return SafeArea(
       top: false,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(5 , 0, 5, 5),
+        padding: const EdgeInsets.fromLTRB(5 , 0, 5, 20),
         child: InkWell(
           borderRadius: BorderRadius.circular(32),
           onTap: _openAddExpenseDialog,
@@ -423,7 +423,7 @@ class _PettyCashDraftScreenState extends State<PettyCashDraftScreen> {
                         )
                       else
                         ..._buildDraftContent(),
-                      const SliverToBoxAdapter(child: SizedBox(height: 120)),
+                      const SliverToBoxAdapter(child: SizedBox(height: 150)),
                     ],
                   ),
                 ),

@@ -27,10 +27,14 @@ class _TasksDashboardScreenState extends State<TasksDashboardScreen> {
   TaskFilter _selectedFilter = TaskFilter.all;
   Map<int, String> _memberPhotoById = {};
   bool _isLoadingMemberPhotos = false;
+  late Stream<DateTime> _timeStream;
 
   @override
   void initState() {
     super.initState();
+    // Create a stream that emits current time every day to update days countdown
+    _timeStream = Stream.periodic(const Duration(days: 1), (_) => DateTime.now());
+    
     // Load tasks from Firebase
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TodoFirebaseProvider>().loadTodos();
@@ -594,7 +598,7 @@ class _FilterTabs extends StatelessWidget {
 }
 
 /// بطاقة المهمة
-class _TaskCard extends StatelessWidget {
+class _TaskCard extends StatefulWidget {
   final TodoModel todo;
   final VoidCallback onToggleComplete;
   final Widget Function(String name, {double size}) buildAvatar;
@@ -605,9 +609,23 @@ class _TaskCard extends StatelessWidget {
     required this.buildAvatar,
   });
 
+  @override
+  State<_TaskCard> createState() => _TaskCardState();
+}
+
+class _TaskCardState extends State<_TaskCard> {
+  late Stream<DateTime> _timeStream;
+
+  @override
+  void initState() {
+    super.initState();
+    // Update every day to reflect days countdown changes
+    _timeStream = Stream.periodic(const Duration(days: 1), (_) => DateTime.now());
+  }
+
   TaskStatus get _status {
-    if (todo.isCompleted) return TaskStatus.completed;
-    if (todo.dueDate != null && todo.dueDate!.isBefore(DateTime.now())) {
+    if (widget.todo.isCompleted) return TaskStatus.completed;
+    if (widget.todo.dueDate != null && widget.todo.dueDate!.isBefore(DateTime.now())) {
       return TaskStatus.overdue;
     }
     return TaskStatus.pending;
@@ -624,17 +642,17 @@ class _TaskCard extends StatelessWidget {
     }
   }
 
-  int get _remainingDays {
-    if (todo.dueDate == null) return 0;
-    return todo.dueDate!.difference(DateTime.now()).inDays;
+  int _getRemainingDays(DateTime now) {
+    if (widget.todo.dueDate == null) return 0;
+    return widget.todo.dueDate!.difference(now).inDays;
   }
 
-  double get _progress {
-    if (todo.isCompleted) return 1.0;
-    if (todo.dueDate == null || todo.createdAt == null) return 0.0;
+  double _getProgress(DateTime now) {
+    if (widget.todo.isCompleted) return 1.0;
+    if (widget.todo.dueDate == null || widget.todo.createdAt == null) return 0.0;
 
-    final total = todo.dueDate!.difference(todo.createdAt!).inDays;
-    final elapsed = DateTime.now().difference(todo.createdAt!).inDays;
+    final total = widget.todo.dueDate!.difference(widget.todo.createdAt!).inDays;
+    final elapsed = now.difference(widget.todo.createdAt!).inDays;
 
     if (total <= 0) return 0.0;
     return (elapsed / total).clamp(0.0, 1.0);
@@ -645,33 +663,41 @@ class _TaskCard extends StatelessWidget {
     final status = _status;
     final statusColor = _statusColor(status);
 
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => TaskDetailsScreen(task: todo),
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFD0D0D0)),
-          borderRadius: BorderRadius.circular(22),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 6,
-              offset: const Offset(0, 4),
+    return StreamBuilder<DateTime>(
+      stream: _timeStream,
+      initialData: DateTime.now(),
+      builder: (context, snapshot) {
+        final now = snapshot.data ?? DateTime.now();
+        final remainingDays = _getRemainingDays(now);
+        final progress = _getProgress(now);
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => TaskDetailsScreen(task: widget.todo),
+              ),
+            );
+          },
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: const Color(0xFFD0D0D0)),
+              borderRadius: BorderRadius.circular(22),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 6,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-          ],
-        ),
-        child: Stack(
-          children: [
-            Row(
+            child: Stack(
+              children: [
+                Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 // LEFT
@@ -682,14 +708,14 @@ class _TaskCard extends StatelessWidget {
                       Padding(
                         padding: const EdgeInsets.only(right: 32),
                         child: Text(
-                          todo.title.toUpperCase(),
+                          widget.todo.title.toUpperCase(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.4,
-                            decoration: todo.isCompleted
+                            decoration: widget.todo.isCompleted
                                 ? TextDecoration.lineThrough
                                 : null,
                           ),
@@ -698,7 +724,7 @@ class _TaskCard extends StatelessWidget {
                       const SizedBox(height: 8),
                       Builder(
                         builder: (context) {
-                          final raw = todo.assignedToName ?? '';
+                          final raw = widget.todo.assignedToName ?? '';
                           final names = raw
                               .split(',')
                               .map((e) => e.trim())
@@ -708,7 +734,7 @@ class _TaskCard extends StatelessWidget {
                           if (names.isEmpty) {
                             return Row(
                               children: [
-                                buildAvatar('U', size: 36),
+                                widget.buildAvatar('U', size: 36),
                                 const SizedBox(width: 8),
                                 const Text(
                                   'Unassigned',
@@ -731,7 +757,7 @@ class _TaskCard extends StatelessWidget {
                                     padding: const EdgeInsets.only(bottom: 6),
                                     child: Row(
                                       children: [
-                                        buildAvatar(name, size: 36),
+                                        widget.buildAvatar(name, size: 36),
                                         const SizedBox(width: 8),
                                         Expanded(
                                           child: Text(
@@ -752,13 +778,13 @@ class _TaskCard extends StatelessWidget {
                           );
                         },
                       ),
-                      if (todo.listId != null)
+                      if (widget.todo.listId != null)
                         Padding(
                           padding: const EdgeInsets.only(left: 44, top: 4),
                           child: Consumer<TodoFirebaseProvider>(
                             builder: (context, provider, _) {
                               final list = provider.todoLists.firstWhere(
-                                (l) => l.firebaseId == todo.listId,
+                                (l) => l.firebaseId == widget.todo.listId,
                                 orElse: () => provider.todoLists.isNotEmpty
                                     ? provider.todoLists.first
                                     : throw Exception('No list found'),
@@ -778,10 +804,10 @@ class _TaskCard extends StatelessWidget {
                       LayoutBuilder(
                         builder: (context, constraints) {
                           final trackWidth = constraints.maxWidth;
-                          final progress = _progress;
+                          final progressLocal = progress;
 
                           const double iconSize = 16;
-                          final double coloredWidth = trackWidth * progress;
+                          final double coloredWidth = trackWidth * progressLocal;
                           final double iconLeft = (coloredWidth - iconSize / 2)
                               .clamp(0.0, trackWidth - iconSize);
 
@@ -813,7 +839,7 @@ class _TaskCard extends StatelessWidget {
                                       left: iconLeft,
                                       bottom: 4,
                                       child: Image.asset(
-                                        progress < 1.0
+                                        progressLocal < 1.0
                                             ? 'assets/png/walker-man.png'
                                             : 'assets/png/stand.png',
                                         width: iconSize,
@@ -825,8 +851,8 @@ class _TaskCard extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                todo.dueDate != null
-                                    ? DateFormat('h:mm a').format(todo.dueDate!)
+                                widget.todo.dueDate != null
+                                    ? DateFormat('h:mm a').format(widget.todo.dueDate!)
                                     : '--:--',
                                 style: const TextStyle(
                                   fontSize: 12,
@@ -863,9 +889,9 @@ class _TaskCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        todo.createdAt != null
+                        widget.todo.createdAt != null
                             ? DateFormat('dd MMM yyyy')
-                                .format(todo.createdAt!)
+                                .format(widget.todo.createdAt!)
                                 .toUpperCase()
                             : '--',
                         style: const TextStyle(
@@ -883,9 +909,9 @@ class _TaskCard extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        todo.dueDate != null
+                        widget.todo.dueDate != null
                             ? DateFormat('dd MMM yyyy')
-                                .format(todo.dueDate!)
+                                .format(widget.todo.dueDate!)
                                 .toUpperCase()
                             : '--',
                         style: const TextStyle(
@@ -898,7 +924,7 @@ class _TaskCard extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           Text(
-                            '${_remainingDays.abs()}',
+                            '${remainingDays.abs()}',
                             style: const TextStyle(
                               fontSize: 40,
                               fontWeight: FontWeight.w900,
@@ -908,11 +934,11 @@ class _TaskCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            _remainingDays >= 0 ? 'Days' : 'Late',
+                            remainingDays >= 0 ? 'Days' : 'Late',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: _remainingDays >= 0
+                              color: remainingDays >= 0
                                   ? const Color(0xFFBDBDBD)
                                   : Colors.red,
                             ),
@@ -928,7 +954,7 @@ class _TaskCard extends StatelessWidget {
               top: 6,
               right: 6,
               child: GestureDetector(
-                onTap: onToggleComplete,
+                onTap: widget.onToggleComplete,
                 child: StarburstBadge(
                   size: 22,
                   color: statusColor,
@@ -937,7 +963,9 @@ class _TaskCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
+        ),
+      );
+    },
     );
   }
 }

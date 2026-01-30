@@ -118,6 +118,18 @@ class ChatModuleHelper {
     try {
       print('🔷 ChatModuleHelper: Attempting to restore from stored session...');
       
+      // First check if user is already signed in to Firebase
+      final isAlreadySignedIn = FirebaseChatAuthService.instance.isSignedIn;
+      if (isAlreadySignedIn) {
+        print('✅ ChatModuleHelper: User already signed in to Firebase');
+        
+        // If we have cached result and it's enabled, return it
+        if (_isInitialized && _lastResult != null && _lastResult!.chatEnabled) {
+          print('✅ ChatModuleHelper: Returning cached chat session');
+          return _lastResult;
+        }
+      }
+      
       final prefs = await SharedPreferences.getInstance();
       final loginJson = prefs.getString('loginResponse');
       
@@ -126,25 +138,49 @@ class ChatModuleHelper {
         return null;
       }
 
+      print('✅ ChatModuleHelper: Found stored login response (${loginJson.length} chars)');
       final decoded = jsonDecode(loginJson) as Map<String, dynamic>;
       
-      // If already initialized, try to reauthenticate first
-      if (_isInitialized && isChatEnabled) {
-        print('🔷 ChatModuleHelper: Already initialized, checking authentication...');
-        final isAuthenticated = await FirebaseChatAuthService.instance.reauthenticate();
-        if (isAuthenticated) {
-          print('✅ ChatModuleHelper: Reauthentication successful');
+      // Debug: Check if firebase fields exist in stored data
+      final data = decoded['result']?['data'] ?? decoded['data'];
+      print('🔍 Stored data contains:');
+      print('   - firebase_uid: ${data?['firebase_uid'] ?? "NOT FOUND"}'  );
+      print('   - firebase_custom_token: ${data?['firebase_custom_token'] != null ? "EXISTS (${data['firebase_custom_token'].toString().length} chars)" : "NOT FOUND ❌"}');
+      print('   - odoo_user_id: ${data?['odoo_user_id'] ?? "NOT FOUND"}');
+      print('   - employee_id: ${data?['employee_id'] ?? "NOT FOUND"}');
+      
+      // If already initialized and signed in, just try to complete setup
+      if (_isInitialized && isAlreadySignedIn) {
+        print('🔷 ChatModuleHelper: Already initialized and signed in, verifying setup...');
+        if (_lastResult != null && _lastResult!.chatEnabled) {
+          print('✅ ChatModuleHelper: Setup already complete');
           return _lastResult;
-        } else {
-          print('⚠️ ChatModuleHelper: Reauthentication failed, reinitializing...');
-          _isInitialized = false;
         }
       }
       
-      return await initializeFromLoginResponse(decoded);
+      // Try to initialize with stored data
+      final result = await initializeFromLoginResponse(decoded);
+      
+      // If failed due to token expiry, provide clear message
+      if (result.error != null && result.error!.contains('custom-token')) {
+        print('⚠️ ChatModuleHelper: Token expired or invalid. User needs to login again.');
+        return ChatSetupResult.failed(
+          'Chat session expired. Please logout and login again to restore chat.',
+        );
+      }
+      
+      return result;
     } catch (e) {
       print('❌ ChatModuleHelper: Error restoring session: $e');
-      return ChatSetupResult.failed(e.toString());
+      
+      // Provide user-friendly error message
+      if (e.toString().contains('custom-token') || e.toString().contains('auth/')) {
+        return ChatSetupResult.failed(
+          'Chat session expired. Please logout and login again.',
+        );
+      }
+      
+      return ChatSetupResult.failed('Unable to restore chat: $e');
     }
   }
 
@@ -187,7 +223,20 @@ class ChatModuleHelper {
       return 'Chat not initialized';
     }
     if (!isChatEnabled) {
-      return _lastResult?.error ?? 'Chat not available';
+      final error = _lastResult?.error ?? 'Chat not available';
+      
+      // Provide user-friendly messages
+      if (error.contains('invalid-custom-token') || error.contains('token format')) {
+        return 'Chat service error: Invalid authentication token from server.\nBackend needs to fix token generation.\nPlease contact IT support.';
+      }
+      if (error.contains('expired') || error.contains('login again')) {
+        return 'Chat session expired. Please logout and login again.';
+      }
+      if (error.contains('custom token not provided')) {
+        return 'Chat not configured on server. Contact IT support.';
+      }
+      
+      return error;
     }
     return 'Chat ready';
   }

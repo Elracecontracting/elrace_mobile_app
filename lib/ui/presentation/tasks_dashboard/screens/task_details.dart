@@ -19,6 +19,10 @@ import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'dart:io';
+import 'package:provider/provider.dart';
+import 'package:el_race/report_module/data/provider/reports_provider.dart';
+import 'package:el_race/report_module/data/models/report_model.dart';
+import 'package:el_race/report_module/presentation/screens/report_detail/report_detail.dart' as report_detail;
 
 class TaskDetailsScreen extends StatefulWidget {
   static const routeName = '/task-details';
@@ -670,6 +674,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 ),
                 if (task.department != null)
                 const SizedBox(height: 20),
+                
+                // Linked Report Section
+                if (task.reportId != null && task.reportId!.isNotEmpty)
+                  _buildLinkedReportSection(task.reportId!),
+                if (task.reportId != null && task.reportId!.isNotEmpty)
+                  const SizedBox(height: 20),
                   
                   // Task Progress Section
                   Container(
@@ -879,7 +889,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       color: Colors.grey[500],
                     ),
                   ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 50),
                   
                   // Write Comment Field
                   Container(
@@ -1001,9 +1011,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       width: 180,
                       height: 45,
                       child: ElevatedButton(
-                        onPressed: () => _toggleComplete(task),
+                        onPressed: task.isCompleted ? null : () => _toggleComplete(task),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: task.isCompleted ? Colors.grey : Color(0xFF4CAF50),
+                          disabledBackgroundColor: Colors.grey,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(22),
                           ),
@@ -1021,6 +1032,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       ),
                     ),
                   ),
+                  SizedBox(height: 30),
                 ]),
             ),
           ),
@@ -1030,9 +1042,14 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   Future<void> _toggleComplete(TodoModel task) async {
+    // Prevent toggling if already completed
+    if (task.isCompleted) {
+      return;
+    }
+    
     try {
       final updatedTask = task.copyWith(
-        isCompleted: !task.isCompleted,
+        isCompleted: true,
         updatedAt: DateTime.now(),
       );
       await TodoFirebaseService.instance.updateTodo(updatedTask);
@@ -1042,10 +1059,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            updatedTask.isCompleted ? 'Task marked as complete!' : 'Task marked as incomplete',
+            'Task marked as complete!',
             style: GoogleFonts.poppins(),
           ),
-          backgroundColor: updatedTask.isCompleted ? Colors.green : Colors.orange,
+          backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
@@ -1599,6 +1616,171 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           const SizedBox(height: 12),
           child,
         ],
+      ),
+    );
+  }
+
+  Widget _buildLinkedReportSection(String reportId) {
+    return FutureBuilder<ReportModel?>(
+      future: _fetchReportById(reportId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.blue.withOpacity(0.3), width: 1.5),
+            ),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.blue,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Loading linked report...',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final report = snapshot.data;
+        
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.blue.withOpacity(0.3), width: 1.5),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.link, size: 18, color: Colors.blue[600]),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Linked',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                'Report',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(height: 12),
+              InkWell(
+                onTap: report != null ? () => _openLinkedReport(report) : null,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.description_outlined,
+                          color: Colors.blue[700],
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              report?.name ?? 'Report #$reportId',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (report != null)
+                              Text(
+                                'Created: ${DateFormat('dd MMM yyyy').format(report.createdAt)}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                        color: Colors.blue[400],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<ReportModel?> _fetchReportById(String reportId) async {
+    try {
+      final reportsProvider = Provider.of<ReportProvider>(context, listen: false);
+      // Search in cached reports first
+      for (var report in reportsProvider.reports) {
+        if (report.id == reportId) {
+          return report;
+        }
+      }
+      // If not found, return null (report might have been deleted)
+      return null;
+    } catch (e) {
+      print('❌ Error fetching report: $e');
+      return null;
+    }
+  }
+
+  void _openLinkedReport(ReportModel report) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => report_detail.ReportDetailScreen(
+          report: report,
+          folderName: '', // Will be loaded inside the screen
+        ),
       ),
     );
   }

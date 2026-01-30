@@ -273,6 +273,8 @@ class _MyProjectState extends State<MyProject> {
                             childCount: _projects.length,
                           ),
                         ),
+          // Bottom padding
+          SliverPadding(padding: EdgeInsets.only(bottom: 100.h)),
         ],
       ),
     );

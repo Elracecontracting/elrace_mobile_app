@@ -2,6 +2,7 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'package:permission_handler/permission_handler.dart';
 
 /// خدمة إشعارات تذكير Check In/Out
 ///
@@ -35,6 +36,9 @@ class CheckInReminderNotificationService {
     // تعيين توقيت الإمارات (GMT+4)
     tz.setLocalLocation(tz.getLocation('Asia/Dubai'));
 
+    // طلب صلاحية الإشعارات
+    await _requestNotificationPermissions();
+
     const AndroidInitializationSettings androidSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
@@ -51,8 +55,77 @@ class CheckInReminderNotificationService {
     );
 
     await _notificationsPlugin.initialize(settings);
+
+    // إنشاء قنوات الإشعارات لـ Android
+    await _createNotificationChannels();
+
     _initialized = true;
     print('🔔 Check-in/out reminder notification service initialized');
+  }
+
+  /// طلب صلاحيات الإشعارات والإشعارات الدقيقة
+  Future<void> _requestNotificationPermissions() async {
+    try {
+      // طلب صلاحية الإشعارات العادية (Android 13+)
+      final notificationStatus = await Permission.notification.request();
+      print('📱 Notification permission: ${notificationStatus.isGranted}');
+
+      // طلب صلاحية الإشعارات الدقيقة (Exact Alarms)
+      // على Android 12 (API 31) وما فوق
+      if (await Permission.scheduleExactAlarm.isDenied) {
+        print('⚠️ Requesting exact alarm permission...');
+        // في Android 14+ المستخدم يحتاج الموافقة يدوياً من الإعدادات
+        await Permission.scheduleExactAlarm.request();
+      }
+
+      final alarmStatus = await Permission.scheduleExactAlarm.status;
+      print('⏰ Exact alarm permission: ${alarmStatus.isGranted}');
+
+      if (!alarmStatus.isGranted) {
+        print('❌ Exact alarm permission NOT granted!');
+        print('💡 User needs to enable "Alarms & reminders" in app settings');
+      }
+    } catch (e) {
+      print('⚠️ Error requesting permissions: $e');
+    }
+  }
+
+  /// إنشاء قنوات الإشعارات لـ Android
+  Future<void> _createNotificationChannels() async {
+    // قناة تذكيرات Check In
+    const AndroidNotificationChannel checkInChannel = AndroidNotificationChannel(
+      'check_in_reminder_channel',
+      'Check In Reminders',
+      description: 'تذكيرات تسجيل الدخول',
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+      showBadge: true,
+    );
+
+    // قناة تذكيرات Check Out
+    const AndroidNotificationChannel checkOutChannel = AndroidNotificationChannel(
+      'check_out_reminder_channel',
+      'Check Out Reminders',
+      description: 'تذكيرات تسجيل الخروج',
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+      showBadge: true,
+    );
+
+    // إنشاء القنوات
+    await _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(checkInChannel);
+
+    await _notificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(checkOutChannel);
+
+    print('✅ Check-in/out notification channels created');
   }
 
   /// جدولة إشعارات التذكير بـ check out (من 4 مساءً - 5 مساءً)
@@ -61,6 +134,7 @@ class CheckInReminderNotificationService {
     await cancelCheckOutReminders(); // إلغاء أي إشعارات سابقة
 
     final now = tz.TZDateTime.now(tz.local);
+    print('⏰ Current time: ${now.toString()}');
 
     // جدول إشعارات كل 15 دقيقة من الساعة 4 مساءً حتى 5 مساءً
     final reminderTimes = [
@@ -77,6 +151,7 @@ class CheckInReminderNotificationService {
     ];
 
     int idCounter = _checkOutReminderId;
+    int scheduledCount = 0;
     for (var scheduledTime in reminderTimes) {
       // إذا كان الوقت قد مضى اليوم، جدول لليوم التالي
       var targetTime = scheduledTime;
@@ -84,35 +159,44 @@ class CheckInReminderNotificationService {
         targetTime = targetTime.add(const Duration(days: 1));
       }
 
-      await _notificationsPlugin.zonedSchedule(
-        idCounter++,
-        '⏰ تذكير بتسجيل الخروج',
-        'لا تنسَ تسجيل الخروج (Check Out)',
-        targetTime,
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'check_out_reminder_channel',
-            'Check Out Reminders',
-            channelDescription: 'تذكيرات تسجيل الخروج',
-            importance: Importance.high,
-            priority: Priority.high,
-            icon: '@mipmap/ic_launcher',
-            playSound: true,
-            enableVibration: true,
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          idCounter,
+          '⏰ تذكير بتسجيل الخروج',
+          'لا تنسَ تسجيل الخروج (Check Out)',
+          targetTime,
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'check_out_reminder_channel',
+              'Check Out Reminders',
+              channelDescription: 'تذكيرات تسجيل الخروج',
+              importance: Importance.high,
+              priority: Priority.high,
+              icon: '@mipmap/ic_launcher',
+              playSound: true,
+              enableVibration: true,
+            ),
+            iOS: DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
           ),
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.time, // يتكرر يومياً
-      );
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time, // يتكرر يومياً
+        );
+        scheduledCount++;
+        print(
+            '✅ Scheduled check-out reminder #${idCounter - _checkOutReminderId + 1} at ${targetTime.toString()}');
+      } catch (e) {
+        print('❌ Error scheduling check-out reminder #${idCounter}: $e');
+      }
+
+      idCounter++;
     }
 
     print(
-        '✅ Scheduled ${reminderTimes.length} check-out reminders (4 PM - 5 PM)');
+        '✅ Successfully scheduled $scheduledCount/${reminderTimes.length} check-out reminders (4 PM - 5 PM)');
   }
 
   /// جدولة إشعارات التذكير بـ check in (من 8 صباحاً - 9 صباحاً)
@@ -121,6 +205,7 @@ class CheckInReminderNotificationService {
     await cancelCheckInReminders(); // إلغاء أي إشعارات سابقة
 
     final now = tz.TZDateTime.now(tz.local);
+    print('⏰ Current time: ${now.toString()}');
 
     // جدول إشعارات كل 15 دقيقة من الساعة 8 صباحاً حتى 9 صباحاً
     final reminderTimes = [
@@ -137,6 +222,7 @@ class CheckInReminderNotificationService {
     ];
 
     int idCounter = _checkInReminderId;
+    int scheduledCount = 0;
     for (var scheduledTime in reminderTimes) {
       // إذا كان الوقت قد مضى اليوم، جدول لليوم التالي
       var targetTime = scheduledTime;
@@ -144,35 +230,44 @@ class CheckInReminderNotificationService {
         targetTime = targetTime.add(const Duration(days: 1));
       }
 
-      await _notificationsPlugin.zonedSchedule(
-        idCounter++,
-        '⏰ تذكير بتسجيل الدخول',
-        'لا تنسَ تسجيل الدخول (Check In)',
-        targetTime,
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'check_in_reminder_channel',
-            'Check In Reminders',
-            channelDescription: 'تذكيرات تسجيل الدخول',
-            importance: Importance.high,
-            priority: Priority.high,
-            icon: '@mipmap/ic_launcher',
-            playSound: true,
-            enableVibration: true,
+      try {
+        await _notificationsPlugin.zonedSchedule(
+          idCounter,
+          '⏰ تذكير بتسجيل الدخول',
+          'لا تنسَ تسجيل الدخول (Check In)',
+          targetTime,
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'check_in_reminder_channel',
+              'Check In Reminders',
+              channelDescription: 'تذكيرات تسجيل الدخول',
+              importance: Importance.high,
+              priority: Priority.high,
+              icon: '@mipmap/ic_launcher',
+              playSound: true,
+              enableVibration: true,
+            ),
+            iOS: DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
           ),
-          iOS: DarwinNotificationDetails(
-            presentAlert: true,
-            presentBadge: true,
-            presentSound: true,
-          ),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.time, // يتكرر يومياً
-      );
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time, // يتكرر يومياً
+        );
+        scheduledCount++;
+        print(
+            '✅ Scheduled check-in reminder #${idCounter - _checkInReminderId + 1} at ${targetTime.toString()}');
+      } catch (e) {
+        print('❌ Error scheduling check-in reminder #${idCounter}: $e');
+      }
+
+      idCounter++;
     }
 
     print(
-        '✅ Scheduled ${reminderTimes.length} check-in reminders (8 AM - 9 AM)');
+        '✅ Successfully scheduled $scheduledCount/${reminderTimes.length} check-in reminders (8 AM - 9 AM)');
   }
 
   /// إلغاء تذكيرات check out
@@ -218,5 +313,46 @@ class CheckInReminderNotificationService {
     await cancelCheckInReminders();
     await cancelCheckOutReminders();
     print('🔕 Cancelled all check-in/out reminders');
+  }
+
+  /// [للاختبار] إرسال إشعار تجريبي فوري
+  Future<void> sendTestNotification({bool isCheckIn = true}) async {
+    await initialize();
+    try {
+      await _notificationsPlugin.show(
+        99999, // رقم مؤقت للاختبار
+        isCheckIn
+            ? '🧪 اختبار: تذكير بتسجيل الدخول'
+            : '🧪 اختبار: تذكير بتسجيل الخروج',
+        isCheckIn
+            ? 'هذا إشعار تجريبي - لا تنسَ تسجيل الدخول (Check In)'
+            : 'هذا إشعار تجريبي - لا تنسَ تسجيل الخروج (Check Out)',
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            isCheckIn
+                ? 'check_in_reminder_channel'
+                : 'check_out_reminder_channel',
+            isCheckIn ? 'Check In Reminders' : 'Check Out Reminders',
+            channelDescription: isCheckIn
+                ? 'تذكيرات تسجيل الدخول'
+                : 'تذكيرات تسجيل الخروج',
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@mipmap/ic_launcher',
+            playSound: true,
+            enableVibration: true,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+      );
+      print(
+          '✅ Test notification sent successfully (${isCheckIn ? "Check In" : "Check Out"})');
+    } catch (e) {
+      print('❌ Error sending test notification: $e');
+    }
   }
 }

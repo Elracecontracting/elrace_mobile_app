@@ -83,7 +83,7 @@ class _RfqScreenState extends State<RfqScreen> {
             ];
 
             return ListView(
-              padding: EdgeInsets.only(top: 8.h, bottom: 24.h),
+              padding: EdgeInsets.only(top: 8.h, bottom: 80.h),
               children: [
                 Padding(
                   padding: EdgeInsets.symmetric(vertical: 10.h),

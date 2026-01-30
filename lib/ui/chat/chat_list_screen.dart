@@ -114,11 +114,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                'Unable to initialize chat service',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[500],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Text(
+                  ChatModuleHelper.instance.getStatusMessage(),
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey[500],
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 3,
                 ),
               ),
               const SizedBox(height: 24),
@@ -130,6 +135,21 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
+              const SizedBox(height: 12),
+              // Show logout button if error mentions session expired
+              if (ChatModuleHelper.instance.getStatusMessage().contains('expired') ||
+                  ChatModuleHelper.instance.getStatusMessage().contains('login again'))
+                TextButton.icon(
+                  onPressed: () {
+                    // Navigate to logout or login screen
+                    Navigator.of(context).pushReplacementNamed('/signIN');
+                  },
+                  icon: const Icon(Icons.logout, size: 20),
+                  label: const Text('Logout & Login Again'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.orange,
+                  ),
+                ),
             ],
           ),
         ),
