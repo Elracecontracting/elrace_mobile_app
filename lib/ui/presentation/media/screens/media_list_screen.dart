@@ -7,10 +7,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../bloc/media_bloc.dart';
 import '../data/media_model.dart';
+import '../data/content_model.dart';
 import '../widgets/media_item_widget.dart';
+import '../widgets/content_item_widget.dart';
 import 'yoyo_video_player_screen.dart';
 
 class MediaListScreen extends StatefulWidget {
@@ -38,6 +41,14 @@ class _MediaListScreenState extends State<MediaListScreen> {
   void _setActiveTab(_MediaFilterTab tab) {
     if (_activeTab == tab) return;
     setState(() => _activeTab = tab);
+    
+    // Fetch appropriate data based on tab
+    if (tab == _MediaFilterTab.videos) {
+      context.read<MediaBloc>().add(const FetchMediaList());
+    } else {
+      context.read<MediaBloc>().add(const FetchContents());
+    }
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final BuildContext? ctx;
       switch (tab) {
@@ -128,31 +139,13 @@ class _MediaListScreenState extends State<MediaListScreen> {
                   sliver: SliverToBoxAdapter(
                     child: Column(
                       children: [
-                        if (state is MediaLoaded)
+                        if (state is MediaLoaded && _activeTab == _MediaFilterTab.videos)
                           (() {
                             final q =
                                 _searchController.text.trim().toLowerCase();
-                            bool matchesTab(MediaModel m) {
-                              switch (_activeTab) {
-                                case _MediaFilterTab.videos:
-                                  return m.isVideo;
-                                case _MediaFilterTab.photos:
-                                  return m.isImage;
-                                case _MediaFilterTab.view360:
-                                  final v = m.view360;
-                                  if (v == null) return false;
-                                  if (v is bool) return v;
-                                  if (v is String) {
-                                    return v.trim().toLowerCase() == 'true' ||
-                                        v.trim().isNotEmpty;
-                                  }
-                                  // Any non-null payload is treated as available 360-view.
-                                  return true;
-                              }
-                            }
-
+                            
                             final list = state.mediaList.where((m) {
-                              if (!matchesTab(m)) return false;
+                              if (!m.isVideo) return false;
                               if (q.isEmpty) return true;
 
                               final name = m.name.toLowerCase();
@@ -205,6 +198,8 @@ class _MediaListScreenState extends State<MediaListScreen> {
                                             SizedBox(height: 6.w),
                                   );
                           })()
+                        else if (state is ContentsLoaded)
+                          _buildContentsList(state.contents)
                         else if (state is MediaError)
                           _buildErrorState(state.message),
                       ],
@@ -455,6 +450,153 @@ class _MediaListScreenState extends State<MediaListScreen> {
           fontSize: 14.sp,
           fontWeight: FontWeight.w400,
           letterSpacing: 1.0,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContentsList(ContentsResponse contents) {
+    final q = _searchController.text.trim().toLowerCase();
+    
+    List<ContentModel> list;
+    if (_activeTab == _MediaFilterTab.photos) {
+      list = contents.photos;
+    } else if (_activeTab == _MediaFilterTab.view360) {
+      list = contents.view360;
+    } else {
+      list = [];
+    }
+
+    // Apply search filter
+    if (q.isNotEmpty) {
+      list = list.where((c) {
+        final name = c.fileName.toLowerCase();
+        final project = c.projectName.toLowerCase();
+        return name.contains(q) || project.contains(q);
+      }).toList();
+    }
+
+    if (list.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: list.length,
+      itemBuilder: (context, index) {
+        final content = list[index];
+        return ContentItemWidget(
+          content: content,
+          onTap: () => _handleContentTap(context, content),
+        );
+      },
+      separatorBuilder: (BuildContext context, int index) =>
+          SizedBox(height: 6.w),
+    );
+  }
+
+  void _handleContentTap(BuildContext context, ContentModel content) async {
+    if (content.is360View) {
+      // Open 360 view in browser or webview
+      final url = Uri.parse(content.previewUrl);
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      }
+    } else {
+      // Show photo in full screen or dialog
+      _showPhotoPreview(context, content);
+    }
+  }
+
+  void _showPhotoPreview(BuildContext context, ContentModel content) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Stack(
+          children: [
+            Center(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12.r),
+                child: Image.network(
+                  content.previewUrl,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      width: 200.w,
+                      height: 200.h,
+                      color: Colors.black54,
+                      child: const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    width: 200.w,
+                    height: 200.h,
+                    color: Colors.black54,
+                    child: const Center(
+                      child: Icon(Icons.error, color: Colors.white, size: 48),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              top: 0,
+              right: 0,
+              child: IconButton(
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                icon: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.close, color: Colors.white),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 16,
+              left: 16,
+              right: 16,
+              child: Container(
+                padding: EdgeInsets.all(12.w),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(8.r),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      content.displayName,
+                      style: GoogleFonts.koulen(
+                        fontSize: 16.sp,
+                        color: Colors.white,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    if (content.projectName.isNotEmpty) ...[
+                      SizedBox(height: 4.h),
+                      Text(
+                        content.projectName,
+                        style: GoogleFonts.koulen(
+                          fontSize: 12.sp,
+                          color: Colors.white70,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

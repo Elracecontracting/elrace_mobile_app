@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../data/media_model.dart';
+import '../data/content_model.dart';
 import '../repository/i_media_repository.dart';
 
 part 'media_event.dart';
@@ -18,6 +19,7 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
 
   MediaBloc({required this.mediaRepository}) : super(MediaInitial()) {
     on<FetchMediaList>(_fetchMediaList);
+    on<FetchContents>(_fetchContents);
     on<FetchMediaByType>(_fetchMediaByType);
     on<SearchMedia>(_searchMedia);
     on<AddMedia>(_addMedia);
@@ -34,6 +36,23 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
       final mediaList = await mediaRepository.getMediaList();
       _allMedia = mediaList;
       emit(MediaLoaded(mediaList));
+    } catch (e) {
+      emit(MediaError(e.toString()));
+    }
+  }
+
+  Future<void> _fetchContents(
+    FetchContents event,
+    Emitter<MediaState> emit,
+  ) async {
+    try {
+      emit(MediaLoading());
+      final contents = await mediaRepository.getContents();
+      if (contents != null) {
+        emit(ContentsLoaded(contents));
+      } else {
+        emit(const MediaError('Failed to fetch contents'));
+      }
     } catch (e) {
       emit(MediaError(e.toString()));
     }

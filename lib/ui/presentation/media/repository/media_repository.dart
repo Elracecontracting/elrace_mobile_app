@@ -7,6 +7,7 @@ import '../../../../utils/di.dart';
 import '../../../../utils/urll_utils.dart';
 import '../../signin/data/repository.dart';
 import '../data/media_model.dart';
+import '../data/content_model.dart';
 import 'i_media_repository.dart';
 
 class MediaRepository implements IMediaRepository {
@@ -163,6 +164,43 @@ class MediaRepository implements IMediaRepository {
     } catch (e, stackTrace) {
       print('❌ Error in prepareShare: $e');
       print('Stack trace: $stackTrace');
+      return null;
+    }
+  }
+
+  @override
+  Future<ContentsResponse?> getContents() async {
+    try {
+      final loginResponse = await userRepo.getLoginResponse();
+      var token = loginResponse?.result?.token;
+
+      Map<String, String> headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        if (token != null) "Authorization": "Bearer $token"
+      };
+
+      final url = Uri.parse("${UrlUtil.baseUrl}${UrlUtil.getContentsApi}");
+      
+      log('📡 Calling get_contents API: $url');
+
+      final response = await http.get(url, headers: headers);
+
+      log('📥 get_contents API Response: ${response.statusCode}');
+      log('📦 Response body: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        
+        if (json['result'] != null && json['result']['status'] == 'success') {
+          return ContentsResponse.fromJson(json);
+        } else {
+          log('⚠️ get_contents: Invalid response format');
+        }
+      }
+      return null;
+    } catch (e) {
+      log('❌ Error in getContents: $e');
       return null;
     }
   }

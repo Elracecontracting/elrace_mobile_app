@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:el_race/core/utils/shared_pref.dart';
 
 import '../data/todo_list_model.dart';
 import '../data/todo_model.dart';
+import '../data/task_member_model.dart';
 
 /// Firebase Service for Task Management
 /// All CRUD operations are done through Firebase Firestore
@@ -18,6 +20,17 @@ class TodoFirebaseService {
 
   // Get current user ID
   String? get _currentUid => FirebaseAuth.instance.currentUser?.uid;
+  
+  // Get current user name from SharedPref
+  String get _currentUserName {
+    final loginData = SharedPref.getLoginData();
+    return loginData.result?.data?.name ?? 'Unknown';
+  }
+
+  // Get current user photo URL from SharedPref
+  String? get _currentUserPhoto {
+    return SharedPref.preferences.getUserBase64Image();
+  }
 
   // Collection references
   CollectionReference<Map<String, dynamic>> get _todosCollection =>
@@ -557,5 +570,178 @@ class TodoFirebaseService {
   Future<int> getTodoCountByListId(String listId) async {
     final todos = await getTodosByListId(listId);
     return todos.where((t) => !t.isCompleted).length;
+  }
+
+  // ==================== COMMENTS OPERATIONS ====================
+
+  /// Get comments collection for a todo
+  CollectionReference<Map<String, dynamic>> _todoCommentsCollection(String uid, String todoId) =>
+      _userTodosCollection(uid).doc(todoId).collection('comments');
+
+  /// Add a comment to a todo
+  Future<String> addComment(String todoId, String content) async {
+    final uid = _currentUid;
+    if (uid == null) throw Exception('User not authenticated');
+
+    try {
+      final commentData = {
+        'author_name': _currentUserName,
+        'author_id': uid,
+        'author_photo': _currentUserPhoto,
+        'content': content,
+        'type': 'text',
+        'created_at': FieldValue.serverTimestamp(),
+      };
+      
+      final docRef = await _todoCommentsCollection(uid, todoId).add(commentData);
+      print('✅ TodoFirebaseService: Added comment ${docRef.id}');
+      return docRef.id;
+    } catch (e) {
+      print('❌ TodoFirebaseService: Error adding comment: $e');
+      rethrow;
+    }
+  }
+
+  /// Add a voice comment to a todo
+  Future<String> addVoiceComment(String todoId, String audioUrl, String duration) async {
+    final uid = _currentUid;
+    if (uid == null) throw Exception('User not authenticated');
+
+    try {
+      final commentData = {
+        'author_name': _currentUserName,
+        'author_id': uid,
+        'author_photo': _currentUserPhoto,
+        'content': '🎤 Voice comment ($duration)',
+        'audio_url': audioUrl,
+        'duration': duration,
+        'type': 'voice',
+        'created_at': FieldValue.serverTimestamp(),
+      };
+      
+      final docRef = await _todoCommentsCollection(uid, todoId).add(commentData);
+      print('✅ TodoFirebaseService: Added voice comment ${docRef.id}');
+      return docRef.id;
+    } catch (e) {
+      print('❌ TodoFirebaseService: Error adding voice comment: $e');
+      rethrow;
+    }
+  }
+
+  /// Get comments for a todo
+  Future<List<Map<String, dynamic>>> getComments(String todoId) async {
+    final uid = _currentUid;
+    if (uid == null) throw Exception('User not authenticated');
+
+    try {
+      final snapshot = await _todoCommentsCollection(uid, todoId)
+          .orderBy('created_at', descending: false)
+          .get();
+      
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      print('❌ TodoFirebaseService: Error getting comments: $e');
+      rethrow;
+    }
+  }
+
+  /// Stream comments for a todo
+  Stream<List<Map<String, dynamic>>> streamComments(String todoId) {
+    final uid = _currentUid;
+    if (uid == null) return Stream.value([]);
+
+    return _todoCommentsCollection(uid, todoId)
+        .orderBy('created_at', descending: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id;
+          return data;
+        }).toList());
+  }
+
+  /// Delete a comment
+  Future<void> deleteComment(String todoId, String commentId) async {
+    final uid = _currentUid;
+    if (uid == null) throw Exception('User not authenticated');
+
+    try {
+      await _todoCommentsCollection(uid, todoId).doc(commentId).delete();
+      print('✅ TodoFirebaseService: Deleted comment $commentId');
+    } catch (e) {
+      print('❌ TodoFirebaseService: Error deleting comment: $e');
+      rethrow;
+    }
+  }
+
+  // ==================== MEMBER OPERATIONS ====================
+
+  /// Update member completion status by name
+  Future<void> updateMemberStatus(
+    String todoId, 
+    String memberName, 
+    bool isCompleted, 
+    {required bool isAssigned}
+  ) async {
+    final uid = _currentUid;
+    if (uid == null) throw Exception('User not authenticated');
+
+    try {
+      final todo = await getTodoById(todoId);
+      if (todo == null) throw Exception('Todo not found');
+
+      if (isAssigned) {
+        // Update assigned members
+        if (todo.assignedMembers == null || todo.assignedMembers!.isEmpty) {
+          throw Exception('No assigned members found');
+        }
+
+        final memberIndex = todo.assignedMembers!.indexWhere((m) => m.name == memberName);
+        if (memberIndex == -1) throw Exception('Member not found');
+
+        final updatedMembers = List<TaskMember>.from(todo.assignedMembers!);
+        updatedMembers[memberIndex] = updatedMembers[memberIndex].copyWith(
+          isCompleted: isCompleted,
+          completedAt: isCompleted ? DateTime.now() : null,
+        );
+
+        // Check if all assigned members completed - mark task as complete
+        final allCompleted = updatedMembers.every((m) => m.isCompleted);
+
+        await _userTodosCollection(uid).doc(todoId).update({
+          'assigned_members': updatedMembers.map((m) => m.toMap()).toList(),
+          'is_completed': allCompleted,
+          'updated_at': FieldValue.serverTimestamp(),
+        });
+      } else {
+        // Update followed by members
+        if (todo.followedUpBy == null || todo.followedUpBy!.isEmpty) {
+          throw Exception('No followers found');
+        }
+
+        final memberIndex = todo.followedUpBy!.indexWhere((m) => m.name == memberName);
+        if (memberIndex == -1) throw Exception('Follower not found');
+
+        final updatedFollowers = List<TaskMember>.from(todo.followedUpBy!);
+        updatedFollowers[memberIndex] = updatedFollowers[memberIndex].copyWith(
+          isCompleted: isCompleted,
+          completedAt: isCompleted ? DateTime.now() : null,
+        );
+
+        await _userTodosCollection(uid).doc(todoId).update({
+          'followed_up_by': updatedFollowers.map((m) => m.toMap()).toList(),
+          'updated_at': FieldValue.serverTimestamp(),
+        });
+      }
+
+      print('✅ TodoFirebaseService: Updated member status');
+    } catch (e) {
+      print('❌ TodoFirebaseService: Error updating member status: $e');
+      rethrow;
+    }
   }
 }

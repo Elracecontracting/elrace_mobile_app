@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'task_member_model.dart';
 
 class TodoModel {
   final int? id; // Local SQLite ID (deprecated)
@@ -11,8 +12,10 @@ class TodoModel {
   final DateTime? startDate;
   final DateTime? dueDate;
   final String? assignedTo;
-  final String? assignedToName; // Name of the assigned member
-  final List<String>? followers; // Names of followers
+  final String? assignedToName; // Name of the assigned member (legacy)
+  final List<TaskMember>? assignedMembers; // List of assigned members with status
+  final List<TaskMember>? followedUpBy; // List of followers with status
+  final List<String>? followers; // Names of followers (legacy)
   final List<String>? attachments; // Attachment file paths/names
   final String? listId; // Firebase list ID (changed from int)
   final String? reportId; // Reference to Report
@@ -34,6 +37,8 @@ class TodoModel {
     this.dueDate,
     this.assignedTo,
     this.assignedToName,
+    this.assignedMembers,
+    this.followedUpBy,
     this.followers,
     this.attachments,
     this.listId,
@@ -44,6 +49,20 @@ class TodoModel {
     required this.createdAt,
     required this.updatedAt,
   });
+
+  /// Calculate progress based on assigned members completion
+  double get progress {
+    if (assignedMembers == null || assignedMembers!.isEmpty) {
+      return isCompleted ? 1.0 : 0.0;
+    }
+    final completed = assignedMembers!.where((m) => m.isCompleted).length;
+    return completed / assignedMembers!.length;
+  }
+
+  /// Get progress percentage string
+  String get progressText {
+    return '${(progress * 100).toInt()}%';
+  }
 
   factory TodoModel.fromMap(Map<String, dynamic> map) {
     return TodoModel(
@@ -62,6 +81,12 @@ class TodoModel {
           : null,
       assignedTo: map['assigned_to'] as String?,
       assignedToName: map['assigned_to_name'] as String?,
+      assignedMembers: map['assigned_members'] != null
+          ? (map['assigned_members'] as List).map((m) => TaskMember.fromMap(m as Map<String, dynamic>)).toList()
+          : null,
+      followedUpBy: map['followed_up_by'] != null
+          ? (map['followed_up_by'] as List).map((m) => TaskMember.fromMap(m as Map<String, dynamic>)).toList()
+          : null,
       followers: map['followers'] != null ? List<String>.from(map['followers'] as List) : null,
       attachments: map['attachments'] != null ? List<String>.from(map['attachments'] as List) : null,
       listId: map['list_id'] as String?,
@@ -92,6 +117,12 @@ class TodoModel {
           : null,
       assignedTo: data['assigned_to'] as String?,
       assignedToName: data['assigned_to_name'] as String?,
+      assignedMembers: data['assigned_members'] != null
+          ? (data['assigned_members'] as List).map((m) => TaskMember.fromMap(m as Map<String, dynamic>)).toList()
+          : null,
+      followedUpBy: data['followed_up_by'] != null
+          ? (data['followed_up_by'] as List).map((m) => TaskMember.fromMap(m as Map<String, dynamic>)).toList()
+          : null,
       followers: data['followers'] != null ? List<String>.from(data['followers'] as List) : null,
       attachments: data['attachments'] != null ? List<String>.from(data['attachments'] as List) : null,
       listId: data['list_id'] as String?,
@@ -121,6 +152,8 @@ class TodoModel {
       'due_date': dueDate?.toIso8601String(),
       'assigned_to': assignedTo,
       'assigned_to_name': assignedToName,
+      'assigned_members': assignedMembers?.map((m) => m.toMap()).toList(),
+      'followed_up_by': followedUpBy?.map((m) => m.toMap()).toList(),
       'followers': followers,
       'attachments': attachments,
       'list_id': listId,
@@ -145,6 +178,8 @@ class TodoModel {
       'due_date': dueDate != null ? Timestamp.fromDate(dueDate!) : null,
       'assigned_to': assignedTo,
       'assigned_to_name': assignedToName,
+      'assigned_members': assignedMembers?.map((m) => m.toMap()).toList() ?? [],
+      'followed_up_by': followedUpBy?.map((m) => m.toMap()).toList() ?? [],
       'followers': followers ?? [],
       'attachments': attachments ?? [],
       'list_id': listId,
@@ -169,6 +204,8 @@ class TodoModel {
     DateTime? dueDate,
     String? assignedTo,
     String? assignedToName,
+    List<TaskMember>? assignedMembers,
+    List<TaskMember>? followedUpBy,
     List<String>? followers,
     List<String>? attachments,
     String? listId,
@@ -191,6 +228,8 @@ class TodoModel {
       dueDate: dueDate ?? this.dueDate,
       assignedTo: assignedTo ?? this.assignedTo,
       assignedToName: assignedToName ?? this.assignedToName,
+      assignedMembers: assignedMembers ?? this.assignedMembers,
+      followedUpBy: followedUpBy ?? this.followedUpBy,
       followers: followers ?? this.followers,
       attachments: attachments ?? this.attachments,
       listId: listId ?? this.listId,
@@ -217,6 +256,8 @@ class TodoModel {
       dueDate: null,
       assignedTo: assignedTo,
       assignedToName: assignedToName,
+      assignedMembers: assignedMembers,
+      followedUpBy: followedUpBy,
       followers: followers,
       attachments: attachments,
       listId: listId,

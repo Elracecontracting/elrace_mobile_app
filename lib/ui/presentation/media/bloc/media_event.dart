@@ -11,6 +11,10 @@ final class FetchMediaList extends MediaEvent {
   const FetchMediaList();
 }
 
+final class FetchContents extends MediaEvent {
+  const FetchContents();
+}
+
 final class FetchMediaByType extends MediaEvent {
   final MediaType type;
   const FetchMediaByType(this.type);

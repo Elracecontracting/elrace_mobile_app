@@ -114,6 +114,56 @@ class _HeaderWidgetState extends State<HeaderWidget> {
     }
   }
 
+  /// Get profile image - handles both base64 and URL formats
+  Widget _getProfileImage(String imageData) {
+    if (imageData.isEmpty) {
+      return Image.asset(
+        'assets/png/profile_1.png',
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+      );
+    }
+    
+    // Check if it's a URL (starts with http:// or https://)
+    if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
+      return Image.network(
+        imageData,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (_, __, ___) => Image.asset(
+          'assets/png/profile_1.png',
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+        ),
+      );
+    }
+    
+    // Check if it's valid base64
+    if (_isValidBase64(imageData)) {
+      try {
+        return Image.memory(
+          base64Decode(imageData),
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+        );
+      } catch (_) {
+        // Fall through to default
+      }
+    }
+    
+    // Default fallback
+    return Image.asset(
+      'assets/png/profile_1.png',
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     var bloc = HomeBloc.get(context);
@@ -417,19 +467,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                               border: Border.all(color: Colors.white, width: 2),
                             ),
                             child: ClipOval(
-                              child: _isValidBase64(_imageBase64)
-                                  ? Image.memory(
-                                      base64Decode(_imageBase64),
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                    )
-                                  : Image.asset(
-                                      'assets/png/profile_1.png',
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity,
-                                    ),
+                              child: _getProfileImage(_imageBase64),
                             ),
                           ),
                         ),

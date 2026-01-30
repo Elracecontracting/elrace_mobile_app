@@ -119,6 +119,30 @@ class _ProfileBoxWithSlideAnimationState
     }
   }
 
+  /// Get profile image - handles both base64 and URL formats
+  ImageProvider _getProfileImage(String imageData) {
+    if (imageData.isEmpty) {
+      return const AssetImage('assets/png/profile_1.png');
+    }
+    
+    // Check if it's a URL (starts with http:// or https://)
+    if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
+      return NetworkImage(imageData);
+    }
+    
+    // Check if it's valid base64
+    if (Util.isValidBase64(imageData)) {
+      try {
+        return MemoryImage(base64Decode(imageData));
+      } catch (_) {
+        return const AssetImage('assets/png/profile_1.png');
+      }
+    }
+    
+    // Default fallback
+    return const AssetImage('assets/png/profile_1.png');
+  }
+
   // Custom painter for QR code background with animated numbers
   Widget _buildQRBackground(String empId) {
     return AnimatedBuilder(
@@ -480,11 +504,7 @@ class _ProfileBoxWithSlideAnimationState
                                   ),
                                   child: CircleAvatar(
                                     radius: 28,
-                                    backgroundImage: hasValidImage
-                                        ? MemoryImage(base64Decode(base64Image))
-                                        : const AssetImage(
-                                                'assets/png/profile_1.png')
-                                            as ImageProvider,
+                                    backgroundImage: _getProfileImage(base64Image),
                                   ),
                                 ),
                                 const SizedBox(height: 1),

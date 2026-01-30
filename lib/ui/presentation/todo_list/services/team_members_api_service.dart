@@ -30,7 +30,8 @@ class TeamMember {
       phone: json['phone'] as String?,
       jobPosition: json['job_position'] as String?,
       department: json['department'] as String?,
-      image: json['image'] as String?,
+      image: (json['profile_photo_url'] ?? json['image_url'] ?? json['image'])
+          as String?,
     );
   }
 

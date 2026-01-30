@@ -13,6 +13,7 @@ import 'package:el_race/ui/presentation/tasks_dashboard/services/teams_api_servi
 import 'package:el_race/ui/presentation/tasks_dashboard/models/team_model.dart';
 import 'package:el_race/ui/presentation/todo_list/services/team_members_api_service.dart';
 import 'package:el_race/ui/presentation/todo_list/data/todo_model.dart';
+import 'package:el_race/ui/presentation/todo_list/data/task_member_model.dart';
 import 'package:el_race/ui/presentation/todo_list/services/todo_firebase_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
@@ -119,16 +120,36 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     setState(() => _isSubmitting = true);
 
     try {
-      // Get assigned member names
+      // Get assigned member names (for backward compatibility)
       String? assignedToName;
       if (_selectedMembers.isNotEmpty) {
         assignedToName = _selectedMembers.map((m) => m.name).join(', ');
       }
 
-      // Get follower names
+      // Convert to TaskMember list for progress tracking
+      List<TaskMember>? assignedMembers;
+      if (_selectedMembers.isNotEmpty) {
+        assignedMembers = _selectedMembers.map((m) => TaskMember(
+          name: m.name,
+          odooId: m.id.toString(),
+          isCompleted: false,
+        )).toList();
+      }
+
+      // Get follower names (for backward compatibility)
       List<String>? followers;
       if (_selectedFollowers.isNotEmpty) {
         followers = _selectedFollowers.map((m) => m.name).toList();
+      }
+
+      // Convert followers to TaskMember list
+      List<TaskMember>? followedUpBy;
+      if (_selectedFollowers.isNotEmpty) {
+        followedUpBy = _selectedFollowers.map((m) => TaskMember(
+          name: m.name,
+          odooId: m.id.toString(),
+          isCompleted: false,
+        )).toList();
       }
 
       // Get attachment file names
@@ -147,7 +168,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         startDate: _startDate,
         dueDate: _endDate,
         assignedToName: assignedToName,
+        assignedMembers: assignedMembers,
         followers: followers,
+        followedUpBy: followedUpBy,
         attachments: attachments,
         isCompleted: false,
         isImportant: false,
@@ -1005,25 +1028,40 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         children: [
           Stack(
             children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.grey[300]!, width: 2),
-                  color: const Color(0xFF1A1A53).withOpacity(0.1),
-                ),
-                child: Center(
-                  child: Text(
-                    member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF1A1A53),
+              // Avatar with image or initials
+              member.image != null && member.image!.isNotEmpty
+                  ? Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey[300]!, width: 2),
+                        image: DecorationImage(
+                          image: NetworkImage(member.image!),
+                          fit: BoxFit.cover,
+                          onError: (_, __) {},
+                        ),
+                      ),
+                    )
+                  : Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey[300]!, width: 2),
+                        color: const Color(0xFF1A1A53).withOpacity(0.1),
+                      ),
+                      child: Center(
+                        child: Text(
+                          member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
+                          style: GoogleFonts.poppins(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF1A1A53),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
               Positioned(
                 right: 0,
                 top: 0,
@@ -1742,22 +1780,41 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                           widget.onMemberSelected(member);
                           setState(() {}); // Refresh to show selection
                         },
-                        leading: CircleAvatar(
-                          backgroundColor: isSelected
-                              ? const Color(0xFF4CAF50)
-                              : const Color(0xFF1A1A53).withOpacity(0.1),
-                          child: Text(
-                            member.name.isNotEmpty
-                                ? member.name[0].toUpperCase()
-                                : '?',
-                            style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w600,
-                              color: isSelected
-                                  ? Colors.white
-                                  : const Color(0xFF1A1A53),
-                            ),
-                          ),
-                        ),
+                        leading: member.image != null && member.image!.isNotEmpty
+                            ? CircleAvatar(
+                                radius: 20.w,
+                                backgroundColor: const Color(0xFF1A1A53).withOpacity(0.1),
+                                backgroundImage: NetworkImage(member.image!),
+                                onBackgroundImageError: (_, __) {},
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: isSelected
+                                        ? Border.all(
+                                            color: const Color(0xFF4CAF50),
+                                            width: 2,
+                                          )
+                                        : null,
+                                  ),
+                                ),
+                              )
+                            : CircleAvatar(
+                                radius: 20.w,
+                                backgroundColor: isSelected
+                                    ? const Color(0xFF4CAF50)
+                                    : const Color(0xFF1A1A53).withOpacity(0.1),
+                                child: Text(
+                                  member.name.isNotEmpty
+                                      ? member.name[0].toUpperCase()
+                                      : '?',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : const Color(0xFF1A1A53),
+                                  ),
+                                ),
+                              ),
                         title: Text(
                           member.name,
                           style: GoogleFonts.poppins(

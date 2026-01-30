@@ -12,6 +12,7 @@ import 'package:el_race/ui/presentation/tasks_dashboard/screens/task_details.dar
 import 'package:el_race/ui/presentation/tasks_dashboard/screens/user_reports_screen.dart';
 import 'package:el_race/ui/presentation/todo_list/providers/todo_firebase_provider.dart';
 import 'package:el_race/ui/presentation/todo_list/data/todo_model.dart';
+import 'package:el_race/ui/presentation/todo_list/services/team_members_api_service.dart';
 
 enum TaskFilter { all, pending, notCompleted, completed }
 
@@ -24,6 +25,8 @@ class TasksDashboardScreen extends StatefulWidget {
 
 class _TasksDashboardScreenState extends State<TasksDashboardScreen> {
   TaskFilter _selectedFilter = TaskFilter.all;
+  Map<int, String> _memberPhotoById = {};
+  bool _isLoadingMemberPhotos = false;
 
   @override
   void initState() {
@@ -31,7 +34,88 @@ class _TasksDashboardScreenState extends State<TasksDashboardScreen> {
     // Load tasks from Firebase
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TodoFirebaseProvider>().loadTodos();
+      _loadMemberPhotos();
     });
+  }
+
+  Future<void> _loadMemberPhotos() async {
+    if (_isLoadingMemberPhotos) return;
+    setState(() => _isLoadingMemberPhotos = true);
+
+    try {
+      final members = await TeamMembersApiService.instance.getTeamMembers();
+      final map = <int, String>{};
+      for (final m in members) {
+        final url = m.image?.trim();
+        if (url != null && url.isNotEmpty) {
+          map[m.id] = url;
+        }
+      }
+      if (!mounted) return;
+      setState(() => _memberPhotoById = map);
+    } catch (_) {
+      // ignore (fallback to initials)
+    } finally {
+      if (!mounted) return;
+      setState(() => _isLoadingMemberPhotos = false);
+    }
+  }
+
+  int? _extractLeadingId(String name) {
+    final match = RegExp(r'^\s*(\d+)\s+').firstMatch(name);
+    return match != null ? int.tryParse(match.group(1)!) : null;
+  }
+
+  String? _photoUrlForDisplayName(String name) {
+    final id = _extractLeadingId(name);
+    if (id == null) return null;
+    return _memberPhotoById[id];
+  }
+
+  Widget _buildAvatarForName(String name, {double size = 42}) {
+    final url = _photoUrlForDisplayName(name);
+    final initials = name.isNotEmpty ? name[0].toUpperCase() : 'U';
+
+    if (url != null && url.isNotEmpty) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: const Color(0xFFD9D9D9),
+            width: 2,
+          ),
+        ),
+        child: CircleAvatar(
+          backgroundColor: const Color(0xFFEFEFEF),
+          backgroundImage: NetworkImage(url),
+          onBackgroundImageError: (_, __) {},
+        ),
+      );
+    }
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: const Color(0xFFD9D9D9),
+          width: 2,
+        ),
+      ),
+      child: CircleAvatar(
+        backgroundColor: const Color(0xFFEFEFEF),
+        child: Text(
+          initials,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
   }
 
   List<TodoModel> _filterTodos(List<TodoModel> todos) {
@@ -195,6 +279,7 @@ class _TasksDashboardScreenState extends State<TasksDashboardScreen> {
                             todo.copyWith(isCompleted: !todo.isCompleted),
                           );
                         },
+                        buildAvatar: _buildAvatarForName,
                       );
                     },
                     childCount: filteredTodos.length,
@@ -512,10 +597,12 @@ class _FilterTabs extends StatelessWidget {
 class _TaskCard extends StatelessWidget {
   final TodoModel todo;
   final VoidCallback onToggleComplete;
+  final Widget Function(String name, {double size}) buildAvatar;
 
   const _TaskCard({
     required this.todo,
     required this.onToggleComplete,
+    required this.buildAvatar,
   });
 
   TaskStatus get _status {
@@ -560,7 +647,12 @@ class _TaskCard extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
-        Navigator.pushNamed(context, TaskDetailsScreen.routeName);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => TaskDetailsScreen(task: todo),
+          ),
+        );
       },
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -604,67 +696,84 @@ class _TaskCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFFD9D9D9),
-                                width: 2,
-                              ),
-                            ),
-                            child: CircleAvatar(
-                              backgroundColor: const Color(0xFFEFEFEF),
-                              child: Text(
-                                (todo.assignedToName ?? 'U')[0].toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                      Builder(
+                        builder: (context) {
+                          final raw = todo.assignedToName ?? '';
+                          final names = raw
+                              .split(',')
+                              .map((e) => e.trim())
+                              .where((e) => e.isNotEmpty)
+                              .toList();
+
+                          if (names.isEmpty) {
+                            return Row(
                               children: [
-                                Text(
-                                  todo.assignedToName ?? 'Unassigned',
+                                buildAvatar('U', size: 36),
+                                const SizedBox(width: 8),
+                                const Text(
+                                  'Unassigned',
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 16,
+                                  style: TextStyle(
+                                    fontSize: 14,
                                     fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                if (todo.listId != null)
-                                  Consumer<TodoFirebaseProvider>(
-                                    builder: (context, provider, _) {
-                                      final list = provider.todoLists.firstWhere(
-                                        (l) => l.firebaseId == todo.listId,
-                                        orElse: () => provider.todoLists.isNotEmpty
-                                            ? provider.todoLists.first
-                                            : throw Exception('No list found'),
-                                      );
-                                      return Text(
-                                        list.name.toUpperCase(),
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: Color(0xFF9AA3AE),
-                                        ),
-                                      );
-                                    },
-                                  ),
                               ],
-                            ),
-                          ),
-                        ],
+                            );
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: names
+                                .map(
+                                  (name) => Padding(
+                                    padding: const EdgeInsets.only(bottom: 6),
+                                    child: Row(
+                                      children: [
+                                        buildAvatar(name, size: 36),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                          );
+                        },
                       ),
+                      if (todo.listId != null)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 44, top: 4),
+                          child: Consumer<TodoFirebaseProvider>(
+                            builder: (context, provider, _) {
+                              final list = provider.todoLists.firstWhere(
+                                (l) => l.firebaseId == todo.listId,
+                                orElse: () => provider.todoLists.isNotEmpty
+                                    ? provider.todoLists.first
+                                    : throw Exception('No list found'),
+                              );
+                              return Text(
+                                list.name.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF9AA3AE),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
                       const SizedBox(height: 12),
                       LayoutBuilder(
                         builder: (context, constraints) {

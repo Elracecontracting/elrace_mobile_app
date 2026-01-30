@@ -9,4 +9,5 @@ class UrlUtil {
   static const String prepareShareApi = 'prepare_share';
   static const String qrCodeApi = 'qr_code/';
   static const String myActionsApi = 'my_actions';
+  static const String getContentsApi = 'get_contents';
 }
