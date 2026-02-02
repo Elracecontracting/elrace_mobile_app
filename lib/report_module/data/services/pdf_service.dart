@@ -59,19 +59,29 @@ class PdfService {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                pw.Image(pw.MemoryImage(logo), height: 50, width: 100),
-                pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                  child: pw.Text(
-                    "Report",
-                    textAlign: pw.TextAlign.center,
-                    style: pw.TextStyle(
-                      font: font,
-                      fontSize: 18,
-                      fontWeight: pw.FontWeight.bold,
+                pw.Image(pw.MemoryImage(logo), height: 90, width: 170),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      "Report",
+                      style: pw.TextStyle(
+                        font: font,
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ),
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      "No. ${_getReportNumber(report)}",
+                      style: pw.TextStyle(
+                        font: font,
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                )
               ],
             ),
             pw.SizedBox(height: 2),
@@ -407,14 +417,10 @@ class PdfService {
             border: pw.Border(top: pw.BorderSide(width: 2))),
         padding: const pw.EdgeInsets.only(top: 10, left: 20, right: 20),
         child: pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: pw.MainAxisAlignment.center,
             children: [
               pw.Text(
                 'Page ${context.pageNumber} of ${context.pagesCount}',
-                style: const pw.TextStyle(fontSize: 12),
-              ),
-              pw.Text(
-                '${companyData.employeeName}-${companyData.employeeID}',
                 style: const pw.TextStyle(fontSize: 12),
               ),
             ]));
@@ -455,28 +461,64 @@ class PdfService {
               ),
               pw.Container(
                 height: rowHeight,
-                alignment: pw.Alignment.bottomLeft,
-                padding: const pw.EdgeInsets.all(4),
-                child: pw.Text(reportDetail.reportItems[i].location,
-                    textDirection: RegExp(r'[\u0600-\u06FF]')
-                            .hasMatch(reportDetail.reportItems[i].location)
-                        ? pw.TextDirection.rtl
-                        : pw.TextDirection.ltr,
-                    style: pw.TextStyle(fontSize: 13, font: font)),
+                alignment: pw.Alignment.topLeft,
+                padding: const pw.EdgeInsets.all(6),
+                child: _buildBulletList(reportDetail.reportItems[i].location, font),
               ),
               // Content column with created date, title, and description.
               pw.Container(
                 height: rowHeight,
-                padding: const pw.EdgeInsets.all(4),
-                alignment: pw.Alignment.bottomLeft,
-                child: pw.Text(reportDetail.reportItems[i].description,
-                    textDirection: RegExp(r'[\u0600-\u06FF]')
-                            .hasMatch(reportDetail.reportItems[i].description)
-                        ? pw.TextDirection.rtl
-                        : pw.TextDirection.ltr,
-                    style: pw.TextStyle(fontSize: 13, font: font)),
+                padding: const pw.EdgeInsets.all(6),
+                alignment: pw.Alignment.topLeft,
+                child: _buildBulletList(reportDetail.reportItems[i].description, font),
               ),
             ],
+          ),
+      ],
+    );
+  }
+
+  int _getReportNumber(ReportDetailModel report) {
+    final parsedId = int.tryParse(report.report.id) ?? 0;
+    if (parsedId <= 0) return 1001;
+    return 1000 + parsedId;
+  }
+
+  pw.Widget _buildBulletList(String description, pw.Font font) {
+    final lines = description
+        .split(RegExp(r'\r?\n'))
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .map((line) => line.replaceFirst(RegExp(r'^[•\-*]+\s*'), ''))
+        .toList();
+
+    if (lines.isEmpty) {
+      return pw.Text(description,
+          textDirection: RegExp(r'[\u0600-\u06FF]').hasMatch(description)
+              ? pw.TextDirection.rtl
+              : pw.TextDirection.ltr,
+          style: pw.TextStyle(fontSize: 13, font: font));
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        for (final line in lines)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 2),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('• ', style: pw.TextStyle(fontSize: 13, font: font)),
+                pw.Expanded(
+                  child: pw.Text(line,
+                      textDirection: RegExp(r'[\u0600-\u06FF]').hasMatch(line)
+                          ? pw.TextDirection.rtl
+                          : pw.TextDirection.ltr,
+                      style: pw.TextStyle(fontSize: 13, font: font)),
+                ),
+              ],
+            ),
           ),
       ],
     );

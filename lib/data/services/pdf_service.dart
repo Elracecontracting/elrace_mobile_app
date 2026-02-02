@@ -75,19 +75,27 @@ class PdfService {
               mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                pw.Image(pw.MemoryImage(logo), height: 50, width: 100),
-                pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                  child: pw.Text(
-                    "Site Report",
-                    textAlign: pw.TextAlign.center,
-                    style: pw.TextStyle(
-                      fontSize: 18,
-                      fontWeight: pw.FontWeight.bold,
+                pw.Image(pw.MemoryImage(logo), height: 90, width: 170),
+                pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text(
+                      "Report",
+                      style: pw.TextStyle(
+                        fontSize: 18,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
                     ),
-                  ),
-                ),
-                pw.SizedBox(width: 100)
+                    pw.SizedBox(height: 2),
+                    pw.Text(
+                      "No. ${_getReportNumber(report)}",
+                      style: pw.TextStyle(
+                        fontSize: 12,
+                        fontWeight: pw.FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                )
               ],
             ),
             pw.SizedBox(height: 2),
@@ -395,6 +403,45 @@ class PdfService {
     return 'Unknown User';
   }
 
+  int _getReportNumber(ReportModel report) {
+    final parsedId = int.tryParse(report.id) ?? 0;
+    if (parsedId <= 0) return 1001;
+    return 1000 + parsedId;
+  }
+
+  pw.Widget _buildBulletList(String description) {
+    final lines = description
+        .split(RegExp(r'\r?\n'))
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .map((line) => line.replaceFirst(RegExp(r'^[•\-*]+\s*'), ''))
+        .toList();
+
+    if (lines.isEmpty) {
+      return pw.Text(description, style: const pw.TextStyle(fontSize: 13));
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        for (final line in lines)
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(bottom: 2),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('• ', style: const pw.TextStyle(fontSize: 13)),
+                pw.Expanded(
+                  child:
+                      pw.Text(line, style: const pw.TextStyle(fontSize: 13)),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
   Future<pw.Font> _loadPdfFont() async {
     // Use a Unicode-capable font to render names with non-Latin characters.
     final ByteData data =
@@ -446,10 +493,10 @@ class PdfService {
               // Content column with created date, title, and description.
               pw.Container(
                 height: rowHeight,
-                padding: const pw.EdgeInsets.all(4),
-                alignment: pw.Alignment.centerLeft,
+                padding: const pw.EdgeInsets.all(6),
+                alignment: pw.Alignment.topLeft,
                 child: pw.Column(
-                  mainAxisAlignment: pw.MainAxisAlignment.center,
+                  mainAxisAlignment: pw.MainAxisAlignment.start,
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     if (reportDetail.items[i].sectionName != null &&
@@ -462,8 +509,7 @@ class PdfService {
                       pw.SizedBox(height: 4),
                     if (reportDetail.items[i].description != null &&
                         reportDetail.items[i].description != "")
-                      pw.Text("${reportDetail.items[i].description}",
-                          style: const pw.TextStyle(fontSize: 13)),
+                      _buildBulletList(reportDetail.items[i].description!),
                   ],
                 ),
               ),

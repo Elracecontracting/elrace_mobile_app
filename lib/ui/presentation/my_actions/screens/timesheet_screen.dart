@@ -1,0 +1,247 @@
+import 'dart:math' as math;
+
+import 'package:el_race/ui/widgets/header_widget.dart';
+import 'package:el_race/ui/presentation/my_actions/data/my_actions_models.dart';
+import 'package:el_race/ui/presentation/my_actions/data/my_actions_repository.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class TimesheetScreen extends StatefulWidget {
+  const TimesheetScreen({super.key});
+
+  @override
+  State<TimesheetScreen> createState() => _TimesheetScreenState();
+}
+
+class _TimesheetScreenState extends State<TimesheetScreen> {
+  final MyActionsRepository _repo = MyActionsRepository();
+  late final Future<List<MyActionItem>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _repo.fetchByType(MyActionsType.timesheet);
+  }
+
+  Color _statusColor(String status) {
+    switch (status.trim().toLowerCase()) {
+      case 'approved':
+      case 'validated':
+        return const Color(0xFF16A34A);
+      case 'pending':
+      case 'draft':
+        return const Color(0xFFF59E0B);
+      case 'rejected':
+        return const Color(0xFFDC2626);
+      default:
+        return const Color(0xFF9AA0A6);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: const HeaderWidget(),
+      body: SafeArea(
+        top: false,
+        child: FutureBuilder<List<MyActionItem>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.w),
+                  child: Text(
+                    'Error: ${snapshot.error}',
+                    style: GoogleFonts.inter(
+                      fontSize: 14.sp,
+                      color: Colors.red,
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            final items = snapshot.data ?? const <MyActionItem>[];
+
+            if (items.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 80.w,
+                      color: const Color(0xFFB5B7C1),
+                    ),
+                    SizedBox(height: 16.h),
+                    Text(
+                      'No timesheets found',
+                      style: GoogleFonts.inter(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF9AA0A6),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return ListView(
+              padding: EdgeInsets.only(top: 8.h, bottom: 80.h),
+              children: [
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10.h),
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.timer,
+                          size: 26.w,
+                          color: const Color(0xFF151544),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'Timesheet',
+                          style: GoogleFonts.inter(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF151544),
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                ...items.map(
+                  (item) => _TimesheetCard(
+                    name: item.name,
+                    employeeName: item.employeeName,
+                    statusColor: _statusColor(item.status),
+                    employeeImage: item.employeeImage,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _TimesheetCard extends StatelessWidget {
+  final String name;
+  final String employeeName;
+  final Color statusColor;
+  final String employeeImage;
+
+  const _TimesheetCard({
+    required this.name,
+    required this.employeeName,
+    required this.statusColor,
+    required this.employeeImage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.fromLTRB(16.w, 0, 16.w, 12.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: const Color(0xFFE9EAEE),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48.w,
+            height: 48.w,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE9EAEE),
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: employeeImage.isNotEmpty
+                ? ClipOval(
+                    child: Image.network(
+                      employeeImage,
+                      width: 48.w,
+                      height: 48.w,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Icon(
+                        Icons.person,
+                        size: 24.w,
+                        color: const Color(0xFF9AA0A6),
+                      ),
+                    ),
+                  )
+                : Icon(
+                    Icons.person,
+                    size: 24.w,
+                    color: const Color(0xFF9AA0A6),
+                  ),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  style: GoogleFonts.inter(
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF151544),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 4.h),
+                Text(
+                  employeeName,
+                  style: GoogleFonts.inter(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFF9AA0A6),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          SizedBox(width: 8.w),
+          Container(
+            width: 8.w,
+            height: 8.w,
+            decoration: BoxDecoration(
+              color: statusColor,
+              shape: BoxShape.circle,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

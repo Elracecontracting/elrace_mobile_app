@@ -158,10 +158,15 @@ class _AttendancePageState extends State<AttendancePage> {
                 final AttendanceData item = state.attendanceList[itemIndex];
                 final bool isExpanded = expandedItems.contains(itemIndex);
 
-                final checkInTime = DateTime.parse(item.checkIn);
+                // Parse check-in/out times (format: "2026-02-02 10:23")
+                final checkInTime = DateTime.parse(item.checkIn.replaceAll(' ', 'T'));
                 DateTime? checkOutTime;
-                if (item.checkOut != null && item.checkOut != false) {
-                  checkOutTime = DateTime.parse(item.checkOut!);
+                if (item.checkOut != null && item.checkOut != false && item.checkOut.toString().isNotEmpty) {
+                  try {
+                    checkOutTime = DateTime.parse(item.checkOut.toString().replaceAll(' ', 'T'));
+                  } catch (e) {
+                    checkOutTime = null;
+                  }
                 }
 
                 // Attendance Status Calculation
@@ -170,19 +175,10 @@ class _AttendancePageState extends State<AttendancePage> {
                     'assets/png/item_bg_green.png'; // Default
                 Color textColor = Colors.green;
 
-                if (checkOutTime == null) {
-                  status = "ABSENT";
+                if (checkOutTime == null || item.isOpen) {
+                  status = "OPEN";
                   backgroundImage = '';
                   textColor = const Color(0xff535353);
-                } else if (item == "SICK") {
-                  status = "SICK LEAVE";
-                  backgroundImage = 'assets/png/item_bg_yellow.png';
-                  textColor = const Color(0xffF9FF46);
-                } else if (item == "ANNUAL") {
-                  // الشرط الجديد
-                  status = "ANNUAL LEAVE";
-                  backgroundImage = '';
-                  textColor = const Color(0xff007AFF);
                 } else if (checkInTime.isAfter(DateTime(checkInTime.year,
                     checkInTime.month, checkInTime.day, 8, 15))) {
                   final lateMinutes = checkInTime
@@ -233,7 +229,9 @@ class _AttendancePageState extends State<AttendancePage> {
                                   status: status,
                                   textColor: textColor,
                                   bgColorStart: bgColorStart,
-                                  bgColorEnd: bgColorEnd)
+                                  bgColorEnd: bgColorEnd,
+                                  employeeName: item.employeeName,
+                                  employeeImageUrl: item.employeeImageUrl)
                               : ColleaspedCard(
                                   key: ValueKey('collapsed_$itemIndex'),
                                   status: status,
@@ -243,7 +241,9 @@ class _AttendancePageState extends State<AttendancePage> {
                                   isExpanded: isExpanded,
                                   checkInTime: checkInTime,
                                   checkOutTime: checkOutTime,
-                                  backgroundImage: backgroundImage),
+                                  backgroundImage: backgroundImage,
+                                  employeeName: item.employeeName,
+                                  employeeImageUrl: item.employeeImageUrl),
                         ),
                       ],
                     ),

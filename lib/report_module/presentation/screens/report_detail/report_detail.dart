@@ -10,6 +10,7 @@ import 'package:el_race/report_module/data/repositories/company_repository.dart'
 import 'package:el_race/report_module/data/services/pdf_service.dart';
 import 'package:el_race/report_module/presentation/bottom_sheets/create_task_from_report_sheet.dart';
 import 'package:el_race/report_module/presentation/bottom_sheets/show_option_sheet.dart';
+import 'package:el_race/report_module/presentation/dialogs/add_image_options_dialog.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/add_cover_screen.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/add_new_item.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/camera_screen.dart';
@@ -351,36 +352,13 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
   //adding options for report start
   _showAddOptions([bool insideSection = false]) async {
-    List<String> options = [
-      "Image From Gallery",
-      "Image From Camera",
-      // "Add New Section",
-      // "Add Text Block",
-      // "Add Cover Page",
-    ];
-    if (insideSection) {
-      options = [
-        "Image From Gallery",
-        "Image From Camera",
-        // "Add Text Block",
-      ];
-    }
-
-    int selectedOptionIndex = await showEditOptions(context, options: options);
+    int selectedOptionIndex = await showAddImageOptions(context);
     if (selectedOptionIndex == 0) {
       _addGalleryImage();
       return;
     }
     if (selectedOptionIndex == 1) {
       _addCameraImage();
-      return;
-    }
-    if (selectedOptionIndex == 2) {
-      _addNewText();
-      return;
-    }
-    if (selectedOptionIndex == 3) {
-      _addNewCover();
       return;
     }
   }

@@ -30,8 +30,8 @@ class ReportItem extends StatelessWidget {
         DateFormat("dd MMM yyyy, HH:mma").format(item.createdAt);
 
     Widget thumbnail = Container(
-      width: 82.w,
-      height: 82.w,
+      width: 110.w,
+      height: 110.w,
       decoration: BoxDecoration(
         color: CustomColors.white,
         borderRadius: BorderRadius.circular(12),
@@ -88,30 +88,6 @@ class ReportItem extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Image.asset(
-                              "assets/png/my_documents.png",
-                              height: 24.h,
-                              width: 24.w,
-                            ),
-                            SizedBox(width: 8.w),
-                            Expanded(
-                              child: Text(
-                                item.location,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.koulen(
-                                  fontSize: 19.26,
-                                  fontWeight: FontWeight.w400,
-                                  color: Colors.black,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
                         SizedBox(height: 12.h),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -171,69 +147,75 @@ class ReportItem extends StatelessWidget {
                               ),
                             ),
                             SizedBox(width: 10.w),
-                            Column(
-                              mainAxisAlignment: MainAxisAlignment.end,
-                              children: [
-                                Container(
-                                  width: 54.w,
-                                  height: 90.h,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.only(
-                                      topLeft: Radius.circular(10.97),
-                                      topRight: Radius.circular(10.97),
-                                      bottomLeft: Radius.circular(10.97),
+                            Padding(
+                              padding: EdgeInsets.only(top: 6.h),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  Container(
+                                    width: 58.w,
+                                    height: 92.h,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: Radius.circular(10.97),
+                                        topRight: Radius.circular(10.97),
+                                        bottomLeft: Radius.circular(10.97),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          width: 42.w,
+                                          height: 42.h,
+                                          alignment: Alignment.center,
+                                          padding: EdgeInsets.only(top: 6.h),
+                                          decoration: const BoxDecoration(
+                                            image: DecorationImage(
+                                              image: AssetImage(
+                                                  "assets/png/date_box_bg.png"),
+                                              fit: BoxFit.fill,
+                                            ),
+                                          ),
+                                          child: FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            child: Text(
+                                              day,
+                                              maxLines: 1,
+                                              softWrap: false,
+                                              textAlign: TextAlign.center,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 14.16,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          month,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xff1A1A53),
+                                          ),
+                                        ),
+                                        Text(
+                                          year,
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                            color: const Color(0xff1A1A53),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        width: 36.w,
-                                        height: 40.h,
-                                        alignment: Alignment.center,
-                                        padding: EdgeInsets.symmetric(
-                                              horizontal: 8.h,
-                                            ) +
-                                            EdgeInsets.only(top: 4.h),
-                                        decoration: const BoxDecoration(
-                                          image: DecorationImage(
-                                            image: AssetImage(
-                                                "assets/png/date_box_bg.png"),
-                                            fit: BoxFit.fill,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          day,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 14.16,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        month,
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          color: const Color(0xff1A1A53),
-                                        ),
-                                      ),
-                                      Text(
-                                        year,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold,
-                                          color: const Color(0xff1A1A53),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ],
                         ),

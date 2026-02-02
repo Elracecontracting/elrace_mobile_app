@@ -1184,62 +1184,29 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     return InkWell(
       onTap: () => _toggleMemberCompletion(member, isAssigned),
       borderRadius: BorderRadius.circular(999),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: Colors.grey[200]!, width: 1),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Stack(
-              children: [
-                _buildAvatarForName(member.name, size: 34),
-                if (member.isCompleted)
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 1.5),
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 9,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 8),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 220),
-              child: Text(
-                member.name,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black,
+      child: Stack(
+        children: [
+          _buildAvatarForName(member.name, size: 44),
+          if (member.isCompleted)
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                width: 16,
+                height: 16,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                ),
+                child: const Icon(
+                  Icons.check,
+                  color: Colors.white,
+                  size: 10,
                 ),
               ),
             ),
-            const SizedBox(width: 8),
-            Icon(
-              member.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: member.isCompleted ? Colors.green : Colors.grey[400],
-              size: 18,
-            ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -1247,34 +1214,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   Widget _buildMemberChip(String name) {
     final trimmed = name.trim();
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.grey[200]!, width: 1),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildAvatarForName(trimmed, size: 34),
-          const SizedBox(width: 8),
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 220),
-            child: Text(
-              trimmed,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    return _buildAvatarForName(trimmed, size: 44);
   }
 
   Widget _buildTaskMemberRow(TaskMember member, {required bool isAssigned}) {

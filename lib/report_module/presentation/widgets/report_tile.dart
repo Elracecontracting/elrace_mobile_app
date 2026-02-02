@@ -63,23 +63,10 @@ class ReportTile extends StatelessWidget {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        color: CustomColors.blue,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 2, horizontal: 12),
-                      child: Text(
-                        "Report",
-                        style: CustomTextStyle.smallWhite,
-                      ),
-                    ),
                     FutureBuilder<ReportDetailModel?>(
                         future: reportProvider.getReportDetail(report),
                         builder: (context, snapshot) {
                           return Container(
-                            margin: const EdgeInsets.only(left: 5),
                             decoration: BoxDecoration(
                               color: CustomColors.blue,
                               borderRadius: BorderRadius.circular(8),

@@ -12,7 +12,11 @@ class MyActionsRepository {
   MyActionsRepository({ApiQuery? apiQuery})
       : _apiQuery = apiQuery ?? ApiQuery();
 
-  Future<List<MyActionItem>> fetchByType(MyActionsType type) async {
+  Future<List<MyActionItem>> fetchByType(
+    MyActionsType type, {
+    int page = 1,
+    int perPage = 50,
+  }) async {
     final token = SharedPref.getLoginDataOrNull()?.result?.token;
     if (token == null || token.isEmpty) {
       throw Exception('Invalid token');
@@ -28,6 +32,8 @@ class MyActionsRepository {
       'jsonrpc': '2.0',
       'params': {
         'type': type.apiValue,
+        'page': page,
+        'per_page': perPage,
       },
     };
 

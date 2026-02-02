@@ -27,7 +27,7 @@ class AttendanceRepo {
         "Authorization": "Bearer $token"
       };
 
-      var url = Uri.parse("https://erp.elrace.com/attendance/filter-by-date");
+      var url = Uri.parse("https://erp.elrace.com/api/attendance/list");
       final body = jsonEncode({
         "jsonrpc": "2.0",
         "params": {
@@ -81,7 +81,7 @@ class AttendanceRepo {
       });
 
       final response = await http.post(
-        Uri.parse("https://erp.elrace.com/attendance/summary"),
+        Uri.parse("https://erp.elrace.com/api/attendance/list"),
         headers: headers,
         body: body,
       );
@@ -97,8 +97,57 @@ class AttendanceRepo {
           final message = result['message']?.toString() ?? 'Unknown error';
           throw Exception(message);
         }
-        final data = result['data'];
-        return data;
+        // Return summary data calculated from the list
+        final data = result['data'] as List? ?? [];
+        
+        int totalDays = 0;
+        int presentDays = 0;
+        int absentDays = 0;
+        int lateDays = 0;
+        double totalHours = 0.0;
+        
+        for (var item in data) {
+          totalDays++;
+          final workedHours = (item['worked_hours'] ?? 0.0).toDouble();
+          totalHours += workedHours;
+          
+          if (item['check_out'] == null || item['is_open'] == true) {
+            // Still open - count as present but not complete
+            presentDays++;
+          } else {
+            presentDays++;
+          }
+          
+          // Check if late (check_in after 08:15)
+          final checkIn = item['check_in'] as String?;
+          if (checkIn != null) {
+            try {
+              final checkInTime = DateTime.parse(checkIn.replaceAll(' ', 'T'));
+              final lateThreshold = DateTime(
+                checkInTime.year,
+                checkInTime.month,
+                checkInTime.day,
+                8,
+                15,
+              );
+              if (checkInTime.isAfter(lateThreshold)) {
+                lateDays++;
+              }
+            } catch (e) {
+              // Ignore parsing errors
+            }
+          }
+        }
+        
+        absentDays = 0; // We only get present days from the API
+        
+        return {
+          'total_days': totalDays,
+          'present_days': presentDays,
+          'absent_days': absentDays,
+          'late_days': lateDays,
+          'total_hours': totalHours,
+        };
       }
       throw Exception('Malformed response');
     } catch (e) {

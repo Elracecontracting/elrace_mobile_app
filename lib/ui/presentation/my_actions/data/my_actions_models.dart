@@ -9,6 +9,9 @@ class MyActionsType {
   static const hr = MyActionsType._('hr', 'hr');
   // API type is "ptsh" but response key is "petty_cash".
   static const ptsh = MyActionsType._('ptsh', 'petty_cash');
+  static const signatures = MyActionsType._('signatures', 'signatures');
+  static const timesheet = MyActionsType._('timesheet', 'timesheet');
+  static const reports = MyActionsType._('reports', 'reports');
 }
 
 class MyActionItem {

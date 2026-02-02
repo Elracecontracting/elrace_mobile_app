@@ -9,6 +9,7 @@ import 'package:el_race/report_module/presentation/dialogs/add_report.dart';
 import 'package:el_race/report_module/presentation/screens/company/company_screen.dart';
 import 'package:el_race/report_module/presentation/widgets/bottom_appbar.dart';
 import 'package:el_race/report_module/presentation/widgets/square_button.dart';
+import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -50,65 +51,17 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
         Provider.of<ReportProvider>(context);
     return Scaffold(
       backgroundColor: CustomColors.white,
-      appBar: AppBar(
-        centerTitle: true,
-        leadingWidth: 70,
-        leading: SquareButton(
-          icon: Icons.keyboard_backspace,
-          color: CustomColors.white,
-          borderColor: CustomColors.black,
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        automaticallyImplyLeading: false,
-        surfaceTintColor: Colors.transparent,
-        backgroundColor: CustomColors.white,
-        title: CompanyRepository.company == null
-            ? const SizedBox(height: 60) // Or a placeholder
-            : Image.asset(
-                CompanyRepository.company!.logo,
-                height: 60,
-              ),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SquareButton(
-              icon: Icons.add,
-              color: CustomColors.blue,
-              borderColor: CustomColors.white,
-              onPressed: () async {
-                int selectedOptionStatus =
-                    await showEditOptions(context, options: ['Add Project']);
-
-                if (selectedOptionStatus == 0) {
-                  if (!context.mounted) return;
-                  bool status = await showAddNewReport(context, type: 2);
-                  if (!mounted) return;
-
-                  if (status) {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => FolderReportScreen(
-                                folder: reportProviderListener.folders.first)));
-                  }
-                  setState(() {});
-                  return;
-                }
-              },
-            ),
-          ),
-        ],
-        bottom: getBottomAppBar(context, edit: true, onClick: () async {
-          await Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => const CompanyInfoScreen()));
-          await CompanyRepository().getCompany();
-          reportProvider.fetchAllFolders();
-          setState(() {});
-        }),
+      appBar: const HeaderWidget(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await showAddNewReport(context, type: 2);
+          if (context.mounted) {
+            Provider.of<ReportProvider>(context, listen: false)
+                .fetchAllFolders();
+          }
+        },
+        backgroundColor: CustomColors.blue,
+        child: const Icon(Icons.add, color: Colors.white),
       ),
       body: reportProviderListener.folders.isEmpty && !isLoading
           ? Center(
@@ -123,15 +76,10 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                   child: CupertinoButton(
                     padding: EdgeInsets.zero,
                     onPressed: () async {
-                      int selectedOptionStatus = await showEditOptions(context,
-                          options: ['Add Project']);
-
-                      if (selectedOptionStatus == 0) {
-                        if (!context.mounted) return;
-                        await showAddNewReport(context, type: 2);
-                        if (!mounted) return;
-                        setState(() {});
-                        return;
+                      await showAddNewReport(context, type: 2);
+                      if (context.mounted) {
+                        Provider.of<ReportProvider>(context, listen: false)
+                            .fetchAllFolders();
                       }
                     },
                     child: Column(

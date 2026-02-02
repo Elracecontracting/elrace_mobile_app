@@ -1344,73 +1344,56 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   Widget _buildSelectedMemberAvatar(TeamMember member, Function(TeamMember) onRemove) {
     return GestureDetector(
       onLongPress: () => onRemove(member),
-      child: Column(
+      child: Stack(
         children: [
-          Stack(
-            children: [
-              // Avatar with image or initials
-              member.image != null && member.image!.isNotEmpty
-                  ? Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey[300]!, width: 2),
-                        image: DecorationImage(
-                          image: NetworkImage(member.image!),
-                          fit: BoxFit.cover,
-                          onError: (_, __) {},
-                        ),
-                      ),
-                    )
-                  : Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey[300]!, width: 2),
-                        color: const Color(0xFF1A1A53).withOpacity(0.1),
-                      ),
-                      child: Center(
-                        child: Text(
-                          member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF1A1A53),
-                          ),
-                        ),
+          // Avatar with image or initials
+          member.image != null && member.image!.isNotEmpty
+              ? Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.grey[300]!, width: 2),
+                    image: DecorationImage(
+                      image: NetworkImage(member.image!),
+                      fit: BoxFit.cover,
+                      onError: (_, __) {},
+                    ),
+                  ),
+                )
+              : Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.grey[300]!, width: 2),
+                    color: const Color(0xFF1A1A53).withOpacity(0.1),
+                  ),
+                  child: Center(
+                    child: Text(
+                      member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF1A1A53),
                       ),
                     ),
-              Positioned(
-                right: 0,
-                top: 0,
-                child: GestureDetector(
-                  onTap: () => onRemove(member),
-                  child: Container(
-                    width: 18,
-                    height: 18,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Colors.red,
-                    ),
-                    child: const Icon(Icons.close, size: 12, color: Colors.white),
                   ),
                 ),
+          Positioned(
+            right: 0,
+            top: 0,
+            child: GestureDetector(
+              onTap: () => onRemove(member),
+              child: Container(
+                width: 18,
+                height: 18,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.red,
+                ),
+                child: const Icon(Icons.close, size: 12, color: Colors.white),
               ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          SizedBox(
-            width: 50,
-            child: Text(
-              member.name.split(' ').first,
-              style: GoogleFonts.poppins(
-                fontSize: 10,
-                color: Colors.grey[700],
-              ),
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],

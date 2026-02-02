@@ -189,6 +189,9 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
   }
 
   _generateReport() async {
+    // Hide keyboard if open
+    FocusScope.of(context).unfocus();
+    
     // if (_generating) return;
     _generating = true;
     setState(() {});
