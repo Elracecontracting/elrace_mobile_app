@@ -182,29 +182,29 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
     final String url = attachment.url ?? '';
 
     // Determine file icon based on type
-    String iconPath = 'assets/png/pdf_file.png';
-    String fileType = 'PDF';
+    String iconPath = 'assets/png/file-icon.png';
+    String fileType = 'FILE';
 
     if (type.contains('spreadsheet') ||
         type.contains('excel') ||
         name.toLowerCase().endsWith('.xlsx') ||
         name.toLowerCase().endsWith('.xls')) {
-      iconPath = 'assets/png/exel_file.png';
-      fileType = 'ESTIMATION';
+      iconPath = 'assets/png/excel-icon.png';
+      fileType = 'EXCEL';
     } else if (type.contains('presentation') ||
         type.contains('powerpoint') ||
         name.toLowerCase().endsWith('.pptx') ||
         name.toLowerCase().endsWith('.ppt')) {
-      iconPath = 'assets/png/ppt_file.png';
-      fileType = 'REPORT';
+      iconPath = 'assets/png/file-icon.png';
+      fileType = 'PPT';
     } else if (type.contains('word') ||
         name.toLowerCase().endsWith('.docx') ||
         name.toLowerCase().endsWith('.doc')) {
-      iconPath = 'assets/png/pdf_file.png';
-      fileType = 'DRAWING';
+      iconPath = 'assets/png/file-icon.png';
+      fileType = 'DOC';
     } else if (type.contains('pdf') || name.toLowerCase().endsWith('.pdf')) {
-      iconPath = 'assets/png/pdf_file.png';
-      fileType = 'DRAWING';
+      iconPath = 'assets/png/pdf-icon.png';
+      fileType = 'PDF';
     }
 
     return GestureDetector(

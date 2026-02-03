@@ -10,9 +10,16 @@ class AttachmentWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String fileIcon = 'assets/newapp/pdf.png';
+    String fileIcon = 'assets/png/file-icon.png';
 
-    if (!item.type.contains("pdf")) fileIcon = 'assets/newapp/excel.png';
+    if (item.type.contains('pdf') || item.name.toLowerCase().endsWith('.pdf')) {
+      fileIcon = 'assets/png/pdf-icon.png';
+    } else if (item.type.contains('spreadsheet') || 
+        item.type.contains('excel') ||
+        item.name.toLowerCase().endsWith('.xlsx') ||
+        item.name.toLowerCase().endsWith('.xls')) {
+      fileIcon = 'assets/png/excel-icon.png';
+    }
     
 
     return GestureDetector(
