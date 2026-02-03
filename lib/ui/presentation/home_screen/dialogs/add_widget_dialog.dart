@@ -102,64 +102,37 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
           cardTitle: 'Timesheet',
           upperCaseTitle: false,
           backgroundImagePath: 'assets/png/t-sheet.png',
-          childAlignment: Alignment.bottomRight,
-          childPadding: EdgeInsets.only(
-            right: 24.w,
-            bottom: 18.h,
-          ),
-          childWidget: Directionality(
-            textDirection: TextDirection.ltr,
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: 18.w,
-                vertical: 10.h,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.55),
-                borderRadius: BorderRadius.circular(28.r),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.85),
-                  width: 1.2,
-            ),
-          ),
+          childWidget: const SizedBox.shrink(),
+        ),
+        Positioned(
+          left: 16.w,
+          bottom: 12.h,
           child: Row(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                'Labors',
-                style: GoogleFonts.koulen(
-                  color: Colors.black,
-                  fontSize: 16.w,
-                  fontWeight: FontWeight.w400,
-                  letterSpacing: 1.1,
-                ),
+              Image.asset(
+                'assets/png/time-sheet-icon.png',
+                width: 44.w,
+                height: 44.w,
               ),
-              SizedBox(width: 28.w),
-              Text(
-                '250',
-                style: GoogleFonts.koulen(
-                  color: Colors.black,
-                  fontSize: 18.w,
-                  fontWeight: FontWeight.w400,
-                  letterSpacing: 1.1,
+              SizedBox(width: 6.w),
+              Padding(
+                padding: EdgeInsets.only(bottom: 6.h),
+                child: Text(
+                  '250',
+                  style: GoogleFonts.koulen(
+                    color: Colors.black,
+                    fontSize: 22.w,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
               ),
             ],
           ),
         ),
-      ),
-    ),
-    Positioned(
-      left: 16.w,
-      bottom: 16.h,
-      child: Image.asset(
-        'assets/png/time-sheet-icon.png',
-        width: 60.w,
-        height: 60.w,
-      ),
-    ),
-    ],
-  );
+      ],
+    );
   }
 
   Widget _buildPettyCashPreview() {

@@ -152,60 +152,33 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           cardTitle: 'Timesheet',
           upperCaseTitle: false,
           backgroundImagePath: 'assets/png/t-sheet.png',
-          childAlignment: Alignment.bottomRight,
-          childPadding: EdgeInsets.only(
-            right: 24.w,
-            bottom: 18.h,
-          ),
-          childWidget: Directionality(
-            textDirection: TextDirection.ltr,
-            child: Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: 8.w,
-                vertical: 0.h,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.02),
-                borderRadius: BorderRadius.circular(28.r),
-                border: Border.all(
-                  color: Colors.white.withOpacity(0.85),
-                  width: 1.2,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Labors',
-                    style: GoogleFonts.koulen(
-                      color: Colors.black,
-                      fontSize: 13.w,
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                  SizedBox(width: 28.w),
-                  Text(
-                    timesheetCount,
-                    style: GoogleFonts.koulen(
-                      color: Colors.black,
-                      fontSize: 15.w,
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          childWidget: const SizedBox.shrink(),
         ),
         Positioned(
           left: 16.w,
-          bottom: 16.h,
-          child: Image.asset(
-            'assets/png/time-sheet-icon.png',
-            width: 60.w,
-            height: 60.w,
+          bottom: 12.h,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Image.asset(
+                'assets/png/time-sheet-icon.png',
+                width: 44.w,
+                height: 44.w,
+              ),
+              SizedBox(width: 6.w),
+              Padding(
+                padding: EdgeInsets.only(bottom: 6.h),
+                child: Text(
+                  timesheetCount,
+                  style: GoogleFonts.koulen(
+                    color: Colors.black,
+                    fontSize: 22.w,
+                    fontWeight: FontWeight.w400,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ],
