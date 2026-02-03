@@ -373,19 +373,25 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
           String icon = 'assets/png/other-documetns-icon.png';
           final t = type.toLowerCase();
+          final n = name.toLowerCase();
+          
           if (t.contains('pdf')) {
             icon = 'assets/png/pdf-icon.png';
           } else if (t.contains('certificate') || t.contains('cert')) {
             icon = 'assets/png/certificate-icon.png';
           } else if (t.contains('contract')) {
             icon = 'assets/png/contract-icon.png';
-          } else if (t.contains('emirates') || t.contains('id') || t.contains('personal')) {
-            icon = 'assets/png/personal-icon.png';
           } else if (t.contains('passport')) {
+            icon = 'assets/png/passport.png';
+          } else if (t.contains('emirates') || t.contains('id') || n.contains('emirates') || n.contains('eid')) {
+            icon = 'assets/png/emitates_id.png';
+          } else if (t.contains('driving') || t.contains('license') || n.contains('driving') || n.contains('license')) {
+            icon = 'assets/png/driving_license.png';
+          } else if (t.contains('insurance') || n.contains('insurance')) {
             icon = 'assets/png/personal-icon.png';
-          } else if (t.contains('license') || t.contains('labor') || t.contains('labour')) {
+          } else if (t.contains('labor') || t.contains('labour')) {
             icon = 'assets/png/labor-cards-icon.png';
-          } else if (t.contains('profile')) {
+          } else if (t.contains('personal') || t.contains('profile')) {
             icon = 'assets/png/personal-icon.png';
           }
 
