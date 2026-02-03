@@ -12,8 +12,13 @@ import 'package:flutter_translate/flutter_translate.dart';
 
 class RequestDetailsPage extends StatefulWidget {
   final loginResponseModel;
+  final String? initialLeaveType;
 
-  const RequestDetailsPage({super.key, required this.loginResponseModel});
+  const RequestDetailsPage({
+    super.key,
+    required this.loginResponseModel,
+    this.initialLeaveType,
+  });
 
   @override
   _RequestDetailsPageState createState() => _RequestDetailsPageState();
@@ -32,6 +37,21 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   final GlobalKey<CustomSliderButtonState> _sliderKey =
       GlobalKey<CustomSliderButtonState>();
   final UserRepo userRepo = UserRepo();
+
+  @override
+  void initState() {
+    super.initState();
+    // Set initial leave type if provided
+    final initial = widget.initialLeaveType?.trim().toUpperCase();
+    if (initial == 'SICK' || initial == 'SHORT' || initial == 'ANNUAL') {
+      selectedLeaveType = initial!;
+    }
+    _initAsync();
+  }
+
+  Future<void> _initAsync() async {
+    await fetchleaveBalance();
+  }
 
   // End date is readonly; calculated from startDate + duration (if both present)
   void _updateEndDate() {
@@ -169,16 +189,6 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   String _formatDate(DateTime? date) {
     if (date == null) return 'Select Date';
     return DateFormat('dd/MM/yyyy').format(date);
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _initAsync();
-  }
-
-  Future<void> _initAsync() async {
-    await fetchleaveBalance();
   }
 
   Future<void> fetchleaveBalance() async {

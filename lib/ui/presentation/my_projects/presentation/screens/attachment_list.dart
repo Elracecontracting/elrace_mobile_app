@@ -218,50 +218,54 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
           ),
           color: Colors.white,
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // File Icon
-            Image.asset(
-              iconPath,
-              width: 70.w,
-              height: 70.w,
-              errorBuilder: (_, __, ___) => Icon(
-                Icons.insert_drive_file,
-                size: 70.w,
-                color: Colors.grey,
-              ),
-            ),
-            SizedBox(height: 12.h),
-
-            // File Type Label
-            Text(
-              fileType,
-              style: GoogleFonts.koulen(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.black,
-                letterSpacing: 0.5,
-              ),
-            ),
-            SizedBox(height: 4.h),
-
-            // File Name
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12.w),
-              child: Text(
-                name,
-                style: GoogleFonts.aBeeZee(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w400,
-                  color: const Color(0xFFBA1719),
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 8.w),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // File Icon
+              Image.asset(
+                iconPath,
+                width: 60.w,
+                height: 60.w,
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.insert_drive_file,
+                  size: 60.w,
+                  color: Colors.grey,
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
               ),
-            ),
-          ],
+              SizedBox(height: 8.h),
+
+              // File Type Label
+              Text(
+                fileType,
+                style: GoogleFonts.koulen(
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              SizedBox(height: 4.h),
+
+              // File Name
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 8.w),
+                child: Text(
+                  name,
+                  style: GoogleFonts.aBeeZee(
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w400,
+                    color: const Color(0xFFBA1719),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

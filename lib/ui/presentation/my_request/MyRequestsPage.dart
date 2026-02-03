@@ -6,6 +6,7 @@ import 'package:el_race/ui/presentation/my_request/RequestEffectiveDate.dart';
 import 'package:el_race/ui/presentation/my_request/RequestJobMissionPage.dart';
 import 'package:el_race/ui/presentation/my_request/RequestLeavePage.dart';
 import 'package:el_race/ui/presentation/my_request/RequestPermission.dart';
+import 'package:el_race/ui/presentation/my_request/HrRequestsMenuPage.dart';
 import 'package:el_race/utils/api_logger.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
@@ -699,7 +700,17 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                             constraints: const BoxConstraints(),
                             icon: Icon(Icons.add,
                                 size: 28.sp, color: appFontColor),
-                            onPressed: _showRequestTypeDialog,
+                            onPressed: () async {
+                              final result = await Navigator.push<bool>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const HrRequestsMenuPage(),
+                                ),
+                              );
+                              if (result == true) {
+                                await _fetchRequests();
+                              }
+                            },
                           ),
                         ),
                       ],
