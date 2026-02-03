@@ -453,28 +453,7 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
       backgroundImagePath: 'assets/png/notes_new_bg.png',
       onClick: null,
       topPadding: true,
-      childWidget: SizedBox(
-        width: SizeConfig().getWidth(200),
-        height: SizeConfig().getHeight(67),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            SizedBox(
-              width: SizeConfig().getWidth(55),
-              height: SizeConfig().getHeight(42.11),
-              child: Image.asset('$imagePrefixIcons/id_card.png'),
-            ),
-            SizedBox(width: SizeConfig().getWidth(20)),
-            SizedBox(
-              width: SizeConfig().getWidth(55),
-              height: SizeConfig().getHeight(44.40),
-              child: Image.asset('$imagePrefixIcons/licnc.png'),
-            ),
-            SizedBox(width: SizeConfig().getWidth(20)),
-          ],
-        ),
-      ),
+      childWidget: const SizedBox.shrink(),
     );
   }
 

@@ -173,7 +173,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                   timesheetCount,
                   style: GoogleFonts.koulen(
                     color: Colors.black,
-                    fontSize: 22.w,
+                    fontSize: 19.w,
                     fontWeight: FontWeight.w400,
                   ),
                 ),
@@ -732,32 +732,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       backgroundImagePath: 'assets/newapp/my_report_widget_background.png',
       onClick: isReorderMode ? null : () => Util.pushPage(const ReportAppHomeScreen(), context),
       topPadding: true,
-      childWidget: Directionality(
-        textDirection: TextDirection.ltr,
-        child: DefaultTextStyle(
-          style: TextStyle(
-            fontSize: 10.sp,
-            fontWeight: FontWeight.w500,
-            color: Colors.white,
-          ),
-          child: Padding(
-            padding: EdgeInsets.only(top: 85.h),
-            child: SizedBox(
-              child: Column(
-                children: [
-                  CustomBulletPoint(
-                    text: translate('home.No_Of_Reports'),
-                    textColor: Colors.white,
-                    countColor: Colors.white,
-                    count: reportsCount,
-                    containerColor: const Color(0xff1A1A53),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+      childWidget: const SizedBox.shrink(),
       // childWidget: Container(
       //   width: SizeConfig().getWidth(200),
       //   height: SizeConfig().getHeight(67),
