@@ -371,15 +371,23 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           final type = (map['type'] ?? 'DOCUMENT').toString();
           final name = (map['name'] ?? '').toString();
 
-          String icon = 'assets/png/document_icon.png';
+          String icon = 'assets/png/other-documetns-icon.png';
           final t = type.toLowerCase();
-          if (t.contains('emirates') || t.contains('id')) {
-            icon = 'assets/png/emitates_id.png';
-          } else if (t.contains('passport'))
-            icon = 'assets/png/passport.png';
-          else if (t.contains('license') || t.contains('labor'))
-            icon = 'assets/png/driving_license.png';
-          else if (t.contains('profile')) icon = 'assets/png/profile_image.png';
+          if (t.contains('pdf')) {
+            icon = 'assets/png/pdf-icon.png';
+          } else if (t.contains('certificate') || t.contains('cert')) {
+            icon = 'assets/png/certificate-icon.png';
+          } else if (t.contains('contract')) {
+            icon = 'assets/png/contract-icon.png';
+          } else if (t.contains('emirates') || t.contains('id') || t.contains('personal')) {
+            icon = 'assets/png/personal-icon.png';
+          } else if (t.contains('passport')) {
+            icon = 'assets/png/personal-icon.png';
+          } else if (t.contains('license') || t.contains('labor') || t.contains('labour')) {
+            icon = 'assets/png/labor-cards-icon.png';
+          } else if (t.contains('profile')) {
+            icon = 'assets/png/personal-icon.png';
+          }
 
           return {
             'id': map['id'],
@@ -833,7 +841,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Image.asset(
-                      document['icon'] ?? 'assets/png/document_icon.png',
+                      document['icon'] ?? 'assets/png/other-documetns-icon.png',
                       width: 40,
                       height: 40,
                     ),
