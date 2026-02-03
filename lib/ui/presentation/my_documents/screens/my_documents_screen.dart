@@ -16,6 +16,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:dropdown_button2/dropdown_button2.dart';
 
 import '../../../widgets/custom_slider_button.dart';
 import 'attachment_viewer_screen.dart';
@@ -450,6 +451,40 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     return documents;
   }
 
+  String _toTitleCase(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return trimmed;
+    return trimmed
+        .split(RegExp(r'\s+'))
+        .where((w) => w.isNotEmpty)
+        .map((w) => w.length == 1
+            ? w.toUpperCase()
+            : '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}')
+        .join(' ');
+  }
+
+  String _formatCardDate(dynamic raw) {
+    if (raw == null || raw == false) return '';
+    final s = raw.toString().trim();
+    if (s.isEmpty) return '';
+    try {
+      final date = DateTime.parse(s);
+      return DateFormat('dd/MM/yyyy').format(date);
+    } catch (_) {
+      return s;
+    }
+  }
+
+  bool _isMeaningfulDocLabel(String value) {
+    final v = value.trim();
+    if (v.isEmpty) return false;
+    if (v.toLowerCase() == 'n/a') return false;
+    // Avoid showing pure numeric IDs as the main label.
+    if (RegExp(r'^\d+$').hasMatch(v)) return false;
+    // Require at least one letter (Latin or Arabic).
+    return RegExp(r'[A-Za-z\u0600-\u06FF]').hasMatch(v);
+  }
+
   Widget _buildInlineSearchField() {
     return Container(
       decoration: BoxDecoration(
@@ -754,44 +789,79 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                               ),
                             ),
                             child: Padding(
-                              padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 6.w),
+                              padding: EdgeInsets.symmetric(
+                                vertical: 10.h,
+                                horizontal: 10.w,
+                              ),
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Image.asset(
-                                    item['icon'],
-                                    height: 50.h,
-                                    width: 50.w,
-                                    fit: BoxFit.contain,
-                                  ),
-                                  SizedBox(height: 6.h),
-                                  Text(
-                                    item['title'],
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.koulen(
-                                      fontSize: 10.5,
-                                      fontWeight: FontWeight.w400,
-                                      letterSpacing: .10,
-                                      color: const Color(0xff949494),
+                                  SizedBox(
+                                    height: 90.h,
+                                    width: double.infinity,
+                                    child: Center(
+                                      child: Image.asset(
+                                        item['icon'],
+                                        height: 90.h,
+                                        width: double.infinity,
+                                        fit: BoxFit.contain,
+                                      ),
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  SizedBox(height: 3.h),
-                                  Text(
-                                    item['name'],
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.aBeeZee(
-                                      fontSize: 9.5,
-                                      fontWeight: FontWeight.w400,
-                                      fontStyle: FontStyle.italic,
-                                      letterSpacing: .10,
-                                      color: Colors.black,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                  SizedBox(height: 10.h),
+                                  Builder(
+                                    builder: (context) {
+                                      final rawName = (item['name'] ?? '').toString().trim();
+                                      final rawType = (item['title'] ?? '').toString().trim();
+                                      final typeLabel = _toTitleCase(
+                                        rawType.replaceAll('_', ' '),
+                                      );
+                                      final nameLabel = _toTitleCase(
+                                        rawName.replaceAll('_', ' '),
+                                      );
+                                      // Match the screenshot: show a human-friendly label under the icon.
+                                      // Prefer the document name only if it looks meaningful; otherwise fallback to the type.
+                                      final displayName =
+                                          _isMeaningfulDocLabel(nameLabel)
+                                              ? nameLabel
+                                              : typeLabel;
+                                      final date = _formatCardDate(item['issue_date']);
+
+                                      return Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            displayName,
+                                            textAlign: TextAlign.center,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: GoogleFonts.aBeeZee(
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.w700,
+                                              letterSpacing: .10,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                          if (date.isNotEmpty) ...[
+                                            SizedBox(height: 4.h),
+                                            Text(
+                                              date,
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.aBeeZee(
+                                                fontSize: 10.sp,
+                                                fontWeight: FontWeight.w400,
+                                                letterSpacing: .10,
+                                                color: const Color(0xff949494),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      );
+                                    },
                                   ),
                                 ],
                               ),
@@ -804,6 +874,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                         crossAxisCount: 2,
                         crossAxisSpacing: 12,
                         mainAxisSpacing: 12,
+                        childAspectRatio: 0.78,
                       ),
                     ),
                   ),
@@ -826,7 +897,11 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           ),
           elevation: 0,
           backgroundColor: Colors.transparent,
-          child: const DocumentDialog(),
+          child: DocumentDialog(
+            type: currentIndex == 1
+                ? DocumentDialogType.family
+                : DocumentDialogType.my,
+          ),
         );
       },
     );
@@ -1239,8 +1314,16 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 //   }
 }
 
+enum DocumentDialogType {
+  my,
+  family,
+  company,
+}
+
 class DocumentDialog extends StatefulWidget {
-  const DocumentDialog({super.key});
+  const DocumentDialog({super.key, required this.type});
+
+  final DocumentDialogType type;
 
   @override
   State<DocumentDialog> createState() => _DocumentDialogState();
@@ -1254,7 +1337,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
     'Passport',
     'Labor Card',
     'Medical Insurance',
-    'Emirates ID ',
+    'Emirates ID',
     'photo',
     'CV',
     'Certifications',
@@ -1262,6 +1345,20 @@ class _DocumentDialogState extends State<DocumentDialog> {
   String? _attachedFileName;
   String? _attachedFilePath;
   bool _isUploading = false;
+
+  bool get _showIdAndExpiry => widget.type != DocumentDialogType.company;
+
+  String get _dialogTitle {
+    switch (widget.type) {
+      case DocumentDialogType.family:
+        return 'Family Documents';
+      case DocumentDialogType.company:
+        return 'Company Documents';
+      case DocumentDialogType.my:
+      default:
+        return 'My Documents';
+    }
+  }
 
   @override
   void dispose() {
@@ -1316,11 +1413,19 @@ class _DocumentDialogState extends State<DocumentDialog> {
   }
 
   Future<void> _submit() async {
-    // Validate required fields (only document type and ID number)
+    // Validate required fields
     final id = _idController.text.trim();
-    if ((_selectedType ?? '').isEmpty || id.isEmpty) {
-      print('❌ Validation failed: Missing required fields');
-      _showErrorDialog('Please fill in document type and ID number.');
+    final selectedType = (_selectedType ?? '').trim();
+    if (selectedType.isEmpty) {
+      _showErrorDialog('Please select document type.');
+      return;
+    }
+    if (_showIdAndExpiry && id.isEmpty) {
+      _showErrorDialog('Please fill in ID number.');
+      return;
+    }
+    if ((_attachedFilePath ?? '').isEmpty) {
+      _showErrorDialog('Please attach a file.');
       return;
     }
 
@@ -1336,7 +1441,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
 
       // Debug: Check values before sending
       print('🔍 Debug - userName: "$userName"');
-      print('🔍 Debug - selectedType: "$_selectedType"');
+      print('🔍 Debug - selectedType: "$selectedType"');
       print('🔍 Debug - id: "$id"');
 
       if (userName.isEmpty) {
@@ -1344,7 +1449,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
         return;
       }
 
-      if (_selectedType == null || _selectedType!.isEmpty) {
+      if (selectedType.isEmpty) {
         print('❌ Error: selectedType is null or empty!');
         return;
       }
@@ -1360,7 +1465,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
         'Certifications': 7,
       };
 
-      final documentTypeId = documentTypeIds[_selectedType] ?? 1;
+      final documentTypeId = documentTypeIds[selectedType] ?? 1;
 
       // Read file and convert to base64
       final file = File(_attachedFilePath!);
@@ -1374,7 +1479,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
       };
 
       final params = {
-        'name': id, // Using ID number as name field
+        'name': _showIdAndExpiry ? id : selectedType,
         'document_type_id': documentTypeId,
         'issue_date': _expiryDate?.toIso8601String().split('T')[0],
         'expiry_date': _expiryDate?.toIso8601String().split('T')[0],
@@ -1447,10 +1552,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
   }
 
   void _showErrorDialog(String message) {
-    // Close the DocumentDialog first
-    Navigator.of(context).pop();
-
-    // Then show the error dialog
+    // Keep the current dialog open; show an error dialog over it.
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -1479,19 +1581,24 @@ class _DocumentDialogState extends State<DocumentDialog> {
 
     return Center(
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
+        constraints: const BoxConstraints(maxWidth: 320),
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 20),
+          padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 18.h),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(18),
-            image: const DecorationImage(
-                image: AssetImage("assets/png/documents_back.png"),
-                fit: BoxFit.fill),
+            borderRadius: BorderRadius.circular(22.r),
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                const Color(0xFF717171),
+                const Color(0xFF1B1F26).withOpacity(0.72),
+              ],
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.25),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
+                color: Colors.black.withOpacity(0.35),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
               ),
             ],
           ),
@@ -1499,127 +1606,207 @@ class _DocumentDialogState extends State<DocumentDialog> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'MY DOCUMENTS',
-                style: GoogleFonts.koulen(
-                  color: HexColor("#002E6B"),
-                  fontWeight: FontWeight.w400,
-                  fontSize: 20,
-                  letterSpacing: 1,
+                _dialogTitle,
+                style: GoogleFonts.aBeeZee(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16.sp,
+                  letterSpacing: 0.6,
                 ),
               ),
-              const SizedBox(height: 16), // Document type dropdown
-              _buildFieldWrapper(
+              SizedBox(height: 14.h),
+
+              // Document type dropdown
+              _buildPillField(
                 child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
+                  child: DropdownButton2<String>(
+                    value: _selectedType,
                     isExpanded: true,
-                    hint: const Center(
+                    hint: Center(
                       child: Text(
                         'document type',
-                        style: TextStyle(color: Colors.grey),
+                        style: GoogleFonts.aBeeZee(
+                          color: Colors.grey,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w400,
+                          letterSpacing: 1.0,
+                        ),
                       ),
                     ),
-                    value: _selectedType,
                     items: _types
-                        .map((t) => DropdownMenuItem(
-                              value: t,
+                        .map(
+                          (t) => DropdownMenuItem<String>(
+                            value: t,
+                            child: Center(
                               child: Text(
                                 t,
                                 overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.aBeeZee(
+                                  color: Colors.black87,
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w400,
+                                ),
                               ),
-                            ))
+                            ),
+                          ),
+                        )
                         .toList(),
                     onChanged: (v) => setState(() => _selectedType = v),
+                    // Keep the pill container as the button background.
+                    buttonStyleData: ButtonStyleData(
+                      height: 30.h,
+                      padding: EdgeInsets.symmetric(horizontal: 4.w),
+                      decoration: const BoxDecoration(color: Colors.transparent),
+                    ),
+                    iconStyleData: const IconStyleData(
+                      icon: Icon(Icons.keyboard_arrow_down_rounded),
+                      iconSize: 20,
+                      iconEnabledColor: Colors.grey,
+                    ),
+                    dropdownStyleData: DropdownStyleData(
+                      maxHeight: 260.h,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16.r),
+                        color: Colors.white,
+                      ),
+                      offset: const Offset(0, -4),
+                      scrollbarTheme: ScrollbarThemeData(
+                        radius: const Radius.circular(40),
+                        thickness: WidgetStateProperty.all(6),
+                        thumbVisibility: WidgetStateProperty.all(true),
+                      ),
+                    ),
+                    menuItemStyleData: MenuItemStyleData(
+                      height: 44.h,
+                      padding: EdgeInsets.symmetric(horizontal: 12.w),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 10),
 
-              // ID Number field
-              _buildFieldWrapper(
-                child: TextField(
-                  controller: _idController,
-                  textAlign: TextAlign.center,
-                  onTapOutside: (v) {
-                    FocusScope.of(context).unfocus();
-                  },
-                  decoration: const InputDecoration(
-                    hintText: 'ID Number',
-                    hintStyle: TextStyle(color: Colors.grey),
-                    border: InputBorder.none,
-                    isDense: true,
-                    contentPadding:
-                        EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+              if (_showIdAndExpiry) ...[
+                SizedBox(height: 10.h),
+                _buildPillField(
+                  child: TextField(
+                    controller: _idController,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.aBeeZee(
+                      fontSize: 12.sp,
+                      color: Colors.black87,
+                    ),
+                    onTapOutside: (_) => FocusScope.of(context).unfocus(),
+                    decoration: InputDecoration(
+                      hintText: 'ID Number',
+                      hintStyle: GoogleFonts.aBeeZee(
+                        color: Colors.grey,
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 1.0,
+                      ),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 10),
-
-              // Expiry date field with icon
-              GestureDetector(
-                onTap: _pickDate,
-                child: _buildFieldWrapper(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Center(
-                          child: Text(
-                            expiryText,
-                            style: TextStyle(
-                              color: _expiryDate == null
-                                  ? Colors.grey
-                                  : Colors.black87,
+                SizedBox(height: 10.h),
+                GestureDetector(
+                  onTap: _pickDate,
+                  child: _buildPillField(
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              expiryText,
+                              style: GoogleFonts.aBeeZee(
+                                fontSize: 12.sp,
+                                color: _expiryDate == null
+                                    ? Colors.grey
+                                    : Colors.black87,
+                                fontWeight: FontWeight.w400,
+                                letterSpacing: 1.0,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.calendar_today_outlined, size: 18),
-                    ],
+                        const SizedBox(width: 8),
+                        const Icon(
+                          Icons.calendar_today_outlined,
+                          size: 16,
+                          color: Colors.grey,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
+              ],
 
-              // Attach files
+              SizedBox(height: 14.h),
+
               InkWell(
                 onTap: _pickFile,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Image.asset('assets/png/Upload cloud.png',
-                        width: 20, height: 20),
-                    const SizedBox(width: 8),
-                    Column(
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        const Icon(
+                          Icons.cloud_upload_outlined,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
                         Text(
                           _attachedFileName == null
-                              ? 'Attach Files'
+                              ? 'Attach  Files'
                               : _attachedFileName!,
-                          style: GoogleFonts.koulen(
-                            color: HexColor("#002E6B"),
-                            fontWeight: FontWeight.w400,
-                            fontSize: 16,
-                            letterSpacing: 1,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.aBeeZee(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14.sp,
+                            letterSpacing: 1.2,
                           ),
                         ),
-                        if (_attachedFileName == null)
-                          Container(
-                            height: 1.5,
-                            width: 80,
-                            color: HexColor("#002E6B"),
-                          ),
                       ],
+                    ),
+                    SizedBox(height: 6.h),
+                    Container(
+                      height: 1.2,
+                      width: 120.w,
+                      color: Colors.white.withOpacity(0.9),
                     ),
                   ],
                 ),
               ),
 
-              const SizedBox(height: 18), // Submit button
+              SizedBox(height: 12.h),
 
               CustomSliderButton(
                 key: _sliderKey,
                 onSlideComplete: _submitExpense,
                 loginResponseModel: SharedPref.getLoginData(),
+                enableProgressColor: false,
+                idleGradient: const LinearGradient(
+                  colors: [Color(0xFFF2F2F2), Color(0xFFE6E6E6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                completedGradient: const LinearGradient(
+                  colors: [Color(0xFFBDBDBD), Color(0xFFB0B0B0)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                idleBorderColor: Color(0x00000000),
+                completedBorderColor: Color(0x00000000),
+                idleLabelColor: Color(0xFF8A8A8A),
+                completedLabelColor: Color(0xFF4A4A4A),
+                idleHandleColor: Color(0xFF4A4A4A),
+                completedHandleColor: Color(0xFF4A4A4A),
               ),
             ],
           ),
@@ -1628,21 +1815,13 @@ class _DocumentDialogState extends State<DocumentDialog> {
     );
   }
 
-  Widget _buildFieldWrapper({required Widget child}) {
+  Widget _buildPillField({required Widget child}) {
     return Container(
-      height: 40,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      height: 30.h,
+      padding: EdgeInsets.symmetric(horizontal: 14.w),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        // small shadow for the inset feel
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(22.r),
       ),
       child: Center(child: child),
     );

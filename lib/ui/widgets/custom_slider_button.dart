@@ -6,11 +6,29 @@ import 'package:google_fonts/google_fonts.dart';
 class CustomSliderButton extends StatefulWidget {
   final Future<void> Function() onSlideComplete;
   final dynamic loginResponseModel;
+  final bool enableProgressColor;
+  final LinearGradient? idleGradient;
+  final LinearGradient? completedGradient;
+  final Color? idleBorderColor;
+  final Color? completedBorderColor;
+  final Color? idleLabelColor;
+  final Color? completedLabelColor;
+  final Color? idleHandleColor;
+  final Color? completedHandleColor;
 
   const CustomSliderButton({
     super.key,
     required this.onSlideComplete,
     required this.loginResponseModel,
+    this.enableProgressColor = true,
+    this.idleGradient,
+    this.completedGradient,
+    this.idleBorderColor,
+    this.completedBorderColor,
+    this.idleLabelColor,
+    this.completedLabelColor,
+    this.idleHandleColor,
+    this.completedHandleColor,
   });
 
   @override
@@ -31,7 +49,12 @@ class CustomSliderButtonState extends State<CustomSliderButton> {
   @override
   Widget build(BuildContext context) {
     // progress 0..1
-    double progress = (_position - 5) / (230 - 5);
+    double progress;
+    if (widget.enableProgressColor) {
+      progress = (_position - 5) / (230 - 5);
+    } else {
+      progress = 0.0;
+    }
     progress = progress.clamp(0.0, 1.0);
 
     Color dynamicColor = Color.lerp(Colors.white, Colors.green, progress)!;
@@ -51,23 +74,25 @@ class CustomSliderButtonState extends State<CustomSliderButton> {
               border: Border.all(
                 width: _isCompleted ? 3 : 2,
                 color: _isCompleted
-                    ? Colors.green.shade900
-                    : Colors.grey.withOpacity(0.25),
+                    ? (widget.completedBorderColor ?? Colors.green.shade900)
+                    : (widget.idleBorderColor ?? Colors.grey.withOpacity(0.25)),
               ),
               gradient: _isCompleted
-                  ? LinearGradient(
-                      colors: [Colors.green.shade600, Colors.green.shade400],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : LinearGradient(
-                      colors: [
-                        dynamicColor.withOpacity(0.95),
-                        dynamicColor.withOpacity(0.8)
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                  ? (widget.completedGradient ??
+                      LinearGradient(
+                        colors: [Colors.green.shade600, Colors.green.shade400],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ))
+                  : (widget.idleGradient ??
+                      LinearGradient(
+                        colors: [
+                          dynamicColor.withOpacity(0.95),
+                          dynamicColor.withOpacity(0.8)
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )),
               boxShadow: [
                 BoxShadow(
                   color: _isCompleted
@@ -113,7 +138,9 @@ class CustomSliderButtonState extends State<CustomSliderButton> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: _isCompleted ? Colors.white : Colors.indigo.shade900,
+                  color: _isCompleted
+                      ? (widget.completedHandleColor ?? Colors.white)
+                      : (widget.idleHandleColor ?? Colors.indigo.shade900),
                   shape: BoxShape.circle,
                   border: _isCompleted
                       ? Border.all(color: Colors.green.shade900, width: 4)
@@ -135,7 +162,9 @@ class CustomSliderButtonState extends State<CustomSliderButton> {
                   child: Icon(
                     Icons.arrow_forward_ios,
                     key: const ValueKey('handle'),
-                    color: _isCompleted ? Colors.indigo.shade900 : Colors.white,
+                    color: _isCompleted
+                        ? (widget.completedLabelColor ?? Colors.indigo.shade900)
+                        : Colors.white,
                     size: 22,
                   ),
                 ),
@@ -152,7 +181,9 @@ class CustomSliderButtonState extends State<CustomSliderButton> {
                 style: GoogleFonts.koulen(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: _isCompleted ? Colors.indigo.shade900 : appFontColor,
+                  color: _isCompleted
+                      ? (widget.completedLabelColor ?? Colors.indigo.shade900)
+                      : (widget.idleLabelColor ?? appFontColor),
                   letterSpacing: 2.2,
                 ),
               ),
