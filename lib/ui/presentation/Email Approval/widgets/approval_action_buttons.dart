@@ -15,6 +15,7 @@ class ApprovalActionButtons extends StatelessWidget {
   final String? selectedAction;
   final List<String> userIds;
   final ApprovalActionButtonsVariant variant;
+  final double? pillWidth;
 
   const ApprovalActionButtons({
     super.key,
@@ -25,6 +26,7 @@ class ApprovalActionButtons extends StatelessWidget {
     this.selectedAction,
     required this.userIds,
     this.variant = ApprovalActionButtonsVariant.holdCircle,
+    this.pillWidth,
   });
 
   @override
@@ -310,7 +312,7 @@ class ApprovalActionButtons extends StatelessWidget {
         final isButtonDisabled = disabled || isLoading;
 
         return SizedBox(
-          width: 150.w,
+          width: pillWidth ?? 150.w,
           height: 52.w,
           child: ElevatedButton(
             onPressed: isButtonDisabled

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:el_race/core/services/approval_viewed_service.dart';
 import 'package:el_race/core/services/approval_count_service.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/screens/invoice_details_screen.dart';
 import 'package:el_race/utils/safe_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -327,15 +328,25 @@ class InvoiceAndRfqCard extends StatelessWidget {
               );
 
               if (context.mounted) {
-                final result = await showDialog(
-                  context: context,
-                  builder: (BuildContext context) {
-                    return ApprovalConfirmationScreen(
-                      requestId: id,
-                      type: type,
-                    );
-                  },
-                );
+                final upperType = type.toString().toUpperCase();
+                final result = upperType == 'INVOICE'
+                    ? await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => InvoiceDetailsScreen(
+                            requestId: id,
+                            type: type,
+                          ),
+                        ),
+                      )
+                    : await showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return ApprovalConfirmationScreen(
+                            requestId: id,
+                            type: type,
+                          );
+                        },
+                      );
                 // Trigger a rebuild to update the list after dialog closes
                 if (result == true) {
                   // Update approval count badge
