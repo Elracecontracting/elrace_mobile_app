@@ -95,29 +95,31 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
   }
 
   Widget _buildTimeSheetPreview() {
-    return GrayCardComponent(
-      onClick: null,
-      cardTitle: 'Timesheet',
-      upperCaseTitle: false,
-      backgroundImagePath: 'assets/png/t-sheet.png',
-      childAlignment: Alignment.bottomRight,
-      childPadding: EdgeInsets.only(
-        right: 24.w,
-        bottom: 18.h,
-      ),
-      childWidget: Directionality(
-        textDirection: TextDirection.ltr,
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: 18.w,
-            vertical: 10.h,
+    return Stack(
+      children: [
+        GrayCardComponent(
+          onClick: null,
+          cardTitle: 'Timesheet',
+          upperCaseTitle: false,
+          backgroundImagePath: 'assets/png/t-sheet.png',
+          childAlignment: Alignment.bottomRight,
+          childPadding: EdgeInsets.only(
+            right: 24.w,
+            bottom: 18.h,
           ),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.55),
-            borderRadius: BorderRadius.circular(28.r),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.85),
-              width: 1.2,
+          childWidget: Directionality(
+            textDirection: TextDirection.ltr,
+            child: Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: 18.w,
+                vertical: 10.h,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.55),
+                borderRadius: BorderRadius.circular(28.r),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.85),
+                  width: 1.2,
             ),
           ),
           child: Row(
@@ -146,7 +148,18 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
           ),
         ),
       ),
-    );
+    ),
+    Positioned(
+      left: 16.w,
+      bottom: 16.h,
+      child: Image.asset(
+        'assets/png/time-sheet-icon.png',
+        width: 60.w,
+        height: 60.w,
+      ),
+    ),
+    ],
+  );
   }
 
   Widget _buildPettyCashPreview() {

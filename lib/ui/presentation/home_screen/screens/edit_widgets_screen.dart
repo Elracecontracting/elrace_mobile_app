@@ -372,21 +372,34 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
   }
 
   Widget _buildTimeSheetPreview() {
-    return GrayCardComponent(
-      onClick: null,
-      mainIcon: 'assets/png/time_sheet.png',
-      cardTitle: translate('home.time_sheet'),
-      backgroundImagePath: 'assets/png/gray_card.png',
-      topPadding: true,
-      topPaddingValue: 40,
-      childWidget: Padding(
-        padding: EdgeInsets.only(left: 210.w),
-        child: Image.asset(
-          'assets/png/time_sheet.png',
-          width: SizeConfig().getWidth(140),
-          height: SizeConfig().getHeight(140),
+    return Stack(
+      children: [
+        GrayCardComponent(
+          onClick: null,
+          mainIcon: 'assets/png/time_sheet.png',
+          cardTitle: translate('home.time_sheet'),
+          backgroundImagePath: 'assets/png/gray_card.png',
+          topPadding: true,
+          topPaddingValue: 40,
+          childWidget: Padding(
+            padding: EdgeInsets.only(left: 210.w),
+            child: Image.asset(
+              'assets/png/time_sheet.png',
+              width: SizeConfig().getWidth(140),
+              height: SizeConfig().getHeight(140),
+            ),
+          ),
         ),
-      ),
+        Positioned(
+          left: 16.w,
+          bottom: 16.h,
+          child: Image.asset(
+            'assets/png/time-sheet-icon.png',
+            width: 60.w,
+            height: 60.w,
+          ),
+        ),
+      ],
     );
   }
 
