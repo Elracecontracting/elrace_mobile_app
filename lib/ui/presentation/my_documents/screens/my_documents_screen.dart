@@ -753,35 +753,48 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                                 width: isExpired ? 2 : 1,
                               ),
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Image.asset(item['icon']),
-                                SizedBox(height: 8.h),
-                                Text(
-                                  item['title'],
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.koulen(
-                                    fontSize: 11.35,
-                                    fontWeight: FontWeight.w400,
-                                    letterSpacing: .10,
-                                    color: const Color(0xff949494),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 6.w),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Image.asset(
+                                    item['icon'],
+                                    height: 50.h,
+                                    width: 50.w,
+                                    fit: BoxFit.contain,
                                   ),
-                                ),
-                                SizedBox(height: 4.h),
-                                Text(
-                                  item['name'],
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.aBeeZee(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w400,
-                                    fontStyle: FontStyle.italic,
-                                    letterSpacing: .10,
-                                    color: Colors.black,
+                                  SizedBox(height: 6.h),
+                                  Text(
+                                    item['title'],
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.koulen(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w400,
+                                      letterSpacing: .10,
+                                      color: const Color(0xff949494),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                ),
-                              ],
+                                  SizedBox(height: 3.h),
+                                  Text(
+                                    item['name'],
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.aBeeZee(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w400,
+                                      fontStyle: FontStyle.italic,
+                                      letterSpacing: .10,
+                                      color: Colors.black,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         );
