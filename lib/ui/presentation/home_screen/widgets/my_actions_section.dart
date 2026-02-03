@@ -29,10 +29,11 @@ class MyActionsSection extends StatelessWidget {
           ),
         ),
         SizedBox(height: 12.h),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14.w),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        SizedBox(
+          height: 100.h,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.symmetric(horizontal: 14.w),
             children: [
               _MyActionTile(
                 iconAsset: 'assets/newapp/newicon/hr.png',
@@ -47,6 +48,7 @@ class MyActionsSection extends StatelessWidget {
                   );
                 },
               ),
+              SizedBox(width: 12.w),
               _MyActionTile(
                 iconAsset: 'assets/newapp/newicon/rfq.png',
                 label: 'RFQ',
@@ -60,6 +62,7 @@ class MyActionsSection extends StatelessWidget {
                   );
                 },
               ),
+              SizedBox(width: 12.w),
               _MyActionTile(
                 iconAsset: 'assets/newapp/newicon/Cash.png',
                 label: 'Petty Cash',
@@ -74,6 +77,7 @@ class MyActionsSection extends StatelessWidget {
                   );
                 },
               ),
+              SizedBox(width: 12.w),
               _MyActionTile(
                 iconAsset: 'assets/newapp/newicon/Invoice.png',
                 label: 'invoice',
@@ -86,6 +90,38 @@ class MyActionsSection extends StatelessWidget {
                           const RouteSettings(name: '/invoice_my_actions'),
                     ),
                   );
+                },
+              ),
+              SizedBox(width: 12.w),
+              _MyActionTile(
+                iconAsset: 'assets/png/signarute-frame.png',
+                label: 'Signature',
+                onTap: () {
+                  // TODO: Navigate to Signature screen
+                },
+              ),
+              SizedBox(width: 12.w),
+              _MyActionTile(
+                iconAsset: 'assets/png/my-req-frame.png',
+                label: 'My Req',
+                onTap: () {
+                  // TODO: Navigate to My Requests screen
+                },
+              ),
+              SizedBox(width: 12.w),
+              _MyActionTile(
+                iconAsset: 'assets/png/my-reports-frame.png',
+                label: 'My Reports',
+                onTap: () {
+                  // TODO: Navigate to My Reports screen
+                },
+              ),
+              SizedBox(width: 12.w),
+              _MyActionTile(
+                iconAsset: 'assets/png/time-sheet-frame.png',
+                label: 'Timesheets',
+                onTap: () {
+                  // TODO: Navigate to Timesheets screen
                 },
               ),
             ],
