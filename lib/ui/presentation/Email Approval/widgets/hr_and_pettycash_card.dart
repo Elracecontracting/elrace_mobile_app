@@ -3,6 +3,7 @@ import 'package:el_race/core/constants/app_images.dart';
 import 'package:el_race/core/services/approval_viewed_service.dart';
 import 'package:el_race/core/services/approval_count_service.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/screens/hr_details_screen.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/screens/pettycash_details_screen.dart';
 import 'package:el_race/utils/safe_insets.dart';
 import 'package:flutter/material.dart';
@@ -470,24 +471,33 @@ class HrAndPettycashCard extends StatelessWidget {
 
               if (context.mounted) {
                 final upperType = type.toString().toUpperCase();
-                final result = upperType == 'PETTY CASH'
+                final result = upperType == 'HR'
                     ? await Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (_) => PettyCashDetailsScreen(
+                          builder: (_) => HrDetailsScreen(
                             requestId: id,
                             type: type,
                           ),
                         ),
                       )
-                    : await showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return ApprovalConfirmationScreen(
-                            requestId: id,
-                            type: type,
+                    : upperType == 'PETTY CASH'
+                        ? await Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => PettyCashDetailsScreen(
+                                requestId: id,
+                                type: type,
+                              ),
+                            ),
+                          )
+                        : await showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return ApprovalConfirmationScreen(
+                                requestId: id,
+                                type: type,
+                              );
+                            },
                           );
-                        },
-                      );
                 // Trigger a rebuild to update the list after dialog closes
                 if (result == true) {
                   // Update approval count badge

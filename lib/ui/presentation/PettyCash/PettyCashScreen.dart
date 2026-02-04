@@ -3,7 +3,6 @@ import 'dart:math' as math;
 
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashDraftScreen.dart';
-import 'package:el_race/ui/presentation/PettyCash/PettyCashSubmittedScreen.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashPopUpScreen.dart';
 import 'package:el_race/utils/api_logger.dart';
 import 'package:flutter/material.dart';
@@ -299,42 +298,60 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final result = data['result']['data'];
+        
+        // Check if data structure is valid
+        if (data == null || data['result'] == null) {
+          throw Exception('Invalid response structure: result is null');
+        }
+        
+        // Handle both response structures: result.data or result directly
+        Map<String, dynamic>? result;
+        if (data['result'] is Map) {
+          // Check if result has a 'data' key
+          if (data['result']['data'] != null && data['result']['data'] is Map) {
+            result = data['result']['data'];
+          } else {
+            // Use result directly
+            result = data['result'];
+          }
+        }
+        
+        if (result == null) {
+          throw Exception('Invalid response structure: cannot find data');
+        }
 
         print(
             '╔═══════════════════════════════════════════════════════════════');
         print('║ 📊 PARSED PETTY CASH DATA');
         print(
             '╠═══════════════════════════════════════════════════════════════');
-        print('║ 👤 Employee ID: ${result['employee_id']}');
-        print('║ 💰 Balance: ${result['balance']} AED');
-        print('║ 📈 Incoming: ${result['incoming']} AED');
-        print('║ 📉 Spent: ${result['spent']} AED');
-        print('║ 📝 Draft Expenses Count: ${result['draft_expenses_count']}');
-        print(
-            '║ 💵 Draft Expenses Total: ${result['draft_expenses_total']} AED');
-        print('║ 📋 Expense Sheets: ${result['expense_sheets']}');
+        print('║ 👤 Employee ID: ${result['employee_id'] ?? 'N/A'}');
+        print('║ 💰 Balance: ${result['balance'] ?? 0} AED');
+        print('║ 📈 Total Limit: ${result['total_limit'] ?? 0} AED');
+        print('║ 📝 Draft: ${result['draft'] ?? 0} AED');
+        print('║ 💵 Not Paid Amount: ${result['not_paid_amount'] ?? 0} AED');
+        print('║ 📋 Submitted Sheets: ${result['submitted_sheets']}');
         print(
             '╚═══════════════════════════════════════════════════════════════\n');
 
         setState(() {
-          balance = result['balance'].toDouble();
-          incoming = result['incoming'].toDouble();
-          spent = result['spent'].toDouble();
-          paid = (result['paid'] ?? 0).toDouble();
+          balance = (result!['balance'] ?? 0).toDouble();
+          incoming = (result['total_limit'] ?? 0).toDouble();
+          spent = (result['draft'] ?? 0).toDouble();
+          paid = (result['not_paid_amount'] ?? 0).toDouble();
 
-          if (result['expense_sheets'] is List) {
+          if (result['submitted_sheets'] is List) {
             expenseSheets =
-                List<Map<String, dynamic>>.from(result['expense_sheets']);
-            print('✅ Expense sheets loaded: ${expenseSheets.length} items');
+                List<Map<String, dynamic>>.from(result['submitted_sheets']);
+            print('✅ Submitted sheets loaded: ${expenseSheets.length} items');
           } else {
             expenseSheets = [];
-            print('ℹ️ Expense sheets is String: ${result['expense_sheets']}');
+            print('ℹ️ Submitted sheets is null or not a list: ${result['submitted_sheets']}');
           }
 
           isLoading = false;
         });
-        print('   Balance: $balance | Incoming: $incoming | Spent: $spent\n');
+        print('   Balance: $balance | Total Limit: $incoming | Draft: $spent | Not Paid: $paid\n');
       } else {
         print(
             '\n╔═══════════════════════════════════════════════════════════════');
@@ -457,21 +474,12 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
   }
 
   Widget _buildBalanceCard(BuildContext context) {
-    // Calculate draft and not paid from expense_sheets
-    double draftTotal = 0.0;
-    double notPaidTotal = 0.0;
-    for (final sheet in expenseSheets) {
-      final amount =
-          (sheet['total_amount'] ?? sheet['amount'] ?? 0).toDouble();
-      if (_isDraft(sheet['state'])) {
-        draftTotal += amount;
-      } else {
-        notPaidTotal += amount;
-      }
-    }
+    // Use the values from API directly
+    final draftTotal = spent; // API returns 'draft' field
+    final notPaidTotal = paid; // API returns 'not_paid_amount' field
 
     final balanceText = _formatAmount(balance);
-    final amountText = _formatAmount(incoming);
+    final totalLimitText = _formatAmount(incoming); // total_limit from API
     final draftText = _formatAmount(draftTotal);
     final notPaidText = _formatAmount(notPaidTotal);
 
@@ -556,7 +564,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildMetric('Amount', amountText),
+                      _buildMetric('Total Limit', totalLimitText),
                       _buildMetric('Draft', draftText),
                       _buildMetric('Not Paid', notPaidText),
                     ],
@@ -599,43 +607,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
   }
 
   Widget _buildTabs(BuildContext context) {
-    Widget tabItem({
-      required String assetPath,
-      required String label,
-      required VoidCallback onTap,
-    }) {
-      return Expanded(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(18),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Image.asset(
-                  assetPath,
-                  width: 34,
-                  height: 34,
-                  color: Colors.black87,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  label,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
     return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
@@ -647,36 +620,37 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          tabItem(
-            assetPath: 'assets/png/draft2.png',
-            label: 'Draft',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const PettyCashDraftScreen()),
-              );
-            },
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const PettyCashDraftScreen()),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(
+                'assets/png/draft2.png',
+                width: 34,
+                height: 34,
+                color: Colors.black87,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Draft',
+                style: GoogleFonts.inter(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
           ),
-          Container(
-            width: 1,
-            height: 50,
-            color: Colors.black.withOpacity(0.08),
-          ),
-          tabItem(
-            assetPath: 'assets/png/Bill.png',
-            label: 'Submitted',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                    builder: (_) => const PettyCashSubmittedScreen()),
-              );
-            },
-          ),
-        ],
+        ),
       ),
     );
   }
