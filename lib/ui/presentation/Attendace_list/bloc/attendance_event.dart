@@ -4,17 +4,18 @@ abstract class AttendanceEvent extends Equatable {
   const AttendanceEvent();
 
   @override
-  List<Object> get props => [];
+  List<Object?> get props => [];
 }
 
 class GetAttendanceListET extends AttendanceEvent {
-  final String startDate;
-  final String endDate;
+  final String? keyword;
+  final int? month;
 
   const GetAttendanceListET({
-    required this.startDate,
-    required this.endDate,
+    this.keyword,
+    this.month,
   });
+  
   @override
-  List<Object> get props => [startDate, endDate];
+  List<Object?> get props => [keyword, month];
 }

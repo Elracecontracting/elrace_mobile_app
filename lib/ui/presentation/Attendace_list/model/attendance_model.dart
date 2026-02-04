@@ -13,53 +13,117 @@ class AttendanceModel {
   final Result result;
 
   factory AttendanceModel.fromJson(Map<String, dynamic> json) => AttendanceModel(
-    result: Result.fromJson(json["result"]),
-  );
+        result: Result.fromJson(json["result"]),
+      );
 
   Map<String, dynamic> toJson() => {
-    "result": result.toJson(),
-  };
+        "result": result.toJson(),
+      };
 }
 
 class Result {
   Result({
     required this.status,
     required this.mode,
-    required this.total,
-    required this.limit,
-    required this.offset,
-    required this.data,
+    this.employeeId,
+    this.employeeName,
+    this.employeeImageUrl,
+    this.month,
+    this.year,
+    this.totalWorkingDays,
+    this.totalPresentDays,
+    this.records,
+    this.data,
+    this.total,
+    this.limit,
+    this.offset,
   });
 
   final String status;
   final String mode;
-  final int total;
-  final int limit;
-  final int offset;
-  final List<AttendanceData> data;
+  
+  // For grouped mode (employee view)
+  final int? employeeId;
+  final String? employeeName;
+  final String? employeeImageUrl;
+  final int? month;
+  final int? year;
+  final int? totalWorkingDays;
+  final int? totalPresentDays;
+  final List<AttendanceRecord>? records;
+  
+  // For flat mode (manager view)
+  final List<FlatAttendanceData>? data;
+  final int? total;
+  final int? limit;
+  final int? offset;
 
-  factory Result.fromJson(Map<String, dynamic> json) => Result(
-    status: json["status"] ?? "success",
-    mode: json["mode"] ?? "flat",
-    total: json["total"] ?? 0,
-    limit: json["limit"] ?? 50,
-    offset: json["offset"] ?? 0,
-    data: List<AttendanceData>.from(
-        (json["data"] as List? ?? []).map((x) => AttendanceData.fromJson(x))),
-  );
+  factory Result.fromJson(Map<String, dynamic> json) {
+    final mode = json["mode"] ?? "grouped";
+    
+    if (mode == "flat") {
+      // Manager view - flat list
+      return Result(
+        status: json["status"] ?? "",
+        mode: mode,
+        total: json["total"],
+        limit: json["limit"],
+        offset: json["offset"],
+        data: json["data"] == null
+            ? []
+            : List<FlatAttendanceData>.from(
+                json["data"].map((x) => FlatAttendanceData.fromJson(x))),
+      );
+    } else {
+      // Employee view - grouped data
+      return Result(
+        status: json["status"] ?? "",
+        mode: mode,
+        employeeId: json["employee_id"] ?? 0,
+        employeeName: json["employee_name"] ?? "",
+        employeeImageUrl: json["employee_image_url"] ?? "",
+        month: json["month"] ?? 0,
+        year: json["year"] ?? 0,
+        totalWorkingDays: json["total_working_days"] ?? 0,
+        totalPresentDays: json["total_present_days"] ?? 0,
+        records: json["records"] == null
+            ? []
+            : List<AttendanceRecord>.from(
+                json["records"].map((x) => AttendanceRecord.fromJson(x))),
+      );
+    }
+  }
 
-  Map<String, dynamic> toJson() => {
-    "status": status,
-    "mode": mode,
-    "total": total,
-    "limit": limit,
-    "offset": offset,
-    "data": List<dynamic>.from(data.map((x) => x.toJson())),
-  };
+  Map<String, dynamic> toJson() {
+    if (mode == "flat") {
+      return {
+        "status": status,
+        "mode": mode,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "data": data == null ? [] : List<dynamic>.from(data!.map((x) => x.toJson())),
+      };
+    } else {
+      return {
+        "status": status,
+        "mode": mode,
+        "employee_id": employeeId,
+        "employee_name": employeeName,
+        "employee_image_url": employeeImageUrl,
+        "month": month,
+        "year": year,
+        "total_working_days": totalWorkingDays,
+        "total_present_days": totalPresentDays,
+        "records": records == null ? [] : List<dynamic>.from(records!.map((x) => x.toJson())),
+      };
+    }
+  }
 }
 
-class AttendanceData {
-  AttendanceData({
+// For flat mode (manager view)
+class FlatAttendanceData {
+  FlatAttendanceData({
     required this.employeeName,
     required this.empId,
     required this.employeeImageUrl,
@@ -77,23 +141,51 @@ class AttendanceData {
   final double workedHours;
   final bool isOpen;
 
-  factory AttendanceData.fromJson(Map<String, dynamic> json) => AttendanceData(
-    employeeName: json["employee_name"] ?? "",
-    empId: json["emp_id"] ?? "",
-    employeeImageUrl: json["employee_image_url"] ?? "",
-    checkIn: json["check_in"] ?? "",
-    checkOut: json["check_out"],
-    workedHours: (json["worked_hours"] ?? 0.0).toDouble(),
-    isOpen: json["is_open"] ?? false,
-  );
+  factory FlatAttendanceData.fromJson(Map<String, dynamic> json) => FlatAttendanceData(
+        employeeName: json["employee_name"] ?? "",
+        empId: json["emp_id"] ?? "",
+        employeeImageUrl: json["employee_image_url"] ?? "",
+        checkIn: json["check_in"] ?? "",
+        checkOut: json["check_out"],
+        workedHours: (json["worked_hours"] ?? 0.0).toDouble(),
+        isOpen: json["is_open"] ?? false,
+      );
 
   Map<String, dynamic> toJson() => {
-    "employee_name": employeeName,
-    "emp_id": empId,
-    "employee_image_url": employeeImageUrl,
-    "check_in": checkIn,
-    "check_out": checkOut,
-    "worked_hours": workedHours,
-    "is_open": isOpen,
-  };
+        "employee_name": employeeName,
+        "emp_id": empId,
+        "employee_image_url": employeeImageUrl,
+        "check_in": checkIn,
+        "check_out": checkOut,
+        "worked_hours": workedHours,
+        "is_open": isOpen,
+      };
+}
+
+class AttendanceRecord {
+  AttendanceRecord({
+    required this.date,
+    required this.checkIn,
+    required this.checkOut,
+    required this.workedHours,
+  });
+
+  final String date;
+  final String checkIn;
+  final dynamic checkOut;
+  final double workedHours;
+
+  factory AttendanceRecord.fromJson(Map<String, dynamic> json) => AttendanceRecord(
+        date: json["date"] ?? "",
+        checkIn: json["check_in"] ?? "",
+        checkOut: json["check_out"],
+        workedHours: (json["worked_hours"] ?? 0.0).toDouble(),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "date": date,
+        "check_in": checkIn,
+        "check_out": checkOut,
+        "worked_hours": workedHours,
+      };
 }

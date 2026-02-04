@@ -18,13 +18,13 @@ class AttendanceLoadingState extends AttendanceState {
   List<Object?> get props => [isLoading];
 }
 
-class AttendanceListLoaded extends AttendanceState {
-  final List<AttendanceData> attendanceList;
+class AttendanceDataLoaded extends AttendanceState {
+  final Result attendanceData;
 
-  const AttendanceListLoaded({required this.attendanceList});
+  const AttendanceDataLoaded({required this.attendanceData});
 
   @override
-  List<Object?> get props => [attendanceList];
+  List<Object?> get props => [attendanceData];
 }
 
 class AttendanceErrorState extends AttendanceState {

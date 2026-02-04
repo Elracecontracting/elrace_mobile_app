@@ -23,30 +23,19 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
 
     try {
       http.Response response = await _attendanceRepo.getAttendanceList(
-        startDate: event.startDate,
-        endDate: event.endDate,
+        keyword: event.keyword,
+        month: event.month,
       );
-
 
       if (response.statusCode == 200) {
         final attendanceModel = attendanceModelFromJson(response.body);
-        if (attendanceModel.result.data.isNotEmpty) {
-          emit(const AttendanceLoadingState(isLoading: false));
-          emit(AttendanceListLoaded(attendanceList: attendanceModel.result.data));
-        } else {
-          emit(const AttendanceLoadingState(isLoading: false));
-          emit(const AttendanceErrorState(message: "No attendance records found."));
-        }
+        emit(AttendanceDataLoaded(attendanceData: attendanceModel.result));
       } else {
-        emit(const AttendanceLoadingState(isLoading: false));
         emit(AttendanceErrorState(
-          message: "Failed to fetch data. HTTP Code: ${response.statusCode}",
-        ));
+            message: 'Failed to load attendance: ${response.statusCode}'));
       }
     } catch (e) {
-      emit(const AttendanceLoadingState(isLoading: false));
-      emit(AttendanceErrorState(message: "Error: $e"));
+      emit(AttendanceErrorState(message: 'Error: ${e.toString()}'));
     }
   }
-
 }

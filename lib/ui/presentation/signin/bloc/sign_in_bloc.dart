@@ -5,7 +5,6 @@ import 'dart:io' show Platform;
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
-import 'package:el_race/chat/chat.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:el_race/ui/presentation/signin/data/repository.dart';
@@ -79,14 +78,6 @@ class SignInBloc extends Bloc<SignInEvent, SignInState> {
         await userRepo.setDeviceInfo(deviceName);
 
         log('loginResponseModel ${response.data}');
-        
-        // 🔍 DEBUG: Print full login response for chat debugging
-        print('');
-        print('🔷🔷🔷 FULL LOGIN RESPONSE DEBUG 🔷🔷🔷');
-        print('========================================');
-        _printJsonPretty(json);
-        print('========================================');
-        print('');
 
         if (loginResponseModel.result?.success == true) {
           emit(InitialSignedInST(loginResponse: loginResponseModel));
@@ -95,10 +86,6 @@ class SignInBloc extends Bloc<SignInEvent, SignInState> {
           await userRepo.setISLoggedIn(true);
           // Update login state in Hive for background service
           await HiveService.setUserLoggedIn(true);
-          
-          // Initialize chat module after successful login
-          // This runs async and doesn't block the login flow
-          _initializeChatModule(json);
         } else {
           final message = loginResponseModel.result?.message ??
               'Login failed. Please try again.';
@@ -128,41 +115,6 @@ class SignInBloc extends Bloc<SignInEvent, SignInState> {
     // }
     try {} catch (e) {
       log('checkSignInMethod $e');
-    }
-  }
-
-  /// Initialize chat module after successful login.
-  /// This is non-blocking and runs in the background.
-  Future<void> _initializeChatModule(Map<String, dynamic> loginJson) async {
-    try {
-      print('🔷 SignInBloc: Initializing chat module...');
-      
-      final result = await ChatModuleHelper.instance
-          .initializeFromLoginResponse(loginJson);
-      
-      if (result.success && result.chatEnabled) {
-        print('✅ SignInBloc: Chat module initialized successfully');
-        print('   - Firebase UID: ${result.firebaseUid}');
-        print('   - Role Chat ID: ${result.roleChatId}');
-      } else if (!result.chatEnabled) {
-        print('ℹ️ SignInBloc: Chat not enabled - ${result.error}');
-        // This is expected if backend doesn't provide firebase_custom_token yet
-      } else {
-        print('⚠️ SignInBloc: Chat initialization failed - ${result.error}');
-      }
-    } catch (e) {
-      // Log but don't fail - chat is optional
-      print('❌ SignInBloc: Error initializing chat module: $e');
-    }
-  }
-  
-  /// Helper to print JSON in a readable format
-  void _printJsonPretty(Map<String, dynamic> json) {
-    const encoder = JsonEncoder.withIndent('  ');
-    final prettyString = encoder.convert(json);
-    // Split and print line by line to avoid truncation
-    for (final line in prettyString.split('\n')) {
-      print(line);
     }
   }
 }

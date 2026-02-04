@@ -67,6 +67,7 @@ class Data {
   final int? uid;
   final bool? isSystem;
   final bool? isAdmin;
+  final bool? isAttendanceManager;
   final UserContext? userContext;
   final String? db;
   final String? serverVersion;
@@ -78,6 +79,8 @@ class Data {
   final String? emp_id;
   final String? emp_profile_id;
   final String? emp_name;
+  final int? odoo_user_id;
+  final int? employee_id;
   final String? partnerDisplayName;
   final int? companyId;
   final bool? branchId;
@@ -97,20 +100,12 @@ class Data {
   final Map<String, dynamic>? certificate;
   final DefaultWidgets? defaultWidgets;
   final int? default_operating_unit_id;
-  
-  // Firebase Chat fields
-  final int? odoo_user_id;
-  final int? employee_id;
-  final String? firebase_uid;
-  final String? firebase_custom_token;
-  
-  // Attendance Manager field
-  final bool? is_attendance_manager;
 
   Data({
     this.uid,
     this.isSystem,
     this.isAdmin,
+    this.isAttendanceManager,
     this.userContext,
     this.db,
     this.serverVersion,
@@ -122,6 +117,8 @@ class Data {
     this.emp_id,
     this.emp_profile_id,
     this.emp_name,
+    this.odoo_user_id,
+    this.employee_id,
     this.partnerDisplayName,
     this.companyId,
     this.branchId,
@@ -141,19 +138,13 @@ class Data {
     this.certificate,
     this.defaultWidgets,
     this.default_operating_unit_id,
-    // Firebase Chat fields
-    this.odoo_user_id,
-    this.employee_id,
-    this.firebase_uid,
-    this.firebase_custom_token,
-    // Attendance Manager field
-    this.is_attendance_manager,
   });
 
   factory Data.fromJson(Map<String, dynamic> json) => Data(
         uid: json["uid"],
         isSystem: json["is_system"],
         isAdmin: json["is_admin"],
+        isAttendanceManager: json["is_attendance_manager"],
         userContext: json["user_context"] == null
             ? null
             : UserContext.fromJson(json["user_context"]),
@@ -189,6 +180,14 @@ class Data {
         emp_name: (json["emp_name"] != null && json["emp_name"] != false)
             ? json["emp_name"].toString()
             : null,
+        odoo_user_id: json["odoo_user_id"] is int
+            ? json["odoo_user_id"]
+            : (json["uid"] is int ? json["uid"] : null),
+        employee_id: json["employee_id"] is int
+            ? json["employee_id"]
+            : (json["emp_id"] != null && json["emp_id"] != false
+                ? int.tryParse(json["emp_id"].toString())
+                : null),
         partnerDisplayName: json["partner_display_name"],
         companyId: json["company_id"],
         branchId: json["branch_id"],
@@ -227,19 +226,13 @@ class Data {
             ? null
             : DefaultWidgets.fromJson(json["default_widgets"]),
         default_operating_unit_id: json["default_operating_unit_id"],
-        // Firebase Chat fields
-        odoo_user_id: json["odoo_user_id"],
-        employee_id: json["employee_id"],
-        firebase_uid: json["firebase_uid"]?.toString(),
-        firebase_custom_token: json["firebase_custom_token"]?.toString(),
-        // Attendance Manager field
-        is_attendance_manager: json["is_attendance_manager"],
       );
 
   Map<String, dynamic> toJson() => {
         "uid": uid,
         "is_system": isSystem,
         "is_admin": isAdmin,
+        "is_attendance_manager": isAttendanceManager,
         "user_context": userContext?.toJson(),
         "db": db,
         "server_version": serverVersion,
@@ -253,6 +246,8 @@ class Data {
         "emp_id": emp_id,
         "emp_profile_id": emp_profile_id,
         "emp_name": emp_name,
+        "odoo_user_id": odoo_user_id,
+        "employee_id": employee_id,
         "partner_display_name": partnerDisplayName,
         "company_id": companyId,
         "branch_id": branchId,
@@ -277,13 +272,6 @@ class Data {
         "certificate": certificate,
         "default_widgets": defaultWidgets?.toJson(),
         "default_operating_unit_id": default_operating_unit_id,
-        // Firebase Chat fields
-        "odoo_user_id": odoo_user_id,
-        "employee_id": employee_id,
-        "firebase_uid": firebase_uid,
-        "firebase_custom_token": firebase_custom_token,
-        // Attendance Manager field
-        "is_attendance_manager": is_attendance_manager,
       };
 }
 

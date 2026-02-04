@@ -5,6 +5,7 @@ import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_li
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_state.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/entities/project_entity.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/screens/attachment_list.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/widgets/project_documents_dialog.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
@@ -378,13 +379,11 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
 
     return GestureDetector(
       onTap: () {
-        // Load attachments and navigate
-        bloc.add(GetProjectAttachmentsEvent(projectId));
-        Navigator.push(
+        // Show project documents dialog
+        ProjectDocumentsDialog.show(
           context,
-          MaterialPageRoute(
-            builder: (context) => AttachmentListScreen(bloc: bloc),
-          ),
+          projectId: int.tryParse(projectId) ?? 0,
+          bloc: bloc,
         );
       },
       child: Container(

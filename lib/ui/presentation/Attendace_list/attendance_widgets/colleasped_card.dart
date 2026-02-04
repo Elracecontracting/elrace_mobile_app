@@ -12,9 +12,6 @@ class ColleaspedCard extends StatelessWidget {
   final bool isExpanded;
   final DateTime checkInTime;
   final DateTime? checkOutTime;
-  final String backgroundImage;
-  final String? employeeName;
-  final String? employeeImageUrl;
   const ColleaspedCard(
       {super.key,
       required this.status,
@@ -23,17 +20,13 @@ class ColleaspedCard extends StatelessWidget {
       required this.bgColorEnd,
       required this.isExpanded,
       required this.checkInTime,
-      required this.checkOutTime,
-      required this.backgroundImage,
-      this.employeeName,
-      this.employeeImageUrl});
+      required this.checkOutTime});
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       alignment: Alignment.centerLeft,
       children: [
-        // if (backgroundImage != '' && !isExpanded)
         if (!isExpanded)
           Container(
             width: 50.w,
@@ -59,30 +52,20 @@ class ColleaspedCard extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Employee Avatar
-              if (employeeImageUrl != null && employeeImageUrl!.isNotEmpty)
-                Padding(
-                  padding: EdgeInsets.only(right: 6.w),
-                  child: CircleAvatar(
-                    radius: 18,
-                    backgroundImage: NetworkImage(employeeImageUrl!),
-                    backgroundColor: Colors.grey[300],
-                  ),
-                ),
               // Date
               SizedBox(
-                width: 75,
+                width: 80,
                 child: Text(
                   DateFormat('dd MMM yy').format(checkInTime).toUpperCase(),
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(
-                    fontSize: 13.sp,
+                    fontSize: 15.sp,
                     fontWeight: FontWeight.bold,
                     color: appFontColor,
                   ),
                 ),
               ),
-              SizedBox(width: 6.w),
+              SizedBox(width: 10.w),
               SizedBox(
                 height: 40.h,
                 child: const VerticalDivider(color: Colors.grey, thickness: 1),
@@ -90,7 +73,7 @@ class ColleaspedCard extends StatelessWidget {
 
               // Check-in
               SizedBox(
-                width: 75.w,
+                width: 80.w,
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -98,7 +81,7 @@ class ColleaspedCard extends StatelessWidget {
                     Text(
                       'Check-in',
                       style: GoogleFonts.inter(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         fontWeight: FontWeight.bold,
                         color: appFontColor,
                       ),
@@ -106,7 +89,7 @@ class ColleaspedCard extends StatelessWidget {
                     Text(
                       DateFormat('HH:mm:ss').format(checkInTime),
                       style: GoogleFonts.inter(
-                        fontSize: 12.sp,
+                        fontSize: 14.sp,
                         fontWeight: FontWeight.w500,
                         color: Colors.black,
                       ),
@@ -124,7 +107,7 @@ class ColleaspedCard extends StatelessWidget {
                     Text(
                       'Check-out',
                       style: GoogleFonts.inter(
-                        fontSize: 11.sp,
+                        fontSize: 13.sp,
                         fontWeight: FontWeight.bold,
                         color: appFontColor,
                       ),
@@ -135,7 +118,7 @@ class ColleaspedCard extends StatelessWidget {
                           : '00:00:00',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
-                        fontSize: 12.sp,
+                        fontSize: 14.sp,
                         fontWeight: FontWeight.w500,
                         color: Colors.black,
                       ),
@@ -143,7 +126,7 @@ class ColleaspedCard extends StatelessWidget {
                   ],
                 ),
               ),
-              SizedBox(width: 8.w),
+              SizedBox(width: 50.w),
             ],
           ),
         ),

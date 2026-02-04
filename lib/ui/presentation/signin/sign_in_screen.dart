@@ -135,7 +135,7 @@ class _SignInScreenState extends State<SignInScreen> {
           print('DEBUG: ===== FULL LOGIN RESPONSE =====');
           final responseJson = state.loginResponse.toJson();
           print('DEBUG: Full JSON:');
-          print(JsonEncoder.withIndent('  ').convert(responseJson));
+          print(const JsonEncoder.withIndent('  ').convert(responseJson));
           print('DEBUG: ===================================');
           print('DEBUG: Specific fields:');
           print('DEBUG: name = ${state.loginResponse.result?.data?.name}');

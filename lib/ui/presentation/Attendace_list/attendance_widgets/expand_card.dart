@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class ExpandCard extends StatelessWidget {
@@ -6,16 +6,12 @@ class ExpandCard extends StatelessWidget {
   final Color textColor;
   final Color bgColorStart;
   final Color bgColorEnd;
-  final String? employeeName;
-  final String? employeeImageUrl;
   const ExpandCard(
       {super.key,
       required this.status,
       required this.textColor,
       required this.bgColorStart,
-      required this.bgColorEnd,
-      this.employeeName,
-      this.employeeImageUrl});
+      required this.bgColorEnd});
 
   @override
   Widget build(BuildContext context) {
@@ -41,16 +37,6 @@ class ExpandCard extends StatelessWidget {
           const SizedBox(
             width: 11,
           ),
-          // Employee Avatar
-          if (employeeImageUrl != null && employeeImageUrl!.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: CircleAvatar(
-                radius: 18,
-                backgroundImage: NetworkImage(employeeImageUrl!),
-                backgroundColor: const Color(0x33FFFFFF),
-              ),
-            ),
           const Spacer(),
           Text(
             status,

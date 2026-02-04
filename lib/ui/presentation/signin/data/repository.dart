@@ -1,12 +1,10 @@
 import 'dart:convert';
-import 'dart:developer';
 import 'package:dio/dio.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:el_race/utils/api_query.dart';
 import 'package:el_race/utils/string_utils.dart';
 import 'package:el_race/utils/urll_utils.dart';
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class UserRepo {
@@ -41,7 +39,7 @@ class UserRepo {
     };
 
     print('\n📤 Login Request Body:');
-    print(JsonEncoder.withIndent('  ').convert(body));
+    print(const JsonEncoder.withIndent('  ').convert(body));
 
     var headers = {
       'Content-Type': 'application/json',
@@ -57,7 +55,7 @@ class UserRepo {
 
     if (response?.data != null) {
       print('📄 Full Login Response:');
-      print(JsonEncoder.withIndent('  ').convert(response!.data));
+      print(const JsonEncoder.withIndent('  ').convert(response!.data));
 
       // Parse and display important data
       try {
@@ -103,7 +101,7 @@ class UserRepo {
 
       print('✅ Login response saved to SharedPreferences');
       print('📦 Saved Data:');
-      print(JsonEncoder.withIndent('  ').convert(loginResponse.toJson()));
+      print(const JsonEncoder.withIndent('  ').convert(loginResponse.toJson()));
       print('💾 ========== SAVE COMPLETE ==========\n');
     } else {
       print('⚠️ Attempted to save NULL login response');

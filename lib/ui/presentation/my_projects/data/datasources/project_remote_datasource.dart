@@ -7,6 +7,7 @@ import 'package:el_race/ui/presentation/my_projects/data/models/project_model.da
 import 'package:el_race/ui/presentation/my_projects/data/models/user_project_model.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/user_projects_response.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/folder_model.dart';
+import 'package:el_race/ui/presentation/my_projects/data/models/project_document_item_model.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
@@ -18,6 +19,10 @@ abstract class ProjectRemoteDataSourceImpl {
   Future<List<ProjectModel>> fetchProjectsByPartnerId(int partnerId);
   Future<List<FolderModel>> fetchProjectFolders();
   Future<UserProjectsResponse> fetchClientsList();
+  Future<ProjectDocumentsResponse> fetchProjectDocuments(int projectId);
+  Future<FolderContentsResponse> fetchFolderContents(
+      int projectId, String folderId);
+  Future<FileDetailsResponse> fetchFileDetails(int projectId, String fileId);
 }
 
 class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
@@ -300,6 +305,143 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       throw Exception('Invalid response format');
     } else {
       throw Exception('Failed to load clients list: ${response.statusCode}');
+    }
+  }
+
+  @override
+  Future<ProjectDocumentsResponse> fetchProjectDocuments(int projectId) async {
+    final token = _getToken();
+
+    final headers = {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Authorization": "Bearer $token",
+    };
+
+    final url = Uri.parse("https://erp.elrace.com/api/projects/documents");
+
+    final body = jsonEncode({
+      "jsonrpc": "2.0",
+      "params": {
+        "project_id": projectId,
+      },
+    });
+
+    debugPrint("===============================");
+    debugPrint("fetchProjectDocuments REQUEST:");
+    debugPrint("URL: $url");
+    debugPrint("Body: $body");
+    debugPrint("===============================");
+
+    // Use GET request with body
+    final request = http.Request('GET', url)
+      ..headers.addAll(headers)
+      ..body = body;
+
+    final streamedResponse = await _client.send(request);
+    final response = await http.Response.fromStream(streamedResponse);
+
+    debugPrint("fetchProjectDocuments RESPONSE: ${response.statusCode}");
+    debugPrint("fetchProjectDocuments: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(response.body) as Map<String, dynamic>;
+      return ProjectDocumentsResponse.fromJson(decoded);
+    } else {
+      throw Exception(
+          'Failed to load project documents: ${response.statusCode}');
+    }
+  }
+
+  @override
+  Future<FolderContentsResponse> fetchFolderContents(
+      int projectId, String folderId) async {
+    final token = _getToken();
+
+    final headers = {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Authorization": "Bearer $token",
+    };
+
+    final url = Uri.parse("https://erp.elrace.com/api/projects/documents/folder");
+
+    final body = jsonEncode({
+      "jsonrpc": "2.0",
+      "params": {
+        "project_id": projectId,
+        "folder_id": folderId,
+      },
+    });
+
+    debugPrint("===============================");
+    debugPrint("fetchFolderContents REQUEST:");
+    debugPrint("URL: $url");
+    debugPrint("Body: $body");
+    debugPrint("===============================");
+
+    // Use GET request with body
+    final request = http.Request('GET', url)
+      ..headers.addAll(headers)
+      ..body = body;
+
+    final streamedResponse = await _client.send(request);
+    final response = await http.Response.fromStream(streamedResponse);
+
+    debugPrint("fetchFolderContents RESPONSE: ${response.statusCode}");
+    debugPrint("fetchFolderContents: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(response.body) as Map<String, dynamic>;
+      return FolderContentsResponse.fromJson(decoded);
+    } else {
+      throw Exception('Failed to load folder contents: ${response.statusCode}');
+    }
+  }
+
+  @override
+  Future<FileDetailsResponse> fetchFileDetails(
+      int projectId, String fileId) async {
+    final token = _getToken();
+
+    final headers = {
+      "Content-Type": "application/json",
+      "Accept": "application/json",
+      "Authorization": "Bearer $token",
+    };
+
+    final url = Uri.parse("https://erp.elrace.com/api/projects/documents/file");
+
+    final body = jsonEncode({
+      "jsonrpc": "2.0",
+      "params": {
+        "project_id": projectId,
+        "file_id": fileId,
+      },
+    });
+
+    debugPrint("===============================");
+    debugPrint("fetchFileDetails REQUEST:");
+    debugPrint("URL: $url");
+    debugPrint("Body: $body");
+    debugPrint("===============================");
+
+    // Use GET request with body
+    final request = http.Request('GET', url)
+      ..headers.addAll(headers)
+      ..body = body;
+
+    final streamedResponse = await _client.send(request);
+    final response = await http.Response.fromStream(streamedResponse);
+
+    debugPrint("fetchFileDetails RESPONSE: ${response.statusCode}");
+    debugPrint("fetchFileDetails: ${response.body}");
+
+    if (response.statusCode == 200) {
+      final decoded = json.decode(response.body) as Map<String, dynamic>;
+      return FileDetailsResponse.fromJson(decoded);
+    } else {
+      throw Exception('Failed to load file details: ${response.statusCode}');
     }
   }
 }
