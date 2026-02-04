@@ -12,12 +12,14 @@ class CloudDocumentsScreen extends StatefulWidget {
   final int projectId;
   final String? folderId;
   final String? folderName;
+  final String? folderType; // "wo" for Work Order, "estimation" for Estimations, null for Cloud
 
   const CloudDocumentsScreen({
     super.key,
     required this.projectId,
     this.folderId,
     this.folderName,
+    this.folderType,
   });
 
   @override
@@ -54,9 +56,10 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
         );
         _items = response.items;
       } else {
-        // Load project root documents
+        // Load project root documents with optional folder_type filter
         final response = await _dataSource.fetchProjectDocuments(
           widget.projectId,
+          folderType: widget.folderType,
         );
         _items = response.items;
       }
@@ -84,6 +87,7 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
           projectId: widget.projectId,
           folderId: folder.id,
           folderName: folder.name,
+          folderType: widget.folderType, // Pass folderType to sub-folders
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_bloc.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_event.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_state.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -19,14 +20,38 @@ import 'package:el_race/core/utils/shared_pref.dart';
 
 class AttachmentListScreen extends StatefulWidget {
   final ProjectListBloc bloc;
+  final int? projectId;
+  final String? folderType;
 
-  const AttachmentListScreen({super.key, required this.bloc});
+  const AttachmentListScreen({
+    super.key,
+    required this.bloc,
+    this.projectId,
+    this.folderType,
+  });
 
   @override
   State<AttachmentListScreen> createState() => _AttachmentListScreenState();
 }
 
 class _AttachmentListScreenState extends State<AttachmentListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    debugPrint("===============================");
+    debugPrint("📋 AttachmentListScreen initState");
+    debugPrint("projectId: ${widget.projectId}");
+    debugPrint("folderType: ${widget.folderType}");
+    debugPrint("===============================");
+    // Load attachments if projectId is provided
+    if (widget.projectId != null) {
+      widget.bloc.add(GetProjectAttachmentsEvent(
+        widget.projectId.toString(),
+        folderType: widget.folderType,
+      ));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -17,7 +17,7 @@ class GetProjectAttachmentsUseCase {
 
   const GetProjectAttachmentsUseCase({required this.repository});
 
-  Future<List<AttachmentEntity>> call(String projectID) async {
-    return await repository.getProjectAttachement(projectID);
+  Future<List<AttachmentEntity>> call(String projectID, {String? folderType}) async {
+    return await repository.getProjectAttachement(projectID, folderType: folderType);
   }
 }

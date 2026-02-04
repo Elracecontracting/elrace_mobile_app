@@ -30,9 +30,9 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
-  Future<List<AttachmentEntity>> getProjectAttachement(String projectID) async {
+  Future<List<AttachmentEntity>> getProjectAttachement(String projectID, {String? folderType}) async {
     final List<AttachmentEntity> models =
-        await remoteDataSource.fetchProjectAttachments(projectID);
+        await remoteDataSource.fetchProjectAttachments(projectID, folderType: folderType);
     return models
         .map((model) => AttachmentEntity(
               name: model.name,

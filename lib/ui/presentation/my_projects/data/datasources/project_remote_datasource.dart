@@ -13,13 +13,15 @@ import 'package:http/http.dart' as http;
 
 abstract class ProjectRemoteDataSourceImpl {
   Future<List<ProjectModel>> fetchProjects();
-  Future<List<AttachmentModel>> fetchProjectAttachments(String projectId);
+  Future<List<AttachmentModel>> fetchProjectAttachments(String projectId,
+      {String? folderType});
   Future<List<PartnerModel>> fetchPartnerProjects(
       {int? partnerId, String? keyword});
   Future<List<ProjectModel>> fetchProjectsByPartnerId(int partnerId);
   Future<List<FolderModel>> fetchProjectFolders();
   Future<UserProjectsResponse> fetchClientsList();
-  Future<ProjectDocumentsResponse> fetchProjectDocuments(int projectId);
+  Future<ProjectDocumentsResponse> fetchProjectDocuments(int projectId,
+      {String? folderType});
   Future<FolderContentsResponse> fetchFolderContents(
       int projectId, String folderId);
   Future<FileDetailsResponse> fetchFileDetails(int projectId, String fileId);
@@ -77,8 +79,9 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
   }
 
   @override
-  Future<List<AttachmentModel>> fetchProjectAttachments(
-      String projectId) async {
+  Future<List<AttachmentModel>> fetchProjectAttachments(String projectId,
+      {String? folderType}) async {
+    debugPrint("🔶 fetchProjectAttachments CALLED with projectId: $projectId, folderType: $folderType");
     final token = _getToken();
 
     final headers = {
@@ -89,15 +92,28 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
 
     final url = Uri.parse("https://erp.elrace.com/api/get_project_attachments");
 
+    // Build params with optional folder_type
+    final params = <String, dynamic>{
+      "project_id": int.tryParse(projectId) ?? 0,
+    };
+    if (folderType != null) {
+      params["folder_type"] = folderType;
+    }
+
     final body = jsonEncode({
       "jsonrpc": "2.0",
-      "params": {
-        "project_id": int.tryParse(projectId) ?? 0,
-      },
+      "params": params,
     });
+
+    debugPrint("===============================");
+    debugPrint("fetchProjectAttachments REQUEST:");
+    debugPrint("URL: $url");
+    debugPrint("Body: $body");
+    debugPrint("===============================");
 
     final response = await _client.post(url, headers: headers, body: body);
 
+    debugPrint("fetchProjectAttachments RESPONSE: ${response.statusCode}");
     debugPrint("fetchProjectAttachments: ${response.body}");
 
     if (response.statusCode == 200) {
@@ -309,7 +325,8 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
   }
 
   @override
-  Future<ProjectDocumentsResponse> fetchProjectDocuments(int projectId) async {
+  Future<ProjectDocumentsResponse> fetchProjectDocuments(int projectId,
+      {String? folderType}) async {
     final token = _getToken();
 
     final headers = {
@@ -320,11 +337,17 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
 
     final url = Uri.parse("https://erp.elrace.com/api/projects/documents");
 
+    // Only include folder_type if provided
+    final params = <String, dynamic>{
+      "project_id": projectId,
+    };
+    if (folderType != null) {
+      params["folder_type"] = folderType;
+    }
+
     final body = jsonEncode({
       "jsonrpc": "2.0",
-      "params": {
-        "project_id": projectId,
-      },
+      "params": params,
     });
 
     debugPrint("===============================");

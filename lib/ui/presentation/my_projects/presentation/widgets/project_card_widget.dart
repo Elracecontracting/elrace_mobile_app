@@ -1,7 +1,7 @@
 import 'package:el_race/resources/app_colors.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/entities/project_entity.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_event.dart';
-import 'package:el_race/ui/presentation/my_projects/presentation/screens/attachment_list.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/widgets/project_documents_dialog.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
@@ -21,14 +21,11 @@ class ProjectCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        bloc.add(GetProjectAttachmentsEvent(item.projectId.toString()));
-        Navigator.push(
+        // Show dialog with 3 options: Work Order, Estimations, Cloud
+        ProjectDocumentsDialog.show(
           context,
-          MaterialPageRoute(
-            builder: (context) => AttachmentListScreen(
-              bloc: bloc,
-            ),
-          ),
+          projectId: item.projectId,
+          bloc: bloc,
         );
       },
       child: Column(

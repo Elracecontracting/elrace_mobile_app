@@ -14,8 +14,9 @@ class LoadProjectsByPartnerEvent extends ProjectListEvent {
 
 class GetProjectAttachmentsEvent extends ProjectListEvent {
   final String projectId;
+  final String? folderType;
 
-  GetProjectAttachmentsEvent(this.projectId);
+  GetProjectAttachmentsEvent(this.projectId, {this.folderType});
 }
 
 class LoadMoreProjectsEvent extends ProjectListEvent {}

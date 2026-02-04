@@ -43,10 +43,15 @@ class ProjectListBloc extends Bloc<ProjectListEvent, ProjectListState> {
 
     on<GetProjectAttachmentsEvent>(
         (GetProjectAttachmentsEvent event, emit) async {
+      debugPrint("===============================");
+      debugPrint("📦 ProjectListBloc GetProjectAttachmentsEvent");
+      debugPrint("projectId: ${event.projectId}");
+      debugPrint("folderType: ${event.folderType}");
+      debugPrint("===============================");
       emit(ProjectAttachmentsLoading());
       try {
         projectAttacmentList =
-            await getProjectAttachmentsUseCase(event.projectId);
+            await getProjectAttachmentsUseCase(event.projectId, folderType: event.folderType);
         emit(const ProjectAttachmentsLoaded());
       } catch (e) {
         emit(ProjectAttachmentsError(e.toString()));

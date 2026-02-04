@@ -4,7 +4,7 @@ import 'package:el_race/ui/presentation/my_projects/domain/entities/project_enti
 
 abstract class ProjectRepository {
   Future<List<ProjectEntity>> getProjects();
-  Future<List<AttachmentEntity>> getProjectAttachement(String projectID);
+  Future<List<AttachmentEntity>> getProjectAttachement(String projectID, {String? folderType});
   Future<List<PartnerEntity>> getPartnerProjects(
       {int? partnerId, String? keyword});
   Future<List<ProjectEntity>> getProjectsByPartnerId(int partnerId);

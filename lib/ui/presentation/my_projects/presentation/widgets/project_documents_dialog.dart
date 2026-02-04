@@ -4,6 +4,7 @@ import 'package:el_race/ui/presentation/my_projects/presentation/screens/cloud_d
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_bloc.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_event.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/screens/attachment_list.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -47,18 +48,51 @@ class ProjectDocumentsDialog extends StatelessWidget {
 
     switch (type) {
       case ProjectDocumentType.workOrder:
-      case ProjectDocumentType.estimations:
-        // Go directly to attachments screen
-        bloc.add(GetProjectAttachmentsEvent(projectId.toString()));
+        debugPrint("=====================================");
+        debugPrint("🔵 WORK ORDER CLICKED");
+        debugPrint("API: https://erp.elrace.com/api/get_project_attachments");
+        debugPrint("Method: POST");
+        debugPrint('Body: {"jsonrpc":"2.0","params":{"project_id":$projectId,"folder_type":"wo"}}');
+        debugPrint("=====================================");
+        // Go directly to attachments screen with folder_type: "wo"
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => AttachmentListScreen(bloc: bloc),
+            builder: (context) => AttachmentListScreen(
+              bloc: bloc,
+              projectId: projectId,
+              folderType: 'wo',
+            ),
+          ),
+        );
+        break;
+      case ProjectDocumentType.estimations:
+        debugPrint("=====================================");
+        debugPrint("💰 ESTIMATIONS CLICKED");
+        debugPrint("API: https://erp.elrace.com/api/get_project_attachments");
+        debugPrint("Method: POST");
+        debugPrint('Body: {"jsonrpc":"2.0","params":{"project_id":$projectId,"folder_type":"estimation"}}');
+        debugPrint("=====================================");
+        // Go directly to attachments screen with folder_type: "estimation"
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AttachmentListScreen(
+              bloc: bloc,
+              projectId: projectId,
+              folderType: 'estimation',
+            ),
           ),
         );
         break;
       case ProjectDocumentType.cloud:
-        // Go to cloud folders screen
+        debugPrint("=====================================");
+        debugPrint("☁️  CLOUD CLICKED");
+        debugPrint("API: https://erp.elrace.com/api/projects/documents");
+        debugPrint("Method: GET (with body)");
+        debugPrint('Body: {"jsonrpc":"2.0","params":{"project_id":$projectId}}');
+        debugPrint("=====================================");
+        // Go to cloud folders screen using projects/documents API
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -93,36 +127,47 @@ class ProjectDocumentsDialog extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             // Header with close button
-            Row(
+            Stack(
               children: [
-                Icon(
-                  Icons.folder_open,
-                  size: 24.w,
-                  color: const Color(0xFF151544),
-                ),
-                SizedBox(width: 8.w),
-                Text(
-                  'Project Documents',
-                  style: GoogleFonts.koulen(
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFF151544),
+                // Centered title with icon
+                Center(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.folder_open,
+                        size: 24.w,
+                        color: const Color(0xFF151544),
+                      ),
+                      SizedBox(width: 8.w),
+                      Text(
+                        'Project Documents',
+                        style: GoogleFonts.koulen(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF151544),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const Spacer(),
-                GestureDetector(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    width: 24.w,
-                    height: 24.w,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE74C3C),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.close,
-                      size: 16.w,
-                      color: Colors.white,
+                // Close button on the right
+                Positioned(
+                  right: 0,
+                  child: GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      width: 24.w,
+                      height: 24.w,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE74C3C),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.close,
+                        size: 16.w,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -173,45 +218,42 @@ class ProjectDocumentsDialog extends StatelessWidget {
   }) {
     return GestureDetector(
       onTap: () => _onOptionTap(context, type),
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30.r),
-          border: Border.all(
-            color: const Color(0xFF151544),
-            width: 1.5,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36.w,
-              height: 36.w,
-              padding: EdgeInsets.all(6.w),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 230.w),
+          child: SizedBox(
+            height: 52.h,
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(8.r),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(15.r),
+                border: Border.all(
+                  color: const Color(0xFF151544),
+                  width: 1.3,
+                ),
               ),
-              child: _buildIcon(icon, fallbackIcon),
-            ),
-            SizedBox(width: 12.w),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF151544),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  SizedBox(
+                    width: 34.w,
+                    height: 34.w,
+                    child: _buildIcon(icon, fallbackIcon),
+                  ),
+                  SizedBox(width: 12.w),
+                  Text(
+                    label,
+                    style: GoogleFonts.inter(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF151544),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
       ),
     );
