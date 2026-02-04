@@ -105,24 +105,17 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
                   var list = widget.bloc.projectAttacmentList;
                   return SliverPadding(
                     padding:
-                        EdgeInsets.symmetric(horizontal: 40.w, vertical: 40.h),
-                    sliver: SliverGrid(
+                        EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
+                    sliver: SliverList(
                       delegate: SliverChildBuilderDelegate(
                         (context, index) {
-                          if (index == 0) {
-                            return _buildAddNewDocumentCard();
-                          } else {
-                            final attachment = list[index - 1];
-                            return _buildAttachmentCard(attachment);
-                          }
+                          final attachment = list[index];
+                          return Padding(
+                            padding: EdgeInsets.only(bottom: 14.h),
+                            child: _buildAttachmentRowCard(attachment),
+                          );
                         },
-                        childCount: list.length + 1,
-                      ),
-                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        mainAxisSpacing: 16.h,
-                        crossAxisSpacing: 16.w,
-                        childAspectRatio: 0.85,
+                        childCount: list.length,
                       ),
                     ),
                   );
@@ -160,6 +153,66 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildAttachmentRowCard(dynamic attachment) {
+    final String name = (attachment.name ?? '').toString();
+    final String type = (attachment.type ?? '').toString();
+    final String url = (attachment.url ?? '').toString();
+
+    String iconPath = 'assets/png/file-icon.png';
+    if (type.contains('spreadsheet') ||
+        type.contains('excel') ||
+        name.toLowerCase().endsWith('.xlsx') ||
+        name.toLowerCase().endsWith('.xls')) {
+      iconPath = 'assets/png/excel-icon.png';
+    } else if (type.contains('pdf') || name.toLowerCase().endsWith('.pdf')) {
+      iconPath = 'assets/png/pdf-icon.png';
+    }
+
+    return GestureDetector(
+      onTap: () => _downloadFile(url, name),
+      child: Container(
+        height: 82.h,
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+        decoration: BoxDecoration(
+          color: const Color(0xFFD9D9D9),
+          borderRadius: BorderRadius.circular(18.r),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 62.w,
+              height: 62.w,
+              child: Center(
+                child: Image.asset(
+                  iconPath,
+                  width: 56.w,
+                  height: 56.w,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            SizedBox(width: 16.w),
+            Expanded(
+              child: Center(
+                child: Text(
+                  name.isEmpty ? 'File Name' : name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.inter(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF2E3445),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
