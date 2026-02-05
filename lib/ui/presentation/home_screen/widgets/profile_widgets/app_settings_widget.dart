@@ -1,11 +1,13 @@
 import 'package:el_race/chat/chat.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
+import 'package:el_race/auth/uaepass_auth_cubit.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 
 class AppSettingsWidget extends StatelessWidget {
@@ -311,6 +313,9 @@ class AppSettingsWidget extends StatelessWidget {
                       print('🧹 Cleaning up chat module...');
                       await ChatModuleHelper.instance.cleanup();
                       print('✅ Chat module cleaned up');
+
+                      // Clear UAE PASS session
+                      await context.read<UaepassAuthCubit>().logout();
 
                       // Clear user preferences
                       print('🧹 Clearing preferences...');

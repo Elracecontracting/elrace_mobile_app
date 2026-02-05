@@ -407,17 +407,29 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // Days TextField
-                  Container(
-                    width: 120,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: Colors.transparent,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Color(0xFFD0D0D0), width: 1.5),
-                    ),
-                    child: Center(
-                      child: TextField(
-                        controller: _daysController,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Days',
+                        style: GoogleFonts.poppins(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: 120,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Color(0xFFD0D0D0), width: 1.5),
+                        ),
+                        child: Center(
+                          child: TextField(
+                            controller: _daysController,
                         textAlign: TextAlign.center,
                         keyboardType: TextInputType.number,
                         inputFormatters: [
@@ -442,6 +454,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                         },
                       ),
                     ),
+                  ),
+                    ],
                   ),
 
                   // Start Date
@@ -516,9 +530,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               const SizedBox(height: 20),
 
               // Following By
-  Center(
-                child:             _buildSectionLabel('Following By'),
-              ),
+              _buildSectionLabel('Following By'),
               const SizedBox(height: 12),
               _buildMembersSection(
                 selectedMembers: _selectedFollowers,

@@ -13,6 +13,8 @@ import 'package:el_race/ui/presentation/my_notes/bloc/notes_bloc.dart';
 import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
 import 'package:el_race/ui/presentation/qr_code/bloc/qr_code_bloc.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
+import 'package:el_race/auth/uaepass_auth_cubit.dart';
+import 'package:el_race/deep_links/uaepass_link_handler.dart';
 import 'package:el_race/ui/presentation/splash_screen/splash_screen.dart';
 import 'package:el_race/ui/presentation/todo_list/providers/todo_firebase_provider.dart';
 import 'package:el_race/ui/presentation/qr_survey/providers/qr_survey_data_provider.dart';
@@ -375,6 +377,7 @@ class MyApp extends StatelessWidget {
             BlocProvider(create: (ctx) => sl<NotesBloc>()),
             BlocProvider(create: (ctx) => sl<MediaBloc>()),
             BlocProvider(create: (ctx) => QrCodeBloc()),
+            BlocProvider(create: (ctx) => sl<UaepassAuthCubit>()),
           ],
           child: ScreenUtilInit(
             designSize: const Size(411.4, 843.4),
@@ -504,6 +507,10 @@ void _handleDeepLink(Uri uri, BuildContext context) async {
   print('🔗 Host: ${uri.host}');
   print('🔗 Path: ${uri.path}');
   print('🔗 Query Parameters: ${uri.queryParameters}');
+
+  if (await UaepassLinkHandler.handle(uri)) {
+    return;
+  }
 
   // Check if it's a QR code survey link
   // Format: https://elrace.com/RCC4/Requirements/qrcodeapp or qrcodeapp.php

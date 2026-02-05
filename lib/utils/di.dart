@@ -12,9 +12,14 @@ import 'package:el_race/ui/presentation/my_request/bloc/requests_bloc.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
 import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:el_race/ui/presentation/signin/data/repository.dart';
+import 'package:el_race/config/uaepass_config.dart';
+import 'package:el_race/services/api_client.dart';
+import 'package:el_race/services/uaepass_auth_service.dart';
+import 'package:el_race/auth/uaepass_auth_cubit.dart';
 import 'package:get_it/get_it.dart';
 import 'package:el_race/ui/presentation/Attendace_list/bloc/attendance_bloc.dart';
 import 'package:el_race/ui/presentation/Attendace_list/repository/attendance_repository.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../ui/presentation/call_screen/bloc/contact_bloc.dart';
 import '../ui/presentation/call_screen/data/repository.dart';
@@ -54,6 +59,21 @@ Future<void> initDI() async {
     _registerSingletonIfNeeded<AttendanceRepo>(AttendanceRepo());
     _registerSingletonIfNeeded<LoginResponseModel>(LoginResponseModel());
 
+    _registerSingletonIfNeeded<UaepassConfig>(UaepassConfig.staging());
+    _registerSingletonIfNeeded<FlutterSecureStorage>(
+      const FlutterSecureStorage(),
+    );
+    _registerSingletonIfNeeded<ApiClient>(
+      ApiClient(baseUrl: sl<UaepassConfig>().baseApiUrl),
+    );
+    _registerSingletonIfNeeded<UaepassAuthService>(
+      UaepassAuthService(
+        config: sl<UaepassConfig>(),
+        apiClient: sl<ApiClient>(),
+        secureStorage: sl<FlutterSecureStorage>(),
+      ),
+    );
+
     // Temporarily comment out problematic dependencies for iOS simulator
     // sl.registerLazySingleton<ProjectRepository>(() => ProjectRepositoryImpl(sl()));
     _registerLazySingletonIfNeeded<INotesRepository>(() => NotesRepository());
@@ -71,6 +91,12 @@ Future<void> initDI() async {
     _registerSingletonIfNeeded<HomeBloc>(HomeBloc());
     _registerSingletonIfNeeded<RequestsBloc>(RequestsBloc());
     _registerSingletonIfNeeded<ApprovalBloc>(ApprovalBloc());
+    _registerSingletonIfNeeded<UaepassAuthCubit>(
+      UaepassAuthCubit(
+        authService: sl<UaepassAuthService>(),
+        config: sl<UaepassConfig>(),
+      ),
+    );
     
     // These depend on repositories, so check if they exist
     if (!sl.isRegistered<NotesBloc>()) {

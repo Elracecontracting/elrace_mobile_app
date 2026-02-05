@@ -6,6 +6,7 @@ import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.d
 import 'package:el_race/ui/presentation/Email%20Approval/screens/hr_details_screen.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/screens/pettycash_details_screen.dart';
 import 'package:el_race/utils/safe_insets.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -96,7 +97,13 @@ class HrAndPettycashCard extends StatelessWidget {
                           color: Colors.white.withOpacity(0.9), width: 2),
                     ),
                     child: ClipOval(
-                      child: _buildEmployeeImage(item["image_emp"], 50.w),
+                      child: _buildEmployeeImage(
+                        item["requester_image"] ?? 
+                        item["employee_image"] ?? 
+                        item["emp_image"] ?? 
+                        item["image_emp"], 
+                        50.w
+                      ),
                     ),
                   ),
                   SizedBox(width: 12.w),
@@ -239,7 +246,13 @@ class HrAndPettycashCard extends StatelessWidget {
                           color: Colors.white.withOpacity(0.95), width: 2),
                     ),
                     child: ClipOval(
-                      child: _buildEmployeeImage(item["image_emp"], 54.w),
+                      child: _buildEmployeeImage(
+                        item["requester_image"] ?? 
+                        item["employee_image"] ?? 
+                        item["emp_image"] ?? 
+                        item["image_emp"], 
+                        54.w
+                      ),
                     ),
                   ),
                   SizedBox(width: 12.w),
@@ -412,9 +425,16 @@ class HrAndPettycashCard extends StatelessWidget {
         separatorBuilder: (context, index) => const SizedBox(height: 1),
         itemBuilder: (context, index) {
           final item = approvalItems[index];
+          String category = item["category"] ?? item["type"] ?? "";
           String type = item["type"] ?? "";
           String id = item["id"]?.toString() ?? "";
-          final isHr = type.toString().toUpperCase() == 'HR';
+          final isHr = category.toString().toUpperCase() == 'HR';
+
+          // Debug: Print all available fields for HR items
+          if (kDebugMode && isHr && index == 0) {
+            print('🔍 HR Item Fields: ${item.keys.toList()}');
+            print('📋 HR Item Data: $item');
+          }
 
           // Use _getSafeString to handle false/true values properly
           String employeeName = _getSafeString(
@@ -426,7 +446,11 @@ class HrAndPettycashCard extends StatelessWidget {
           String empCode = _getSafeString(
               item["emp_code"] ??
                   item["employee_code"] ??
+                  item["requester_code"] ??
                   item["emp_id"]?.toString() ??
+                  item["employee_id"]?.toString() ??
+                  item["requester_id"]?.toString() ??
+                  item["requester_emp_id"]?.toString() ??
                   item["code"],
               "");
 
@@ -446,12 +470,15 @@ class HrAndPettycashCard extends StatelessWidget {
               "0");
 
           String requestType = _getSafeString(
-              item["request_type_name"] ??
+              item["type"] ??
                   item["request_type"] ??
+                  item["holiday_status_name"] ??
+                  item["request_type_name"] ??
+                  item["holiday_status_id"] ??
+                  item["leave_type"] ??
                   item["subject"] ??
-                  item["title"] ??
-                  item["type"],
-              "N/A");
+                  item["title"],
+              "HR Request");
 
             String date = _getSafeString(
               item["date"] ??
@@ -463,29 +490,29 @@ class HrAndPettycashCard extends StatelessWidget {
           return GestureDetector(
             onTap: () async {
               // Mark item as viewed
-              print('🔵 Marking as viewed - Type: $type, ID: $id');
+              print('🔵 Marking as viewed - Category: $category, ID: $id');
               await ApprovalViewedService.markAsViewed(
-                type,
+                category,
                 id,
               );
 
               if (context.mounted) {
-                final upperType = type.toString().toUpperCase();
-                final result = upperType == 'HR'
+                final upperCategory = category.toString().toUpperCase();
+                final result = upperCategory == 'HR'
                     ? await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => HrDetailsScreen(
                             requestId: id,
-                            type: type,
+                            type: category,
                           ),
                         ),
                       )
-                    : upperType == 'PETTY CASH'
+                    : upperCategory == 'PETTY CASH'
                         ? await Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => PettyCashDetailsScreen(
                                 requestId: id,
-                                type: type,
+                                type: category,
                               ),
                             ),
                           )
@@ -494,7 +521,7 @@ class HrAndPettycashCard extends StatelessWidget {
                             builder: (BuildContext context) {
                               return ApprovalConfirmationScreen(
                                 requestId: id,
-                                type: type,
+                                type: category,
                               );
                             },
                           );

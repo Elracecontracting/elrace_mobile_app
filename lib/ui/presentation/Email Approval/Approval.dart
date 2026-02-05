@@ -120,7 +120,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       "Authorization": "Bearer $token",
     };
 
-    final url = Uri.parse("https://test.elrace.com/api/my_approvals_grouped");
+    final url = Uri.parse("https://erp.elrace.com/api/my_approvals_grouped");
 
     final body = jsonEncode({
       "jsonrpc": "2.0",
@@ -135,6 +135,31 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
+
+    // Detailed HR list logging
+    if (kDebugMode && groupType == 'hr') {
+      debugPrint('=========== HR LIST API RESPONSE START ===========');
+      debugPrint('URL: ${request.url}');
+      debugPrint('Group Type: $groupType');
+      debugPrint('Status: ${response.statusCode}');
+      try {
+        final decoded = jsonDecode(response.body);
+        final hrRequests = decoded['result']?['data']?['human_resources'];
+        debugPrint('HR count from API: ${hrRequests?.length ?? 0}');
+        debugPrint('HR IDs: ${hrRequests?.map((e) => e['id']).toList()}');
+        const encoder = JsonEncoder.withIndent('  ');
+        final pretty = encoder.convert(decoded);
+        // Print in chunks to avoid truncation
+        const chunkSize = 900;
+        for (var i = 0; i < pretty.length; i += chunkSize) {
+          final end = i + chunkSize > pretty.length ? pretty.length : i + chunkSize;
+          debugPrint(pretty.substring(i, end));
+        }
+      } catch (_) {
+        debugPrint(response.body);
+      }
+      debugPrint('=========== HR LIST API RESPONSE END ===========');
+    }
 
     // Detailed invoice list logging
     if (kDebugMode && groupType == 'invoice') {
@@ -204,13 +229,13 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         _safeFetch("petty_cash"),
       ]);
 
-      // Add type info to each item
-      hrItems = results[0].map((item) => {...item, 'type': 'HR'}).toList();
-      rfqItems = results[1].map((item) => {...item, 'type': 'RFQ'}).toList();
+      // Add category info to each item (preserve original 'type' field from API)
+      hrItems = results[0].map((item) => {...item, 'category': 'HR'}).toList();
+      rfqItems = results[1].map((item) => {...item, 'category': 'RFQ'}).toList();
       invoiceItems =
-          results[2].map((item) => {...item, 'type': 'INVOICE'}).toList();
+          results[2].map((item) => {...item, 'category': 'INVOICE'}).toList();
       pettyCashItems =
-          results[3].map((item) => {...item, 'type': 'PETTY CASH'}).toList();
+          results[3].map((item) => {...item, 'category': 'PETTY CASH'}).toList();
 
       allItems = [...hrItems, ...rfqItems, ...invoiceItems, ...pettyCashItems];
 

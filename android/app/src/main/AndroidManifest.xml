@@ -72,6 +72,20 @@
   <category android:name="android.intent.category.BROWSABLE" />
   <data android:scheme="elrace" android:host="callback" />
 </intent-filter>
+
+            <!-- UAE PASS Deep Link Configuration -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="elrace" android:host="uaepass" android:pathPrefix="/success" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="elrace" android:host="uaepass" android:pathPrefix="/error" />
+            </intent-filter>
             
             <!-- QR Code Deep Link Configuration -->
             <intent-filter android:autoVerify="true">

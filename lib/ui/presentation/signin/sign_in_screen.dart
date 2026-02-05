@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:developer';
 
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/auth/uaepass_auth_cubit.dart';
+import 'package:el_race/ui/auth/auth_loading_screen.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -92,6 +94,8 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final uaepassCubit = context.read<UaepassAuthCubit>();
+    final uaepassConfig = uaepassCubit.config;
     return BlocConsumer<SignInBloc, SignInState>(
       listener: (context, state) async {
         log('Listener state: $state');
@@ -291,6 +295,32 @@ class _SignInScreenState extends State<SignInScreen> {
                             deviceId: '776655',
                           ));
                         }),
+                        const SizedBox(height: 16),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => const AuthLoadingScreen(),
+                              ),
+                            );
+                            uaepassCubit.startLogin();
+                          },
+                          child: Image.asset(
+                            uaepassConfig.buttonAssetPath,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, _, __) => Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.black12),
+                              ),
+                              child: const Text('Sign in with UAE PASS'),
+                            ),
+                          ),
+                        ),
                         const SizedBox(
                           height: 7,
                         ),
