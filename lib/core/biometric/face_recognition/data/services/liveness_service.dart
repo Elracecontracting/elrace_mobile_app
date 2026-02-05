@@ -1010,17 +1010,17 @@ extension LivenessChallengeExtension on LivenessChallenge {
     switch (this) {
       case LivenessChallenge.blinkEyes:
       case LivenessChallenge.blinkTwice:
-        return IconData(0xe3fc, fontFamily: 'MaterialIcons'); // visibility
+        return const IconData(0xe3fc, fontFamily: 'MaterialIcons'); // visibility
       case LivenessChallenge.turnHeadLeft:
-        return IconData(0xe5c4, fontFamily: 'MaterialIcons'); // arrow_back
+        return const IconData(0xe5c4, fontFamily: 'MaterialIcons'); // arrow_back
       case LivenessChallenge.turnHeadRight:
-        return IconData(0xe5c8, fontFamily: 'MaterialIcons'); // arrow_forward
+        return const IconData(0xe5c8, fontFamily: 'MaterialIcons'); // arrow_forward
       case LivenessChallenge.lookUp:
-        return IconData(0xe5d8, fontFamily: 'MaterialIcons'); // arrow_upward
+        return const IconData(0xe5d8, fontFamily: 'MaterialIcons'); // arrow_upward
       case LivenessChallenge.lookDown:
-        return IconData(0xe5db, fontFamily: 'MaterialIcons'); // arrow_downward
+        return const IconData(0xe5db, fontFamily: 'MaterialIcons'); // arrow_downward
       case LivenessChallenge.rapidEyeMovement:
-        return IconData(0xe5d2, fontFamily: 'MaterialIcons'); // swap_horiz
+        return const IconData(0xe5d2, fontFamily: 'MaterialIcons'); // swap_horiz
     }
   }
 

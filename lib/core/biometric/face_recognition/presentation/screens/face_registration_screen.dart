@@ -1017,8 +1017,8 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
               color: AppColors.primaryColor.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              IconData(_currentChallengeIcon, fontFamily: 'MaterialIcons'),
+            child: const Icon(
+              IconData(0xe3fc, fontFamily: 'MaterialIcons'),
               color: AppColors.primaryColor,
               size: 28,
             ),
