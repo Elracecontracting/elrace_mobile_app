@@ -328,52 +328,98 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
         }
       }
 
-      // Draw date and time text with shadow (smaller readable size)
-      final int fontSize = (baseImage.width * 0.045).toInt();
+      // Draw date, time, and location text with shadow (all same font, aligned)
+      final font = img.arial24;
       final shadowOffset = 1;
 
-      // Calculate proper date width
-      final dateTextWidth = _currentDate.length * (fontSize * 0.6).toInt();
+      // Measure actual text widths using font metrics
+      int measureWidth(img.BitmapFont f, String text) {
+        int w = 0;
+        for (var ch in text.codeUnits) {
+          if (f.characters.containsKey(ch)) {
+            w += f.characters[ch]!.xAdvance;
+          }
+        }
+        return w;
+      }
 
-      // Draw shadow for time (left)
+      final timeTextWidth = measureWidth(font, _currentTime);
+      final dateTextWidth = measureWidth(font, _currentDate);
+      final locationTextWidth = _currentLocation.isNotEmpty
+          ? measureWidth(font, _currentLocation)
+          : 0;
+
+      // Find widest to align all from the same left edge
+      int maxWidth = timeTextWidth;
+      if (dateTextWidth > maxWidth) maxWidth = dateTextWidth;
+      if (locationTextWidth > maxWidth) maxWidth = locationTextWidth;
+
+      final int rightEdge = baseImage.width - padding;
+      final int lineHeight = font.lineHeight + 6;
+      final int totalLines = _currentLocation.isNotEmpty ? 3 : 2;
+      int currentY = baseImage.height - padding - (lineHeight * totalLines);
+
+      // Draw time (right-aligned)
+      final int timeX = rightEdge - timeTextWidth;
       img.drawString(
         baseImage,
         _currentTime,
-        font: img.arial24,
-        x: padding + shadowOffset,
-        y: baseImage.height - padding - fontSize - 10 + shadowOffset,
+        font: font,
+        x: timeX + shadowOffset,
+        y: currentY + shadowOffset,
         color: img.ColorRgb8(50, 50, 50),
       );
-
-      // Draw time on the left
       img.drawString(
         baseImage,
         _currentTime,
-        font: img.arial24,
-        x: padding,
-        y: baseImage.height - padding - fontSize - 10,
+        font: font,
+        x: timeX,
+        y: currentY,
         color: img.ColorRgb8(255, 255, 255),
       );
 
-      // Draw shadow for date (right)
+      currentY += lineHeight;
+
+      // Draw date (right-aligned)
+      final int dateX = rightEdge - dateTextWidth;
       img.drawString(
         baseImage,
         _currentDate,
-        font: img.arial24,
-        x: baseImage.width - padding - dateTextWidth + shadowOffset,
-        y: baseImage.height - padding - fontSize - 10 + shadowOffset,
+        font: font,
+        x: dateX + shadowOffset,
+        y: currentY + shadowOffset,
         color: img.ColorRgb8(50, 50, 50),
       );
-
-      // Draw date on the right
       img.drawString(
         baseImage,
         _currentDate,
-        font: img.arial24,
-        x: baseImage.width - padding - dateTextWidth,
-        y: baseImage.height - padding - fontSize - 10,
+        font: font,
+        x: dateX,
+        y: currentY,
         color: img.ColorRgb8(255, 255, 255),
       );
+
+      // Draw location (right-aligned)
+      if (_currentLocation.isNotEmpty) {
+        currentY += lineHeight;
+        final int locationX = rightEdge - locationTextWidth;
+        img.drawString(
+          baseImage,
+          _currentLocation,
+          font: font,
+          x: locationX + shadowOffset,
+          y: currentY + shadowOffset,
+          color: img.ColorRgb8(50, 50, 50),
+        );
+        img.drawString(
+          baseImage,
+          _currentLocation,
+          font: font,
+          x: locationX,
+          y: currentY,
+          color: img.ColorRgb8(255, 255, 255),
+        );
+      }
 
       // Save the result with optimized quality
       final outputBytes = img.encodeJpg(baseImage, quality: 95);

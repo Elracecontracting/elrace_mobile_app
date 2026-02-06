@@ -4,6 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:image/image.dart' as img;
+import 'dart:io';
 
 class CameraScreen extends StatefulWidget {
   final CameraDescription camera;
@@ -20,6 +24,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
   String _currentDate = '';
   String _currentTime = '';
+  String _currentLocation = '';
 
   @override
   void initState() {
@@ -34,6 +39,7 @@ class _CameraScreenState extends State<CameraScreen> {
     _initializeControllerFuture = _controller.initialize();
 
     _updateTime();
+    _updateLocation();
   }
 
   void _updateTime() {
@@ -46,6 +52,44 @@ class _CameraScreenState extends State<CameraScreen> {
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted) _updateTime();
     });
+  }
+
+  Future<void> _updateLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        setState(() {
+          _currentLocation = '';
+        });
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        final place = placemarks.first;
+        setState(() {
+          _currentLocation = place.locality ?? place.subAdministrativeArea ?? '';
+        });
+      }
+    } catch (e) {
+      print('Error getting location: $e');
+      setState(() {
+        _currentLocation = '';
+      });
+    }
   }
 
   @override
@@ -61,11 +105,121 @@ class _CameraScreenState extends State<CameraScreen> {
 
       if (!mounted) return;
 
+      // Add overlay to image
+      final composedPath = await _composeWithOverlay(file.path);
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Saved: ${file.path}")),
+        SnackBar(content: Text("Saved: ${composedPath ?? file.path}")),
       );
     } catch (e) {
       print("Camera error: $e");
+    }
+  }
+
+  Future<String?> _composeWithOverlay(String imagePath) async {
+    try {
+      print('🎨 Starting to compose overlay on image...');
+      print('⏰ Time: $_currentTime');
+      print('📅 Date: $_currentDate');
+      print('📍 Location: $_currentLocation');
+      
+      final bytes = await File(imagePath).readAsBytes();
+      img.Image? baseImage = img.decodeImage(bytes);
+      if (baseImage == null) {
+        print('❌ Failed to decode image');
+        return imagePath;
+      }
+
+      print('✅ Image decoded: ${baseImage.width}x${baseImage.height}');
+
+      final int padding = (baseImage.width * 0.04).toInt();
+      final int fontSize = (baseImage.width * 0.045).toInt();
+      final shadowOffset = 2;
+      final lineHeight = (fontSize * 1.4).toInt();
+
+      // حساب عرض النصوص بدقة أكبر
+      final timeTextWidth = _currentTime.length * (fontSize * 0.55).toInt();
+      final dateTextWidth = _currentDate.length * (fontSize * 0.55).toInt();
+      final locationTextWidth = _currentLocation.length * (fontSize * 0.55).toInt();
+
+      // Find the longest text to use as reference for alignment
+      int maxTextWidth = timeTextWidth;
+      if (dateTextWidth > maxTextWidth) maxTextWidth = dateTextWidth;
+      if (locationTextWidth > maxTextWidth) maxTextWidth = locationTextWidth;
+
+      // Start from bottom right
+      int currentY = baseImage.height - padding - (lineHeight * (_currentLocation.isNotEmpty ? 3 : 2));
+
+      // Draw time (right-aligned to maxTextWidth)
+      final timeX = baseImage.width - padding - maxTextWidth;
+      img.drawString(
+        baseImage,
+        _currentTime,
+        font: img.arial14,
+        x: timeX + shadowOffset,
+        y: currentY + shadowOffset,
+        color: img.ColorRgb8(40, 40, 40),
+      );
+      img.drawString(
+        baseImage,
+        _currentTime,
+        font: img.arial14,
+        x: timeX,
+        y: currentY,
+        color: img.ColorRgb8(255, 255, 255),
+      );
+
+      // Draw date (right-aligned to maxTextWidth)
+      currentY += lineHeight;
+      final dateX = baseImage.width - padding - maxTextWidth;
+      img.drawString(
+        baseImage,
+        _currentDate,
+        font: img.arial14,
+        x: dateX + shadowOffset,
+        y: currentY + shadowOffset,
+        color: img.ColorRgb8(40, 40, 40),
+      );
+      img.drawString(
+        baseImage,
+        _currentDate,
+        font: img.arial14,
+        x: dateX,
+        y: currentY,
+        color: img.ColorRgb8(255, 255, 255),
+      );
+
+      // Draw location if available (right-aligned to maxTextWidth)
+      if (_currentLocation.isNotEmpty) {
+        currentY += lineHeight;
+        final locationX = baseImage.width - padding - maxTextWidth;
+        img.drawString(
+          baseImage,
+          _currentLocation,
+          font: img.arial14,
+          x: locationX + shadowOffset,
+          y: currentY + shadowOffset,
+          color: img.ColorRgb8(40, 40, 40),
+        );
+        img.drawString(
+          baseImage,
+          _currentLocation,
+          font: img.arial14,
+          x: locationX,
+          y: currentY,
+          color: img.ColorRgb8(255, 255, 255),
+        );
+      }
+
+      // Save composed image
+      final composedFile = File(imagePath);
+      composedFile.writeAsBytesSync(img.encodeJpg(baseImage, quality: 95));
+
+      print('✅ Image saved with overlay: $imagePath');
+      return composedFile.path;
+    } catch (e) {
+      print('❌ Error composing image: $e');
+      return imagePath;
     }
   }
 
@@ -164,28 +318,43 @@ class _CameraScreenState extends State<CameraScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      /// ——— DATE + TIME ———
+                      /// ——— TIME + DATE + LOCATION ———
                       Align(
                         alignment: Alignment.centerRight,
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Text(
-                              _currentDate,
-                              style: GoogleFonts.inter(
-                                fontSize: 14.sp,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
                             Text(
                               _currentTime,
                               style: GoogleFonts.inter(
-                                fontSize: 14.sp,
+                                fontSize: 15.sp,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
                               ),
                             ),
+                            SizedBox(height: 2.h),
+                            Text(
+                              _currentDate,
+                              style: GoogleFonts.inter(
+                                fontSize: 15.sp,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                            if (_currentLocation.isNotEmpty) ..[
+                              SizedBox(height: 2.h),
+                              Text(
+                                _currentLocation,
+                                style: GoogleFonts.inter(
+                                  fontSize: 15.sp,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       ),

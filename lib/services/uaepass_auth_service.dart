@@ -1,10 +1,14 @@
 import 'dart:convert';
+import 'dart:io';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:el_race/config/uaepass_config.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
+import 'package:el_race/firebase_service.dart';
 import 'package:el_race/services/api_client.dart';
 import 'package:el_race/ui/presentation/signin/data/model.dart';
+import 'package:el_race/utils/string_utils.dart';
 import 'package:el_race/utils/uaepass_logger.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -137,6 +141,18 @@ class UaepassAuthService {
         return _fetchResultByTransaction(tx);
       }
 
+      // Check for error codes in the deep link (e.g. NOT_ELIGIBLE, EXISTING_USERS_ONLY)
+      final deepLinkErrorCode = errorCode ?? errorParam;
+      if (deepLinkErrorCode != null && deepLinkErrorCode.isNotEmpty) {
+        UaepassLogger.logWarning('Error code from deep link: $deepLinkErrorCode');
+        final failureType = mapBackendErrorToFailureType(
+          errorCode: deepLinkErrorCode,
+        );
+        UaepassLogger.logError('UAEPASS LOGIN FAILED', 'Deep link error: $deepLinkErrorCode');
+        UaepassLogger.logKV('Mapped failure type', _failureTypeToString(failureType));
+        return UaepassAuthResult.failure(failureType, backendErrorCode: deepLinkErrorCode);
+      }
+
       UaepassLogger.logError('No session or tx in deeplink');
       UaepassLogger.logError('UAEPASS LOGIN FAILED', 'Missing session/tx');
       return const UaepassAuthResult.failure(AuthFailureType.generic);
@@ -231,13 +247,44 @@ class UaepassAuthService {
   Future<UaepassAuthResult> _exchangeSession(String session) async {
     UaepassLogger.logSection('API: SESSION EXCHANGE');
     try {
+      // Build device_id (same logic as regular login)
+      String deviceId = '';
+      try {
+        final deviceInfo = DeviceInfoPlugin();
+        if (Platform.isAndroid) {
+          final androidInfo = await deviceInfo.androidInfo;
+          deviceId = '${androidInfo.brand}_${androidInfo.device}_${androidInfo.id}';
+        } else if (Platform.isIOS) {
+          final iosInfo = await deviceInfo.iosInfo;
+          deviceId = '${iosInfo.name}_${iosInfo.model}_${iosInfo.utsname.machine}';
+        }
+      } catch (e) {
+        UaepassLogger.logError('Failed to get device info', e);
+      }
+
+      // Ensure FCM token is available
+      try {
+        await FirebaseService.ensureFCMToken();
+      } catch (e) {
+        UaepassLogger.logError('Failed to ensure FCM token', e);
+      }
+      final String fcmTokenValue = SharedPref().getPreferenceString(fcm_token);
+
+      final Map<String, dynamic> requestBody = {
+        'session': session,
+        if (deviceId.isNotEmpty) 'device_id': deviceId,
+        if (fcmTokenValue.isNotEmpty) 'fcm_token': fcmTokenValue,
+      };
+
       UaepassLogger.logKV('Endpoint', config.sessionExchangePath);
       UaepassLogger.logKV('Method', 'POST');
-      UaepassLogger.logKV('Request body', '{"session": "${UaepassLogger.maskSensitive(session)}"}');
+      UaepassLogger.logKV('device_id', deviceId.isNotEmpty ? deviceId : '(empty)');
+      UaepassLogger.logKV('fcm_token', fcmTokenValue.isNotEmpty ? '${fcmTokenValue.substring(0, 20)}...' : '(empty)');
+      UaepassLogger.logKV('Request body keys', requestBody.keys.join(', '));
 
       final response = await apiClient.post(
         config.sessionExchangePath,
-        data: {'session': session},
+        data: requestBody,
       );
 
       UaepassLogger.logKV('Response status', response.statusCode);
@@ -406,16 +453,35 @@ class UaepassAuthService {
     final status = uri.queryParameters['status']?.toLowerCase();
     final result = uri.queryParameters['result']?.toLowerCase();
 
-    final cancelled = error == 'access_denied' ||
+    // Only treat explicit user cancellation signals as "cancelled".
+    // Do NOT treat all error deep links as cancelled — they may carry
+    // specific error codes (NOT_ELIGIBLE, EXISTING_USERS_ONLY, etc.)
+    // that should flow through to handleCallbackOrResult for proper mapping.
+    final isExplicitCancel = error == 'access_denied' ||
         status == 'cancel' ||
         status == 'cancelled' ||
         result == 'cancel' ||
-        result == 'cancelled' ||
-        config.isErrorLink(uri);
+        result == 'cancelled';
 
-    if (cancelled) {
+    // If it's an error deep link, only treat it as cancelled when there is
+    // NO specific error code attached — i.e. a bare error link means the
+    // user dismissed UAE PASS without completing.
+    if (config.isErrorLink(uri) && !isExplicitCancel) {
+      final errorCode = uri.queryParameters['code']?.toLowerCase() ??
+          uri.queryParameters['error_code']?.toLowerCase();
+      if (errorCode != null && errorCode.isNotEmpty) {
+        // Has a specific error code → let handleCallbackOrResult map it
+        UaepassLogger.logKV('Error link with code', 'code=$errorCode — not treating as cancel');
+        return false;
+      }
+      // Bare error link with no code → treat as cancel
+      UaepassLogger.logKV('Bare error link', 'no code — treating as cancel');
+      return true;
+    }
+
+    if (isExplicitCancel) {
       UaepassLogger.logKV('Cancel detected', 'error=$error, status=$status, result=$result');
     }
-    return cancelled;
+    return isExplicitCancel;
   }
 }

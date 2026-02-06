@@ -215,86 +215,97 @@ ImageProcessingResult _processImageInIsolate(ImageProcessingParams params) {
     }
 
     // Draw time, date and location text with shadow (all right-aligned, stacked vertically)
-    final int fontSize = (baseImage.width * 0.045).toInt();
-    final int locationFontSize = (baseImage.width * 0.035).toInt();
+    // Use same font for all texts for consistent alignment
+    final font = img.arial24;
     const shadowOffset = 1;
-    final timeTextWidth = params.currentTime.length * (fontSize * 0.6).toInt();
-    final dateTextWidth = params.currentDate.length * (fontSize * 0.6).toInt();
 
-    // Calculate vertical positions - stack time, date, location from top to bottom
-    final int lineHeight = fontSize + 8;
-    int currentY;
-    
-    if (params.currentLocation.isNotEmpty) {
-      currentY = baseImage.height - padding - (lineHeight * 2) - locationFontSize - 10;
-    } else {
-      currentY = baseImage.height - padding - (lineHeight * 2);
+    // Measure actual text widths using font metrics
+    int _textWidth(img.BitmapFont f, String text) {
+      int w = 0;
+      for (var ch in text.codeUnits) {
+        if (f.characters.containsKey(ch)) {
+          w += f.characters[ch]!.xAdvance;
+        }
+      }
+      return w;
     }
 
-    // Draw shadow for time (right-aligned)
+    final timeTextWidth = _textWidth(font, params.currentTime);
+    final dateTextWidth = _textWidth(font, params.currentDate);
+    final locationTextWidth = params.currentLocation.isNotEmpty
+        ? _textWidth(font, params.currentLocation)
+        : 0;
+
+    // Find the widest text to align all from the same left edge
+    int maxWidth = timeTextWidth;
+    if (dateTextWidth > maxWidth) maxWidth = dateTextWidth;
+    if (locationTextWidth > maxWidth) maxWidth = locationTextWidth;
+
+    // Right edge reference point
+    final int rightEdge = baseImage.width - padding;
+
+    // Calculate vertical positions
+    final int lineHeight = font.lineHeight + 6;
+    final int totalLines = params.currentLocation.isNotEmpty ? 3 : 2;
+    int currentY = baseImage.height - padding - (lineHeight * totalLines);
+
+    // Draw time (right-aligned)
+    final int timeX = rightEdge - timeTextWidth;
     img.drawString(
       baseImage,
       params.currentTime,
-      font: img.arial24,
-      x: baseImage.width - padding - timeTextWidth + shadowOffset,
+      font: font,
+      x: timeX + shadowOffset,
       y: currentY + shadowOffset,
       color: img.ColorRgb8(50, 50, 50),
     );
-
-    // Draw time (right-aligned)
     img.drawString(
       baseImage,
       params.currentTime,
-      font: img.arial24,
-      x: baseImage.width - padding - timeTextWidth,
+      font: font,
+      x: timeX,
       y: currentY,
       color: img.ColorRgb8(255, 255, 255),
     );
 
     currentY += lineHeight;
 
-    // Draw shadow for date (right-aligned)
+    // Draw date (right-aligned)
+    final int dateX = rightEdge - dateTextWidth;
     img.drawString(
       baseImage,
       params.currentDate,
-      font: img.arial24,
-      x: baseImage.width - padding - dateTextWidth + shadowOffset,
+      font: font,
+      x: dateX + shadowOffset,
       y: currentY + shadowOffset,
       color: img.ColorRgb8(50, 50, 50),
     );
-
-    // Draw date (right-aligned)
     img.drawString(
       baseImage,
       params.currentDate,
-      font: img.arial24,
-      x: baseImage.width - padding - dateTextWidth,
+      font: font,
+      x: dateX,
       y: currentY,
       color: img.ColorRgb8(255, 255, 255),
     );
 
-    // Draw location below date (right-aligned)
+    // Draw location (right-aligned)
     if (params.currentLocation.isNotEmpty) {
-      // Use same width calculation as date for consistency
-      final locationTextWidth = params.currentLocation.length * (fontSize * 0.55).toInt();
       currentY += lineHeight;
-
-      // Draw shadow for location
+      final int locationX = rightEdge - locationTextWidth;
       img.drawString(
         baseImage,
         params.currentLocation,
-        font: img.arial14,
-        x: baseImage.width - padding - locationTextWidth + shadowOffset,
+        font: font,
+        x: locationX + shadowOffset,
         y: currentY + shadowOffset,
         color: img.ColorRgb8(50, 50, 50),
       );
-
-      // Draw location
       img.drawString(
         baseImage,
         params.currentLocation,
-        font: img.arial14,
-        x: baseImage.width - padding - locationTextWidth,
+        font: font,
+        x: locationX,
         y: currentY,
         color: img.ColorRgb8(255, 255, 255),
       );

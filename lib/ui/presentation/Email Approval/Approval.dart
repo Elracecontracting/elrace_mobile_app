@@ -352,9 +352,6 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
       extendBody: true,
-      bottomNavigationBar: const CustomBottomNavBar(
-        isMain: false,
-      ),
       body: Stack(
         children: [
           // Main content - starts from top and scrolls behind tabs

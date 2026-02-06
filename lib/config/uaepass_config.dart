@@ -200,7 +200,7 @@ class UaepassConfig {
       sessionExchangePath: 'uaepass/mobile/session',
       resultPollingPath: 'uaepass/result',
       useBackendRedirectDeepLink: true,
-      enablePollingFallback: false,
+      enablePollingFallback: true,
       deepLinkScheme: 'elrace',
       deepLinkHost: 'uaepass',
       deepLinkSuccessPath: '/success',

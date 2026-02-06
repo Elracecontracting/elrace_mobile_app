@@ -481,9 +481,23 @@ void _initDeepLinking(BuildContext context) {
     print('❌ Deep link stream error: $err');
   });
 
-  // DO NOT handle initial link - this causes old links to reopen on app restart
-  // Only handle NEW deep links via uriLinkStream above
-  print('ℹ️ Initial deep link check DISABLED - only NEW QR scans will work');
+  // Handle cold-start deep links (app was killed and relaunched via deep link)
+  if (!_initialDeepLinkProcessed) {
+    _initialDeepLinkProcessed = true;
+    appLinks.getInitialLink().then((uri) {
+      if (uri != null) {
+        print('🔗 Initial deep link (cold start): $uri');
+        // Small delay to ensure the widget tree is ready
+        Future.delayed(const Duration(milliseconds: 500), () {
+          _handleDeepLink(uri, context);
+        });
+      } else {
+        print('ℹ️ No initial deep link on app start');
+      }
+    }).catchError((err) {
+      print('❌ Error getting initial deep link: $err');
+    });
+  }
   print(
       '🚀 ==================== DEEP LINKING INITIALIZED ====================');
 }
