@@ -52,7 +52,7 @@ class WidgetContainer extends StatelessWidget {
                         style: GoogleFonts.inter(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
-                          color: const Color(0xFF000F42),
+                          color: const Color(0xFF484848),
                         ),
                       ),
                       /* GestureDetector(
@@ -127,8 +127,15 @@ class WidgetContainer extends StatelessWidget {
                 ),
 
                 SizedBox(height: 14.h),
-                const MyActionsSection(),
-
+              ],
+            ),
+          ),
+          const MyActionsSection(),
+          Padding(
+            padding:
+                EdgeInsets.symmetric(horizontal: SizeConfig().getWidth(20)),
+            child: Column(
+              children: [
                 SizedBox(height: 10.w),
                 const ListViewWidgets(),
 

@@ -18,13 +18,13 @@ class MyActionsSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: 20.w),
+          padding: EdgeInsets.only(left: 26.w),
           child: Text(
-            translate('home.my_actions'),
+            'ACTIONS',
             style: GoogleFonts.inter(
-              fontSize: 16.sp,
+              fontSize: 14.sp,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF000F42),
+              color: const Color(0xFF484848),
             ),
           ),
         ),
@@ -33,8 +33,9 @@ class MyActionsSection extends StatelessWidget {
           height: 100.h,
           child: ListView(
             scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: 14.w),
+            padding: EdgeInsets.zero,
             children: [
+              SizedBox(width: 20.w),
               _MyActionTile(
                 iconAsset: 'assets/newapp/newicon/hr.png',
                 label: 'HR',
@@ -124,6 +125,7 @@ class MyActionsSection extends StatelessWidget {
                   // TODO: Navigate to Timesheets screen
                 },
               ),
+              SizedBox(width: 20.w),
             ],
           ),
         ),
