@@ -39,6 +39,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   // Time display variables - updated via BlocListener
   String _checkInDisplayTime = '00:00:00';
   String _checkOutDisplayTime = '00:00:00';
+  String _totalHoursDisplay = '00:00';
 
   final double buttonWidth = 300.w;
   final double buttonHeight = 48.w; // Reduced from 56.w to 48.w for shorter bar
@@ -98,12 +99,44 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           (checkIn.isEmpty || checkIn == '--:--') ? '00:00:00' : checkIn;
       _checkOutDisplayTime =
           (checkOut.isEmpty || checkOut == '--:--') ? '00:00:00' : checkOut;
+      _calculateTotalHours();
     });
 
     print('⏰ After setState:');
     print('⏰   _checkInDisplayTime (GREEN/LEFT) = $_checkInDisplayTime');
     print('⏰   _checkOutDisplayTime (RED/RIGHT) = $_checkOutDisplayTime');
     print('⏰ ===================================\n');
+  }
+
+  /// Calculate total hours between check-in and check-out
+  void _calculateTotalHours() {
+    if (_checkInDisplayTime == '00:00:00' || _checkOutDisplayTime == '00:00:00') {
+      _totalHoursDisplay = '00:00';
+      return;
+    }
+
+    try {
+      // Parse times (format: HH:mm:ss)
+      final checkInParts = _checkInDisplayTime.split(':');
+      final checkOutParts = _checkOutDisplayTime.split(':');
+
+      if (checkInParts.length >= 2 && checkOutParts.length >= 2) {
+        final checkInMinutes = int.parse(checkInParts[0]) * 60 + int.parse(checkInParts[1]);
+        final checkOutMinutes = int.parse(checkOutParts[0]) * 60 + int.parse(checkOutParts[1]);
+
+        int totalMinutes = checkOutMinutes - checkInMinutes;
+        if (totalMinutes < 0) {
+          totalMinutes += 24 * 60; // Handle crossing midnight
+        }
+
+        final hours = totalMinutes ~/ 60;
+        final minutes = totalMinutes % 60;
+
+        _totalHoursDisplay = '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}';
+      }
+    } catch (e) {
+      _totalHoursDisplay = '00:00';
+    }
   }
 
   /// التحقق من أن الوقت الحالي ضمن فترة السماح بـ Check-in
@@ -197,6 +230,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
             dragOffset = 0;
             _checkInDisplayTime = '00:00:00';
             _checkOutDisplayTime = '00:00:00';
+            _totalHoursDisplay = '00:00';
           });
           return;
         }
@@ -448,14 +482,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                 height: buttonHeight,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(40),
-                  gradient: const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Color(0xFFFFFFFF),
-                      Color.fromARGB(255, 102, 110, 132),
-                    ],
-                  ),
+                  color: const Color(0xFFFFFFFF),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(40),
@@ -638,7 +665,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
             SizedBox(height: 24.h),
             SizedBox(
               width:
-                  buttonWidth * 0.9, // Decreased width to 70% of button width
+                  buttonWidth * 1.0, // Adjusted width for timeline
               child: Column(
                 children: [
                   // Time labels above the timeline
@@ -663,6 +690,16 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                         ),
                       ),
 
+                      // Total hours text in the middle
+                  Text(
+                          '$_totalHoursDisplay H',
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+
                       // Right time label - shows check-out time
                       Container(
                         padding: EdgeInsets.symmetric(
@@ -683,60 +720,60 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                     ],
                   ),
 
-                  SizedBox(height: 5.h),
+                  SizedBox(height: 8.h),
 
                   // Timeline with circles on the line
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 25.w),
+                    padding: EdgeInsets.symmetric(horizontal: 15.w),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Left green circle
-                        Container(
-                          width: 15.w,
-                          height: 15.w,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(0xFF78DBAD),
-                          ),
-                        ),
-
-                        Expanded(
-                          child: Container(
-                            height: 3,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                begin: Alignment.centerLeft,
-                                end: Alignment.centerRight,
-                                colors: [
-                                  Color(0xFF78DBAD),
-                                  Color(0xFF008FC7),
-                                ],
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Left green circle
+                            Container(
+                              width: 15.w,
+                              height: 15.w,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFF78DBAD),
                               ),
-                              borderRadius: BorderRadius.circular(1.5),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 2,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
                             ),
-                          ),
-                        ),
 
-                        // Right red circle
-                        Container(
-                          width: 15.w,
-                          height: 15.w,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(0xFF008FC7),
-                          ),
+                            Expanded(
+                              child: Container(
+                                height: 3,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(
+                                    begin: Alignment.centerLeft,
+                                    end: Alignment.centerRight,
+                                    colors: [
+                                      Color(0xFF78DBAD),
+                                      Color(0xFF008FC7),
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(1.5),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 2,
+                                      offset: const Offset(0, 1),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                            // Right red circle
+                            Container(
+                              width: 15.w,
+                              height: 15.w,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Color(0xFF008FC7),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
                   ),
                 ],
               ),
