@@ -440,11 +440,33 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
         ),
       ],
       child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            // Main swipe button container
-            GestureDetector(
+            // Finger animation GIF on top left (behind swipe)
+            Positioned(
+              left: -80,
+              top: -80,
+              child: Opacity(
+                opacity: 0.4,
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    bottomRight: Radius.circular(23),
+                  ),
+                  child: Image.asset(
+                    'assets/png/finger.gif',
+                    width: 150,
+                    height: 160,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Main swipe button container
+                GestureDetector(
               onHorizontalDragStart: (_) => setState(() => isDragging = true),
               onHorizontalDragUpdate: (details) {
                 setState(() {
@@ -777,6 +799,8 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                   ),
                 ],
               ),
+            ),
+              ],
             ),
           ],
         ),
