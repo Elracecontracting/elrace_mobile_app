@@ -154,6 +154,7 @@ class GrayCardComponent extends StatelessWidget {
     this.onClick,
     required this.cardTitle,
     this.backgroundImagePath,
+    this.gradient,
     required this.childWidget,
     this.upperCaseTitle = true,
     this.childAlignment = Alignment.topLeft,
@@ -166,6 +167,7 @@ class GrayCardComponent extends StatelessWidget {
   final bool topPadding;
   final String? mainIcon;
   final String? backgroundImagePath;
+  final Gradient? gradient;
   final VoidCallback? onClick;
   final String cardTitle;
   final Widget childWidget;
@@ -187,18 +189,25 @@ class GrayCardComponent extends StatelessWidget {
           color: Colors.white,
           child: InkWell(
             onTap: onClick,
-            child: backgroundImagePath != null 
-              ? Ink.image(
-                  image: AssetImage(backgroundImagePath!),
-                  fit: BoxFit.cover,
-                  child: _buildContent(),
-                )
-              : Ink(
+            child: gradient != null
+              ? Ink(
                   decoration: BoxDecoration(
-                    color: Colors.grey[200],
+                    gradient: gradient,
                   ),
                   child: _buildContent(),
-                ),
+                )
+              : backgroundImagePath != null 
+                ? Ink.image(
+                    image: AssetImage(backgroundImagePath!),
+                    fit: BoxFit.cover,
+                    child: _buildContent(),
+                  )
+                : Ink(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                    ),
+                    child: _buildContent(),
+                  ),
           ),
         ),
       ),

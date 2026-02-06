@@ -156,6 +156,61 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
     );
   }
 
+  Widget _buildEmployeeImage(String imageData) {
+    // Check if it's a base64 encoded image
+    if (imageData.startsWith('data:image') || 
+        (!imageData.startsWith('http://') && !imageData.startsWith('https://'))) {
+      try {
+        // Remove the data:image/png;base64, prefix if it exists
+        String base64String = imageData;
+        if (imageData.contains('base64,')) {
+          base64String = imageData.split('base64,')[1];
+        }
+        
+        final bytes = base64Decode(base64String);
+        return Image.memory(
+          bytes,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Icon(
+            Icons.person,
+            color: const Color(0xFF6B6B6B),
+            size: 30.w,
+          ),
+        );
+      } catch (e) {
+        print('🔴 Error decoding base64 image: $e');
+        return Icon(
+          Icons.person,
+          color: const Color(0xFF6B6B6B),
+          size: 30.w,
+        );
+      }
+    }
+    
+    // It's a URL, use Image.network
+    return Image.network(
+      imageData,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, loadingProgress) {
+        if (loadingProgress == null) return child;
+        return Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2,
+            value: loadingProgress.expectedTotalBytes != null
+                ? loadingProgress.cumulativeBytesLoaded /
+                    loadingProgress.expectedTotalBytes!
+                : null,
+          ),
+        );
+      },
+      errorBuilder: (_, __, ___) => Icon(
+        Icons.person,
+        color: const Color(0xFF6B6B6B),
+        size: 30.w,
+      ),
+    );
+  }
+
   Widget _detailRow(String label, String value) {
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 8.w),
@@ -191,10 +246,32 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
       _formData['requester_name'],
     ], fallback: 'Employee Name');
 
+    // Additional name for manager or secondary person
+    final secondaryName = _pick([
+      _formData['manager_name'],
+      _formData['parent_id'],
+      _formData['department_manager'],
+      _formData['approver_name'],
+    ]);
+
     final employeeImage = _pick([
       _formData['employee_image'],
       _formData['image_emp'],
+      _formData['emp_image'],
+      _formData['employee_img'],
+      _formData['image'],
+      _formData['avatar'],
+      _formData['photo'],
+      _formData['profile_image'],
     ]);
+
+    // Log the image URL for debugging
+    if (employeeImage.isNotEmpty) {
+      print('🟢 Employee Image URL: $employeeImage');
+    } else {
+      print('🔴 No employee image found in data');
+      print('🔴 Available keys: ${_formData.keys.toList()}');
+    }
 
     final requestDate = _pick([
       _formData['request_date'],
@@ -296,16 +373,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                                       ),
                                       child: ClipOval(
                                         child: employeeImage.isNotEmpty
-                                            ? Image.network(
-                                                employeeImage,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (_, __, ___) =>
-                                                    Icon(
-                                                  Icons.person,
-                                                  color: const Color(0xFF6B6B6B),
-                                                  size: 30.w,
-                                                ),
-                                              )
+                                            ? _buildEmployeeImage(employeeImage)
                                             : Icon(
                                                 Icons.person,
                                                 color: const Color(0xFF6B6B6B),
@@ -315,13 +383,27 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                                     ),
                                     SizedBox(width: 12.w),
                                     Expanded(
-                                      child: Text(
-                                        employeeName,
-                                        style: GoogleFonts.inter(
-                                          fontSize: 16.sp,
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white,
-                                        ),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            employeeName,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 16.sp,
+                                              fontWeight: FontWeight.w900,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                          if (secondaryName.isNotEmpty)
+                                            Text(
+                                              secondaryName,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 14.sp,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white.withOpacity(0.9),
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     ),
                                   ],

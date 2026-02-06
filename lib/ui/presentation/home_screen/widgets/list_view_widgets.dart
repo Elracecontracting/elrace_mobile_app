@@ -237,38 +237,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       titleColor: Colors.white,
       backgroundImagePath: 'assets/newapp/Lpo_background_widget.png',
       topPadding: true,
-      childWidget: Directionality(
-        textDirection: TextDirection.ltr,
-        child: SizedBox(
-          width: SizeConfig().getWidth(190),
-          height: SizeConfig().getHeight(115),
-          child: Align(
-            alignment: Alignment.bottomLeft,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  translate('home.lpo').toUpperCase(),
-                  style: GoogleFonts.inter(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(width: 16.w),
-                Text(
-                  lpoTotal,
-                  style: GoogleFonts.inter(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
+      childWidget: SizedBox(),
 
       // childWidget: Padding(
       //   padding: EdgeInsets.only(
@@ -325,8 +294,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Colors.white.withOpacity(0.26),
-                      Colors.white.withOpacity(0.08),
+                      Colors.white.withOpacity(0.45),
+                      Colors.white.withOpacity(0.25),
                     ],
                   ),
                   border: Border.all(
@@ -500,7 +469,14 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         children: [
           GrayCardComponent(
             cardTitle: translate('home.projects'),
-            backgroundImagePath: 'assets/newapp/blue_widget_background.png',
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                Color(0xFFD6D6D6),
+                Color(0xFFADB2BD),
+              ],
+            ),
             onClick: isReorderMode ? null : () => Util.pushPage(const MyProject(), context),
             childWidget: Directionality(
               textDirection: TextDirection.ltr,
@@ -522,7 +498,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                           textColor: Colors.black,
                           countColor: Colors.black,
                           count: totalProjects,
-                          containerColor: Colors.white,
+                          containerColor: Colors.transparent,
                         ),
                         SizedBox(height: 4.h),
                         CustomBulletPoint(
@@ -530,7 +506,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                           textColor: Colors.black,
                           countColor: Colors.black,
                           count: delayedProjects,
-                          containerColor: Colors.white,
+                          containerColor: Colors.transparent,
                         ),
                       ],
                     ),
@@ -548,27 +524,47 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                   children: [
                     Transform.translate(
                       offset: Offset(50.w, 40.h),
-                      child: Opacity(
-                        opacity: 0.16,
-                        child: Image.asset(
-                          'assets/newapp/Ellipse 106.png',
-                          height: 260.h,
-                          fit: BoxFit.contain,
-                          color: const Color(0xFF9ED3FF),
-                          colorBlendMode: BlendMode.srcIn,
+                      child: ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xB81B1F26), // #1B1F26 with 0.72 opacity
+                            Color(0xFF717171),
+                          ],
+                        ).createShader(bounds),
+                        child: Opacity(
+                          opacity: 0.16,
+                          child: Image.asset(
+                            'assets/newapp/Ellipse 106.png',
+                            height: 260.h,
+                            fit: BoxFit.contain,
+                            color: Colors.white,
+                            colorBlendMode: BlendMode.srcIn,
+                          ),
                         ),
                       ),
                     ),
                     Transform.translate(
                       offset: Offset(10.w, 5.h),
-                      child: Opacity(
-                        opacity: 0.16,
-                        child: Image.asset(
-                          'assets/newapp/Ellipse 105.png',
-                          height: 230.h,
-                          fit: BoxFit.contain,
-                          color: const Color(0xFF9ED3FF),
-                          colorBlendMode: BlendMode.srcIn,
+                      child: ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Color(0xB81B1F26), // #1B1F26 with 0.72 opacity
+                            Color(0xFF717171),
+                          ],
+                        ).createShader(bounds),
+                        child: Opacity(
+                          opacity: 0.16,
+                          child: Image.asset(
+                            'assets/newapp/Ellipse 105.png',
+                            height: 230.h,
+                            fit: BoxFit.contain,
+                            color: Colors.white,
+                            colorBlendMode: BlendMode.srcIn,
+                          ),
                         ),
                       ),
                     ),
@@ -596,56 +592,22 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       child: Stack(
         children: [
           GrayCardComponent(
-            cardTitle: translate('home.my_request'),
+            cardTitle: 'HR Requests',
             backgroundImagePath: 'assets/newapp/blue_widget_background.png',
             onClick: isReorderMode ? null : () => Util.pushPage(const MyRequestsPage(), context),
-            childWidget: Directionality(
-              textDirection: TextDirection.ltr,
-              child: DefaultTextStyle(
-                style: TextStyle(
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
-                ),
-                child: Padding(
-                  padding: EdgeInsets.only(top: 80.h),
-                  child: SizedBox(
-                    width: SizeConfig().getWidth(190),
-                    height: SizeConfig().getHeight(80),
-                    child: Column(
-                      children: [
-                        CustomBulletPoint(
-                          text: translate('home.total'),
-                          textColor: Colors.black,
-                          countColor: Colors.black,
-                          containerColor: Colors.white,
-                          count: totalRequests,
-                        ),
-                        CustomBulletPoint(
-                          text: translate('home.waiting'),
-                          textColor: Colors.black,
-                          countColor: Colors.black,
-                          containerColor: Colors.white,
-                          count: waitingApproval,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            childWidget: const SizedBox.shrink(),
           ),
           Positioned.fill(
             child: IgnorePointer(
               child: Align(
                 alignment: Alignment.centerRight,
                 child: Opacity(
-                  opacity: 0.16,
+                  opacity: 0.35,
                   child: Image.asset(
                     'assets/newapp/R.png',
                     height: 220.h,
                     fit: BoxFit.contain,
-                    color: const Color(0xFF9ED3FF),
+                    color: const Color(0xFF62AAE0),
                     colorBlendMode: BlendMode.srcIn,
                   ),
                 ),
