@@ -822,48 +822,26 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            // Left green circle
-                            Container(
+                            // Left circle image
+                            Image.asset(
+                              'assets/newapp/left.png',
                               width: 15.w,
                               height: 15.w,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Color(0xFF78DBAD),
-                              ),
                             ),
 
                             Expanded(
-                              child: Container(
+                              child: Image.asset(
+                                'assets/newapp/row.png',
                                 height: 3,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    begin: Alignment.centerLeft,
-                                    end: Alignment.centerRight,
-                                    colors: [
-                                      Color(0xFF78DBAD),
-                                      Color(0xFF008FC7),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(1.5),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.1),
-                                      blurRadius: 2,
-                                      offset: const Offset(0, 1),
-                                    ),
-                                  ],
-                                ),
+                                fit: BoxFit.fill,
                               ),
                             ),
 
-                            // Right red circle
-                            Container(
+                            // Right circle image
+                            Image.asset(
+                              'assets/newapp/right.png',
                               width: 15.w,
                               height: 15.w,
-                              decoration: const BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Color(0xFF008FC7),
-                              ),
                             ),
                           ],
                         ),
