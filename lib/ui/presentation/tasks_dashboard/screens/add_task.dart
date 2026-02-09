@@ -103,13 +103,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         _isLoadingDepartments = false;
         _isLoadingMembers = false;
         
-        // Set default selections
-        if (_projects.isNotEmpty) {
-          _selectedProject = _projects.first;
-        }
-        if (_departments.isNotEmpty) {
-          _selectedDepartment = _departments.first;
-        }
+        // Don't set default selections - let user choose
       });
     }
     
@@ -404,7 +398,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               // Days Section with Dates
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   // Days TextField
                   Column(
@@ -413,7 +407,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                       Text(
                         'Days',
                         style: GoogleFonts.poppins(
-                          fontSize: 17,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: Colors.black87,
                         ),
@@ -443,7 +437,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                         ),
                         decoration: const InputDecoration(
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
+                          contentPadding: EdgeInsets.only(bottom: 4),
                         ),
                         onChanged: (value) {
                           if (value.isNotEmpty) {
@@ -774,6 +768,13 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     return DropdownButtonHideUnderline(
       child: DropdownButton2<ProjectOption>(
         value: _selectedProject,
+        hint: Text(
+          'Choose a project...',
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            color: Colors.grey[400],
+          ),
+        ),
         isExpanded: true,
         items: _projects.map((ProjectOption project) {
           return DropdownMenuItem<ProjectOption>(
@@ -850,6 +851,13 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     return DropdownButtonHideUnderline(
       child: DropdownButton2<String>(
         value: _selectedDepartment,
+        hint: Text(
+          'Choose a department...',
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            color: Colors.grey[400],
+          ),
+        ),
         isExpanded: true,
         items: _departments.map((String dept) {
           return DropdownMenuItem<String>(
@@ -1456,8 +1464,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   strokeWidth: 2,
                   dashPattern: const [6, 4],
                   child: Container(
-                    width: 50,
-                    height: 50,
+                    width: 40,
+                    height: 40,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
                       color: Colors.white,

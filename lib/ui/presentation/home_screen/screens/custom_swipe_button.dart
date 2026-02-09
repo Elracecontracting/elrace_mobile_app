@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/auto_checkout_service.dart';
 import 'package:el_race/data/services/checkin_reminder_notification_service.dart';
@@ -40,6 +41,9 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   String _checkInDisplayTime = '00:00:00';
   String _checkOutDisplayTime = '00:00:00';
   String _totalHoursDisplay = '00:00';
+  
+  // Timer للعداد التصاعدي
+  Timer? _liveTimer;
 
   final double buttonWidth = 300.w;
   final double buttonHeight = 48.w; // Reduced from 56.w to 48.w for shorter bar
@@ -138,6 +142,60 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
       _totalHoursDisplay = '00:00';
     }
   }
+  
+  /// حساب الوقت التصاعدي من check-in حتى الآن
+  void _calculateLiveTotalHours() {
+    if (_checkInDisplayTime == '00:00:00') {
+      _totalHoursDisplay = '00:00';
+      return;
+    }
+
+    try {
+      // Parse check-in time (format: HH:mm:ss)
+      final checkInParts = _checkInDisplayTime.split(':');
+      if (checkInParts.length >= 2) {
+        final checkInMinutes = int.parse(checkInParts[0]) * 60 + int.parse(checkInParts[1]);
+        
+        // Get current Dubai time
+        final now = DateTime.now().toUtc().add(const Duration(hours: 4));
+        final currentMinutes = now.hour * 60 + now.minute;
+
+        int totalMinutes = currentMinutes - checkInMinutes;
+        if (totalMinutes < 0) {
+          totalMinutes += 24 * 60; // Handle crossing midnight
+        }
+
+        final hours = totalMinutes ~/ 60;
+        final minutes = totalMinutes % 60;
+
+        _totalHoursDisplay = '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}';
+      }
+    } catch (e) {
+      _totalHoursDisplay = '00:00';
+    }
+  }
+  
+  /// بدء العداد التصاعدي
+  void _startLiveTimer() {
+    _liveTimer?.cancel();
+    _liveTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted && isCheckedIn) {
+        setState(() {
+          _calculateLiveTotalHours();
+        });
+      } else {
+        timer.cancel();
+      }
+    });
+    // Update immediately
+    _calculateLiveTotalHours();
+  }
+  
+  /// إيقاف العداد التصاعدي
+  void _stopLiveTimer() {
+    _liveTimer?.cancel();
+    _liveTimer = null;
+  }
 
   /// التحقق من أن الوقت الحالي ضمن فترة السماح بـ Check-in
   /// Check-in مسموح من 5:00 AM حتى 11:59 AM بتوقيت دبي
@@ -157,6 +215,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
 
   @override
   void dispose() {
+    _liveTimer?.cancel();
     _arrowController.dispose();
     _checkmarkController.dispose();
     _bounceController.dispose();
@@ -224,6 +283,9 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           // Update notifications
           CheckInReminderNotificationService().updateReminders();
 
+          // إيقاف العداد التصاعدي
+          _stopLiveTimer();
+
           setState(() {
             isCheckedIn = false;
             _isVisualCheckedIn = false;
@@ -242,6 +304,11 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
       _isVisualCheckedIn = storedState; // Sync visual state with actual state
       dragOffset = isCheckedIn ? (buttonWidth - knobSize) : 0;
     });
+    
+    // بدء العداد إذا كان checked in
+    if (isCheckedIn && _checkOutDisplayTime == '00:00:00') {
+      _startLiveTimer();
+    }
   }
 
   void animateTo(double target, VoidCallback onComplete) {
@@ -410,6 +477,8 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
             if (state is CheckedInST || state is CheckInWarningST) {
               // Reload display times after successful check-in
               _loadDisplayTimes();
+              // بدء العداد التصاعدي
+              _startLiveTimer();
             } else if (state is CheckInBlockedST) {
               // Check-in is blocked due to time restriction (after 11:59 AM)
               _resetPosition();
@@ -435,6 +504,8 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
             if (state is CheckedOutST || state is CheckOutWarningST) {
               // Reload display times after successful check-out
               _loadDisplayTimes();
+              // إيقاف العداد التصاعدي
+              _stopLiveTimer();
             }
           },
         ),
