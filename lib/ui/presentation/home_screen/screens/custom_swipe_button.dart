@@ -817,18 +817,13 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
 
                   // Timeline with circles on the line
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 15.w),
-                    child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                    padding: EdgeInsets.symmetric(horizontal:8.w),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // The line in the middle
+                        Row(
                           children: [
-                            // Left circle image
-                            Image.asset(
-                              'assets/newapp/left.png',
-                              width: 15.w,
-                              height: 15.w,
-                            ),
-
                             Expanded(
                               child: Image.asset(
                                 'assets/newapp/row.png',
@@ -836,15 +831,30 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                                 fit: BoxFit.fill,
                               ),
                             ),
+                          ],
+                        ),
+                        // Circles on top
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Left circle image
+                            Image.asset(
+                              'assets/newapp/left.png',
+                              width: 10.w,
+                              height: 15.w,
+                            ),
 
                             // Right circle image
                             Image.asset(
                               'assets/newapp/right.png',
-                              width: 15.w,
+                              width: 10.w,
                               height: 15.w,
                             ),
                           ],
                         ),
+                      ],
+                    ),
                   ),
                 ],
               ),
