@@ -808,13 +808,14 @@ class GradientSliderState extends State<GradientSliderWidget> {
       children: [
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
-            activeTrackColor: const Color(0xFF00D179),
-            inactiveTrackColor: const Color(0xFFCDCDFF),
-            trackHeight: 20.0,
-            thumbColor: const Color(0xFF1A1A53),
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 17.0),
-            overlayColor: const Color(0x2900D179), // Translucent green overlay
+            trackHeight: 3.0,
+            thumbColor: const Color(0xFF78DBAD),
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 10.0),
+            overlayColor: const Color(0x2978DBAD),
             overlayShape: const RoundSliderOverlayShape(overlayRadius: 15.0),
+            trackShape: const GradientSliderTrackShape(),
+            activeTrackColor: Colors.transparent,
+            inactiveTrackColor: Colors.transparent,
           ),
           child: Slider(
             value: _sliderValue,
@@ -1103,6 +1104,50 @@ class _CameraWithOverlayState extends State<CameraWithOverlay> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class GradientSliderTrackShape extends RoundedRectSliderTrackShape {
+  const GradientSliderTrackShape();
+
+  @override
+  void paint(
+    PaintingContext context,
+    Offset offset, {
+    required RenderBox parentBox,
+    required SliderThemeData sliderTheme,
+    required Animation<double> enableAnimation,
+    required TextDirection textDirection,
+    required Offset thumbCenter,
+    Offset? secondaryOffset,
+    bool isDiscrete = false,
+    bool isEnabled = false,
+    double additionalActiveTrackHeight = 2.0,
+  }) {
+    final Rect trackRect = getPreferredRect(
+      parentBox: parentBox,
+      offset: offset,
+      sliderTheme: sliderTheme,
+      isEnabled: isEnabled,
+      isDiscrete: isDiscrete,
+    );
+
+    final Paint paint = Paint()
+      ..shader = const LinearGradient(
+        colors: [
+          Color(0xFF78DBAD),
+          Color(0xFF008FC7),
+        ],
+      ).createShader(trackRect)
+      ..style = PaintingStyle.fill;
+
+    context.canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        trackRect,
+        const Radius.circular(1.5),
+      ),
+      paint,
     );
   }
 }
