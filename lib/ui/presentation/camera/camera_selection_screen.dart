@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
+import 'package:cunning_document_scanner/cunning_document_scanner.dart';
 import 'package:image/image.dart' as img;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -609,7 +610,169 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
   }
 
   void _openScanner() async {
-    await _captureForScan();
+    try {
+      final pictures = await CunningDocumentScanner.getPictures(
+        noOfPages: 20,
+        isGalleryImportAllowed: true,
+      );
+
+      if (!mounted) return;
+      if (pictures == null || pictures.isEmpty) return;
+
+      // Add logo, date, time, location overlay then save to gallery
+      final List<String> processedPaths = [];
+      for (final picturePath in pictures) {
+        try {
+          await _composeWithOverlay(picturePath);
+          await Gal.putImage(picturePath, album: 'RCC');
+          processedPaths.add(picturePath);
+        } catch (e) {
+          debugPrint('Error processing scanned page: $e');
+        }
+      }
+
+      if (!mounted || processedPaths.isEmpty) return;
+
+      // Show bottom sheet with Save ✓ and Share options
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => Container(
+          padding: EdgeInsets.all(20.w),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A2E),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40.w,
+                height: 4.h,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2.r),
+                ),
+              ),
+              SizedBox(height: 16.h),
+              Icon(Icons.check_circle_rounded,
+                  color: Colors.green, size: 48.sp),
+              SizedBox(height: 12.h),
+              Text(
+                '${processedPaths.length} page(s) scanned & saved ✓',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              SizedBox(height: 20.h),
+              Row(
+                children: [
+                  // Share as Images
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        await Share.shareXFiles(
+                          processedPaths.map((p) => XFile(p)).toList(),
+                        );
+                      },
+                      icon: Icon(Icons.image_rounded, size: 20.sp),
+                      label: Text('Share Images',
+                          style: GoogleFonts.inter(fontSize: 13.sp)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white.withOpacity(0.1),
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 14.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                          side: BorderSide(
+                              color: Colors.white.withOpacity(0.15)),
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: 12.w),
+                  // Share as PDF
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        try {
+                          final pages = processedPaths
+                              .asMap()
+                              .entries
+                              .map((e) => DocumentPage(
+                                    id: 'scan-${DateTime.now().millisecondsSinceEpoch}-${e.key}',
+                                    originalImagePath: e.value,
+                                    processedImagePath: e.value,
+                                    filterType: ImageFilterType.original,
+                                    pageNumber: e.key + 1,
+                                    capturedAt: DateTime.now(),
+                                    edgeDetectionSuccessful: false,
+                                  ))
+                              .toList();
+
+                          final exportDir =
+                              await _exportService.getExportDirectory();
+                          final pdfPath =
+                              '$exportDir/scan_${DateTime.now().millisecondsSinceEpoch}.pdf';
+
+                          await _exportService.exportToPdf(
+                              pages, pdfPath, ExportQuality.high);
+
+                          await Share.shareXFiles([XFile(pdfPath)]);
+                        } catch (e) {
+                          debugPrint('PDF export error: $e');
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('PDF share failed: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      icon: Icon(Icons.picture_as_pdf_rounded, size: 20.sp),
+                      label: Text('Share PDF',
+                          style: GoogleFonts.inter(fontSize: 13.sp)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.cyan.withOpacity(0.8),
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: 14.h),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12.h),
+              // Done button
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    'Done',
+                    style: GoogleFonts.inter(
+                      color: Colors.white54,
+                      fontSize: 14.sp,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: 8.h),
+            ],
+          ),
+        ),
+      );
+    } on PlatformException catch (e) {
+      debugPrint('Document scanner error: $e');
+    }
   }
 
   @override

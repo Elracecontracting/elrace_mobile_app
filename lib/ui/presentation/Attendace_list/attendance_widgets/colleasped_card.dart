@@ -87,7 +87,7 @@ class ColleaspedCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      DateFormat('HH:mm:ss').format(checkInTime),
+                      DateFormat('hh:mm a').format(checkInTime),
                       style: GoogleFonts.inter(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w500,
@@ -114,8 +114,8 @@ class ColleaspedCard extends StatelessWidget {
                     ),
                     Text(
                       checkOutTime != null
-                          ? DateFormat('HH:mm:ss').format(checkOutTime!)
-                          : '00:00:00',
+                          ? DateFormat('hh:mm a').format(checkOutTime!)
+                          : '--:--',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         fontSize: 14.sp,
