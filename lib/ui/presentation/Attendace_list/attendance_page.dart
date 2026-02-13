@@ -330,14 +330,14 @@ class _AttendancePageState extends State<AttendancePage> {
                             color: Colors.black,
                           ),
                         ),
-                        Text(
-                          'ID: ${employee.empId}',
-                          style: GoogleFonts.inter(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                            color: const Color(0xFF757575),
-                          ),
-                        ),
+                        // Text(
+                        //   'ID: ${employee.empId}',
+                        //   style: GoogleFonts.inter(
+                        //     fontSize: 11,
+                        //     fontWeight: FontWeight.w500,
+                        //     color: const Color(0xFF757575),
+                        //   ),
+                        // ),
                       ],
                     ),
                   ),

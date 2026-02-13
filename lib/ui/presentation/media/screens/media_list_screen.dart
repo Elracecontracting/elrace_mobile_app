@@ -237,10 +237,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
           ],
         ),
         SizedBox(height: 10.h),
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12.w),
-          child: _buildFilterTabs(),
-        ),
+        _buildFilterTabs(),
         SizedBox(height: 14.h),
       ],
     );

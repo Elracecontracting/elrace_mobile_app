@@ -248,7 +248,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     // استخدام الأوقات من Aladhan API مباشرة (أدق من local calculation)
     // بس نحتفظ بـ PrayerTimes object للـ UI
     final params = CalculationMethod.egyptian.getParameters()
-      ..madhab = Madhab.hanafi;
+      ..madhab = Madhab.shafi; // تم تغييره من hanafi إلى shafi ليتطابق مع Aladhan API method=5
     final dateComponents = DateComponents.from(DateTime.now());
     _prayerTimes = PrayerTimes(coords, dateComponents, params);
 
@@ -310,7 +310,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
   void _setPrayerTimesFor(Coordinates coords) {
     final params = CalculationMethod.egyptian.getParameters()
-      ..madhab = Madhab.hanafi;
+      ..madhab = Madhab.shafi; // تم تغييره من hanafi إلى shafi ليتطابق مع Aladhan API method=5
 
     final pt = PrayerTimes.today(coords, params);
     final n = pt.nextPrayer();
@@ -383,7 +383,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
             : Coordinates(25.2048, 55.2708);
 
         final params = CalculationMethod.egyptian.getParameters()
-          ..madhab = Madhab.hanafi;
+          ..madhab = Madhab.shafi; // تم تغييره من hanafi إلى shafi ليتطابق مع Aladhan API method=5
 
         final tomorrow = now.add(const Duration(days: 1));
         final tomorrowComponents = DateComponents.from(tomorrow);

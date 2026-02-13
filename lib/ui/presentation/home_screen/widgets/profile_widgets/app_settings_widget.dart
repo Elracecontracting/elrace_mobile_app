@@ -3,6 +3,7 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/auth/uaepass_auth_cubit.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
+import 'package:el_race/ui/presentation/qr_code/qr_scanner_screen.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';

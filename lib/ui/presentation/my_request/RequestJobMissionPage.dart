@@ -84,6 +84,16 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
       _showErrorDialog('Please enter a reason.');
       return;
     }
+    
+    // Validate: Job Mission must be at least 1 day in advance (not same day)
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final selectedDateOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    
+    if (selectedDateOnly.isBefore(todayDate.add(const Duration(days: 1)))) {
+      _showErrorDialog('Job Mission must be submitted at least 1 day in advance. Cannot select today.');
+      return;
+    }
 
     if (selectedMissionType == 'Client Visit') {
       if (clientDetails.trim().isEmpty || projectDetails.trim().isEmpty) {

@@ -817,7 +817,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
 
                   // Timeline with circles on the line
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal:8.w),
+                    padding: EdgeInsets.symmetric(horizontal:25.w),
                     child: Stack(
                       alignment: Alignment.center,
                       children: [

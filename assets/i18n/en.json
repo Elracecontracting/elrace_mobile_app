@@ -114,7 +114,9 @@
   "notification": {
     "pending_approval": "Please be aware that this request will remain in pending status until it receives approval from all departments.",
     "job_mission_notice": "Please be aware that you have to take your manager's approval on the same day or your request will be canceled.",
-    "annual_leave_notice": "Please be aware that you have to submit your annual leave 20 days prior your leave start date."
+    "annual_leave_notice": "Must submit 20 days in advance. Blocked 3 days before & 4 days after official holidays.",
+    "short_leave_notice": "Max 7 days. Submit 20 days ahead. Blocked 3 days before & 4 days after official holidays.",
+    "holiday_restriction": "Cannot apply 3 days before or 4 days after official holidays."
   },
   "request_permission": {
     "tomorrow": "Tomorrow",

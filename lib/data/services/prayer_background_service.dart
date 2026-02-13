@@ -221,7 +221,7 @@ class PrayerBackgroundService {
           ? Coordinates(last.latitude, last.longitude)
           : Coordinates(25.2048, 55.2708); // fallback Dubai
       final params = CalculationMethod.egyptian.getParameters()
-        ..madhab = Madhab.hanafi;
+        ..madhab = Madhab.shafi; // تم تغييره من hanafi إلى shafi ليتطابق مع Aladhan API method=5
       final prayerTimes = PrayerTimes.today(coords, params);
 
       final now = DateTime.now();

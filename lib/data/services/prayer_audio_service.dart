@@ -143,7 +143,7 @@ class PrayerAudioService {
       // debugPrint('🔊 Volume set to 10% (starting fade-in)');
 
       // تشغيل ملف الصوت من assets
-      await _audioPlayer.play(AssetSource('mp3/azan.mp3'));
+      await _audioPlayer.play(AssetSource('mp3/athan.mp3'));
 
       // Gradually increase volume to full over ~3 seconds
       for (int i = 1; i <= 10; i++) {

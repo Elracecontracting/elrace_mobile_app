@@ -118,6 +118,7 @@ dependencies:
   workmanager: ^0.9.0
   cunning_document_scanner: ^1.4.0
   gal: ^2.3.0
+  mobile_scanner: ^5.2.3
   app_links: ^6.3.3
   syncfusion_flutter_pdfviewer: ^28.1.33
   chewie: ^1.8.5

@@ -22,6 +22,7 @@ import '../document_scanner/data/services/document_export_service.dart';
 import '../document_scanner/data/services/image_processing_service.dart';
 import '../document_scanner/domain/entities/document_page.dart';
 import '../document_scanner/domain/entities/scanned_document.dart';
+import '../qr_code/qr_scanner_screen.dart';
 
 /// Camera Selection Screen with built-in camera preview
 /// Shows SCAN and PHOTO buttons at bottom
@@ -775,6 +776,29 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
     }
   }
 
+  void _openQrScanner() async {
+    try {
+      // Navigate to QR scanner screen
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const QrScannerScreen(),
+          fullscreenDialog: true,
+        ),
+      );
+    } catch (e) {
+      debugPrint('QR scanner error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('QR scanner error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final H = MediaQuery.of(context).size.height;
@@ -1144,15 +1168,16 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                               : null,
                         ),
                       ),
-                      SizedBox(height: 4.h),
+                      SizedBox(height: 15.h),
 
-                      /// ——— SCAN / PHOTO BUTTONS ———
+                      /// ——— SCAN / PHOTO / QR BUTTONS ———
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           _glassButton("SCAN", _openScanner),
                           _glassButton(
                               "PHOTO", _isCapturing ? () {} : _takePicture),
+                          _glassButton("QR", _openQrScanner),
                         ],
                       ),
                     ],
