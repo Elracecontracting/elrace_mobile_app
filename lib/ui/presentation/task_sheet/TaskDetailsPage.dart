@@ -7,6 +7,7 @@ import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:el_race/resources/app_colors.dart';
 
 import '../../widgets/header_widget.dart';
 import 'EmployeeShiftRequestPage.dart';
@@ -74,11 +75,8 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
   }
 
   Future<void> _selectDate(BuildContext context, bool isStartDate) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: isStartDate ? selectedStartDate : selectedEndDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2101),
+    final picked = await _showStyledDatePicker(
+      isStartDate ? selectedStartDate : selectedEndDate,
     );
 
     if (picked != null) {
@@ -93,121 +91,312 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
     }
   }
 
+  Future<DateTime?> _showStyledDatePicker(DateTime initialDate) async {
+    final start = DateUtils.dateOnly(initialDate);
+    const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+
+    return showDialog<DateTime>(
+      context: context,
+      builder: (dialogContext) {
+        DateTime visibleMonth = DateTime(start.year, start.month, 1);
+        DateTime selectedDate = start;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final firstDay = DateTime(visibleMonth.year, visibleMonth.month, 1);
+            final daysInMonth = DateUtils.getDaysInMonth(visibleMonth.year, visibleMonth.month);
+            final leading = firstDay.weekday % 7;
+            final prevMonth = DateTime(visibleMonth.year, visibleMonth.month - 1, 1);
+            final daysInPrevMonth = DateUtils.getDaysInMonth(prevMonth.year, prevMonth.month);
+
+            return Dialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 22),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left, color: Colors.black, size: 22),
+                          onPressed: () {
+                            setModalState(() {
+                              visibleMonth = DateTime(visibleMonth.year, visibleMonth.month - 1, 1);
+                            });
+                          },
+                        ),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  height: 36,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(11),
+                                    border: Border.all(color: const Color(0xFFD7D7D7)),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<int>(
+                                      value: visibleMonth.month,
+                                      isExpanded: true,
+                                      items: List.generate(12, (index) {
+                                        final m = index + 1;
+                                        return DropdownMenuItem<int>(
+                                          value: m,
+                                          child: Text(months[index], style: const TextStyle(fontSize: 16)),
+                                        );
+                                      }),
+                                      onChanged: (value) {
+                                        if (value == null) return;
+                                        setModalState(() {
+                                          visibleMonth = DateTime(visibleMonth.year, value, 1);
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  height: 36,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(11),
+                                    border: Border.all(color: const Color(0xFFD7D7D7)),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<int>(
+                                      value: visibleMonth.year,
+                                      isExpanded: true,
+                                      items: List.generate(31, (index) {
+                                        final y = DateTime.now().year - 10 + index;
+                                        return DropdownMenuItem<int>(
+                                          value: y,
+                                          child: Text('$y', style: const TextStyle(fontSize: 16)),
+                                        );
+                                      }),
+                                      onChanged: (value) {
+                                        if (value == null) return;
+                                        setModalState(() {
+                                          visibleMonth = DateTime(value, visibleMonth.month, 1);
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right, color: Colors.black, size: 22),
+                          onPressed: () {
+                            setModalState(() {
+                              visibleMonth = DateTime(visibleMonth.year, visibleMonth.month + 1, 1);
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: weekDays
+                          .map(
+                            (day) => Expanded(
+                              child: Center(
+                                child: Text(
+                                  day,
+                                  style: const TextStyle(
+                                    color: Color(0xFF8E8E8E),
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 250,
+                      child: GridView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: 42,
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          mainAxisSpacing: 8,
+                          crossAxisSpacing: 8,
+                        ),
+                        itemBuilder: (context, index) {
+                          final dayNumber = index - leading + 1;
+                          final isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth;
+
+                          DateTime cellDate;
+                          if (isCurrentMonth) {
+                            cellDate = DateTime(visibleMonth.year, visibleMonth.month, dayNumber);
+                          } else if (dayNumber <= 0) {
+                            cellDate = DateTime(
+                              prevMonth.year,
+                              prevMonth.month,
+                              daysInPrevMonth + dayNumber,
+                            );
+                          } else {
+                            cellDate = DateTime(
+                              visibleMonth.year,
+                              visibleMonth.month + 1,
+                              dayNumber - daysInMonth,
+                            );
+                          }
+
+                          final selected = DateUtils.isSameDay(cellDate, selectedDate);
+
+                          return InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: isCurrentMonth
+                                ? () {
+                                    setModalState(() {
+                                      selectedDate = cellDate;
+                                    });
+                                  }
+                                : null,
+                            child: Container(
+                              decoration: selected
+                                  ? BoxDecoration(
+                                      color: const Color(0xFFBFEBD6),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: const Color(0xFF8DB6A6)),
+                                    )
+                                  : null,
+                              alignment: Alignment.center,
+                              child: Text(
+                                '${cellDate.day}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: isCurrentMonth ? Colors.black : const Color(0xFFBEBEBE),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          height: 36,
+                          width: 110,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: red,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(22),
+                              ),
+                            ),
+                            onPressed: () => Navigator.pop(dialogContext),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(color: Colors.white, fontSize: 12),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 22),
+                        SizedBox(
+                          height: 36,
+                          width: 110,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.green,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(22),
+                              ),
+                            ),
+                            onPressed: () => Navigator.pop(dialogContext, selectedDate),
+                            child: const Text(
+                              'Done',
+                              style: TextStyle(color: Colors.white, fontSize: 12),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    String startDateFormatted =
-        DateFormat('MM/dd/yyyy').format(selectedStartDate);
-    String endDateFormatted = DateFormat('MM/dd/yyyy').format(selectedEndDate);
+    final displayDate = DateFormat('dd MMM yyyy').format(selectedEndDate);
 
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          const SizedBox(height: 8),
+          Center(
+            child: Text(
+              translate('home.time_sheet'),
+              style: GoogleFonts.koulen(
+                fontSize: 30,
+                fontWeight: FontWeight.w400,
+                color: Colors.black,
+                letterSpacing: 2.0,
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: GestureDetector(
+                onTap: () => _selectDate(context, false),
+                child: _buildSingleDateChip(displayDate),
+              ),
+            ),
+          ),
           const SizedBox(height: 10),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                Text(
-                  translate('home.time_sheet'),
-                  style: GoogleFonts.koulen(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w400,
-                    color: appFontColor,
-                    letterSpacing: 1.9, // ⬅️ Adjust spacing as needed
-                  ),
-                ),
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: const BoxDecoration(
-                      color: appFontColor, shape: BoxShape.circle),
-                  child: IconButton(
-                    icon: const Icon(Icons.add, size: 20, color: Colors.white),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => EmployeeShiftRequestPage(
-                              loginResponseModel: widget.loginResponseModel,
-                              taskId: widget.taskId,
-                              project_id: widget.project_id,
-                              selectedDate: selectedStartDate),
-                        ),
-                      );
-                    },
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ),
-              ],
-            ),
+            child: _buildAddNewRequestButton(context),
           ),
-          const SizedBox(height: 20),
-
-          // Date pickers
-          Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                GestureDetector(
-                  onTap: () => _selectDate(context, true),
-                  child: _buildDateContainer(startDateFormatted),
-                ),
-                const SizedBox(width: 15),
-                Text(translate('home.to'),
-                    style: const TextStyle(
-                        fontSize: 12, fontWeight: FontWeight.w500)),
-                const SizedBox(width: 15),
-                GestureDetector(
-                  onTap: () => _selectDate(context, false),
-                  child: _buildDateContainer(endDateFormatted),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 30),
-
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Text(
-                translate('home.OVERALL_HOURS'),
-                style: GoogleFonts.koulen(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w300,
-                  color: Colors.grey,
-                  letterSpacing: 1.0,
-                ),
-              ),
-              const Row(
-                children: [
-                  Expanded(
-                    child: Divider(
-                      color: Colors.grey,
-                      thickness: 0.5,
-                      endIndent: 8,
-                    ),
-                  ),
-                  SizedBox(width: 95), // Width of the text above (roughly)
-                  Expanded(
-                    child: Divider(
-                      color: Colors.grey,
-                      thickness: 0.5,
-                      indent: 8,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+          const SizedBox(height: 8),
+          _buildOverallHoursHeader(),
 
           // Task list
           Expanded(
@@ -247,86 +436,11 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
                               ),
                             );
                           },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              image: const DecorationImage(
-                                image: AssetImage('assets/png/TIMESHEET.png'),
-                                fit: BoxFit.none,
-                              ),
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                    color: Colors.grey
-                                        .withAlpha((0.2 * 255).toInt()),
-                                    blurRadius: 6,
-                                    spreadRadius: 1)
-                              ],
-                              gradient: const LinearGradient(
-                                  colors: [Colors.white, Colors.grey],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomRight),
-                            ),
-                            child: Padding(
-                              padding: const EdgeInsets.fromLTRB(5, 16, 0, 16),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Container(
-                                    width: 50,
-                                    alignment: Alignment.center,
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(day,
-                                            style: const TextStyle(
-                                                fontSize: 16,
-                                                fontWeight: FontWeight.bold,
-                                                color: Colors.black)),
-                                        Text(weekday,
-                                            style: const TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
-                                                color: appFontColor)),
-                                      ],
-                                    ),
-                                  ),
-                                  Container(
-                                    width: 0.5,
-                                    height: 50,
-                                    color: Colors.grey,
-                                    margin: const EdgeInsets.symmetric(
-                                        horizontal: 10),
-                                  ),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.only(left: 10),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _buildStatusLabel(
-                                              "In Progress (${item['inprogress']})",
-                                              const Color(0xFFBA1719)),
-                                          _buildStatusLabel(
-                                              "Submitted (${item['submitted']})",
-                                              Colors.blue),
-                                          _buildStatusLabel(
-                                              "Approved (${item['approved']})",
-                                              const Color(0xFF00D17A)),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  const Padding(
-                                    padding: EdgeInsets.only(right: 18.0),
-                                    child: Icon(Icons.arrow_forward_ios,
-                                        size: 19, color: appFontColor),
-                                  ),
-                                ],
-                              ),
-                            ),
+                          child: _buildTimesheetStatusCard(
+                            date: date,
+                            inProgress: item['inprogress'],
+                            submitted: item['submitted'],
+                            approved: item['approved'],
                           ),
                         ),
                       );
@@ -338,37 +452,270 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
     );
   }
 
-  Widget _buildDateContainer(String text) {
+  Widget _buildSingleDateChip(String text) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 14),
       decoration: BoxDecoration(
-        color: appFontColor,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-              color: Colors.black.withAlpha((0.2 * 255).toInt()),
-              blurRadius: 6,
-              spreadRadius: 2,
-              offset: const Offset(0, 4))
+        border: Border.all(color: const Color(0xFF8D8D8D), width: 1),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF1F7F4), Color(0xFFD8EEE4)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(top: 2, left: 2.5),
+            child: Image.asset(
+              'assets/png/tscalendericon.png',
+              width: 19,
+              height: 20,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: appFontColor,
+            ),
+          ),
         ],
       ),
-      child: Text(
-        text,
-        style: GoogleFonts.inter(
-          fontSize: 10,
-          fontWeight: FontWeight.w500,
-          color: Colors.white,
+    );
+  }
+
+  Widget _buildAddNewRequestButton(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 46,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(
+          color: const Color(0xFF8D8D8D),
+          width: 1,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(26),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFFF2FBF6),
+                      Color(0xFFBFEBD6),
+                      Color(0xFFFFFFFF),
+                    ],
+                    stops: [0.0, 0.58, 1.0],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
+                ),
+              ),
+            ),
+            Positioned.fill(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EmployeeShiftRequestPage(
+                          loginResponseModel: widget.loginResponseModel,
+                          taskId: widget.taskId,
+                          project_id: widget.project_id,
+                          selectedDate: selectedEndDate,
+                        ),
+                      ),
+                    );
+                  },
+                  child: Center(
+                    child: Text(
+                      'Add a new request',
+                      style: GoogleFonts.inter(
+                        fontSize: 30 / 2,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusLabel(String text, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4.0),
-      child: Text(text,
-          style: TextStyle(
-              fontSize: 10, fontWeight: FontWeight.w600, color: color)),
+  Widget _buildOverallHoursHeader() {
+    return Row(
+      children: [
+        const Expanded(
+          child: Divider(
+            color: Color(0xFFCDCDCD),
+            thickness: 0.9,
+            indent: 0,
+            endIndent: 10,
+          ),
+        ),
+        Text(
+          translate('home.OVERALL_HOURS'),
+          style: GoogleFonts.koulen(
+            fontSize: 26 / 1.6,
+            fontWeight: FontWeight.w300,
+            color: const Color(0xFF9A9A9A),
+            letterSpacing: 1.1,
+          ),
+        ),
+        const Expanded(
+          child: Divider(
+            color: Color(0xFFCDCDCD),
+            thickness: 0.9,
+            indent: 10,
+            endIndent: 0,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTimesheetStatusCard({
+    required DateTime date,
+    required dynamic inProgress,
+    required dynamic submitted,
+    required dynamic approved,
+  }) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 134),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFF8D8D8D), width: 1),
+        image: const DecorationImage(
+          image: AssetImage('assets/newapp/tsbackground.png'),
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            Positioned(
+              right: 6,
+              top: 0,
+              bottom: 0,
+              child: Opacity(
+                opacity: 0.22,
+                child: ColorFiltered(
+                  colorFilter: const ColorFilter.mode(
+                    Colors.white,
+                    BlendMode.srcIn,
+                  ),
+                  child: Image.asset(
+                    'assets/png/tsIcon.png',
+                    width: 150,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(18, 18, 18, 14),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildStatusRow(
+                    label: 'In Progress',
+                    value: inProgress,
+                    dotColor: const Color(0xFFFF9800),
+                  ),
+                  const SizedBox(height: 4),
+                  _buildStatusRow(
+                    label: 'Submitted',
+                    value: submitted,
+                    dotColor: const Color(0xFF1F2466),
+                  ),
+                  const SizedBox(height: 4),
+                  _buildStatusRow(
+                    label: 'Approved',
+                    value: approved,
+                    dotColor: const Color(0xFF20C78C),
+                  ),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.bottomRight,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2, left: 2.5),
+                          child: Image.asset(
+                            'assets/png/tscalendericon.png',
+                            width: 19,
+                            height: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          DateFormat('dd MMM yyyy').format(date),
+                          style: GoogleFonts.inter(
+                            fontSize: 30 / 2,
+                            fontWeight: FontWeight.w500,
+                            color: appFontColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusRow({
+    required String label,
+    required dynamic value,
+    required Color dotColor,
+  }) {
+    return Row(
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(color: dotColor, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 32 / 2,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          '${value ?? 0}',
+          style: GoogleFonts.inter(
+            fontSize: 32 / 2,
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
+          ),
+        ),
+      ],
     );
   }
 }

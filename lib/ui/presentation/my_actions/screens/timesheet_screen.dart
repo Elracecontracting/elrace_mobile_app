@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_models.dart';
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_repository.dart';
@@ -24,21 +22,6 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     _future = _repo.fetchByType(MyActionsType.timesheet);
   }
 
-  Color _statusColor(String status) {
-    switch (status.trim().toLowerCase()) {
-      case 'approved':
-      case 'validated':
-        return const Color(0xFF16A34A);
-      case 'pending':
-      case 'draft':
-        return const Color(0xFFF59E0B);
-      case 'rejected':
-        return const Color(0xFFDC2626);
-      default:
-        return const Color(0xFF9AA0A6);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -46,93 +29,108 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
-        child: FutureBuilder<List<MyActionItem>>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (snapshot.hasError) {
-              return Center(
-                child: Padding(
-                  padding: EdgeInsets.all(20.w),
-                  child: Text(
-                    'Error: ${snapshot.error}',
-                    style: GoogleFonts.inter(
-                      fontSize: 14.sp,
-                      color: Colors.red,
-                    ),
-                  ),
-                ),
-              );
-            }
-
-            final items = snapshot.data ?? const <MyActionItem>[];
-
-            if (items.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.access_time,
-                      size: 80.w,
-                      color: const Color(0xFFB5B7C1),
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      'No timesheets found',
-                      style: GoogleFonts.inter(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF9AA0A6),
+        child: Column(
+          children: [
+            // Title Bar with Add Button
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Center(
+                      child: Text(
+                        'TIME SHEET',
+                        style: GoogleFonts.inter(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                          letterSpacing: 1.5,
+                        ),
                       ),
                     ),
-                  ],
-                ),
-              );
-            }
-
-            return ListView(
-              padding: EdgeInsets.only(top: 8.h, bottom: 80.h),
-              children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 10.h),
-                  child: Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.timer,
-                          size: 26.w,
-                          color: const Color(0xFF151544),
+                  ),
+                  Container(
+                    width: 36.w,
+                    height: 36.w,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF1E3A8A),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          // TODO: Add new timesheet
+                        },
+                        borderRadius: BorderRadius.circular(18.r),
+                        child: Icon(
+                          Icons.add,
+                          color: Colors.white,
+                          size: 22.w,
                         ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'Timesheet',
-                          style: GoogleFonts.inter(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF151544),
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-                ...items.map(
-                  (item) => _TimesheetCard(
-                    name: item.name,
-                    employeeName: item.employeeName,
-                    statusColor: _statusColor(item.status),
-                    employeeImage: item.employeeImage,
-                  ),
-                ),
-              ],
-            );
-          },
+                ],
+              ),
+            ),
+            
+            // List
+            Expanded(
+              child: FutureBuilder<List<MyActionItem>>(
+                future: _future,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(20.w),
+                        child: Text(
+                          'Error: ${snapshot.error}',
+                          style: GoogleFonts.inter(
+                            fontSize: 14.sp,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  final items = snapshot.data ?? const <MyActionItem>[];
+
+                  if (items.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No timesheets found',
+                        style: GoogleFonts.inter(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF9AA0A6),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+                    itemCount: items.length,
+                    itemBuilder: (context, index) {
+                      return _TimesheetCard(
+                        index: index + 1,
+                        name: items[index].employeeName,
+                        projectName: items[index].name,
+                        client: 'Abu Dhabi Police',
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -140,104 +138,155 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
 }
 
 class _TimesheetCard extends StatelessWidget {
+  final int index;
   final String name;
-  final String employeeName;
-  final Color statusColor;
-  final String employeeImage;
+  final String projectName;
+  final String client;
 
   const _TimesheetCard({
+    required this.index,
     required this.name,
-    required this.employeeName,
-    required this.statusColor,
-    required this.employeeImage,
+    required this.projectName,
+    required this.client,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.fromLTRB(16.w, 0, 16.w, 12.h),
-      padding: EdgeInsets.all(16.w),
+      margin: EdgeInsets.only(bottom: 16.h),
+      height: 100.h,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(
-          color: const Color(0xFFE9EAEE),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: const Color(0xFFE8E8E8),
+        borderRadius: BorderRadius.circular(16.r),
       ),
-      child: Row(
+      child: Stack(
         children: [
-          Container(
-            width: 48.w,
-            height: 48.w,
-            decoration: BoxDecoration(
-              color: const Color(0xFFE9EAEE),
-              shape: BoxShape.circle,
+          // Background icon
+          Positioned(
+            right: 0,
+            top: 0,
+            bottom: 0,
+            child: Opacity(
+              opacity: 0.2,
+              child: Image.asset(
+                'assets/png/tsIcon.png',
+                width: 120.w,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => const SizedBox(),
+              ),
             ),
-            alignment: Alignment.center,
-            child: employeeImage.isNotEmpty
-                ? ClipOval(
-                    child: Image.network(
-                      employeeImage,
-                      width: 48.w,
-                      height: 48.w,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Icon(
-                        Icons.person,
-                        size: 24.w,
-                        color: const Color(0xFF9AA0A6),
+          ),
+          // Content
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                // TODO: Navigate to timesheet details
+              },
+              borderRadius: BorderRadius.circular(16.r),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                child: Row(
+                  children: [
+                    // Number
+                    Container(
+                      width: 28.w,
+                      alignment: Alignment.center,
+                      child: Text(
+                        '$index',
+                        style: GoogleFonts.inter(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
                       ),
                     ),
-                  )
-                : Icon(
-                    Icons.person,
-                    size: 24.w,
-                    color: const Color(0xFF9AA0A6),
-                  ),
-          ),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  name,
-                  style: GoogleFonts.inter(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF151544),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                    SizedBox(width: 12.w),
+                    // Employee Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            name.toUpperCase(),
+                            style: GoogleFonts.inter(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                              height: 1.2,
+                              letterSpacing: 0.3,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: 6.h),
+                          RichText(
+                            text: TextSpan(
+                              style: GoogleFonts.inter(
+                                fontSize: 11.sp,
+                                height: 1.4,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: 'Project Name: ',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFFDC2626),
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: projectName,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFFDC2626),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          SizedBox(height: 2.h),
+                          RichText(
+                            text: TextSpan(
+                              style: GoogleFonts.inter(
+                                fontSize: 11.sp,
+                                height: 1.4,
+                              ),
+                              children: [
+                                TextSpan(
+                                  text: 'Client: ',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFFDC2626),
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: client,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFFDC2626),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    // Arrow
+                    Icon(
+                      Icons.chevron_right,
+                      color: Colors.black,
+                      size: 24.w,
+                    ),
+                  ],
                 ),
-                SizedBox(height: 4.h),
-                Text(
-                  employeeName,
-                  style: GoogleFonts.inter(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF9AA0A6),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          SizedBox(width: 8.w),
-          Container(
-            width: 8.w,
-            height: 8.w,
-            decoration: BoxDecoration(
-              color: statusColor,
-              shape: BoxShape.circle,
+              ),
             ),
           ),
         ],

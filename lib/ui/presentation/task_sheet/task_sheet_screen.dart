@@ -1,11 +1,11 @@
 import 'dart:convert';
 
+import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/task_sheet/TaskDetailsPage.dart';
 import 'package:el_race/ui/presentation/task_sheet/add_task_sheet.dart';
-import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_translate/flutter_translate.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 
@@ -24,6 +24,7 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
   List<dynamic> tasks = [];
   bool isLoading = true;
   String? errorMessage;
+  String? _selectedEmployee;
 
   @override
   void initState() {
@@ -117,41 +118,114 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0, vertical: 10.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                padding: EdgeInsets.fromLTRB(20.w, 14.h, 20.w, 10.h),
+                child: Column(
                   children: [
-                    const SizedBox(width: 22),
-                    Text(
-                      translate('home.time_sheet'),
-                      style: GoogleFonts.koulen(
-                        fontSize: 19,
-                        fontWeight: FontWeight.w300,
-                        letterSpacing: 1.0,
-                        color: appFontColor,
+                    Center(
+                      child: Text(
+                        'TIME SHEET',
+                        style: GoogleFonts.inter(
+                          fontSize: 17.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                          letterSpacing: 2.5,
+                        ),
                       ),
                     ),
-                    Container(
-                      width: 22,
-                      height: 22,
-                      decoration: const BoxDecoration(
-                          color: appFontColor, shape: BoxShape.circle),
-                      child: IconButton(
-                        icon: const Icon(Icons.add,
-                            size: 16, color: Colors.white),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const AddTaskSheet(),
-                            ),
-                          );
-                        },
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                    SizedBox(height: 18.h),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 40.h,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(28.r),
+                          border: Border.all(
+                            color: const Color(0xFF9AA0A6),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(28.r),
+                          child: Stack(
+                            children: [
+                              // Base gradient
+                              Positioned.fill(
+                                child: const DecoratedBox(
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Color(0xFFF2FBF6),
+                                        Color(0xFFBFEBD6),
+                                        Color(0xFFFFFFFF),
+                                      ],
+                                      stops: [0.0, 0.58, 1.0],
+                                      begin: Alignment.centerLeft,
+                                      end: Alignment.centerRight,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Soft splash highlight (no sharp edge): top-right light green -> white fade
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      gradient: RadialGradient(
+                                        center: Alignment.topRight,
+                                        radius: 1.25,
+                                        colors: [
+                                          Colors.white.withOpacity(0.92),
+                                          Colors.white.withOpacity(0.65),
+                                          Colors.white.withOpacity(0.0),
+                                        ],
+                                        stops: const [0.0, 0.42, 1.0],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Tap area + label
+                              Positioned.fill(
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => const AddTaskSheet(),
+                                        ),
+                                      );
+                                    },
+                                    child: Center(
+                                      child: Text(
+                                        'Add a new request',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 16.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
+                    SizedBox(height: 12.h),
+                    _EmployeeDropdown(
+                      value: _selectedEmployee,
+                      tasks: tasks,
+                      onChanged: (value) {
+                        setState(() {
+                          _selectedEmployee = value;
+                        });
+                      },
+                    ),
+                    SizedBox(height: 8.h),
                   ],
                 ),
               ),
@@ -173,10 +247,13 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
-                    final task = tasks[index];
+                    final filteredTasks = _filterTasks(tasks, _selectedEmployee);
+                    final task = filteredTasks[index];
                     return Padding(
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 7.0, horizontal: 14.0),
+                      padding: EdgeInsets.symmetric(
+                        vertical: 8.h,
+                        horizontal: 20.w,
+                      ),
                       child: GestureDetector(
                         onTap: () {
                           Navigator.push(
@@ -184,121 +261,310 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                             MaterialPageRoute(
                               builder: (context) => TaskDetailsPage(
                                 loginResponseModel: SharedPref.getLoginData(),
-                                taskId: tasks[index][
-                                    'id'], // <-- Make sure 'id' exists in your task map
-                                project_id: tasks[index][
-                                    'project_id'], // <-- Make sure 'id' exists in your task map
+                                taskId: tasks[index]['id'],
+                                project_id: tasks[index]['project_id'],
                               ),
                             ),
                           );
                         },
-                        child: Container(
-                          width: MediaQuery.of(context).size.width *
-                              0.9, // 90% of screen width
-                          height: 120,
-                          decoration: BoxDecoration(
-                            image: const DecorationImage(
-                              image: AssetImage('assets/png/TIMESHEET.png'),
-                              fit: BoxFit.none,
-                            ),
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                    Colors.grey.withAlpha((0.2 * 255).toInt()),
-                                blurRadius: 3,
-                                spreadRadius: 1,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                            gradient: const LinearGradient(
-                              colors: [Colors.white, Colors.grey],
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomRight,
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.fromLTRB(5, 16, 0, 16),
-                            child: Row(
-                              children: [
-                                Container(
-                                  alignment: Alignment.center,
-                                  width: 30,
-                                  child: Text(
-                                    '${index + 1}',
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: appFontColor,
-                                    ),
-                                  ),
-                                ),
-                                Container(
-                                  width: 0.5,
-                                  height: 40,
-                                  color: Colors.grey,
-                                  margin: const EdgeInsets.symmetric(
-                                      horizontal: 10),
-                                ),
-                                Expanded(
-                                  child: Center(
-                                    child: Column(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          task["name"] ?? '',
-                                          style: GoogleFonts.koulen(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w400,
-                                            color: appFontColor,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          "Project Name: ${task["project_name"] ?? ''}",
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: const Color(0xFFBA1719),
-                                          ),
-                                        ),
-                                        Text(
-                                          "Client: ${task["customer_name"] ?? ''}",
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.inter(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w600,
-                                            color: const Color(0xFFBA1719),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                                const Padding(
-                                  padding: EdgeInsets.only(right: 18.0),
-                                  child: Icon(Icons.arrow_forward_ios,
-                                      size: 19, color: appFontColor),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
+                        child: _GreenTimesheetCard(task: task),
                       ),
                     );
                   },
-                  childCount: tasks.length,
+                  childCount: _filterTasks(tasks, _selectedEmployee).length,
                 ),
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  static List<dynamic> _filterTasks(List<dynamic> allTasks, String? employee) {
+    if (employee == null || employee.trim().isEmpty) return allTasks;
+    return allTasks.where((t) {
+      final name = (t is Map ? (t['name'] ?? '') : '').toString();
+      final employeeName = (t is Map ? (t['employee_name'] ?? '') : '').toString();
+      final label = employeeName.isNotEmpty ? employeeName : name;
+      return label.trim() == employee.trim();
+    }).toList();
+  }
+}
+
+class _EmployeeDropdown extends StatelessWidget {
+  final String? value;
+  final List<dynamic> tasks;
+  final ValueChanged<String?> onChanged;
+
+  const _EmployeeDropdown({
+    required this.value,
+    required this.tasks,
+    required this.onChanged,
+  });
+
+  List<String> _employeeOptions() {
+    final set = <String>{};
+    for (final t in tasks) {
+      if (t is! Map) continue;
+      final employeeName = (t['employee_name'] ?? '').toString().trim();
+      final name = (t['name'] ?? '').toString().trim();
+      final label = employeeName.isNotEmpty ? employeeName : name;
+      if (label.isNotEmpty) set.add(label);
+    }
+    final list = set.toList()..sort();
+    return list;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final options = _employeeOptions();
+    return Container(
+      width: double.infinity,
+       height: 40.h,      padding: EdgeInsets.symmetric(horizontal: 18.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28.r),
+        border: Border.all(
+          color: const Color(0xFFBDBDBD),
+          width: 1,
+        ),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton2<String>(
+          isExpanded: true,
+          value: options.contains(value) ? value : null,
+          hint: Text(
+            'Select an Employee',
+            style: GoogleFonts.inter(
+              fontSize: 15.sp,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFFB0B0B0),
+            ),
+          ),
+          items: options
+              .map(
+                (e) => DropdownMenuItem<String>(
+                  value: e,
+                  child: Text(
+                    e,
+                    style: GoogleFonts.inter(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w400,
+                      color: Colors.black,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
+              .toList(),
+          onChanged: onChanged,
+          iconStyleData: IconStyleData(
+            icon: Icon(
+              Icons.keyboard_arrow_down,
+              color: const Color(0xFFB0B0B0),
+              size: 26.w,
+            ),
+          ),
+          buttonStyleData: ButtonStyleData(
+            height: 56.h,
+            padding: EdgeInsets.zero,
+            decoration: const BoxDecoration(color: Colors.transparent),
+          ),
+          dropdownStyleData: DropdownStyleData(
+            elevation: 2,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(
+                color: const Color(0xFFEEEEEE),
+                width: 1,
+              ),
+            ),
+          ),
+          menuItemStyleData: MenuItemStyleData(
+            height: 44.h,
+            padding: EdgeInsets.symmetric(horizontal: 12.w),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GreenTimesheetCard extends StatelessWidget {
+  final Map task;
+
+  const _GreenTimesheetCard({required this.task});
+
+  @override
+  Widget build(BuildContext context) {
+    final employeeName = (task['employee_name'] ?? task['name'] ?? '').toString();
+    final projectName = (task['project_name'] ?? '').toString();
+    final clientName = (task['customer_name'] ?? '').toString();
+    final imageUrl = (task['employee_image'] ?? task['image'] ?? '').toString();
+
+    return Container(
+      height: 120.h,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22.r),
+        border: Border.all(
+          color: const Color(0xFF8D8D8D),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+        image: const DecorationImage(
+          image: AssetImage('assets/newapp/tsbackground.png'),
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22.r),
+        child: Stack(
+          children: [
+            Positioned(
+              right: 10.w,
+              top: 0,
+              bottom: 0,
+              child: Opacity(
+                opacity: 0.28,
+                child: ColorFiltered(
+                  colorFilter: const ColorFilter.mode(
+                    Colors.white,
+                    BlendMode.srcIn,
+                  ),
+                  child: Image.asset(
+                    'assets/png/tsIcon.png',
+                    width: 150.w,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+              child: Row(
+                children: [
+                  _Avatar(imageUrl: imageUrl),
+                  SizedBox(width: 14.w),
+                  Container(
+                    width: 1,
+                    height: 52.h,
+                    color: const Color(0xFF7F7F7F),
+                  ),
+                  SizedBox(width: 14.w),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          employeeName,
+                          style: GoogleFonts.inter(
+                            fontSize: 17.sp,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                            height: 1.15,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: 8.h),
+                        _LabelValue(
+                          label: 'Project Name : ',
+                          value: projectName,
+                        ),
+                        SizedBox(height: 4.h),
+                        _LabelValue(
+                          label: 'Client : ',
+                          value: clientName,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _LabelValue extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _LabelValue({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return RichText(
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      text: TextSpan(
+        style: GoogleFonts.inter(
+          fontSize: 13.sp,
+          color: const Color(0xFF6F6F6F),
+          height: 1.2,
+        ),
+        children: [
+          TextSpan(
+            text: label,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+          TextSpan(
+            text: value,
+            style: const TextStyle(fontWeight: FontWeight.w400),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  final String imageUrl;
+
+  const _Avatar({required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    final hasNetwork = imageUrl.trim().startsWith('http');
+    return Container(
+      width: 56.w,
+      height: 56.w,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.black,
+          width: 1.2,
+        ),
+        color: Colors.white,
+      ),
+      child: ClipOval(
+        child: hasNetwork
+            ? Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.person,
+                  size: 28.w,
+                  color: const Color(0xFF9E9E9E),
+                ),
+              )
+            : Icon(
+                Icons.person,
+                size: 28.w,
+                color: const Color(0xFF9E9E9E),
+              ),
       ),
     );
   }

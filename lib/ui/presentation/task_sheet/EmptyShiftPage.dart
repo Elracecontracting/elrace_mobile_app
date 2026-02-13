@@ -79,8 +79,8 @@ class _EmptyShiftPageState extends State<EmptyShiftPage> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : timesheets.isEmpty
-          ? _buildEmptyView(formattedDate)
-          : _buildTimesheetList(formattedDate),
+              ? _buildEmptyView()
+              : _buildTimesheetList(formattedDate),
     );
   }
 
@@ -258,31 +258,97 @@ class _EmptyShiftPageState extends State<EmptyShiftPage> {
     );
   }
 
-  Widget _buildEmptyView(String formattedDate) {
+  Widget _buildEmptyView() {
     final formattedAPIDate = _formatDate(widget.selectedDate);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        
-
-        const SizedBox(height: 10),
+        const SizedBox(height: 8),
+        Center(
+          child: Text(
+            'TIME SHEET',
+            style: GoogleFonts.koulen(
+              fontSize: 34,
+              fontWeight: FontWeight.w400,
+              color: Colors.black,
+              letterSpacing: 2.0,
+            ),
+          ),
+        ),
+        const Spacer(flex: 3),
+        Center(
+          child: ColorFiltered(
+            colorFilter: const ColorFilter.mode(
+              Color(0xFFA8E2CB),
+              BlendMode.srcIn,
+            ),
+            child: Image.asset(
+              'assets/png/loading.png',
+              width: 150,
+              height: 150,
+            ),
+          ),
+        ),
+        const SizedBox(height: 42),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              IconButton(icon: const Icon(Icons.arrow_back), onPressed: () => Navigator.pop(context)),
-              Text(formattedDate.toUpperCase(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: appFontColor)),
-              Container(
-                width: 25,
-                height: 25,
-                decoration: const BoxDecoration(
-                  color: appFontColor,
-                  shape: BoxShape.circle,
+          padding: const EdgeInsets.symmetric(horizontal: 36),
+          child: Text(
+            "NO SHIFTS OR ABSENCES WERE\nRECORDED ON , $formattedAPIDate",
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.black,
+              letterSpacing: 1.3,
+              height: 1.45,
+            ),
+          ),
+        ),
+        const SizedBox(height: 34),
+        Center(
+          child: _buildEmptyAddRequestButton(),
+        ),
+        const Spacer(flex: 5),
+      ],
+    );
+  }
+
+  Widget _buildEmptyAddRequestButton() {
+    return Container(
+      width: 172,
+      height: 42,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(26),
+        border: Border.all(
+          color: const Color(0xFF8D8D8D),
+          width: 1,
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(26),
+        child: Stack(
+          children: [
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFFF2FBF6),
+                      Color(0xFFBFEBD6),
+                      Color(0xFFFFFFFF),
+                    ],
+                    stops: [0.0, 0.58, 1.0],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  ),
                 ),
-                child: IconButton(
-                  icon: const Icon(Icons.add, size: 20, color: Colors.white),
-                  onPressed: () {
+              ),
+            ),
+            Positioned.fill(
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -295,58 +361,22 @@ class _EmptyShiftPageState extends State<EmptyShiftPage> {
                       ),
                     );
                   },
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              )
-            ],
-          ),
-        ),
-        const SizedBox(height: 30),
-        Center(
-          child: Column(
-            children: [
-              Image.asset('assets/png/loading.png', width: 120, height: 120),
-              const SizedBox(height: 40),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  "NO SHIFTS OR ABSENCES WERE RECORDED ON, $formattedAPIDate",
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red,
+                  child: Center(
+                    child: Text(
+                      'Add a new request',
+                      style: GoogleFonts.inter(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black,
+                      ),
+                    ),
                   ),
                 ),
               ),
-              const SizedBox(height: 90),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: appFontColor,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => EmployeeShiftRequestPage(
-                        loginResponseModel: widget.loginResponseModel,
-                        taskId: widget.taskId,
-                        project_id: widget.project_id,
-                        selectedDate : widget.selectedDate
-                      ),
-                    ),
-                  );
-                },
-                child: const Text("Add a new request", style: TextStyle(color: Colors.white)),
-              ),
-
-            ],
-          ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 

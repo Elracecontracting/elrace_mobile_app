@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
+import 'package:el_race/resources/app_colors.dart';
 
 import '../../widgets/header_widget.dart';
 
@@ -26,7 +27,6 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
 // In your State:
   final TextEditingController _employeeSearchController =
       TextEditingController();
-  String _employeeSearchQuery = '';
   Map<String, dynamic>? _selectedEmployee;
   bool isLeaveSelected = false;
 
@@ -35,12 +35,16 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
   Duration breakDuration = const Duration(hours: 1);
 
   String getWorkingHours() {
-    if (startDateTime == null || endDateTime == null) return '0:0';
+    if (startDateTime == null || endDateTime == null) return '00:00';
 
     final total = endDateTime!.difference(startDateTime!) - breakDuration;
+    if (total.isNegative) return '00:00';
+
     final hours = total.inHours;
     final minutes = total.inMinutes % 60;
-    return "$hours:$minutes";
+    final hh = hours.toString().padLeft(2, '0');
+    final mm = minutes.toString().padLeft(2, '0');
+    return "$hh:$mm";
   }
 
   final List<String> leaveTypes = [
@@ -244,14 +248,14 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                         fontSize: 19,
                         fontWeight: FontWeight.w300,
                         letterSpacing: 1.0,
-                        color: appFontColor,
+                        color: Colors.black,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(height: 10),
 
-                // ✅ Searchable Employee Field
+                // ✅ Employee picker (dropdown-like)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Column(
@@ -262,86 +266,55 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1A53), // matches mockup color
+                          color: Colors.black,
                         ),
                       ),
                       const SizedBox(height: 10),
-                      TextField(
-                        controller: _employeeSearchController,
-                        onChanged: (value) {
-                          setState(() {
-                            _employeeSearchQuery = value;
-                          });
-                        },
+                      DropdownButtonFormField<String>(
+                        value: selectedEmployeeId,
+                        isExpanded: true,
+                        icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
                         decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.search),
-                          hintText: 'Search employee...',
+                          hintText: 'Select an Employee',
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontWeight: FontWeight.w600,
+                          ),
                           border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(25),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(25),
                             borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 12),
                         ),
+                        items: employees.map((emp) {
+                          return DropdownMenuItem<String>(
+                            value: emp['id'].toString(),
+                            child: Text(
+                              emp['name'].toString(),
+                              style: const TextStyle(fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedEmployeeId = value;
+                            _selectedEmployee = employees.firstWhere(
+                              (emp) => emp['id'].toString() == value,
+                            );
+                          });
+                        },
                       ),
                     ],
                   ),
                 ),
 
                 const SizedBox(height: 8),
-
-                if (_employeeSearchQuery.trim().isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                    child: Container(
-                      height: 200,
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: ListView.separated(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: employees
-                            .where((emp) => emp['name']
-                                .toString()
-                                .toLowerCase()
-                                .contains(_employeeSearchQuery.toLowerCase()))
-                            .length,
-                        separatorBuilder: (_, __) =>
-                            Divider(height: 1, color: Colors.grey.shade300),
-                        itemBuilder: (context, index) {
-                          final filteredEmployees = employees.where((emp) {
-                            return emp['name']
-                                .toString()
-                                .toLowerCase()
-                                .contains(_employeeSearchQuery.toLowerCase());
-                          }).toList();
-
-                          final employee = filteredEmployees[index];
-
-                          return ListTile(
-                            dense: true,
-                            title: Text(employee['name']),
-                            tileColor: _selectedEmployee == employee
-                                ? Colors.deepPurple
-                                    .withAlpha((0.1 * 255).toInt())
-                                : Colors.transparent,
-                            onTap: () {
-                              setState(() {
-                                _selectedEmployee = employee;
-                                selectedEmployeeId = employee['id'].toString();
-                                _employeeSearchQuery = '';
-                                _employeeSearchController.text =
-                                    employee['name'];
-                              });
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-
                 const SizedBox(height: 15),
 
                 // ✅ Action Buttons
@@ -355,20 +328,14 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                         onTap: () => setState(() => isLeaveSelected = false),
                         child: _buildActionButton(
                           "Add shift",
-                          backgroundColor:
-                              isLeaveSelected ? Colors.white : appFontColor,
-                          textColor:
-                              isLeaveSelected ? Colors.black : Colors.white,
+                          isSelected: !isLeaveSelected,
                         ),
                       ),
                       GestureDetector(
                         onTap: () => setState(() => isLeaveSelected = true),
                         child: _buildActionButton(
                           "Add leave",
-                          backgroundColor:
-                              isLeaveSelected ? appFontColor : Colors.white,
-                          textColor:
-                              isLeaveSelected ? Colors.white : Colors.black,
+                          isSelected: isLeaveSelected,
                         ),
                       ),
                     ],
@@ -426,27 +393,9 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
 
                 const SizedBox(height: 20),
 
-                // ✅ Note Field
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: TextField(
-                    controller: noteController,
-                    minLines: 2,
-                    maxLines: 3,
-                    keyboardType: TextInputType.multiline,
-                    style: const TextStyle(fontSize: 12, color: Colors.black87),
-                    decoration: InputDecoration(
-                      hintText: "Attach a note to your request",
-                      hintStyle:
-                          const TextStyle(fontSize: 12, color: Colors.grey),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(color: Colors.grey),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 19),
-                    ),
-                  ),
+                  child: _buildDescriptionBox(),
                 ),
 
                 const SizedBox(height: 20),
@@ -455,9 +404,9 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                   child: Text(
                     "All requests will be sent for a manager’s approval",
                     style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: appFontColor),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black87),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -470,11 +419,11 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      _buildBottomButton("Cancel", greyText3, Colors.black, () {
+                      _buildBottomButton("Cancel", red, Colors.white, () {
                         Navigator.pop(context);
                       }),
                       _buildBottomButton(
-                          "Send for approval", appFontColor, Colors.white, () {
+                          "Send for approval", AppColors.green, Colors.white, () {
                         _showApprovalPopup(context);
                       }),
                     ],
@@ -492,18 +441,13 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       String label, DateTime? dateTime, Function(DateTime) onDateTimePicked) {
     return Column(
       children: [
-        const Divider(color: Colors.grey, height: 2, thickness: 1),
+        Divider(color: Colors.grey.shade300, height: 1, thickness: 1),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15),
           child: InkWell(
             onTap: () async {
               DateTime initialDate = dateTime ?? DateTime.now();
-              DateTime? pickedDate = await showDatePicker(
-                context: context,
-                initialDate: initialDate,
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2100),
-              );
+              DateTime? pickedDate = await _showStyledDatePicker(initialDate);
 
               if (pickedDate != null) {
                 TimeOfDay? pickedTime = await showTimePicker(
@@ -529,23 +473,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                     style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A53))),
-                Row(
-                  children: [
-                    Text(
-                      dateTime != null
-                          ? _formatDateTime(dateTime)
-                          : "-- | --:--",
-                      style: const TextStyle(
-                        color: appFontColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const Icon(Icons.keyboard_arrow_down,
-                        size: 18, color: Colors.grey),
-                  ],
-                ),
+                        color: Colors.black)),
+                _buildDateTimeValue(dateTime),
               ],
             ),
           ),
@@ -554,13 +483,307 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     );
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    String month = _getMonthShortName(dateTime.month);
-    String daySuffix = _getDaySuffix(dateTime.day);
-    String formattedDate =
-        "$month ${dateTime.day}$daySuffix ${dateTime.year % 100}";
-    String formattedTime = TimeOfDay.fromDateTime(dateTime).format(context);
-    return "$formattedDate | $formattedTime";
+  Future<DateTime?> _showStyledDatePicker(DateTime initialDate) async {
+    final start = DateUtils.dateOnly(initialDate);
+    const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+
+    return showDialog<DateTime>(
+      context: context,
+      builder: (dialogContext) {
+        DateTime visibleMonth = DateTime(start.year, start.month, 1);
+        DateTime selectedDate = start;
+
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final firstDay = DateTime(visibleMonth.year, visibleMonth.month, 1);
+            final daysInMonth = DateUtils.getDaysInMonth(visibleMonth.year, visibleMonth.month);
+            final leading = firstDay.weekday % 7;
+            final prevMonth = DateTime(visibleMonth.year, visibleMonth.month - 1, 1);
+            final daysInPrevMonth = DateUtils.getDaysInMonth(prevMonth.year, prevMonth.month);
+
+            return Dialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 22),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left, color: Colors.black, size: 22),
+                          onPressed: () {
+                            setModalState(() {
+                              visibleMonth = DateTime(visibleMonth.year, visibleMonth.month - 1, 1);
+                            });
+                          },
+                        ),
+                        Expanded(
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  height: 36,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(11),
+                                    border: Border.all(color: const Color(0xFFD7D7D7)),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<int>(
+                                      value: visibleMonth.month,
+                                      isExpanded: true,
+                                      items: List.generate(12, (index) {
+                                        final m = index + 1;
+                                        return DropdownMenuItem<int>(
+                                          value: m,
+                                          child: Text(months[index], style: const TextStyle(fontSize: 16)),
+                                        );
+                                      }),
+                                      onChanged: (value) {
+                                        if (value == null) return;
+                                        setModalState(() {
+                                          visibleMonth = DateTime(visibleMonth.year, value, 1);
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  height: 36,
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(11),
+                                    border: Border.all(color: const Color(0xFFD7D7D7)),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<int>(
+                                      value: visibleMonth.year,
+                                      isExpanded: true,
+                                      items: List.generate(31, (index) {
+                                        final y = DateTime.now().year - 10 + index;
+                                        return DropdownMenuItem<int>(
+                                          value: y,
+                                          child: Text('$y', style: const TextStyle(fontSize: 16)),
+                                        );
+                                      }),
+                                      onChanged: (value) {
+                                        if (value == null) return;
+                                        setModalState(() {
+                                          visibleMonth = DateTime(value, visibleMonth.month, 1);
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right, color: Colors.black, size: 22),
+                          onPressed: () {
+                            setModalState(() {
+                              visibleMonth = DateTime(visibleMonth.year, visibleMonth.month + 1, 1);
+                            });
+                          },
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: weekDays
+                          .map(
+                            (day) => Expanded(
+                              child: Center(
+                                child: Text(
+                                  day,
+                                  style: const TextStyle(
+                                    color: Color(0xFF8E8E8E),
+                                    fontSize: 22 / 2,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 250,
+                      child: GridView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: 42,
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 7,
+                          mainAxisSpacing: 8,
+                          crossAxisSpacing: 8,
+                        ),
+                        itemBuilder: (context, index) {
+                          final dayNumber = index - leading + 1;
+                          final isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth;
+
+                          DateTime cellDate;
+                          if (isCurrentMonth) {
+                            cellDate = DateTime(visibleMonth.year, visibleMonth.month, dayNumber);
+                          } else if (dayNumber <= 0) {
+                            cellDate = DateTime(
+                              prevMonth.year,
+                              prevMonth.month,
+                              daysInPrevMonth + dayNumber,
+                            );
+                          } else {
+                            cellDate = DateTime(
+                              visibleMonth.year,
+                              visibleMonth.month + 1,
+                              dayNumber - daysInMonth,
+                            );
+                          }
+
+                          final selected = DateUtils.isSameDay(cellDate, selectedDate);
+
+                          return InkWell(
+                            borderRadius: BorderRadius.circular(10),
+                            onTap: isCurrentMonth
+                                ? () {
+                                    setModalState(() {
+                                      selectedDate = cellDate;
+                                    });
+                                  }
+                                : null,
+                            child: Container(
+                              decoration: selected
+                                  ? BoxDecoration(
+                                      color: const Color(0xFFBFEBD6),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(color: const Color(0xFF8DB6A6)),
+                                    )
+                                  : null,
+                              alignment: Alignment.center,
+                              child: Text(
+                                '${cellDate.day}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: isCurrentMonth ? Colors.black : const Color(0xFFBEBEBE),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          height: 36,
+                          width: 110,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: red,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(22),
+                              ),
+                            ),
+                            onPressed: () => Navigator.pop(dialogContext),
+                            child: const Text(
+                              'Cancel',
+                              style: TextStyle(color: Colors.white, fontSize: 24 / 2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 22),
+                        SizedBox(
+                          height: 36,
+                          width: 110,
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.green,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(22),
+                              ),
+                            ),
+                            onPressed: () => Navigator.pop(dialogContext, selectedDate),
+                            child: const Text(
+                              'Done',
+                              style: TextStyle(color: Colors.white, fontSize: 24 / 2),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildDateTimeValue(DateTime? dateTime) {
+    final dateText = dateTime == null ? '--' : _formatDateOnly(dateTime);
+    final timeText = dateTime == null ? '--:--' : DateFormat('HH:mm').format(dateTime);
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          dateText,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Container(width: 1, height: 16, color: Colors.grey),
+        const SizedBox(width: 10),
+        Text(
+          timeText,
+          style: const TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.w700,
+            fontSize: 12,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDateOnly(DateTime dateTime) {
+    final month = _getMonthShortName(dateTime.month);
+    final daySuffix = _getDaySuffix(dateTime.day);
+    final yy = (dateTime.year % 100).toString().padLeft(2, '0');
+    return "$month ${dateTime.day}$daySuffix $yy";
   }
 
   String _getMonthShortName(int month) {
@@ -598,7 +821,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
   Widget _buildBreakRow(String label, Duration breakDuration) {
     return Column(
       children: [
-        const Divider(color: Colors.grey, height: 2, thickness: 1),
+        Divider(color: Colors.grey.shade300, height: 1, thickness: 1),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 15),
           child: Row(
@@ -608,48 +831,35 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                   style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: appFontColor)),
+                      color: Colors.black)),
               Text(
                 "${breakDuration.inHours.toString().padLeft(2, '0')}:00",
                 style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: appFontColor,
+                    color: Colors.black,
                     fontSize: 12),
               ),
             ],
           ),
         ),
-        const Divider(color: Colors.black, height: 2, thickness: 2),
       ],
     );
   }
 
   // ✅ Build Action Buttons (Add Shift / Add Leave)
-  Widget _buildActionButton(
-    String text, {
-    required Color backgroundColor,
-    required Color textColor,
-  }) {
+  Widget _buildActionButton(String text, {required bool isSelected}) {
     return Container(
       decoration: BoxDecoration(
-        color: backgroundColor,
+        color: isSelected ? greyText2 : greyText3,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha((0.2 * 255).toInt()),
-            blurRadius: 6,
-            spreadRadius: 2,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
       child: Text(
         text,
         style: TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.w500,
-          color: textColor,
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+          color: Colors.black,
         ),
       ),
     );
@@ -661,13 +871,12 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     return Container(
       decoration: highlight
           ? BoxDecoration(
-              color: const Color(0xFFD9D9D9),
+              color: const Color(0xFFE6E6E6),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withAlpha((0.4 * 255).toInt()),
-                  offset: const Offset(0, 3),
-                  blurRadius: 6,
-                  spreadRadius: 1,
+                  color: Colors.black.withAlpha((0.15 * 255).toInt()),
+                  offset: const Offset(0, 2),
+                  blurRadius: 4,
                 ),
               ],
             )
@@ -681,7 +890,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
             style: const TextStyle(
               fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: appFontColor,
+              color: Colors.black,
             ),
           ),
           Text(
@@ -689,11 +898,235 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.bold,
-              color: appFontColor,
+              color: Colors.black,
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildDescriptionBox() {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Description',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const Spacer(),
+              _buildMiniImageButton('assets/png/paragraphIcon.png', tooltip: 'Paragraph', onPressed: _insertParagraph),
+              const SizedBox(width: 6),
+              _buildMiniIconButton(Icons.format_list_numbered, tooltip: 'Numbered list', onPressed: _insertNumberedList),
+              const SizedBox(width: 6),
+              _buildMiniIconButton(Icons.format_list_bulleted, tooltip: 'Bulleted list', onPressed: _insertBulletList),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            child: TextField(
+              controller: noteController,
+              minLines: 3,
+              maxLines: 6,
+              keyboardType: TextInputType.multiline,
+              style: const TextStyle(fontSize: 12, color: Colors.black87, height: 1.3),
+              decoration: const InputDecoration(
+                isDense: true,
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _insertAtCursor(String insertion) {
+    final text = noteController.text;
+    final sel = noteController.selection;
+    final pos = sel.isValid ? sel.baseOffset : text.length;
+    final before = text.substring(0, pos);
+    final after = text.substring(pos);
+    final needsNewline = before.isNotEmpty && !before.endsWith('\n');
+    final prefix = needsNewline ? '\n$insertion' : insertion;
+    noteController.text = '$before$prefix$after';
+    final newPos = before.length + prefix.length;
+    noteController.selection = TextSelection.collapsed(offset: newPos);
+  }
+
+  void _insertParagraph() {
+    _insertAtCursor('\n');
+  }
+
+  void _insertNumberedList() {
+    final text = noteController.text;
+    // Count existing numbered lines to auto-increment
+    final lines = text.split('\n');
+    int count = 0;
+    for (final line in lines) {
+      if (RegExp(r'^\d+\.\s').hasMatch(line)) count++;
+    }
+    _insertAtCursor('${count + 1}. ');
+  }
+
+  void _insertBulletList() {
+    _insertAtCursor('• ');
+  }
+
+  Widget _buildMiniImageButton(String assetPath, {String? tooltip, VoidCallback? onPressed}) {
+    return SizedBox(
+      width: 34,
+      height: 28,
+      child: Tooltip(
+        message: tooltip ?? '',
+        child: Material(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(6),
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Image.asset(assetPath, fit: BoxFit.contain),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiniIconButton(IconData icon, {String? tooltip, VoidCallback? onPressed}) {
+    return SizedBox(
+      width: 34,
+      height: 28,
+      child: Tooltip(
+        message: tooltip ?? '',
+        child: Material(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(6),
+          child: InkWell(
+            onTap: onPressed,
+            borderRadius: BorderRadius.circular(6),
+            child: Icon(icon, size: 16, color: Colors.black87),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openEmployeePicker() async {
+    if (employees.isEmpty) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        String query = '';
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final filtered = employees.where((emp) {
+              final name = (emp['name'] ?? '').toString().toLowerCase();
+              return name.contains(query.toLowerCase());
+            }).toList();
+
+            return SafeArea(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  left: 16,
+                  right: 16,
+                  top: 12,
+                  bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      autofocus: true,
+                      onChanged: (v) => setModalState(() => query = v),
+                      decoration: InputDecoration(
+                        hintText: 'Search employee...',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 340),
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: filtered.length,
+                        separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+                        itemBuilder: (context, index) {
+                          final employee = filtered[index];
+                          final isSelected = _selectedEmployee != null && employee['id'] == _selectedEmployee!['id'];
+                          return ListTile(
+                            dense: true,
+                            title: Text(
+                              (employee['name'] ?? '').toString(),
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              ),
+                            ),
+                            trailing: isSelected ? const Icon(Icons.check, color: Colors.black) : null,
+                            onTap: () {
+                              setState(() {
+                                _selectedEmployee = employee;
+                                selectedEmployeeId = employee['id'].toString();
+                                _employeeSearchController.text = employee['name'].toString();
+                              });
+                              Navigator.pop(context);
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -727,81 +1160,107 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          backgroundColor: Colors.white,
-          child: Padding(
-            padding: const EdgeInsets.all(20),
+          insetPadding: const EdgeInsets.symmetric(horizontal: 26),
+          backgroundColor: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              gradient: const LinearGradient(
+                colors: [
+                  Color(0xFFF2FBF6),
+                  Color(0xFFBFEBD6),
+                  Color(0xFFFFFFFF),
+                ],
+                stops: [0.0, 0.62, 1.0],
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+              ),
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                const Text(
+                  "Are you sure you want to send your request",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // ✅ Send Button
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: appFontColor, // Dark blue background
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 6),
+                    Expanded(
+                      child: _buildPopupActionButton(
+                        label: 'Cancel',
+                        color: red,
+                        icon: Icons.close,
+                        onTap: () => Navigator.pop(context),
                       ),
-                      icon:
-                          const Icon(Icons.send, color: Colors.white, size: 16),
-                      label: const Text("Send",
-                          style: TextStyle(color: Colors.white)),
-                      onPressed: () async {
-                        final success = await _submitTimesheetWithFeedback();
-                        if (success) {
-                          await Future.delayed(const Duration(seconds: 1));
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const TaskSheetPage(),
-                            ),
-                            (route) => route.isFirst,
-                          );
-                        }
-                      },
                     ),
-                    const SizedBox(width: 10),
-
-                    // ✅ Cancel Button
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red, // Red background
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 6),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: _buildPopupActionButton(
+                        label: 'Send',
+                        color: AppColors.green,
+                        icon: Icons.send_outlined,
+                        onTap: () async {
+                          Navigator.pop(context);
+                          final success = await _submitTimesheetWithFeedback();
+                          if (success) {
+                            await Future.delayed(const Duration(seconds: 1));
+                            if (!mounted) return;
+                            Navigator.pushAndRemoveUntil(
+                              this.context,
+                              MaterialPageRoute(
+                                builder: (context) => const TaskSheetPage(),
+                              ),
+                              (route) => route.isFirst,
+                            );
+                          }
+                        },
                       ),
-                      icon: const Icon(Icons.close,
-                          color: Colors.white, size: 16),
-                      label: const Text("Cancel",
-                          style: TextStyle(color: Colors.white)),
-                      onPressed: () {
-                        Navigator.pop(context); // Close the popup
-                      },
                     ),
                   ],
                 ),
-                const SizedBox(height: 15),
-                // ✅ Confirmation Text
-                const Text(
-                  "Are you sure you want to send your request?",
-                  style: TextStyle(fontSize: 10, color: Colors.black),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 10),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildPopupActionButton({
+    required String label,
+    required Color color,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      height: 38,
+      child: ElevatedButton.icon(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(22),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+          elevation: 0,
+        ),
+        onPressed: onTap,
+        icon: Icon(icon, color: Colors.white, size: 14),
+        label: Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 24 / 2,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
     );
   }
 }

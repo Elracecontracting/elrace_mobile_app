@@ -1730,7 +1730,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               ),
               Row(
                 children: [
-                  _buildIconButton(Icons.format_align_left, _formatAlignLeft),
+                  _buildParagraphIconButton(_formatAlignLeft),
                   const SizedBox(width: 8),
                   _buildIconButton(Icons.format_list_bulleted, _formatBulletList),
                   const SizedBox(width: 8),
@@ -1780,6 +1780,25 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           icon,
           size: 18,
           color: Colors.grey[700],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildParagraphIconButton(VoidCallback onTap) {
+    return SizedBox(
+      width: 34,
+      height: 28,
+      child: Material(
+        color: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(6),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(6),
+          child: Padding(
+            padding: const EdgeInsets.all(4),
+            child: Image.asset('assets/png/paragraphIcon.png', fit: BoxFit.contain),
+          ),
         ),
       ),
     );
