@@ -41,25 +41,32 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildBubble(BuildContext context) {
-    final bgColor = isMe 
-        ? AppColors.primaryBlackLight 
-        : AppColors.chatReceiverColor;
-    final textColor = isMe ? AppColors.primaryColor : Colors.black87;
+    final textColor = isMe ? Colors.white : const Color(0xFF141E24);
 
     return Container(
       decoration: BoxDecoration(
-        color: bgColor,
+        color: isMe ? null : const Color(0xFFE6EAEE),
+        gradient: isMe
+            ? const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Color(0xFF1D2449),
+                  Color(0xFF2B355D),
+                ],
+              )
+            : null,
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(16),
           topRight: const Radius.circular(16),
-          bottomLeft: Radius.circular(isMe ? 16 : 4),
-          bottomRight: Radius.circular(isMe ? 4 : 16),
+          bottomLeft: Radius.circular(isMe ? 16 : 6),
+          bottomRight: Radius.circular(isMe ? 6 : 16),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 3,
-            offset: const Offset(0, 1),
+            color: Colors.black.withValues(alpha: isMe ? 0.10 : 0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -70,8 +77,8 @@ class MessageBubble extends StatelessWidget {
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(16),
           topRight: const Radius.circular(16),
-          bottomLeft: Radius.circular(isMe ? 16 : 4),
-          bottomRight: Radius.circular(isMe ? 4 : 16),
+          bottomLeft: Radius.circular(isMe ? 16 : 6),
+          bottomRight: Radius.circular(isMe ? 6 : 16),
         ),
         child: _buildContent(context, textColor),
       ),
@@ -285,7 +292,6 @@ class _AudioContentState extends State<_AudioContent> {
   final AudioPlayer _player = AudioPlayer();
   bool _isPlaying = false;
   Duration _duration = Duration.zero;
-  Duration _position = Duration.zero;
 
   @override
   void initState() {
@@ -311,14 +317,6 @@ class _AudioContentState extends State<_AudioContent> {
           });
         }
       });
-
-      _player.positionStream.listen((position) {
-        if (mounted) {
-          setState(() {
-            _position = position;
-          });
-        }
-      });
     } catch (e) {
       debugPrint('Error initializing audio player: $e');
     }
@@ -332,76 +330,61 @@ class _AudioContentState extends State<_AudioContent> {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = widget.isMe ? AppColors.primaryColor : Colors.black87;
+    final textColor = widget.isMe ? Colors.white : const Color(0xFF141E24);
 
     return Padding(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           GestureDetector(
             onTap: _togglePlay,
             child: Container(
-              width: 40,
-              height: 40,
+              width: 34,
+              height: 34,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: widget.isMe 
-                    ? AppColors.primaryColor.withValues(alpha: 0.2) 
-                    : Colors.grey[300],
+                color: widget.isMe
+                    ? Colors.white.withValues(alpha: 0.96)
+                    : const Color(0xFFD4D9DE),
               ),
               child: Icon(
                 _isPlaying ? Icons.pause : Icons.play_arrow,
-                color: textColor,
+                color: const Color(0xFF243057),
+                size: 21,
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  height: 20,
-                  child: SliderTheme(
-                    data: SliderTheme.of(context).copyWith(
-                      trackHeight: 3,
-                      thumbShape: const RoundSliderThumbShape(
-                        enabledThumbRadius: 6,
-                      ),
-                      overlayShape: const RoundSliderOverlayShape(
-                        overlayRadius: 12,
-                      ),
-                      activeTrackColor: widget.isMe ? AppColors.primaryColor : AppColors.primaryColor,
-                      inactiveTrackColor: widget.isMe 
-                          ? AppColors.primaryColor.withValues(alpha: 0.3) 
-                          : Colors.grey[400],
-                      thumbColor: widget.isMe ? AppColors.primaryColor : AppColors.primaryColor,
-                    ),
-                    child: Slider(
-                      value: _position.inMilliseconds.toDouble(),
-                      max: _duration.inMilliseconds.toDouble().clamp(1, double.infinity),
-                      onChanged: (value) {
-                        _player.seek(Duration(milliseconds: value.toInt()));
-                      },
-                    ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 200,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(17, (index) {
+                final lightBar = index >= 10;
+                final baseHeight = (index % 4) + 1;
+                return Container(
+                  width: 3,
+                  height: 6 + (baseHeight * 3),
+                  margin: const EdgeInsets.symmetric(horizontal: 2),
+                  decoration: BoxDecoration(
+                    color: lightBar
+                        ? const Color(0xFF7FE0D8)
+                        : Colors.white.withValues(alpha: 0.93),
+                    borderRadius: BorderRadius.circular(3),
                   ),
-                ),
-                Text(
-                  _formatDuration(_duration),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: textColor.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
+                );
+              }),
             ),
           ),
-          const SizedBox(width: 8),
-          Icon(
-            Icons.mic,
-            size: 20,
-            color: textColor.withValues(alpha: 0.5),
+          const SizedBox(width: 12),
+          Text(
+            _formatDuration(_duration),
+            style: TextStyle(
+              color: textColor,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),

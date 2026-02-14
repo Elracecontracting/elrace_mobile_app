@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,6 +11,8 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../chat/chat.dart';
 import '../../chat/services/chat_notification_service.dart';
 import '../../resources/app_colors.dart';
+import '../../core/utils/shared_pref.dart';
+import '../widgets/header_widget.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/chat_input_bar.dart';
 import 'widgets/typing_indicator.dart';
@@ -104,71 +107,122 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor   : AppColors.white,
-      appBar: _buildAppBar(),
-      body: Column(
-        children: [
-          Expanded(child: _buildMessageList()),
-          _buildTypingIndicator(),
-          ChatInputBar(
-            controller: _messageController,
-            isLoading: false, // Always false - optimistic UI
-            isRecording: _isRecording,
-            onSendText: _sendTextMessage,
-            onPickImage: _pickImage,
-            onPickFile: _pickFile,
-            onStartRecording: _startRecording,
-            onStopRecording: _stopRecording,
-            onCancelRecording: _cancelRecording,
-          ),
-        ],
+      backgroundColor: AppColors.primaryColor,
+      appBar: const HeaderWidget(),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            _buildGlassTopHeader(),
+            Expanded(
+              child: Container(
+                color: const Color(0xFFF2F2F2),
+                child: Stack(
+                  children: [
+                    Positioned.fill(child: _buildChatBackgroundPattern()),
+                    _buildMessageList(),
+                  ],
+                ),
+              ),
+            ),
+            _buildTypingIndicator(),
+            ChatInputBar(
+              controller: _messageController,
+              isLoading: false,
+              isRecording: _isRecording,
+              onSendText: _sendTextMessage,
+              onPickImage: _pickImage,
+              onPickFile: _pickFile,
+              onStartRecording: _startRecording,
+              onStopRecording: _stopRecording,
+              onCancelRecording: _cancelRecording,
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: AppColors.white,
-      elevation: 0.9,
-      scrolledUnderElevation: 0.6,
-      shadowColor: Colors.black.withValues(alpha: 0.06),
-      surfaceTintColor: Colors.transparent,
-      titleSpacing: 0,
-      title: Row(
-        children: [
-          _buildAvatar(),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.title,
-                  style: const TextStyle(fontSize: 16),
+  Widget _buildGlassTopHeader() {
+    return Column(
+      children: [
+        ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
+            child: Container(
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.08),
+                border: Border(
+                  bottom: BorderSide(
+                    color: Colors.white.withValues(alpha: 0.10),
+                    width: 0.8,
+                  ),
                 ),
-                if (widget.chatType == ChatType.dm && widget.peerUid != null)
-                  _buildPresenceStatus(),
-              ],
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        PopupMenuButton<String>(
-          onSelected: _onMenuAction,
-          color: Colors.white,
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 'mute',
-              child: Row(
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(_isMuted ? Icons.volume_up : Icons.volume_off),
-                  const SizedBox(width: 8),
-                  Text(_isMuted ? 'Unmute' : 'Mute'),
+                  Icon(Icons.chat_bubble_outline, color: Colors.white, size: 22),
+                  SizedBox(width: 6),
+                  Text(
+                    'Private Chat',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ),
             ),
-          ],
+          ),
+        ),
+        Container(
+          color: AppColors.primaryColor,
+          padding: const EdgeInsets.fromLTRB(14, 10, 8, 12),
+          child: Row(
+            children: [
+              _buildAvatar(),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.title,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (widget.chatType == ChatType.dm && widget.peerUid != null)
+                      _buildPresenceStatus(),
+                  ],
+                ),
+              ),
+              PopupMenuButton<String>(
+                onSelected: _onMenuAction,
+                color: Colors.white,
+                icon: const Icon(Icons.more_vert, color: Colors.white),
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'mute',
+                    child: Row(
+                      children: [
+                        Icon(_isMuted ? Icons.volume_up : Icons.volume_off),
+                        const SizedBox(width: 8),
+                        Text(_isMuted ? 'Unmute' : 'Mute'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );
@@ -176,22 +230,61 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   Widget _buildAvatar() {
     if (widget.chatType == ChatType.dm) {
-      return CircleAvatar(
-        radius: 20,
-        backgroundColor: AppColors.primaryBlackLight,
-        child: Text(
-          _getInitials(widget.title),
-          style: const TextStyle(
-            color: AppColors.primaryColor,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+      return StreamBuilder<PresenceStatus>(
+        stream: widget.peerUid != null
+            ? PresenceService.instance.subscribeToUserPresence(widget.peerUid!)
+            : null,
+        builder: (context, snapshot) {
+          final isOnline = snapshot.data?.online ?? false;
+          return Stack(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(1.3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFE9B23A), width: 1.2),
+                ),
+                child: CircleAvatar(
+                  radius: 22,
+                  backgroundColor: const Color(0xFFECECEC),
+                  child: Text(
+                    _getInitials(widget.title),
+                    style: const TextStyle(
+                      color: Color(0xFF2E2E2E),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+              if (isOnline)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: Container(
+                    width: 11,
+                    height: 11,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2DD65B),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       );
     }
-    return CircleAvatar(
-      radius: 20,
-      backgroundColor: AppColors.primaryBlackLight,
-      child: const Icon(Icons.group, color: AppColors.primaryColor, size: 20),
+    return Container(
+      padding: const EdgeInsets.all(1.3),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFE9B23A), width: 1.2),
+      ),
+      child: const CircleAvatar(
+        radius: 22,
+        backgroundImage: AssetImage('assets/logo/rcc2.png'),
+      ),
     );
   }
 
@@ -203,10 +296,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         if (status == null) return const SizedBox.shrink();
 
         return Text(
-          status.online ? 'Online' : status.lastSeenText,
+          status.online ? 'Active now' : status.lastSeenText,
           style: TextStyle(
             fontSize: 12,
-            color: status.online ? Colors.green : Colors.grey[400],
+            color: status.online ? const Color(0xFF6BE483) : Colors.white70,
+            fontWeight: FontWeight.w500,
           ),
         );
       },
@@ -273,6 +367,55 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         );
       },
     );
+  }
+
+  Widget _buildChatBackgroundPattern() {
+    final token = _watermarkToken();
+    return IgnorePointer(
+      child: GridView.builder(
+        physics: const NeverScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          childAspectRatio: 2.4,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+        ),
+        itemCount: 30,
+        itemBuilder: (context, index) {
+          return Opacity(
+            opacity: index.isEven ? 0.07 : 0.04,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                token,
+                maxLines: 1,
+                overflow: TextOverflow.visible,
+                style: const TextStyle(
+                  fontSize: 48,
+                  fontWeight: FontWeight.w700,
+                  color: Color(0xFFBFC3C9),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _watermarkToken() {
+    final loginData = SharedPref.getLoginDataOrNull();
+    final empId = loginData?.result?.data?.emp_id;
+    if (empId != null && empId.isNotEmpty) return empId;
+    // fallback
+    final raw = (_currentUid ?? widget.peerUid ?? widget.chatId).trim();
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isNotEmpty) {
+      return digits.length > 4 ? digits.substring(digits.length - 4) : digits;
+    }
+    if (raw.length <= 4) return raw.toUpperCase();
+    return raw.substring(raw.length - 4).toUpperCase();
   }
 
   bool _shouldShowDateHeader(List<Message> messages, int index) {

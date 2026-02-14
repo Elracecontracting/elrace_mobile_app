@@ -94,18 +94,24 @@ class _ChatInputBarState extends State<ChatInputBar>
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.only(
-        left: 8,
-        right: 8,
-        top: 8,
-        bottom: MediaQuery.of(context).padding.bottom + 8,
+        left: 18,
+        right: 18,
+        top: 12,
+        bottom: MediaQuery.of(context).padding.bottom + 12,
       ),
       decoration: BoxDecoration(
         color: Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: const Color(0xFFDCE6E5).withValues(alpha: 0.7),
+            width: 1,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 4,
-            offset: const Offset(0, -2),
+            color: Colors.black.withValues(alpha: 0.025),
+            blurRadius: 6,
+            offset: const Offset(0, -1),
           ),
         ],
       ),
@@ -115,34 +121,38 @@ class _ChatInputBarState extends State<ChatInputBar>
 
   Widget _buildInputBar() {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        // Attachment button
         _AttachmentButton(
           onPickImage: widget.onPickImage,
           onPickFile: widget.onPickFile,
           isLoading: widget.isLoading,
         ),
-        
-        const SizedBox(width: 8),
-        
-        // Text input field
+
+        const SizedBox(width: 10),
+
         Expanded(
           child: Container(
-            constraints: const BoxConstraints(maxHeight: 120),
+            constraints: const BoxConstraints(minHeight: 54, maxHeight: 120),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(24),
+              color: const Color(0xFFE9EAEC),
+              borderRadius: BorderRadius.circular(30),
             ),
             child: TextField(
               controller: widget.controller,
               maxLines: null,
               textCapitalization: TextCapitalization.sentences,
+              style: const TextStyle(fontSize: 16),
               decoration: const InputDecoration(
-                hintText: 'Type a message...',
+                hintText: 'Write your message',
+                hintStyle: TextStyle(
+                  color: Color(0xFF9DA2A6),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                ),
                 contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
+                  horizontal: 20,
+                  vertical: 16,
                 ),
                 border: InputBorder.none,
               ),
@@ -150,67 +160,40 @@ class _ChatInputBarState extends State<ChatInputBar>
             ),
           ),
         ),
-        
-        const SizedBox(width: 8),
-        
-        // Send or voice button
+
+        const SizedBox(width: 12),
         AnimatedSwitcher(
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 180),
+          child: _hasText
+              ? _buildSideIcon(icon: Icons.send_rounded, onTap: widget.onSendText)
+              : _buildSideIcon(icon: Icons.camera_alt_outlined, onTap: widget.onPickImage),
+        ),
+        const SizedBox(width: 8),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 180),
           child: widget.isLoading
-              ? const Padding(
-                  padding: EdgeInsets.all(8),
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
+              ? const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : _hasText
-                  ? _buildSendButton()
-                  : _buildMicButton(),
+              : _buildSideIcon(icon: Icons.mic_none_rounded, onTap: widget.onStartRecording),
         ),
       ],
     );
   }
 
-  Widget _buildSendButton() {
-    return Material(
-      color: AppColors.white,
-      borderRadius: BorderRadius.circular(24),
-      child: InkWell(
-        onTap: widget.onSendText,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          child: const Icon(
-            Icons.send,
-            color: AppColors.primaryColor,
-            size: 22,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMicButton() {
-    return GestureDetector(
-      onTap: widget.onStartRecording, // Allow tap to start recording
-      onLongPressStart: (_) => widget.onStartRecording(),
-      onLongPressEnd: (_) => widget.onStopRecording(),
-      child: Material(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          child: const Icon(
-            Icons.mic,
-            color: AppColors.primaryColor,
-            size: 24,
-          ),
+  Widget _buildSideIcon({required IconData icon, VoidCallback? onTap}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: SizedBox(
+        width: 32,
+        height: 32,
+        child: Icon(
+          icon,
+          size: 22,
+          color: const Color(0xFF1C2226),
         ),
       ),
     );
@@ -312,7 +295,7 @@ class _AttachmentButton extends StatelessWidget {
             break;
         }
       },
-      offset: const Offset(0, -120),
+      offset: const Offset(0, -132),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       color: Colors.white,
       itemBuilder: (context) => [
@@ -338,13 +321,13 @@ class _AttachmentButton extends StatelessWidget {
         ),
       ],
       child: Container(
-        width: 44,
-        height: 44,
+        width: 32,
+        height: 32,
         alignment: Alignment.center,
         child: Icon(
-          Icons.add,
-          color: Colors.grey[700],
-          size: 26,
+          Icons.attach_file_rounded,
+          color: const Color(0xFF1C2226),
+          size: 22,
         ),
       ),
     );
