@@ -372,7 +372,7 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
             child: Text(
               translate('home.time_sheet'),
               style: GoogleFonts.koulen(
-                fontSize: 30,
+                fontSize: 20,
                 fontWeight: FontWeight.w400,
                 color: Colors.black,
                 letterSpacing: 2.0,

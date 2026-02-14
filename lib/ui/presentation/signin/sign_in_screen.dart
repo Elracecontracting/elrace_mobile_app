@@ -32,6 +32,26 @@ class _SignInScreenState extends State<SignInScreen> {
   bool isChecked = false;
   bool isPasswordVisible = false;
   late SignInBloc signInBloc;
+  bool _isLoadingDialogVisible = false;
+
+  void _showLoadingDialog() {
+    if (!mounted || _isLoadingDialogVisible) return;
+    _isLoadingDialogVisible = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  void _hideLoadingDialog() {
+    if (!mounted || !_isLoadingDialogVisible) return;
+    _isLoadingDialogVisible = false;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -101,8 +121,9 @@ class _SignInScreenState extends State<SignInScreen> {
         log('Listener state: $state');
 
         if (state is ErrMsg) {
-          Navigator.of(context, rootNavigator: true).maybePop();
+          _hideLoadingDialog();
           await Future.delayed(const Duration(milliseconds: 100));
+          if (!mounted) return;
           showDialog(
             context: context,
             barrierDismissible: false,
@@ -121,14 +142,10 @@ class _SignInScreenState extends State<SignInScreen> {
 
         if (state is LoadingST) {
           if (state.isLoading) {
-            showDialog(
-              context: context,
-              barrierDismissible: false,
-              builder: (_) => const Center(child: CircularProgressIndicator()),
-            );
+            _showLoadingDialog();
           } else {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.of(context, rootNavigator: true).maybePop();
+              _hideLoadingDialog();
             });
           }
         }

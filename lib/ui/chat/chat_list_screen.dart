@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../chat/chat.dart';
 import '../../resources/app_colors.dart';
+import '../widgets/header_widget.dart';
 import 'chat_screen.dart';
 import 'new_chat_screen.dart';
 import 'widgets/typing_indicator.dart';
@@ -75,15 +76,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     // Show loading indicator while initializing chat
     if (_isInitializing) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Chats'),
-          centerTitle: true,
-        ),
+        appBar: const HeaderWidget(),
         body: const Center(
           child: CircularProgressIndicator(),
         ),
@@ -92,10 +89,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
     
     if (!_isChatAvailable || _currentUid == null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Chats'),
-          centerTitle: true,
-        ),
+        appBar: const HeaderWidget(),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -157,118 +151,183 @@ class _ChatListScreenState extends State<ChatListScreen> {
     }
 
     return Scaffold(
-      backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: colorScheme.surface,
-        foregroundColor: colorScheme.onSurface,
-        elevation: 0.5,
-        scrolledUnderElevation: 0.6,
-        shadowColor: Colors.black.withValues(alpha: 0.06),
-        surfaceTintColor: Colors.transparent,
-        titleSpacing: 16,
-        title: Text(
-          'Chats',
-          style: theme.textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: _ChatSearchBar(
-              controller: _localSearchController,
-              onOpenGlobalSearch: _openSearch,
+      backgroundColor: AppColors.primaryColor,
+      appBar: const HeaderWidget(),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            // Fixed secondary bar (Chats + Massages)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+              child: _SecondaryChatBar(onMessagesTap: _startNewChat),
             ),
-          ),
-        ),
-      ),
-      body: StreamBuilder<List<UserChat>>(
-        stream: ChatRepository.instance.subscribeToUserChats(_currentUid!),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+            // Everything else scrolls together
+            Expanded(
+              child: StreamBuilder<List<UserChat>>(
+                stream: ChatRepository.instance.subscribeToUserChats(_currentUid!),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 60, color: Colors.red[300]),
-                  const SizedBox(height: 16),
-                  Text('Error: ${snapshot.error}'),
-                ],
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.error_outline, size: 56, color: Colors.red[300]),
+                          const SizedBox(height: 12),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              'Error: ${snapshot.error}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white70),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+
+                  final allChats = snapshot.data ?? [];
+
+                  final groups = allChats
+                      .where((c) => c.type == ChatType.role || c.type == ChatType.group)
+                      .toList();
+
+                  final filteredChats = _localSearchQuery.isEmpty
+                      ? allChats
+                      : allChats
+                          .where((c) => (c.title ?? '').toLowerCase().contains(_localSearchQuery))
+                          .toList();
+
+                  return CustomScrollView(
+                    slivers: [
+                      // Search bar
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                          child: _ChatSearchBar(
+                            controller: _localSearchController,
+                            onOpenGlobalSearch: _openSearch,
+                          ),
+                        ),
+                      ),
+                      // Groups header + horizontal list
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                          child: Row(
+                            children: const [
+                              Text(
+                                'Groups',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: 82,
+                          child: groups.isEmpty
+                              ? const Center(
+                                  child: Text(
+                                    'No groups yet',
+                                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  padding: const EdgeInsets.only(left: 16),
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: groups.length,
+                                  itemBuilder: (context, i) {
+                                    final g = groups[i];
+                                    return _GroupQuickItem(
+                                      label: g.title ?? 'Group',
+                                      onTap: () => _openChat(g),
+                                    );
+                                  },
+                                ),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 14)),
+                      // White card header (drag handle)
+                      SliverToBoxAdapter(
+                        child: Container(
+                          decoration: const BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                          ),
+                          padding: const EdgeInsets.only(top: 9, bottom: 8),
+                          alignment: Alignment.center,
+                          child: Container(
+                            width: 70,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade300,
+                              borderRadius: BorderRadius.circular(99),
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Chat list items
+                      if (filteredChats.isEmpty)
+                        SliverFillRemaining(
+                          hasScrollBody: false,
+                          child: Container(
+                            color: Colors.white,
+                            child: Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.chat_bubble_outline, size: 70, color: Colors.grey[400]),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    allChats.isEmpty ? 'No chats yet' : 'No results',
+                                    style: TextStyle(fontSize: 17, color: Colors.grey[700]),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        SliverList(
+                          delegate: SliverChildBuilderDelegate(
+                            (context, index) {
+                              final userChat = filteredChats[index];
+                              return Container(
+                                color: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 12),
+                                child: _ChatListTile(
+                                  userChat: userChat,
+                                  currentUid: _currentUid!,
+                                  onTap: () => _openChat(userChat),
+                                ),
+                              );
+                            },
+                            childCount: filteredChats.length,
+                          ),
+                        ),
+                      // Fill remaining space with white
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Container(color: Colors.white),
+                      ),
+                    ],
+                  );
+                },
               ),
-            );
-          }
-
-          final chats = snapshot.data ?? [];
-
-          final filteredChats = _localSearchQuery.isEmpty
-              ? chats
-              : chats
-                  .where((c) => (c.title ?? '').toLowerCase().contains(_localSearchQuery))
-                  .toList();
-
-          if (filteredChats.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.chat_bubble_outline,
-                    size: 80,
-                    color: Colors.grey[400],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    chats.isEmpty ? 'No chats yet' : 'No results',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    chats.isEmpty
-                        ? 'Start a new conversation'
-                        : 'Try a different search term',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[500],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.separated(
-            padding: const EdgeInsets.symmetric(vertical: 6),
-            itemCount: filteredChats.length,
-            separatorBuilder: (_, __) => Divider(
-              height: 1,
-              indent: 88,
-              endIndent: 16,
-              color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
             ),
-            itemBuilder: (context, index) {
-              final userChat = filteredChats[index];
-              return _ChatListTile(
-                userChat: userChat,
-                currentUid: _currentUid!,
-                onTap: () => _openChat(userChat),
-              );
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _startNewChat,
-        backgroundColor: AppColors.primaryColor,
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.message),
+          ],
+        ),
       ),
     );
   }
@@ -321,7 +380,6 @@ class _ChatListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
 
     return StreamBuilder<Chat?>(
       stream: ChatRepository.instance.subscribeToChat(userChat.chatId),
@@ -340,8 +398,9 @@ class _ChatListTile extends StatelessWidget {
             return InkWell(
               onTap: onTap,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     _buildAvatar(),
                     const SizedBox(width: 12),
@@ -349,76 +408,79 @@ class _ChatListTile extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  userChat.title ?? 'Chat',
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: hasUnread ? FontWeight.w800 : FontWeight.w700,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ),
-                              if (lastMessage != null)
-                                Text(
-                                  _formatTime(lastMessage.createdAt),
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    color: hasUnread
-                                        ? AppColors.primaryColor
-                                        : colorScheme.onSurfaceVariant,
-                                    fontWeight: hasUnread ? FontWeight.w700 : FontWeight.w500,
-                                  ),
-                                ),
-                            ],
+                          Text(
+                            userChat.title ?? 'Chat',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: const Color(0xFF171717),
+                              fontWeight: FontWeight.w700,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
                           ),
                           const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: isTyping
-                                    ? TypingTextWidget(
-                                        typingUserNames: typingInfo!.typingNames,
-                                        isGroupChat: userChat.type != ChatType.dm,
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: const Color(0xFF25D366),
-                                          fontStyle: FontStyle.italic,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      )
-                                    : DefaultTextStyle.merge(
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: colorScheme.onSurfaceVariant,
-                                          fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
-                                        ),
-                                        child: _buildLastMessage(lastMessage),
-                                      ),
-                              ),
-                              const SizedBox(width: 8),
-                              if (userChat.muted)
-                                Icon(Icons.volume_off, size: 16, color: colorScheme.onSurfaceVariant),
-                              if (userChat.pinned)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 6),
-                                  child: Icon(Icons.push_pin, size: 16, color: colorScheme.onSurfaceVariant),
-                                ),
-                              if (hasUnread)
-                                Padding(
-                                  padding: const EdgeInsets.only(left: 8),
-                                  child: Container(
-                                    width: 10,
-                                    height: 10,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF25D366),
-                                      shape: BoxShape.circle,
+                          DefaultTextStyle.merge(
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: const Color(0xFF8B8B8B),
+                              fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
+                            ),
+                            child: isTyping
+                                ? TypingTextWidget(
+                                    typingUserNames: typingInfo!.typingNames,
+                                    isGroupChat: userChat.type != ChatType.dm,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: const Color(0xFF20B051),
+                                      fontStyle: FontStyle.italic,
+                                      fontWeight: FontWeight.w600,
                                     ),
-                                  ),
-                                ),
-                            ],
+                                  )
+                                : _buildLastMessage(lastMessage),
                           ),
                         ],
                       ),
+                    ),
+                    const SizedBox(width: 10),
+                    StreamBuilder<int>(
+                      stream: ChatRepository.instance.subscribeToUnreadCount(userChat.chatId),
+                      builder: (context, unreadSnap) {
+                        final unreadCount = unreadSnap.data ?? 0;
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              lastMessage != null ? _formatTime(lastMessage.createdAt) : '',
+                              style: TextStyle(
+                                color: unreadCount > 0
+                                    ? const Color(0xFF8C8C8C)
+                                    : const Color(0xFFAAAAAA),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            if (unreadCount > 0)
+                              Container(
+                                constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                alignment: Alignment.center,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFF04D57),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Text(
+                                  unreadCount > 99 ? '99+' : '$unreadCount',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              )
+                            else
+                              const SizedBox(height: 22),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -436,44 +498,59 @@ class _ChatListTile extends StatelessWidget {
         stream: PresenceService.instance.subscribeToUserPresence(userChat.peerUid!),
         builder: (context, snapshot) {
           final isOnline = snapshot.data?.online ?? false;
-          return Stack(
-            children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: AppColors.primaryBlackLight,
-                child: Text(
-                  _getInitials(userChat.title ?? '?'),
-                  style: const TextStyle(
-                    color: AppColors.primaryColor,
-                    fontWeight: FontWeight.bold,
-                  ),
+          return _avatarShell(
+            isOnline: isOnline,
+            child: CircleAvatar(
+              radius: 24,
+              backgroundColor: const Color(0xFFECECEC),
+              child: Text(
+                _getInitials(userChat.title ?? '?'),
+                style: const TextStyle(
+                  color: Color(0xFF2E2E2E),
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              if (isOnline)
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 14,
-                    height: 14,
-                    decoration: BoxDecoration(
-                      color: Colors.green,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                  ),
-                ),
-            ],
+            ),
           );
         },
       );
     }
 
-    // Group chat avatar
-    return CircleAvatar(
-      radius: 24,
-      backgroundColor: AppColors.primaryBlackLight,
-      child: const Icon(Icons.group, color: AppColors.primaryColor),
+    return _avatarShell(
+      isOnline: true,
+      child: const CircleAvatar(
+        radius: 24,
+        backgroundImage: AssetImage('assets/logo/rcc2.png'),
+      ),
+    );
+  }
+
+  Widget _avatarShell({required Widget child, required bool isOnline}) {
+    return Stack(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(1.3),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFFE9B23A), width: 1.2),
+          ),
+          child: child,
+        ),
+        if (isOnline)
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: 11,
+              height: 11,
+              decoration: BoxDecoration(
+                color: const Color(0xFF2DD65B),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -524,12 +601,15 @@ class _ChatListTile extends StatelessWidget {
     final now = DateTime.now();
     final diff = now.difference(dateTime);
 
-    if (diff.inMinutes < 1) return 'now';
-    if (diff.inHours < 1) return '${diff.inMinutes}m';
-    if (diff.inDays < 1) return '${diff.inHours}h';
-    if (diff.inDays < 7) return '${diff.inDays}d';
+    if (diff.inSeconds < 60) return 'just now';
+    if (diff.inMinutes == 1) return '1 min ago';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inHours == 1) return '1 hour ago';
+    if (diff.inHours < 24) return '${diff.inHours} hours ago';
+    if (diff.inDays == 1) return 'Yesterday';
+    if (diff.inDays < 7) return '${diff.inDays} days ago';
 
-    return '${dateTime.day}/${dateTime.month}';
+    return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
   }
 }
 
@@ -544,29 +624,131 @@ class _ChatSearchBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return TextField(
       controller: controller,
       decoration: InputDecoration(
-        hintText: 'Search chats',
-        prefixIcon: Icon(Icons.search, color: colorScheme.onSurfaceVariant),
+        hintText: 'Search',
+        hintStyle: const TextStyle(
+          color: Color(0xFF9A9A9A),
+          fontWeight: FontWeight.w500,
+        ),
+        prefixIcon: const SizedBox.shrink(),
+        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         suffixIcon: IconButton(
           tooltip: 'Search users',
           onPressed: onOpenGlobalSearch,
-          icon: Icon(Icons.person_search, color: colorScheme.onSurfaceVariant),
+          icon: const Icon(Icons.search_rounded, color: Color(0xFF8E8E8E)),
         ),
         filled: true,
-        fillColor: colorScheme.surfaceContainerHighest,
+        fillColor: Colors.white,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(30),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(30),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
       ),
-      style: theme.textTheme.bodyMedium,
+      style: const TextStyle(
+        color: Color(0xFF1F1F1F),
+        fontWeight: FontWeight.w500,
+      ),
       textInputAction: TextInputAction.search,
+    );
+  }
+}
+
+class _SecondaryChatBar extends StatelessWidget {
+  final VoidCallback onMessagesTap;
+
+  const _SecondaryChatBar({required this.onMessagesTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return SizedBox(
+      height: 54,
+      child: Row(
+        children: [
+          const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 26),
+          const SizedBox(width: 8),
+          Text(
+            'Chats',
+            style: theme.textTheme.titleLarge?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Spacer(),
+          OutlinedButton.icon(
+            onPressed: onMessagesTap,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFFF4C542),
+              side: const BorderSide(color: Color(0xFFF4C542), width: 1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            ),
+            icon: const Icon(Icons.star, size: 16),
+            label: const Text(
+              'Massages',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GroupQuickItem extends StatelessWidget {
+  final String label;
+  final VoidCallback? onTap;
+
+  const _GroupQuickItem({required this.label, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 14),
+        child: SizedBox(
+          width: 64,
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(1.3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFE9B23A), width: 1.2),
+                ),
+                child: const CircleAvatar(
+                  radius: 24,
+                  backgroundImage: AssetImage('assets/logo/rcc2.png'),
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

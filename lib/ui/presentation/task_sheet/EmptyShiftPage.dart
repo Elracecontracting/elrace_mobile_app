@@ -268,7 +268,7 @@ class _EmptyShiftPageState extends State<EmptyShiftPage> {
           child: Text(
             'TIME SHEET',
             style: GoogleFonts.koulen(
-              fontSize: 34,
+              fontSize: 20,
               fontWeight: FontWeight.w400,
               color: Colors.black,
               letterSpacing: 2.0,

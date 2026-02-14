@@ -265,93 +265,47 @@ class FirebaseChatAuthService {
   /// Check if user is signed in to Firebase
   bool get isSignedIn => _auth.currentUser != null;
   
-  /// Clean and fix Firebase custom token format issues.
+  /// Clean Firebase custom token by stripping surrounding whitespace only.
   /// 
-  /// This handles common issues from backend:
-  /// - Extra spaces in JWT parts
-  /// - Newlines and whitespace
-  /// - Malformed base64 padding
-  /// - URL encoding issues
+  /// IMPORTANT: Do NOT modify the JWT content (header/payload). The signature
+  /// is computed over the exact original bytes. Changing even whitespace inside
+  /// the decoded JSON header invalidates the signature.
   String _cleanFirebaseToken(String rawToken) {
     try {
       print('🧹 Cleaning token...');
       
-      // Remove all whitespace (spaces, newlines, tabs)
-      String token = rawToken.replaceAll(RegExp(r'\s+'), '');
+      // Only trim leading/trailing whitespace and newlines
+      String token = rawToken.trim();
       
       print('🔍 Original length: ${rawToken.length}, Cleaned length: ${token.length}');
       
-      // Split JWT into parts (header.payload.signature)
+      // Validate it has 3 JWT parts
       final parts = token.split('.');
       if (parts.length != 3) {
-        print('⚠️ Token does not have 3 parts, returning as-is');
+        print('⚠️ Token does not have 3 parts (has ${parts.length}), returning as-is');
         return token;
       }
       
-      // Try to decode and re-encode each part to fix base64 issues
-      final List<String> fixedParts = [];
-      
-      for (int i = 0; i < parts.length; i++) {
-        String part = parts[i];
-        
-        // Don't modify signature (part 2)
-        if (i == 2) {
-          fixedParts.add(part);
-          continue;
+      // Debug: decode header for logging only (do NOT modify)
+      try {
+        String headerPart = parts[0];
+        String padded = headerPart;
+        while (padded.length % 4 != 0) {
+          padded += '=';
         }
-        
-        try {
-          // For header and payload, try to decode and validate
-          // Add padding if needed
-          String padded = part;
-          while (padded.length % 4 != 0) {
-            padded += '=';
-          }
-          
-          // Try to decode to verify it's valid base64
-          final decoded = base64Url.decode(padded);
-          
-          // For debugging: check the JSON content
-          if (i == 0) {
-            final headerJson = utf8.decode(decoded);
-            print('🔍 Token header: $headerJson');
-            
-            // Check if header has spaces in JSON (the actual problem)
-            if (headerJson.contains(': ')) {
-              print('⚠️ Header contains spaces after colons, attempting fix...');
-              
-              // Parse and re-encode without spaces
-              try {
-                final headerMap = jsonDecode(headerJson) as Map<String, dynamic>;
-                final fixedHeader = jsonEncode(headerMap);
-                print('✅ Fixed header: $fixedHeader');
-                
-                // Re-encode to base64url
-                final fixedBytes = utf8.encode(fixedHeader);
-                final fixedBase64 = base64Url.encode(fixedBytes).replaceAll('=', '');
-                fixedParts.add(fixedBase64);
-                continue;
-              } catch (e) {
-                print('⚠️ Could not fix header: $e');
-              }
-            }
-          }
-          
-          // If no fix needed or fix failed, use original
-          fixedParts.add(part);
-        } catch (e) {
-          print('⚠️ Could not process part $i: $e');
-          fixedParts.add(part);
-        }
+        final decoded = base64Url.decode(padded);
+        final headerJson = utf8.decode(decoded);
+        print('🔍 Token header: $headerJson');
+      } catch (e) {
+        print('⚠️ Could not decode header for logging: $e');
       }
       
-      final fixedToken = fixedParts.join('.');
-      print('✅ Token cleaned: ${fixedToken.length} chars');
+      print('✅ Token ready: ${token.length} chars');
+      print('🔐 FirebaseChatAuth: Token preview: ${token.substring(0, 20)}...${token.substring(token.length - 20)}');
       
-      return fixedToken;
+      return token;
     } catch (e) {
       print('❌ Error cleaning token: $e');
-      print('⚠️ Returning original token');
       return rawToken.trim();
     }
   }

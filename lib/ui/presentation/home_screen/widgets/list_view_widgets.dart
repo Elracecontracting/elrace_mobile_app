@@ -760,58 +760,41 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               Positioned(
                 right: 12.w,
                 top: 10.h,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20.r),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12.w,
-                        vertical: 6.h,
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDDE3EB),
+                    borderRadius: BorderRadius.circular(20.r),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
                       ),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20.r),
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Colors.white.withOpacity(0.26),
-                            Colors.white.withOpacity(0.08),
-                          ],
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.calendar_month_outlined,
+                        size: 15.sp,
+                        color: const Color(0xFF151544),
+                      ),
+                      SizedBox(width: 6.w),
+                      Text(
+                        monthAbbrev,
+                        style: GoogleFonts.inter(
+                          color: const Color(0xFF151544),
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
                         ),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.35),
-                          width: 1,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.14),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.calendar_month_outlined,
-                            size: 16.sp,
-                            color: const Color(0xFF151544),
-                          ),
-                          SizedBox(width: 6.w),
-                          Text(
-                            monthAbbrev,
-                            style: GoogleFonts.inter(
-                              color: const Color(0xFF151544),
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ),

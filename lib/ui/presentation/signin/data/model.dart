@@ -79,8 +79,11 @@ class Data {
   final String? emp_id;
   final String? emp_profile_id;
   final String? emp_name;
+  final int? role_id;
   final int? odoo_user_id;
   final int? employee_id;
+  final String? firebase_uid;
+  final String? firebase_custom_token;
   final String? partnerDisplayName;
   final int? companyId;
   final bool? branchId;
@@ -117,8 +120,11 @@ class Data {
     this.emp_id,
     this.emp_profile_id,
     this.emp_name,
+    this.role_id,
     this.odoo_user_id,
     this.employee_id,
+    this.firebase_uid,
+    this.firebase_custom_token,
     this.partnerDisplayName,
     this.companyId,
     this.branchId,
@@ -180,6 +186,9 @@ class Data {
         emp_name: (json["emp_name"] != null && json["emp_name"] != false)
             ? json["emp_name"].toString()
             : null,
+        role_id: json["role_id"] is int
+          ? json["role_id"]
+          : int.tryParse(json["role_id"]?.toString() ?? ''),
         odoo_user_id: json["odoo_user_id"] is int
             ? json["odoo_user_id"]
             : (json["uid"] is int ? json["uid"] : null),
@@ -188,6 +197,14 @@ class Data {
             : (json["emp_id"] != null && json["emp_id"] != false
                 ? int.tryParse(json["emp_id"].toString())
                 : null),
+        firebase_uid: (json["firebase_uid"] != null &&
+            json["firebase_uid"] != false)
+          ? json["firebase_uid"].toString()
+          : null,
+        firebase_custom_token: (json["firebase_custom_token"] != null &&
+            json["firebase_custom_token"] != false)
+          ? json["firebase_custom_token"].toString()
+          : null,
         partnerDisplayName: json["partner_display_name"],
         companyId: json["company_id"],
         branchId: json["branch_id"],
@@ -246,8 +263,11 @@ class Data {
         "emp_id": emp_id,
         "emp_profile_id": emp_profile_id,
         "emp_name": emp_name,
+        "role_id": role_id,
         "odoo_user_id": odoo_user_id,
         "employee_id": employee_id,
+        "firebase_uid": firebase_uid,
+        "firebase_custom_token": firebase_custom_token,
         "partner_display_name": partnerDisplayName,
         "company_id": companyId,
         "branch_id": branchId,

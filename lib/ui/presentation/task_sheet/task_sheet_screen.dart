@@ -128,7 +128,6 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                           fontSize: 17.sp,
                           fontWeight: FontWeight.w700,
                           color: Colors.black,
-                          letterSpacing: 2.5,
                         ),
                       ),
                     ),
