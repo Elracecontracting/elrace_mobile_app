@@ -1,12 +1,11 @@
 import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
 import 'package:el_race/report_module/data/models/folder_model.dart';
-import 'package:el_race/report_module/presentation/screens/report_listing/folder_reports_screen.dart';
+import 'package:el_race/report_module/presentation/screens/report_listing/project_reports_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-
 class FolderTile extends StatelessWidget {
   final FolderModel folder;
   final VoidCallback onMoreClicked;
@@ -15,117 +14,112 @@ class FolderTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String day = DateFormat.d().format(folder.createdAt);
-    final String month = DateFormat.MMMM().format(folder.createdAt);
-    final String year = DateFormat.y().format(folder.createdAt);
-    final String formattedDate =
-        DateFormat("dd MMM yyyy, HH:mma").format(folder.createdAt);
-
     return GestureDetector(
       onTap: () {
         Navigator.push(
             context,
             MaterialPageRoute(
-                builder: (context) => FolderReportScreen(folder: folder)));
+                builder: (context) => ProjectReportsScreen(folder: folder)));
       },
       child: Container(
-        margin: EdgeInsets.only(bottom: 12.h),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            height: 180.h,
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("assets/png/background.png"),
-                fit: BoxFit.fill,
+        margin: EdgeInsets.fromLTRB(14.w, 0, 14.w, 12.h),
+        clipBehavior: Clip.hardEdge,
+        padding: EdgeInsets.fromLTRB(20.w, 16.h, 0, 0),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22.r),
+          border: Border.all(
+            color: const Color(0xFFBEC1C8),
+            width: 1.2,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Left side: Project Name + Company Name
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: 10.h),
+                  Text(
+                    folder.name.isEmpty ? 'Project Name' : folder.name,
+                    style: GoogleFonts.inter(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF27304E),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    folder.description.isEmpty ? 'Company Name' : folder.description,
+                    style: GoogleFonts.inter(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w400,
+                      color: const Color(0xFF8A8D97),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
-            child: Stack(
-              children: [
-                Padding(
-                  padding: EdgeInsets.fromLTRB(20.w, 16.h, 16.w, 16.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            "assets/png/my_documents.png",
-                            height: 22.h,
-                            width: 22.w,
-                          ),
-                          SizedBox(width: 8.w),
-                          Expanded(
-                            child: Text(
-                              folder.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.koulen(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w400,
-                                color: Colors.black,
-                                letterSpacing: 1.1,
+            // Right side: three dots + chart + 100
+            SizedBox(
+              width: 180.w,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  // Three dots at top-right
+                  GestureDetector(
+                    onTap: onMoreClicked,
+                    child: Padding(
+                      padding: EdgeInsets.only(right: 2.w),
+                      child: Icon(
+                        Icons.more_vert,
+                        size: 20.w,
+                        color: const Color(0xFF27304E),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  // Chart image with 100 inside
+                SizedBox(
+                      width: 190.w,
+                      height: 52.h,
+                      child: ClipRect(
+                        
+                        child: Stack(
+                          children: [
+                            Positioned.fill(
+                              child: Image.asset(
+                                'assets/png/r1.png',
+                                fit: BoxFit.contain,
+                                alignment: Alignment.centerRight,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: 10.h),
-                      if (folder.description.isNotEmpty)
-                        Padding(
-                          padding: EdgeInsets.only(right: 12.w),
-                          child: Text(
-                            folder.description,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: CustomTextStyle.reportHeader.copyWith(
-                              fontWeight: FontWeight.normal,
-                              color: CustomColors.black,
+                            Positioned(
+                              right: 8.w,
+                              bottom: 2.h,
+                              child: Text(
+                                '200',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF27304E),
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      SizedBox(height: 12.h),
-                      Text(
-                        formattedDate,
-                        style: CustomTextStyle.smallGrey.copyWith(
-                          color: CustomColors.black,
+                          ],
                         ),
                       ),
-                      SizedBox(height: 12.h),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: CustomColors.blue,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            padding: EdgeInsets.symmetric(
-                                vertical: 4.h, horizontal: 12.w),
-                            child: Text(
-                              "Project",
-                              style: CustomTextStyle.smallWhite,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Positioned(
-                  right: 6.w,
-                  top: 6.h,
-                  child: InkWell(
-                      onTap: onMoreClicked,
-                      child: const Icon(
-                        Icons.more_vert_rounded,
-                        color: Colors.black,
-                      )),
-                ),
-              ],
+                    ),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

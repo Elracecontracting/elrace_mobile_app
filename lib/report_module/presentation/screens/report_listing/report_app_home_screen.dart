@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
 import 'package:el_race/report_module/core/utils/flush_bar.dart';
@@ -13,6 +15,8 @@ import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../../widgets/folder_tile.dart';
@@ -27,6 +31,11 @@ class ReportAppHomeScreen extends StatefulWidget {
 
 class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
   bool isLoading = true;
+  String _searchQuery = '';
+  bool _isCreateButtonExpanded = false;
+  bool _isCreateButtonBusy = false;
+  bool _isScrolled = false;
+
   @override
   void initState() {
     super.initState();
@@ -45,91 +54,323 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
     setState(() {});
   }
 
+  Future<void> _onCreateReportTap() async {
+    if (_isCreateButtonBusy) {
+      return;
+    }
+
+    if (!_isCreateButtonExpanded) {
+      setState(() {
+        _isCreateButtonExpanded = true;
+      });
+      return;
+    }
+
+    setState(() {
+      _isCreateButtonBusy = true;
+    });
+
+    await showAddNewReport(context, type: 2);
+
+    if (mounted) {
+      await Provider.of<ReportProvider>(context, listen: false)
+          .fetchAllFolders();
+      setState(() {
+        _isCreateButtonBusy = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     ReportProvider reportProviderListener =
         Provider.of<ReportProvider>(context);
-    return Scaffold(
-      backgroundColor: CustomColors.white,
-      appBar: const HeaderWidget(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await showAddNewReport(context, type: 2);
-          if (context.mounted) {
-            Provider.of<ReportProvider>(context, listen: false)
-                .fetchAllFolders();
-          }
-        },
-        backgroundColor: CustomColors.blue,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-      body: reportProviderListener.folders.isEmpty && !isLoading
-          ? Center(
-              child: Text(
-                "No Report Added Yet",
-                style:
-                    CustomTextStyle.heading.copyWith(color: CustomColors.black),
-              ),
-            )
-          : !isLoading && reportProviderListener.folders.isEmpty
-              ? Center(
-                  child: CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: () async {
-                      await showAddNewReport(context, type: 2);
-                      if (context.mounted) {
-                        Provider.of<ReportProvider>(context, listen: false)
-                            .fetchAllFolders();
-                      }
-                    },
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "New Project",
-                          style: CustomTextStyle.heading.copyWith(color: black),
+
+    final filteredFolders = reportProviderListener.folders.where((folder) {
+      if (_searchQuery.trim().isEmpty) {
+        return true;
+      }
+      final query = _searchQuery.trim().toLowerCase();
+      return folder.name.toLowerCase().contains(query) ||
+          folder.description.toLowerCase().contains(query);
+    }).toList();
+
+    return GestureDetector(
+      onTap: () {
+        if (_isCreateButtonExpanded) {
+          setState(() {
+            _isCreateButtonExpanded = false;
+          });
+        }
+      },
+      behavior: HitTestBehavior.translucent,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF4F4F4),
+        appBar: const HeaderWidget(),
+        body: SafeArea(
+          top: false,
+          child: Stack(
+            children: [
+              NotificationListener<ScrollNotification>(
+                onNotification: (scrollNotification) {
+                  if (scrollNotification is ScrollUpdateNotification ||
+                      scrollNotification is ScrollEndNotification) {
+                    final isScrolled = scrollNotification.metrics.pixels > 10;
+                    if (isScrolled != _isScrolled && mounted) {
+                      setState(() => _isScrolled = isScrolled);
+                    }
+                  }
+                  return false;
+                },
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(child: SizedBox(height: 130.h)),
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.only(left: 20.w),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                'Projects Reports',
+                                style: GoogleFonts.inter(
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF878B98),
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
+                            ),
+                            InkWell(
+                              onTap: _onCreateReportTap,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 260),
+                                curve: Curves.easeOutCubic,
+                                width: _isCreateButtonExpanded ? 170.w : 44.w,
+                                height: 44.w,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF27304E),
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: Radius.circular(14.r),
+                                    bottomLeft: Radius.circular(14.r),
+                                  ),
+                                ),
+                                padding: EdgeInsets.symmetric(horizontal: 10.w),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: [
+                                    Icon(
+                                      Icons.add,
+                                      size: 24.w,
+                                      color: Colors.white,
+                                    ),
+                                    Expanded(
+                                      child: ClipRect(
+                                        child: AnimatedAlign(
+                                          duration:
+                                              const Duration(milliseconds: 260),
+                                          curve: Curves.easeOutCubic,
+                                          alignment: Alignment.centerRight,
+                                          widthFactor:
+                                              _isCreateButtonExpanded ? 1 : 0,
+                                          child: Padding(
+                                            padding: EdgeInsetsDirectional.only(
+                                                start: 4.w),
+                                            child: Text(
+                                              'Create Report',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.clip,
+                                              style: GoogleFonts.inter(
+                                                fontSize: 13.sp,
+                                                fontWeight: FontWeight.w700,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        Image.asset("assets/png/icons/add_folder.png")
-                      ],
+                      ),
                     ),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: (isLoading ? 10 : 0) +
-                      reportProviderListener.folders.length,
-                  itemBuilder: (context, index) {
-                    return isLoading
-                        ? showFolderOrReportLoader()
-                        : FolderTile(
-                            folder: reportProviderListener.folders[index],
-                            onMoreClicked: () async {
-                              int selectedOptionStatus = await showEditOptions(
+                    SliverToBoxAdapter(child: SizedBox(height: 12.h)),
+                    if (isLoading)
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) => showFolderOrReportLoader(),
+                          childCount: 10,
+                        ),
+                      )
+                    else if (filteredFolders.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(
+                          child: Text(
+                            'No reports found',
+                            style: GoogleFonts.inter(
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF9AA0A6),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final folder = filteredFolders[index];
+                            return FolderTile(
+                              folder: folder,
+                              onMoreClicked: () async {
+                                int selectedOptionStatus =
+                                    await showEditOptions(
                                   context,
-                                  options: ['rename', 'delete']);
-                              if (selectedOptionStatus == 0) {
-                                if (!context.mounted) return;
-                                showFlushBar(context,
-                                    message:
-                                        "Rename function for folder is not available at the moment");
-                                return;
-                              }
-                              if (selectedOptionStatus == 1) {
-                                if (!context.mounted) return;
-                                int deleteCodeStatus = await showEditOptions(
+                                  options: ['rename', 'delete'],
+                                );
+                                if (selectedOptionStatus == 0) {
+                                  if (!context.mounted) return;
+                                  showFlushBar(
                                     context,
-                                    options: ['Confirm Delete', 'Cancel']);
-                                if (deleteCodeStatus == 0) {
-                                  showFlushBar(context,
-                                      message:
-                                          "Delete function for folder is not available at the moment.");
+                                    message:
+                                        'Rename function for folder is not available at the moment',
+                                  );
                                   return;
                                 }
-                              }
-                            },
-                          );
-                  },
+                                if (selectedOptionStatus == 1) {
+                                  if (!context.mounted) return;
+                                  int deleteCodeStatus = await showEditOptions(
+                                    context,
+                                    options: ['Confirm Delete', 'Cancel'],
+                                  );
+                                  if (deleteCodeStatus == 0) {
+                                    showFlushBar(
+                                      context,
+                                      message:
+                                          'Delete function for folder is not available at the moment.',
+                                    );
+                                    return;
+                                  }
+                                }
+                              },
+                            );
+                          },
+                          childCount: filteredFolders.length,
+                        ),
+                      ),
+                    SliverToBoxAdapter(child: SizedBox(height: 18.h)),
+                  ],
                 ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(
+                      sigmaX: _isScrolled ? 15 : 8,
+                      sigmaY: _isScrolled ? 15 : 8,
+                    ),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: EdgeInsets.fromLTRB(0, 12.h, 0, 16.h),
+                      decoration: BoxDecoration(
+                        color: _isScrolled
+                            ? Colors.white.withOpacity(0.55)
+                            : Colors.white.withOpacity(0.30),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 2,
+                            offset: const Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/png/my-reports-frame.png',
+                                width: 22.w,
+                                height: 22.w,
+                                fit: BoxFit.contain,
+                                color: const Color(0xFF151A36),
+                                colorBlendMode: BlendMode.srcIn,
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                'My Reports',
+                                style: GoogleFonts.inter(
+                                  fontSize: 20.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF151A36),
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 16.h),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 18.w),
+                            child: Container(
+                              height: 52.h,
+                              padding: EdgeInsets.symmetric(horizontal: 16.w),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF4F4F4),
+                                borderRadius: BorderRadius.circular(28.r),
+                                border: Border.all(
+                                  color: const Color(0xFFB9BBC3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      onChanged: (value) {
+                                        setState(() => _searchQuery = value);
+                                      },
+                                      style: GoogleFonts.inter(
+                                        fontSize: 16.sp,
+                                        color: const Color(0xFF22263A),
+                                      ),
+                                      decoration: InputDecoration(
+                                        hintText: 'Search',
+                                        border: InputBorder.none,
+                                        hintStyle: GoogleFonts.inter(
+                                          fontSize: 16.sp,
+                                          color: const Color(0xFFA3A6B1),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Icon(
+                                    Icons.search,
+                                    size: 22.w,
+                                    color: const Color(0xFFA3A6B1),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

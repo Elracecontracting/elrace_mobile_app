@@ -8,6 +8,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import '../models/models.dart';
 import '../repositories/chat_repository.dart';
 import '../repositories/user_repository.dart';
+import 'chat_session_storage.dart';
 import 'presence_service.dart';
 import 'chat_notification_service.dart';
 
@@ -148,6 +149,24 @@ class FirebaseChatAuthService {
       _isSetupComplete = true;
       print('✅ FirebaseChatAuth: Setup complete!');
 
+      // Cache session securely for fast restore on next app open
+      await ChatSessionStorage.instance.saveSession(
+        firebaseUid: firebaseUid,
+        roleChatId: _currentRoleChatId!,
+        sessionData: {
+          'firebase_uid': session.firebaseUid,
+          'odoo_user_id': session.odooUserId,
+          'employee_id': session.employeeId,
+          'name': session.name,
+          'email': session.email,
+          'role_id': session.roleId,
+          'branch_id': session.branchId,
+          'company_id': session.companyId,
+          'role_name': session.roleName,
+          'avatar_url': session.avatarUrl,
+        },
+      );
+
       return ChatSetupResult.success(
         firebaseUid: firebaseUid,
         roleChatId: _currentRoleChatId!,
@@ -158,6 +177,70 @@ class FirebaseChatAuthService {
     } catch (e) {
       print('❌ FirebaseChatAuth: Setup error: $e');
       return ChatSetupResult.failed('Chat setup failed: $e');
+    }
+  }
+
+  /// Lightweight restore from cached session.
+  ///
+  /// Skips Firestore writes (upsert user, role membership) and only sets up
+  /// presence + notifications. Call this when Firebase Auth is still valid
+  /// and we have a cached session from a previous successful setup.
+  Future<ChatSetupResult> restoreFromCachedSession(
+      CachedChatSession cached) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        print('⚠️ FirebaseChatAuth: No Firebase user for cached restore');
+        return ChatSetupResult.failed(
+            'Firebase user not signed in for cached restore');
+      }
+
+      if (currentUser.uid != cached.firebaseUid) {
+        print(
+            '⚠️ FirebaseChatAuth: UID mismatch in cache. Current: ${currentUser.uid}, Cached: ${cached.firebaseUid}');
+        // Clear stale cache
+        await ChatSessionStorage.instance.clearSession();
+        return ChatSetupResult.failed('Cached session UID mismatch');
+      }
+
+      final firebaseUid = currentUser.uid;
+      _currentRoleChatId = cached.roleChatId;
+
+      print(
+          '🔄 FirebaseChatAuth: Restoring from cached session for $firebaseUid...');
+
+      // Only do lightweight setup: presence + notifications
+      // Skip Firestore writes (upsert user, role membership) since
+      // those were already done in a previous successful setup
+
+      try {
+        print('🟢 FirebaseChatAuth: Setting up presence...');
+        await PresenceService.instance.initialize(firebaseUid);
+      } catch (e) {
+        print('⚠️ FirebaseChatAuth: Presence setup failed (non-fatal): $e');
+      }
+
+      try {
+        print('🔔 FirebaseChatAuth: Setting up chat notifications...');
+        await ChatNotificationService.instance.initialize();
+        await ChatNotificationService.instance.startListening();
+      } catch (e) {
+        print(
+            '⚠️ FirebaseChatAuth: Notification setup failed (non-fatal): $e');
+      }
+
+      _isSetupComplete = true;
+      print('✅ FirebaseChatAuth: Restored from cache successfully!');
+
+      return ChatSetupResult.success(
+        firebaseUid: firebaseUid,
+        roleChatId: _currentRoleChatId!,
+      );
+    } catch (e) {
+      print('❌ FirebaseChatAuth: Cache restore error: $e');
+      // Clear bad cache
+      await ChatSessionStorage.instance.clearSession();
+      return ChatSetupResult.failed('Cache restore failed: $e');
     }
   }
 
@@ -224,6 +307,9 @@ class FirebaseChatAuthService {
 
       // Dispose presence service
       await PresenceService.instance.dispose();
+
+      // Clear cached session from secure storage
+      await ChatSessionStorage.instance.clearSession();
 
       // Sign out from Firebase
       await _auth.signOut();

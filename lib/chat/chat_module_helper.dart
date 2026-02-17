@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/models.dart';
 import 'services/services.dart';
+import 'services/chat_session_storage.dart';
 
 /// Chat module initialization helper.
 /// 
@@ -128,8 +129,47 @@ class ChatModuleHelper {
           print('✅ ChatModuleHelper: Returning cached chat session');
           return _lastResult;
         }
+
+        // Try to restore from secure storage cache (fast path - no Firestore)
+        final cachedSession = await ChatSessionStorage.instance.loadSession();
+        if (cachedSession != null && cachedSession.isFresh) {
+          print('🔄 ChatModuleHelper: Restoring from secure storage cache...');
+          
+          final result = await FirebaseChatAuthService.instance
+              .restoreFromCachedSession(cachedSession);
+
+          if (result.success && result.chatEnabled) {
+            _isInitialized = true;
+            _lastResult = result;
+            
+            // Restore session model from cached data
+            _currentSession = ChatUserSession(
+              backendJwt: '',
+              odooUserId: cachedSession.sessionData['odoo_user_id'] ?? 0,
+              employeeId: cachedSession.sessionData['employee_id'],
+              name: cachedSession.sessionData['name'] ?? '',
+              email: cachedSession.sessionData['email'],
+              roleId: cachedSession.sessionData['role_id'] ?? 0,
+              roleName: cachedSession.sessionData['role_name'],
+              branchId: cachedSession.sessionData['branch_id'],
+              companyId: cachedSession.sessionData['company_id'] ?? 0,
+              firebaseUid: cachedSession.firebaseUid,
+              avatarUrl: cachedSession.sessionData['avatar_url'],
+            );
+            
+            // Initialize lifecycle observer for presence
+            ChatLifecycleObserver.instance.initialize();
+            
+            print('✅ ChatModuleHelper: Restored from secure cache successfully');
+            print('   - Role Chat ID: ${result.roleChatId}');
+            return result;
+          } else {
+            print('⚠️ ChatModuleHelper: Cached restore failed, trying full setup...');
+          }
+        }
       }
       
+      // Fall back to full setup from SharedPreferences login response
       final prefs = await SharedPreferences.getInstance();
       final loginJson = prefs.getString('loginResponse');
       
@@ -199,7 +239,7 @@ class ChatModuleHelper {
       // Dispose lifecycle observer
       ChatLifecycleObserver.instance.dispose();
       
-      // Sign out from Firebase and cleanup
+      // Sign out from Firebase and cleanup (also clears secure cache)
       await FirebaseChatAuthService.instance.signOut();
       
       _isInitialized = false;

@@ -1,21 +1,15 @@
+import 'dart:math' as math;
+
+import 'package:el_race/report_module/data/models/folder_model.dart';
+import 'package:el_race/report_module/data/provider/reports_provider.dart';
+import 'package:el_race/report_module/data/repositories/company_repository.dart';
+import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
-import 'package:el_race/ui/widgets/header_widget.dart';
-import 'package:el_race/utils/color_utils.dart';
-import 'package:el_race/report_module/data/provider/reports_provider.dart';
-import 'package:el_race/report_module/data/models/folder_model.dart';
-import 'package:el_race/report_module/data/repositories/company_repository.dart';
-import 'package:el_race/report_module/presentation/screens/report_listing/folder_reports_screen.dart';
-import 'package:el_race/ui/presentation/todo_list/providers/todo_firebase_provider.dart';
-import 'package:el_race/ui/presentation/todo_list/data/todo_model.dart';
-import 'package:intl/intl.dart';
 
-/// Screen to display user's pending reports from tasks
 class UserReportsScreen extends StatefulWidget {
-  const UserReportsScreen({Key? key}) : super(key: key);
+  const UserReportsScreen({super.key});
 
   static const String routeName = '/user-reports';
 
@@ -23,16 +17,14 @@ class UserReportsScreen extends StatefulWidget {
   State<UserReportsScreen> createState() => _UserReportsScreenState();
 }
 
-class _UserReportsScreenState extends State<UserReportsScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _UserReportsScreenState extends State<UserReportsScreen> {
   bool _isLoading = true;
+  String _searchQuery = '';
   List<FolderModel> _folders = [];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _loadData();
   }
 
@@ -40,19 +32,17 @@ class _UserReportsScreenState extends State<UserReportsScreen>
     setState(() => _isLoading = true);
 
     try {
-      // Initialize and load folders
       await CompanyRepository().getCompany();
-      ReportProvider().init(base: "https://erp.elrace.com");
+      ReportProvider().init(base: 'https://erp.elrace.com');
       await reportProvider.fetchAllFolders();
-      
+
       if (mounted) {
         setState(() {
           _folders = reportProvider.folders;
           _isLoading = false;
         });
       }
-    } catch (e) {
-      debugPrint('Error loading reports: $e');
+    } catch (_) {
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -60,509 +50,336 @@ class _UserReportsScreenState extends State<UserReportsScreen>
   }
 
   @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final displayItems = _folders
+        .where((folder) {
+          if (_searchQuery.trim().isEmpty) return true;
+          final query = _searchQuery.trim().toLowerCase();
+          return folder.name.toLowerCase().contains(query) ||
+              folder.description.toLowerCase().contains(query);
+        })
+        .toList();
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF4F4F4),
       appBar: const HeaderWidget(),
-      body: Column(
-        children: [
-          // Header
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
-            child: Row(
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            SizedBox(height: 12.h),
+            Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SvgPicture.asset(
-                  "assets/png/Tasks.svg",
-                  height: 24.w,
-                  width: 24.w,
+                Image.asset(
+                  'assets/png/my-reports-frame.png',
+                  width: 22.w,
+                  height: 22.w,
+                  fit: BoxFit.contain,
+                  color: const Color(0xFF151A36),
+                  colorBlendMode: BlendMode.srcIn,
                 ),
-                SizedBox(width: 4.w),
+                SizedBox(width: 8.w),
                 Text(
-                  'MY REPORTS',
-                  style: GoogleFonts.koulen(
-                    fontSize: 22.sp,
-                    fontWeight: FontWeight.w500,
-                    color: appFontColor,
+                  'My Reports',
+                  style: GoogleFonts.inter(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF151A36),
+                    letterSpacing: 0.2,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
-          ),
-          SizedBox(height: 16.h),
-
-          // Tabs (modern segmented control)
-          Container(
-            margin: EdgeInsets.symmetric(horizontal: 16.w),
-            padding: EdgeInsets.all(4.w),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16.r),
-              gradient: const LinearGradient(
-                colors: [Color(0xFFE9F4FF), Color(0xFFF3ECFF)],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Container(
-              height: 46.h,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.92),
-                borderRadius: BorderRadius.circular(14.r),
-                border: Border.all(color: const Color(0xFFE6E6E6)),
-              ),
-              child: TabBar(
-                controller: _tabController,
-                dividerColor: Colors.transparent,
-                splashBorderRadius: BorderRadius.circular(14.r),
-                indicatorSize: TabBarIndicatorSize.tab,
-                indicatorPadding: EdgeInsets.all(4.w),
-                indicator: BoxDecoration(
-                  borderRadius: BorderRadius.circular(12.r),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF8BC6EC), Color(0xFF9599E2)],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
+            SizedBox(height: 16.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 18.w),
+              child: Container(
+                height: 52.h,
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF4F4F4),
+                  borderRadius: BorderRadius.circular(28.r),
+                  border: Border.all(
+                    color: const Color(0xFFB9BBC3),
+                    width: 1,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.10),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        onChanged: (value) {
+                          setState(() => _searchQuery = value);
+                        },
+                        style: GoogleFonts.inter(
+                          fontSize: 16.sp,
+                          color: const Color(0xFF22263A),
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Search',
+                          border: InputBorder.none,
+                          hintStyle: GoogleFonts.inter(
+                            fontSize: 16.sp,
+                            color: const Color(0xFFA3A6B1),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.search,
+                      size: 22.w,
+                      color: const Color(0xFFA3A6B1),
                     ),
                   ],
                 ),
-                labelColor: Colors.white,
-                unselectedLabelColor: const Color(0xFF6B7280),
-                labelStyle: GoogleFonts.inter(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.6,
-                ),
-                unselectedLabelStyle: GoogleFonts.inter(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.4,
-                ),
-                tabs: [
-                  Tab(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.pending_actions_outlined, size: 16.w),
-                        SizedBox(width: 8.w),
-                        const Text('PENDING'),
-                      ],
+              ),
+            ),
+            SizedBox(height: 20.h),
+            Padding(
+              padding: EdgeInsets.only(left: 20.w),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Projects Reports',
+                      style: GoogleFonts.inter(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF878B98),
+                        letterSpacing: 0.4,
+                      ),
                     ),
                   ),
-                  Tab(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.folder_outlined, size: 16.w),
-                        SizedBox(width: 8.w),
-                        const Text('ALL'),
-                      ],
+                  Container(
+                    width: 44.w,
+                    height: 44.w,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF27304E),
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(14.r),
+                        bottomLeft: Radius.circular(14.r),
+                      ),
+                    ),
+                    alignment: Alignment.center,
+                    child: Icon(
+                      Icons.add,
+                      size: 26.w,
+                      color: Colors.white,
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-          SizedBox(height: 16.h),
-
-          // Tab content
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildPendingReportsTab(),
-                _buildAllReportsTab(),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Tab for pending reports (from tasks)
-  Widget _buildPendingReportsTab() {
-    return Consumer<TodoFirebaseProvider>(
-      builder: (context, provider, child) {
-        // Filter todos that have pending reports
-        final pendingReportTodos = provider.todos
-            .where((t) => t.reportId != null && !t.isCompleted)
-            .toList();
-
-        if (provider.isLoading) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (pendingReportTodos.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.assignment_turned_in,
-                  size: 80.w,
-                  color: Colors.grey.shade300,
-                ),
-                SizedBox(height: 16.h),
-                Text(
-                  'No pending reports',
-                  style: GoogleFonts.inter(
-                    fontSize: 18.sp,
-                    color: Colors.grey.shade500,
-                  ),
-                ),
-                SizedBox(height: 8.h),
-                Text(
-                  'All your task reports are completed!',
-                  style: GoogleFonts.inter(
-                    fontSize: 14.sp,
-                    color: Colors.grey.shade400,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: EdgeInsets.all(16.w),
-          itemCount: pendingReportTodos.length,
-          itemBuilder: (context, index) {
-            final todo = pendingReportTodos[index];
-            return _buildPendingReportCard(todo);
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildPendingReportCard(TodoModel todo) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            // Navigate to task detail or report
-            _navigateToReport(todo);
-          },
-          child: Padding(
-            padding: EdgeInsets.all(16.w),
-            child: Row(
-              children: [
-                // Report icon
-                Container(
-                  width: 50.w,
-                  height: 50.w,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF90CAF9), Color(0xFF9FA8DA)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.description_outlined,
-                    color: Colors.white,
-                    size: 28.w,
-                  ),
-                ),
-                SizedBox(width: 16.w),
-
-                // Report info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        todo.title,
-                        style: GoogleFonts.inter(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
+            SizedBox(height: 12.h),
+            Expanded(
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : displayItems.isEmpty
+                      ? Center(
+                          child: Text(
+                            'No reports found',
+                            style: GoogleFonts.inter(
+                              fontSize: 15.sp,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF9AA0A6),
+                            ),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: EdgeInsets.only(bottom: 18.h),
+                          itemCount: displayItems.length,
+                          itemBuilder: (context, index) {
+                            final folder = displayItems[index];
+                            return _ReportCard(
+                              title: folder.name.trim().isEmpty
+                                  ? 'Project Name'
+                                  : folder.name,
+                              subtitle: folder.description.trim().isEmpty
+                                  ? 'Company Name'
+                                  : folder.description,
+                              seed: int.tryParse(folder.id) ?? (index + 1),
+                            );
+                          },
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 4.h),
-                      if (todo.dueDate != null)
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today,
-                              size: 14.w,
-                              color: Colors.grey,
-                            ),
-                            SizedBox(width: 4.w),
-                            Text(
-                              'Due: ${DateFormat('dd MMM yyyy').format(todo.dueDate!)}',
-                              style: GoogleFonts.inter(
-                                fontSize: 12.sp,
-                                color: todo.dueDate!.isBefore(DateTime.now())
-                                    ? Colors.red
-                                    : Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      if (todo.assignedToName != null) ...[
-                        SizedBox(height: 4.h),
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.person_outline,
-                              size: 14.w,
-                              color: Colors.grey,
-                            ),
-                            SizedBox(width: 4.w),
-                            Expanded(
-                              child: Text(
-                                todo.assignedToName!,
-                                style: GoogleFonts.inter(
-                                  fontSize: 12.sp,
-                                  color: Colors.grey,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-
-                // Status indicator
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 12.w,
-                    vertical: 6.h,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF3E0),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text(
-                    'PENDING',
-                    style: GoogleFonts.inter(
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFFE65100),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _navigateToReport(TodoModel todo) {
-    // If reportId exists, try to navigate to the specific report
-    // For now, we show the folders screen
-    if (_folders.isNotEmpty) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => FolderReportScreen(folder: _folders.first),
-        ),
-      );
-    }
-  }
-
-  /// Tab for all reports (folders)
-  Widget _buildAllReportsTab() {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (_folders.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.folder_outlined,
-              size: 80.w,
-              color: Colors.grey.shade300,
-            ),
-            SizedBox(height: 16.h),
-            Text(
-              'No reports yet',
-              style: GoogleFonts.inter(
-                fontSize: 18.sp,
-                color: Colors.grey.shade500,
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              'Your reports will appear here',
-              style: GoogleFonts.inter(
-                fontSize: 14.sp,
-                color: Colors.grey.shade400,
-              ),
             ),
           ],
         ),
-      );
-    }
-
-    return ListView.builder(
-      padding: EdgeInsets.all(16.w),
-      itemCount: _folders.length,
-      itemBuilder: (context, index) {
-        final folder = _folders[index];
-        return _buildFolderCard(folder);
-      },
+      ),
     );
   }
+}
 
-  Widget _buildFolderCard(FolderModel folder) {
+class _ReportCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final int seed;
+
+  const _ReportCard({
+    required this.title,
+    required this.subtitle,
+    required this.seed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final points = _sparklinePoints(seed);
+
     return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
+      margin: EdgeInsets.fromLTRB(14.w, 0, 14.w, 12.h),
+      padding: EdgeInsets.fromLTRB(18.w, 14.h, 12.w, 14.h),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE0E0E0)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+        color: const Color(0xFFF4F4F4),
+        borderRadius: BorderRadius.circular(22.r),
+        border: Border.all(
+          color: const Color(0xFFA7AAB4),
+          width: 1,
+        ),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => FolderReportScreen(folder: folder),
-              ),
-            );
-          },
-          child: Padding(
-            padding: EdgeInsets.all(16.w),
-            child: Row(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Folder icon
-                Container(
-                  width: 50.w,
-                  height: 50.w,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF039BE5), Color(0xFF4DD0E1)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
+                SizedBox(height: 8.h),
+                Text(
+                  title,
+                  style: GoogleFonts.inter(
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF27304E),
                   ),
-                  child: Icon(
-                    Icons.folder_outlined,
-                    color: Colors.white,
-                    size: 28.w,
-                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                SizedBox(width: 16.w),
-
-                // Folder info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        folder.name,
-                        style: GoogleFonts.inter(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 4.h),
-                      if (folder.description.isNotEmpty)
-                        Text(
-                          folder.description,
-                          style: GoogleFonts.inter(
-                            fontSize: 12.sp,
-                            color: Colors.grey,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      SizedBox(height: 4.h),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 12.w,
-                            color: Colors.grey.shade400,
-                          ),
-                          SizedBox(width: 4.w),
-                          Text(
-                            DateFormat('dd MMM yyyy').format(folder.createdAt),
-                            style: GoogleFonts.inter(
-                              fontSize: 11.sp,
-                              color: Colors.grey.shade400,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                SizedBox(height: 2.h),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 9.sp,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF777A86),
                   ),
-                ),
-
-                // Arrow
-                Icon(
-                  Icons.chevron_right,
-                  color: Colors.grey.shade400,
-                  size: 24.w,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
           ),
-        ),
+          SizedBox(width: 8.w),
+          SizedBox(
+            width: 132.w,
+            height: 94.h,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Image.asset(
+                  'assets/png/r1.png',
+                  width: 16.w,
+                  height: 16.w,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Icon(
+                    Icons.more_vert,
+                    size: 16.w,
+                    color: const Color(0xFF27304E),
+                  ),
+                ),
+                const Spacer(),
+                SizedBox(
+                  width: 130.w,
+                  height: 52.h,
+                  child: CustomPaint(
+                    painter: _ReportChartPainter(points),
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Padding(
+                  padding: EdgeInsets.only(right: 2.w),
+                  child: Text(
+                    '100',
+                    style: GoogleFonts.inter(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF27304E),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  List<Offset> _sparklinePoints(int baseSeed) {
+    final random = math.Random(baseSeed.abs() + 21);
+    final values = <double>[];
+
+    double current = 0.12 + random.nextDouble() * 0.08;
+    for (int i = 0; i < 24; i++) {
+      final drift = (random.nextDouble() - 0.3) * 0.18;
+      current = (current + drift).clamp(0.08, 0.92);
+      if (i > 18) {
+        current = (current + 0.05).clamp(0.1, 0.96);
+      }
+      values.add(current);
+    }
+
+    return values
+        .asMap()
+        .entries
+        .map((entry) => Offset(entry.key.toDouble(), entry.value))
+        .toList();
+  }
+}
+
+class _ReportChartPainter extends CustomPainter {
+  final List<Offset> points;
+
+  const _ReportChartPainter(this.points);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (points.length < 2) {
+      return;
+    }
+
+    final paint = Paint()
+      ..color = const Color(0xFF6E758A)
+      ..strokeWidth = 1
+      ..style = PaintingStyle.stroke
+      ..isAntiAlias = true;
+
+    final path = Path();
+    for (int i = 0; i < points.length; i++) {
+      final px = (i / (points.length - 1)) * size.width;
+      final py = size.height - (points[i].dy * size.height);
+      if (i == 0) {
+        path.moveTo(px, py);
+      } else {
+        path.lineTo(px, py);
+      }
+    }
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ReportChartPainter oldDelegate) {
+    if (identical(oldDelegate.points, points)) {
+      return false;
+    }
+    if (oldDelegate.points.length != points.length) {
+      return true;
+    }
+    for (int i = 0; i < points.length; i++) {
+      if (oldDelegate.points[i] != points[i]) {
+        return true;
+      }
+    }
+    return false;
   }
 }

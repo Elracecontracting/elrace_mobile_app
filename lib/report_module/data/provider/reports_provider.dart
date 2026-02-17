@@ -1,5 +1,6 @@
 import 'package:el_race/report_module/data/models/folder_model.dart';
 import 'package:el_race/report_module/data/models/report_model.dart';
+import 'package:el_race/report_module/data/models/report_item_model.dart';
 import 'package:el_race/report_module/data/models/report_pdf_model.dart';
 import 'package:el_race/report_module/data/services/report_hive_service.dart';
 import 'package:el_race/ui/presentation/call_screen/data/repository.dart';
@@ -11,6 +12,7 @@ import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'dart:convert';
+import 'dart:io';
 
 ReportProvider reportProvider =
     Provider.of<ReportProvider>(navKey.currentContext!, listen: false);
@@ -86,8 +88,11 @@ class ReportProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> createReport(
-      {required String title, required String folderID}) async {
+  Future<void> createReport({
+    required String title,
+    required String folderID,
+    String? reportType,
+  }) async {
     _setLoading(true);
     var request =
         http.MultipartRequest('POST', Uri.parse('$baseUrl/api/create_report'))
@@ -96,12 +101,25 @@ class ReportProvider extends ChangeNotifier {
             'name': title,
             'company_id': companyId,
             'folder_id': folderID,
-            'company': "test" //todo remove
+            'company': "test", //todo remove
+            if (reportType != null) 'report_type': reportType,
           });
     final jsonData = await _handleResponse(await request.send());
     print(jsonData);
     _setLoading(false);
-    final createdReport = ReportModel.fromJson(jsonData['data']);
+    ReportModel createdReport = ReportModel.fromJson(jsonData['data']);
+    // If API doesn't return reportType, preserve what we sent
+    if (createdReport.reportType == null && reportType != null) {
+      createdReport = ReportModel(
+        id: createdReport.id,
+        name: createdReport.name,
+        companyId: createdReport.companyId,
+        folderId: createdReport.folderId,
+        createdAt: createdReport.createdAt,
+        updatedAt: createdReport.updatedAt,
+        reportType: reportType,
+      );
+    }
     _reports.insert(0, createdReport);
     notifyListeners();
   }
@@ -114,7 +132,7 @@ class ReportProvider extends ChangeNotifier {
             ..fields.addAll({
               'emp_id': empID,
               'report_id': reportId,
-              'name': companyId,
+              'name': name,
             });
 
       final jsonData = await _handleResponse(await request.send());
@@ -193,11 +211,33 @@ class ReportProvider extends ChangeNotifier {
     final jsonData = await _handleResponse(await request.send());
 
     if (kDebugMode) {
-      print(jsonData);
+      print('🔍 get_folder_report_list response: $jsonData');
     }
     _setLoading(false);
+    // Preserve locally-stored reportTypes before overwriting
+    final Map<String, String?> oldTypes = {};
+    for (final r in _reports) {
+      if (r.reportType != null) {
+        oldTypes[r.id] = r.reportType;
+      }
+    }
     _reports =
         (jsonData['data'] as List).map((e) => ReportModel.fromJson(e)).toList();
+    // Re-apply preserved reportTypes if API didn't return them
+    for (int i = 0; i < _reports.length; i++) {
+      if (_reports[i].reportType == null && oldTypes.containsKey(_reports[i].id)) {
+        _reports[i] = ReportModel(
+          id: _reports[i].id,
+          name: _reports[i].name,
+          companyId: _reports[i].companyId,
+          folderId: _reports[i].folderId,
+          createdAt: _reports[i].createdAt,
+          updatedAt: _reports[i].updatedAt,
+          reportType: oldTypes[_reports[i].id],
+        );
+      }
+    }
+    debugPrint('🔍 Loaded ${_reports.length} reports. Types: ${_reports.map((r) => '${r.name}:${r.reportType}').join(', ')}');
     notifyListeners();
   }
 
@@ -298,6 +338,140 @@ class ReportProvider extends ChangeNotifier {
     } catch (e) {
       print("Exception caught during PDF upload: $e");
       return false;
+    }
+  }
+
+  // ── Report Items API (server-side) ──
+
+  /// Add a report item (image + location + description) to the server
+  Future<ReportItemModel?> addReportItem({
+    required String reportId,
+    required File imageFile,
+    required String location,
+    required String description,
+    String type = 'image',
+    int index = 0,
+  }) async {
+    try {
+      debugPrint('📤 addReportItem: reportId=$reportId, location=$location, image=${imageFile.path}');
+      var request = http.MultipartRequest(
+          'POST', Uri.parse('$baseUrl/api/upload_report_item'))
+        ..fields.addAll({
+          'emp_id': empID,
+          'report_id': reportId,
+          'location': location,
+          'description': description,
+          'type': type,
+        });
+
+      request.files
+          .add(await http.MultipartFile.fromPath('item_data', imageFile.path));
+
+      final response = await request.send();
+      final res = await response.stream.bytesToString();
+      debugPrint('📤 upload_report_item response: $res');
+      final jsonData = json.decode(res);
+      
+      if (jsonData is Map<String, dynamic> && jsonData.containsKey('data') && jsonData['data'] != null) {
+        final data = jsonData['data'];
+        if (data is List && data.isNotEmpty) {
+          return ReportItemModel.fromJson(data[0] as Map<String, dynamic>, reportId);
+        } else if (data is Map<String, dynamic>) {
+          return ReportItemModel.fromJson(data, reportId);
+        }
+      }
+      return null;
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error adding report item: $e');
+      debugPrint('❌ Stack: $stackTrace');
+      return null;
+    }
+  }
+
+  /// Update a report item on the server
+  Future<ReportItemModel?> updateReportItem({
+    required String reportId,
+    required String itemId,
+    String? location,
+    String? description,
+    File? imageFile,
+    int index = 0,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+          'POST', Uri.parse('$baseUrl/report-items/update'))
+        ..fields.addAll({
+          'emp_id': empID,
+          'report_id': reportId,
+          'item_id': itemId,
+          if (location != null) 'location': location,
+          if (description != null) 'description': description,
+          'index': index.toString(),
+        });
+
+      if (imageFile != null) {
+        request.files
+            .add(await http.MultipartFile.fromPath('image', imageFile.path));
+      }
+
+      final jsonData = await _handleResponse(await request.send());
+      if (jsonData.containsKey('data') && jsonData['data'] != null) {
+        return ReportItemModel.fromJson(jsonData['data'], reportId);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error updating report item: $e');
+      return null;
+    }
+  }
+
+  /// Delete a report item from the server
+  Future<bool> deleteReportItem({
+    required String reportId,
+    required String itemId,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+          'POST', Uri.parse('$baseUrl/report-items/delete'))
+        ..fields.addAll({
+          'emp_id': empID,
+          'report_id': reportId,
+          'item_id': itemId,
+        });
+
+      await _handleResponse(await request.send());
+      return true;
+    } catch (e) {
+      debugPrint('Error deleting report item: $e');
+      return false;
+    }
+  }
+
+  /// Fetch full report detail (with items) from the server
+  Future<ReportDetailModel?> fetchReportDetailFromApi(String reportId) async {
+    try {
+      debugPrint('🔍 fetchReportDetailFromApi: reportId=$reportId, baseUrl=$baseUrl');
+      var request = http.MultipartRequest(
+          'POST', Uri.parse('$baseUrl/reports/detail'))
+        ..fields.addAll({
+          'emp_id': empID,
+          'report_id': reportId,
+        });
+
+      final response = await request.send();
+      final res = await response.stream.bytesToString();
+      debugPrint('🔍 reports/detail raw response: $res');
+      final jsonData = json.decode(res);
+      
+      if (jsonData is Map<String, dynamic> && jsonData.containsKey('data') && jsonData['data'] != null) {
+        return ReportDetailModel.fromJson(jsonData['data']);
+      }
+      debugPrint('🔍 reports/detail: no data in response');
+      return null;
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error fetching report detail: $e');
+      debugPrint('❌ Stack trace: $stackTrace');
+      return null;
     }
   }
 }

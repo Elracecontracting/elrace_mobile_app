@@ -73,6 +73,7 @@ class ChatRepository {
       batch.set(chatRef, {
         'type': 'dm',
         'dm_pair': dmPair,
+        'member_ids': FieldValue.arrayUnion(dmPair),
         'created_at': FieldValue.serverTimestamp(),
         'updated_at': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
@@ -160,6 +161,7 @@ class ChatRepository {
         'branch_id': branchId,
         'company_id': companyId,
         'title': groupTitle,
+        'member_ids': FieldValue.arrayUnion([uid]),
         'created_at': FieldValue.serverTimestamp(),
         'updated_at': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
@@ -680,5 +682,109 @@ class ChatRepository {
     } catch (e) {
       print('❌ ChatRepository: Error toggling pin: $e');
     }
+  }
+
+  // ============== Starred Messages ==============
+
+  /// Star a message (stored per-user in userChats/{uid}/starred_messages/{messageId})
+  Future<void> starMessage(String chatId, Message message) async {
+    final currentUid = _currentUid;
+    if (currentUid == null) return;
+
+    try {
+      await _firestore
+          .collection('userChats')
+          .doc(currentUid)
+          .collection('starred_messages')
+          .doc(message.id)
+          .set({
+        'chat_id': chatId,
+        'message_id': message.id,
+        'sender_id': message.senderId,
+        'type': message.type.toJson(),
+        'text': message.text,
+        'media_url': message.mediaUrl,
+        'file_name': message.fileName,
+        'file_size': message.fileSize,
+        'mime_type': message.mimeType,
+        'duration_ms': message.durationMs,
+        'created_at': Timestamp.fromDate(message.createdAt),
+        'starred_at': FieldValue.serverTimestamp(),
+      });
+      print('⭐ ChatRepository: Starred message ${message.id}');
+    } catch (e) {
+      print('❌ ChatRepository: Error starring message: $e');
+    }
+  }
+
+  /// Unstar a message
+  Future<void> unstarMessage(String messageId) async {
+    final currentUid = _currentUid;
+    if (currentUid == null) return;
+
+    try {
+      await _firestore
+          .collection('userChats')
+          .doc(currentUid)
+          .collection('starred_messages')
+          .doc(messageId)
+          .delete();
+      print('⭐ ChatRepository: Unstarred message $messageId');
+    } catch (e) {
+      print('❌ ChatRepository: Error unstarring message: $e');
+    }
+  }
+
+  /// Check if a message is starred
+  Future<bool> isMessageStarred(String messageId) async {
+    final currentUid = _currentUid;
+    if (currentUid == null) return false;
+
+    try {
+      final doc = await _firestore
+          .collection('userChats')
+          .doc(currentUid)
+          .collection('starred_messages')
+          .doc(messageId)
+          .get();
+      return doc.exists;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Subscribe to starred message IDs (returns Set of message IDs for quick lookup)
+  Stream<Set<String>> subscribeToStarredMessageIds() {
+    final currentUid = _currentUid;
+    if (currentUid == null) return Stream.value({});
+
+    return _firestore
+        .collection('userChats')
+        .doc(currentUid)
+        .collection('starred_messages')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => doc.id).toSet();
+    });
+  }
+
+  /// Get all starred messages stream
+  Stream<List<Map<String, dynamic>>> subscribeToStarredMessages() {
+    final currentUid = _currentUid;
+    if (currentUid == null) return Stream.value([]);
+
+    return _firestore
+        .collection('userChats')
+        .doc(currentUid)
+        .collection('starred_messages')
+        .orderBy('starred_at', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    });
   }
 }

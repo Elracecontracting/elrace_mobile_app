@@ -8,6 +8,9 @@ class ChatUser {
   final int? employeeId;
   final String name;
   final String? email;
+  final String? roleName;
+  final String? jobTitle;
+  final String? phoneNumber;
   final int roleId;
   final int? branchId;
   final int companyId;
@@ -24,6 +27,9 @@ class ChatUser {
     this.employeeId,
     required this.name,
     this.email,
+    this.roleName,
+    this.jobTitle,
+    this.phoneNumber,
     required this.roleId,
     this.branchId,
     required this.companyId,
@@ -77,6 +83,9 @@ class ChatUser {
       employeeId: data['employee_id'],
       name: data['name'] ?? '',
       email: data['email'],
+      roleName: data['role_name']?.toString(),
+      jobTitle: (data['job_title'] ?? data['job'] ?? data['designation'])?.toString(),
+      phoneNumber: (data['phone'] ?? data['mobile_phone'] ?? data['mobile'])?.toString(),
       roleId: data['role_id'] ?? 0,
       branchId: data['branch_id'],
       companyId: data['company_id'] ?? 0,
@@ -95,6 +104,9 @@ class ChatUser {
       'employee_id': employeeId,
       'name': name,
       'email': email,
+      'role_name': roleName,
+      'job_title': jobTitle,
+      'phone': phoneNumber,
       'role_id': roleId,
       'branch_id': branchId,
       'company_id': companyId,
@@ -117,6 +129,9 @@ class ChatUser {
     int? employeeId,
     String? name,
     String? email,
+    String? roleName,
+    String? jobTitle,
+    String? phoneNumber,
     int? roleId,
     int? branchId,
     int? companyId,
@@ -133,6 +148,9 @@ class ChatUser {
       employeeId: employeeId ?? this.employeeId,
       name: name ?? this.name,
       email: email ?? this.email,
+      roleName: roleName ?? this.roleName,
+      jobTitle: jobTitle ?? this.jobTitle,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
       roleId: roleId ?? this.roleId,
       branchId: branchId ?? this.branchId,
       companyId: companyId ?? this.companyId,

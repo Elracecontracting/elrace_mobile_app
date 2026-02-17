@@ -1,41 +1,142 @@
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../chat/chat.dart';
 import '../../../resources/app_colors.dart';
 
+/// Callback types for message actions
+typedef MessageActionCallback = void Function(Message message);
+
 /// Message bubble widget for displaying a single message
 class MessageBubble extends StatelessWidget {
   final Message message;
   final bool isMe;
+  final bool isStarred;
+  final String? senderName; // for showing reply-to sender name in group chats
+  final MessageActionCallback? onStar;
+  final MessageActionCallback? onReply;
+  final MessageActionCallback? onForward;
 
   const MessageBubble({
     super.key,
     required this.message,
     required this.isMe,
+    this.isStarred = false,
+    this.senderName,
+    this.onStar,
+    this.onReply,
+    this.onForward,
   });
 
   @override
   Widget build(BuildContext context) {
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: EdgeInsets.only(
-          left: isMe ? 60 : 8,
-          right: isMe ? 8 : 60,
-          top: 4,
-          bottom: 4,
+      child: GestureDetector(
+        onLongPress: () => _showMessageActions(context),
+        child: Container(
+          margin: EdgeInsets.only(
+            left: isMe ? 60 : 8,
+            right: isMe ? 8 : 60,
+            top: 4,
+            bottom: 4,
+          ),
+          child: Column(
+            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              _buildBubble(context),
+              _buildStatus(context),
+            ],
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            _buildBubble(context),
-            _buildStatus(context),
-          ],
+      ),
+    );
+  }
+
+  void _showMessageActions(BuildContext context) {
+    HapticFeedback.mediumImpact();
+
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    final Offset position = box.localToGlobal(Offset.zero);
+    final Size size = box.size;
+
+    // Position the menu above or below the bubble based on screen space
+    final screenHeight = MediaQuery.of(context).size.height;
+    final bubbleCenter = position.dx + size.width / 2;
+    final showAbove = position.dy > screenHeight / 2;
+
+    final RelativeRect menuPosition = RelativeRect.fromLTRB(
+      isMe ? position.dx + size.width - 200 : position.dx,
+      showAbove ? position.dy - 8 : position.dy + size.height,
+      isMe ? position.dx + size.width : position.dx + 200,
+      showAbove ? position.dy + size.height : position.dy,
+    );
+
+    showMenu<String>(
+      context: context,
+      position: menuPosition,
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
+      items: [
+        _buildMenuItem(
+          value: 'star',
+          icon: isStarred ? Icons.star_rounded : Icons.star_outline_rounded,
+          label: isStarred ? 'Unstar' : 'Star',
         ),
+        _buildMenuItem(
+          value: 'reply',
+          icon: Icons.reply_rounded,
+          label: 'Reply',
+        ),
+        _buildMenuItem(
+          value: 'forward',
+          icon: Icons.shortcut_rounded,
+          label: 'Forward',
+        ),
+      ],
+    ).then((value) {
+      if (value == null) return;
+      switch (value) {
+        case 'star':
+          onStar?.call(message);
+          break;
+        case 'reply':
+          onReply?.call(message);
+          break;
+        case 'forward':
+          onForward?.call(message);
+          break;
+      }
+    });
+  }
+
+  PopupMenuItem<String> _buildMenuItem({
+    required String value,
+    required IconData icon,
+    required String label,
+  }) {
+    return PopupMenuItem<String>(
+      value: value,
+      height: 48,
+      child: Row(
+        children: [
+          Icon(icon, color: const Color(0xFF8E8E93), size: 22),
+          const SizedBox(width: 14),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF2C2C2E),
+              fontSize: 17,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -86,18 +187,33 @@ class MessageBubble extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context, Color textColor) {
+    Widget content;
     switch (message.type) {
       case MessageType.text:
-        return _TextContent(message: message, textColor: textColor, isMe: isMe);
+        content = _TextContent(message: message, textColor: textColor, isMe: isMe);
       case MessageType.image:
-        return _ImageContent(message: message, isMe: isMe);
+        content = _ImageContent(message: message, isMe: isMe);
       case MessageType.audio:
-        return _AudioContent(message: message, isMe: isMe);
+        content = _AudioContent(message: message, isMe: isMe);
       case MessageType.video:
-        return _VideoContent(message: message, isMe: isMe);
+        content = _VideoContent(message: message, isMe: isMe);
       case MessageType.file:
-        return _FileContent(message: message, textColor: textColor, isMe: isMe);
+        content = _FileContent(message: message, textColor: textColor, isMe: isMe);
     }
+
+    // Wrap with reply-to preview if present
+    if (message.replyTo != null && message.replyTo!.messageId.isNotEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _ReplyToPreview(replyTo: message.replyTo!, isMe: isMe),
+          content,
+        ],
+      );
+    }
+
+    return content;
   }
 
   Widget _buildStatus(BuildContext context) {
@@ -292,6 +408,14 @@ class _AudioContentState extends State<_AudioContent> {
   final AudioPlayer _player = AudioPlayer();
   bool _isPlaying = false;
   Duration _duration = Duration.zero;
+  Duration _position = Duration.zero;
+
+  // Waveform bar heights (simulated – gives a realistic pattern)
+  static const List<double> _barHeights = [
+    0.25, 0.40, 0.55, 0.70, 0.50, 0.80, 0.95, 0.60, 0.85, 0.45,
+    0.70, 0.90, 0.35, 0.65, 0.80, 0.50, 0.75, 0.55, 0.40, 0.90,
+    0.60, 0.35, 0.70, 0.85, 0.45,
+  ];
 
   @override
   void initState() {
@@ -305,17 +429,24 @@ class _AudioContentState extends State<_AudioContent> {
     try {
       await _player.setUrl(widget.message.mediaUrl!);
       _duration = _player.duration ?? Duration.zero;
-      
+
       if (widget.message.durationMs != null) {
         _duration = Duration(milliseconds: widget.message.durationMs!);
       }
 
       _player.playerStateStream.listen((state) {
         if (mounted) {
-          setState(() {
-            _isPlaying = state.playing;
-          });
+          setState(() => _isPlaying = state.playing);
+          // Reset position when playback completes
+          if (state.processingState == ProcessingState.completed) {
+            _player.seek(Duration.zero);
+            _player.pause();
+          }
         }
+      });
+
+      _player.positionStream.listen((pos) {
+        if (mounted) setState(() => _position = pos);
       });
     } catch (e) {
       debugPrint('Error initializing audio player: $e');
@@ -328,62 +459,78 @@ class _AudioContentState extends State<_AudioContent> {
     super.dispose();
   }
 
+  double get _progress {
+    if (_duration.inMilliseconds == 0) return 0;
+    return (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final textColor = widget.isMe ? Colors.white : const Color(0xFF141E24);
+    // Colors
+    const playedBarColor = Colors.white;
+    const unplayedBarColor = Color(0xFF7FE0D8);
+    const iconBg = Colors.white;
+    const iconColor = Color(0xFF1D2449);
+
+    final displayDuration = _isPlaying ? _position : _duration;
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // ── Play / Pause button ──
           GestureDetector(
             onTap: _togglePlay,
             child: Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
+              width: 44,
+              height: 44,
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: widget.isMe
-                    ? Colors.white.withValues(alpha: 0.96)
-                    : const Color(0xFFD4D9DE),
+                color: iconBg,
               ),
               child: Icon(
-                _isPlaying ? Icons.pause : Icons.play_arrow,
-                color: const Color(0xFF243057),
-                size: 21,
+                _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                color: iconColor,
+                size: 28,
               ),
             ),
           ),
           const SizedBox(width: 10),
-          SizedBox(
-            width: 200,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(17, (index) {
-                final lightBar = index >= 10;
-                final baseHeight = (index % 4) + 1;
-                return Container(
-                  width: 3,
-                  height: 6 + (baseHeight * 3),
-                  margin: const EdgeInsets.symmetric(horizontal: 2),
-                  decoration: BoxDecoration(
-                    color: lightBar
-                        ? const Color(0xFF7FE0D8)
-                        : Colors.white.withValues(alpha: 0.93),
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                );
-              }),
+
+          // ── Waveform bars ──
+          Flexible(
+            child: SizedBox(
+              height: 30,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: List.generate(_barHeights.length, (i) {
+                  final fraction = i / _barHeights.length;
+                  final isPlayed = fraction < _progress;
+                  return Container(
+                    width: 3,
+                    height: 6 + (_barHeights[i] * 24),
+                    margin: const EdgeInsets.symmetric(horizontal: 1.4),
+                    decoration: BoxDecoration(
+                      color: isPlayed ? playedBarColor : unplayedBarColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  );
+                }),
+              ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
+
+          // ── Duration ──
           Text(
-            _formatDuration(_duration),
-            style: TextStyle(
-              color: textColor,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
+            _formatDuration(displayDuration),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              fontFeatures: [FontFeature.tabularFigures()],
             ),
           ),
         ],
@@ -400,9 +547,9 @@ class _AudioContentState extends State<_AudioContent> {
   }
 
   String _formatDuration(Duration duration) {
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
   }
 }
 
@@ -608,5 +755,71 @@ class _FileContent extends StatelessWidget {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
     }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+}
+
+/// Reply-to preview shown inside the message bubble
+class _ReplyToPreview extends StatelessWidget {
+  final ReplyTo replyTo;
+  final bool isMe;
+
+  const _ReplyToPreview({required this.replyTo, required this.isMe});
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = isMe
+        ? Colors.white.withValues(alpha: 0.12)
+        : const Color(0xFFD6DCE2);
+    final accentColor = isMe ? const Color(0xFF7FE0D8) : const Color(0xFF1D2449);
+    final textColor = isMe ? Colors.white70 : const Color(0xFF5A6570);
+
+    String preview = replyTo.text ?? '';
+    if (preview.isEmpty) {
+      final type = replyTo.type;
+      if (type == 'image') preview = '📷 Photo';
+      else if (type == 'audio') preview = '🎵 Voice message';
+      else if (type == 'video') preview = '🎬 Video';
+      else if (type == 'file') preview = '📎 File';
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(6, 6, 6, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border(
+          left: BorderSide(color: accentColor, width: 3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            replyTo.senderId.length > 8
+                ? replyTo.senderId.substring(0, 8)
+                : replyTo.senderId,
+            style: TextStyle(
+              color: accentColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            preview,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 13,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -1,107 +1,162 @@
 import 'package:el_race/main.dart';
 import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
+import 'package:el_race/report_module/data/models/folder_model.dart';
 import 'package:el_race/report_module/data/provider/reports_provider.dart';
+import 'package:el_race/report_module/data/repositories/company_repository.dart';
 import 'package:el_race/report_module/presentation/widgets/custom_textfield.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 Future<bool> showAddNewReport(BuildContext context,
     {required int type, String? folderID}) async {
-  GlobalKey<FormState> form = GlobalKey<FormState>();
   TextEditingController nameController = TextEditingController();
   TextEditingController descriptionController = TextEditingController();
 
+  // ── Available projects (folders already loaded) ──
+  final folders =
+      Provider.of<ReportProvider>(context, listen: false).folders;
+  final projectNames =
+      folders.map((f) => f.name).where((n) => n.isNotEmpty).toList();
+
+  // ── Available companies ──
+  final companies = <String>[
+    'RCC',
+    'El Race Cons. & Gen. Cont. Co. L.C.C',
+    'Al Hewar Contracting & Irrigation Est.',
+  ];
+  final currentCompany =
+      CompanyRepository.company?.companyName ?? companies.first;
+
+  String? selectedProject;
+  String selectedCompany = companies.contains(currentCompany) ? currentCompany : companies.first;
+
   bool cancel = true;
+
   await showDialog(
     context: context,
     barrierColor: Colors.black.withValues(alpha: 0.5),
-    builder: (context) {
-      return Dialog(
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15), // Rounded border
-        ),
-        backgroundColor: CustomColors.white, // White background
-        child: Container(
-          width: MediaQuery.sizeOf(context).width * 1,
-          padding: const EdgeInsets.symmetric(vertical: 25, horizontal: 20),
-          child: Form(
-            key: form,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CustomTextField(
-                  maxCharacter: 100,
-                  showLabel: true,
-                  required: true,
-                  controller: nameController,
-                  inputType: TextInputType.text,
-                  hintText: type == 1 ? "Report Name" : "Project Name",
-                ),
-                if (type == 2) const SizedBox(height: 10),
-                if (type == 2)
-                  CustomTextField(
-                    maxCharacter: 1000,
-                    showLabel: true,
-                    required: false,
-                    controller: descriptionController,
-                    inputType: TextInputType.multiline,
-                    maxLine: 4,
-                    hintText: "Description",
+    builder: (ctx) {
+      return StatefulBuilder(
+        builder: (ctx, setDialogState) {
+          return Dialog(
+            insetPadding: EdgeInsets.symmetric(horizontal: 20.w),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20.r),
+            ),
+            backgroundColor: Colors.white,
+            child: Padding(
+              padding:
+                  EdgeInsets.symmetric(vertical: 28.h, horizontal: 22.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // ── Project Name dropdown ──
+                  _DropdownSection(
+                    label: 'Project',
+                    subLabel: 'Name',
+                    hint: 'Select project',
+                    value: selectedProject,
+                    items: projectNames,
+                    onChanged: (v) {
+                      setDialogState(() => selectedProject = v);
+                      nameController.text = v ?? '';
+                    },
                   ),
-                const SizedBox(height: 20),
-                Row(
-                  children: [
-                    MaterialButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      height: 44,
-                      color: CustomColors.containerColor,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15)),
-                      child: Text(
-                        "Cancel",
-                        style: CustomTextStyle.reportTitle.copyWith(
-                          color: CustomColors.maroon,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 20),
-                    Expanded(
-                      child: MaterialButton(
-                        onPressed: () {
-                          if (form.currentState!.validate()) {
-                            cancel = false;
-                            Navigator.pop(context);
-                          }
-                        },
-                        height: 44,
-                        color: CustomColors.maroon,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15)),
-                        child: Text(
-                          "Save",
-                          style: CustomTextStyle.reportTitle.copyWith(
-                            color: CustomColors.white,
-                            fontWeight: FontWeight.w500,
+
+                  SizedBox(height: 16.h),
+
+                  // ── Company Name dropdown ──
+                  _DropdownSection(
+                    label: 'Company',
+                    subLabel: 'Name',
+                    hint: 'Select company',
+                    value: selectedCompany,
+                    items: companies,
+                    onChanged: (v) {
+                      setDialogState(() => selectedCompany = v ?? companies.first);
+                      descriptionController.text = v ?? '';
+                    },
+                  ),
+
+                  SizedBox(height: 24.h),
+
+                  // ── Buttons ──
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SizedBox(
+                          height: 48.h,
+                          child: ElevatedButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFC62828),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30.r),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              'CANCEL',
+                              style: GoogleFonts.inter(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: 1,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                )
-              ],
+                      SizedBox(width: 14.w),
+                      Expanded(
+                        child: SizedBox(
+                          height: 48.h,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              if (selectedProject != null &&
+                                  selectedProject!.isNotEmpty) {
+                                nameController.text = selectedProject!;
+                                descriptionController.text = selectedCompany;
+                                cancel = false;
+                                Navigator.pop(ctx);
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF2E7D32),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30.r),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text(
+                              'SUBMIT',
+                              style: GoogleFonts.inter(
+                                fontSize: 13.sp,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       );
     },
   );
-  if (!form.currentState!.validate() || cancel) return false;
+
+  if (cancel || nameController.text.trim().isEmpty) return false;
+
   ReportProvider provider =
       Provider.of<ReportProvider>(navKey.currentContext!, listen: false);
   if (type == 2) {
@@ -112,5 +167,101 @@ Future<bool> showAddNewReport(BuildContext context,
     await provider.createReport(
         title: nameController.text, folderID: folderID!);
     return true;
+  }
+}
+
+/// Reusable styled dropdown section matching the design mockup.
+class _DropdownSection extends StatelessWidget {
+  final String label;
+  final String subLabel;
+  final String hint;
+  final String? value;
+  final List<String> items;
+  final ValueChanged<String?> onChanged;
+
+  const _DropdownSection({
+    required this.label,
+    required this.subLabel,
+    required this.hint,
+    required this.value,
+    required this.items,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 14.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFFD1D3DA)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFF6B7280),
+            ),
+          ),
+          Text(
+            subLabel,
+            style: GoogleFonts.inter(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1F2937),
+            ),
+          ),
+          SizedBox(height: 10.h),
+          Container(
+            height: 44.h,
+            padding: EdgeInsets.symmetric(horizontal: 14.w),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4F4F4),
+              borderRadius: BorderRadius.circular(22.r),
+              border: Border.all(color: const Color(0xFFD1D3DA)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: value,
+                hint: Text(
+                  hint,
+                  style: GoogleFonts.inter(
+                    fontSize: 12.sp,
+                    color: const Color(0xFFA3A6B1),
+                  ),
+                ),
+                isExpanded: true,
+                icon: Icon(
+                  Icons.arrow_drop_down,
+                  size: 22.w,
+                  color: const Color(0xFF374151),
+                ),
+                style: GoogleFonts.inter(
+                  fontSize: 12.sp,
+                  color: const Color(0xFF374151),
+                ),
+                dropdownColor: Colors.white,
+                borderRadius: BorderRadius.circular(14.r),
+                items: items
+                    .map((item) => DropdownMenuItem<String>(
+                          value: item,
+                          child: Text(
+                            item,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ))
+                    .toList(),
+                onChanged: onChanged,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

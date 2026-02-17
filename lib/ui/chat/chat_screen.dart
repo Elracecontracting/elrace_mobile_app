@@ -13,6 +13,7 @@ import '../../chat/services/chat_notification_service.dart';
 import '../../resources/app_colors.dart';
 import '../../core/utils/shared_pref.dart';
 import '../widgets/header_widget.dart';
+import 'chat_user_profile_screen.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/chat_input_bar.dart';
 import 'widgets/typing_indicator.dart';
@@ -45,6 +46,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   bool _isRecording = false;
   bool _isMuted = false;
   Timer? _typingTimer;
+
+  /// Starred message IDs (live from Firestore)
+  Set<String> _starredIds = {};
+  StreamSubscription? _starredSub;
+
+  /// Reply state (WhatsApp-style)
+  Message? _replyingTo;
   
   @override
   void initState() {
@@ -59,6 +67,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     ChatNotificationService.instance.setActiveChatId(widget.chatId);
     // Cancel any pending notifications for this chat
     ChatNotificationService.instance.cancelNotificationsForChat(widget.chatId);
+
+    // Subscribe to starred message IDs
+    _starredSub = ChatRepository.instance.subscribeToStarredMessageIds().listen((ids) {
+      if (mounted) setState(() => _starredIds = ids);
+    });
   }
 
   Future<void> _loadMuteStatus() async {
@@ -75,6 +88,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _messageController.dispose();
     _scrollController.dispose();
     _typingTimer?.cancel();
+    _starredSub?.cancel();
     PresenceService.instance.setTyping(widget.chatId, false);
     
     // Clear active chat when leaving
@@ -126,6 +140,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               ),
             ),
             _buildTypingIndicator(),
+            _buildReplyBar(),
             ChatInputBar(
               controller: _messageController,
               isLoading: false,
@@ -144,6 +159,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildGlassTopHeader() {
+    final isGroupChat = widget.chatType != ChatType.dm;
+    final headerIcon = isGroupChat ? Icons.groups_rounded : Icons.chat_bubble_outline;
+    final headerTitle = isGroupChat ? 'Group Media Chat' : 'Private Chat';
+
     return Column(
       children: [
         ClipRect(
@@ -160,16 +179,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   ),
                 ),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.chat_bubble_outline, color: Colors.white, size: 22),
-                  SizedBox(width: 6),
+                  Icon(headerIcon, color: Colors.white, size: 20),
+                  const SizedBox(width: 6),
                   Text(
-                    'Private Chat',
-                    style: TextStyle(
+                    headerTitle,
+                    style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 26,
+                      fontSize: 17,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -179,29 +198,44 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           ),
         ),
         Container(
-          color: AppColors.primaryColor,
+          decoration: const BoxDecoration(
+            color: AppColors.primaryColor,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
           padding: const EdgeInsets.fromLTRB(14, 10, 8, 12),
           child: Row(
             children: [
-              _buildAvatar(),
-              const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.title,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
+                child: GestureDetector(
+                  onTap: (widget.chatType == ChatType.dm && widget.peerUid != null)
+                      ? _openPeerProfile
+                      : null,
+                  behavior: HitTestBehavior.opaque,
+                  child: Row(
+                    children: [
+                      _buildAvatar(),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.title,
+                              style: const TextStyle(
+                                fontSize: 17,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            if (widget.chatType == ChatType.dm && widget.peerUid != null)
+                              _buildPresenceStatus(),
+                          ],
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    if (widget.chatType == ChatType.dm && widget.peerUid != null)
-                      _buildPresenceStatus(),
-                  ],
+                    ],
+                  ),
                 ),
               ),
               PopupMenuButton<String>(
@@ -360,6 +394,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 MessageBubble(
                   message: message,
                   isMe: isMe,
+                  isStarred: _starredIds.contains(message.id),
+                  onStar: _onStarMessage,
+                  onReply: _onReplyMessage,
+                  onForward: _onForwardMessage,
                 ),
               ],
             );
@@ -482,6 +520,78 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     );
   }
 
+  /// WhatsApp-style reply preview bar above input
+  Widget _buildReplyBar() {
+    if (_replyingTo == null) return const SizedBox.shrink();
+
+    final message = _replyingTo!;
+    final preview = message.getPreviewText();
+    final isMyMessage = message.senderId == _currentUid;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: const Color(0xFFDCE6E5).withValues(alpha: 0.7),
+            width: 1,
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 44,
+            decoration: BoxDecoration(
+              color: isMyMessage
+                  ? const Color(0xFF1D2449)
+                  : const Color(0xFF2DD65B),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isMyMessage ? 'You' : widget.title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: isMyMessage
+                        ? const Color(0xFF1D2449)
+                        : const Color(0xFF2DD65B),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  preview,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Color(0xFF8E8E93),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () => setState(() => _replyingTo = null),
+            icon: const Icon(Icons.close, size: 20, color: Color(0xFF8E8E93)),
+            splashRadius: 20,
+          ),
+        ],
+      ),
+    );
+  }
+
   void _onMenuAction(String action) {
     switch (action) {
       case 'mute':
@@ -499,14 +609,25 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
+    // Capture reply state before clearing
+    final replyTo = _replyingTo != null
+        ? ReplyTo(
+            messageId: _replyingTo!.id,
+            senderId: _replyingTo!.senderId,
+            text: _replyingTo!.getPreviewText(),
+            type: _replyingTo!.type.toJson(),
+          )
+        : null;
+
     _messageController.clear();
+    setState(() => _replyingTo = null);
     PresenceService.instance.setTyping(widget.chatId, false);
     
     // Optimistic UI - scroll immediately, no loading
     _scrollToBottom();
 
     try {
-      await ChatRepository.instance.sendText(widget.chatId, text);
+      await ChatRepository.instance.sendText(widget.chatId, text, replyTo: replyTo);
     } catch (e) {
       _showError('Failed to send message');
     }
@@ -625,6 +746,148 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
+      ),
+    );
+  }
+
+  // ── Message long-press actions ──
+
+  void _onStarMessage(Message message) {
+    final isCurrentlyStarred = _starredIds.contains(message.id);
+    if (isCurrentlyStarred) {
+      ChatRepository.instance.unstarMessage(message.id);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Message unstarred'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    } else {
+      ChatRepository.instance.starMessage(widget.chatId, message);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Message starred'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+  }
+
+  void _onReplyMessage(Message message) {
+    setState(() => _replyingTo = message);
+    // Focus the text field
+    // Delay slightly to ensure the reply bar is rendered first
+    Future.delayed(const Duration(milliseconds: 100), () {
+      FocusScope.of(context).requestFocus(FocusNode());
+    });
+  }
+
+  void _onForwardMessage(Message message) {
+    // Show a bottom sheet to pick a chat to forward to
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      builder: (sheetCtx) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 50,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 18),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                ),
+                const Text(
+                  'Forward to...',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 12),
+                StreamBuilder<List<UserChat>>(
+                  stream: ChatRepository.instance.subscribeToUserChats(_currentUid!),
+                  builder: (ctx, snap) {
+                    final chats = snap.data ?? [];
+                    if (chats.isEmpty) {
+                      return const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Text('No chats available'),
+                      );
+                    }
+                    return SizedBox(
+                      height: 280,
+                      child: ListView.builder(
+                        itemCount: chats.length,
+                        itemBuilder: (_, i) {
+                          final chat = chats[i];
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: const Color(0xFFECECEC),
+                              child: Text(
+                                _getInitials(chat.title ?? '?'),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF2E2E2E),
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              chat.title ?? 'Chat',
+                              style: const TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            onTap: () async {
+                              Navigator.pop(sheetCtx);
+                              try {
+                                final text = message.getPreviewText();
+                                await ChatRepository.instance.sendText(
+                                  chat.chatId,
+                                  text,
+                                );
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Message forwarded'),
+                                      duration: Duration(seconds: 1),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (mounted) _showError('Failed to forward message');
+                              }
+                            },
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _openPeerProfile() {
+    final peerUid = widget.peerUid;
+    if (peerUid == null || widget.chatType != ChatType.dm) return;
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChatUserProfileScreen(
+          chatId: widget.chatId,
+          peerUid: peerUid,
+          fallbackName: widget.title,
+        ),
       ),
     );
   }

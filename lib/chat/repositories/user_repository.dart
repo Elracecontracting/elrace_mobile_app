@@ -34,6 +34,7 @@ class UserRepository {
       'employee_id': session.employeeId,
       'name': session.name,
       'email': session.email,
+      'role_name': session.roleName,
       'role_id': session.roleId,
       'branch_id': session.branchId,
       'company_id': session.companyId,

@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -6,6 +9,7 @@ import '../../resources/app_colors.dart';
 import '../widgets/header_widget.dart';
 import 'chat_screen.dart';
 import 'new_chat_screen.dart';
+import 'starred_messages_screen.dart';
 import 'widgets/typing_indicator.dart';
 
 /// Main chat list screen showing all user's conversations
@@ -20,9 +24,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
   String? _currentUid;
   bool _isChatAvailable = false;
   bool _isInitializing = false;
+  bool _isScrolled = false;
 
   final TextEditingController _localSearchController = TextEditingController();
-  String _localSearchQuery = '';
+  final ValueNotifier<String> _searchNotifier = ValueNotifier('');
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -30,36 +36,45 @@ class _ChatListScreenState extends State<ChatListScreen> {
     _initializeChat();
 
     _localSearchController.addListener(() {
-      final q = _localSearchController.text.trim().toLowerCase();
-      if (q == _localSearchQuery) return;
-      setState(() => _localSearchQuery = q);
+      _debounce?.cancel();
+      _debounce = Timer(const Duration(milliseconds: 350), () {
+        final q = _localSearchController.text.trim().toLowerCase();
+        if (q != _searchNotifier.value) {
+          _searchNotifier.value = q;
+        }
+      });
     });
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _localSearchController.dispose();
+    _searchNotifier.dispose();
     super.dispose();
   }
 
   Future<void> _initializeChat() async {
     _currentUid = FirebaseAuth.instance.currentUser?.uid;
     _isChatAvailable = ChatModuleHelper.instance.isChatEnabled;
-    
+
     // If chat is not available but user is authenticated, try to restore session
     if (!_isChatAvailable && !_isInitializing) {
       setState(() => _isInitializing = true);
-      
+
       try {
-        print('🔷 ChatListScreen: Chat not available, attempting to restore session...');
-        final result = await ChatModuleHelper.instance.restoreFromStoredSession();
-        
+        print(
+            '🔷 ChatListScreen: Chat not available, attempting to restore session...');
+        final result =
+            await ChatModuleHelper.instance.restoreFromStoredSession();
+
         if (result != null && result.chatEnabled) {
           _currentUid = FirebaseAuth.instance.currentUser?.uid;
           _isChatAvailable = true;
           print('✅ ChatListScreen: Chat session restored successfully');
         } else {
-          print('⚠️ ChatListScreen: Failed to restore chat session: ${result?.error}');
+          print(
+              '⚠️ ChatListScreen: Failed to restore chat session: ${result?.error}');
         }
       } catch (e) {
         print('❌ ChatListScreen: Error restoring chat session: $e');
@@ -86,7 +101,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         ),
       );
     }
-    
+
     if (!_isChatAvailable || _currentUid == null) {
       return Scaffold(
         appBar: const HeaderWidget(),
@@ -126,13 +141,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
                 icon: const Icon(Icons.refresh),
                 label: const Text('Retry'),
                 style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 ),
               ),
               const SizedBox(height: 12),
               // Show logout button if error mentions session expired
-              if (ChatModuleHelper.instance.getStatusMessage().contains('expired') ||
-                  ChatModuleHelper.instance.getStatusMessage().contains('login again'))
+              if (ChatModuleHelper.instance
+                      .getStatusMessage()
+                      .contains('expired') ||
+                  ChatModuleHelper.instance
+                      .getStatusMessage()
+                      .contains('login again'))
                 TextButton.icon(
                   onPressed: () {
                     // Navigate to logout or login screen
@@ -155,56 +175,64 @@ class _ChatListScreenState extends State<ChatListScreen> {
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
-        child: Column(
+        child: Stack(
           children: [
-            // Fixed secondary bar (Chats + Massages)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
-              child: _SecondaryChatBar(onMessagesTap: _startNewChat),
-            ),
-            // Everything else scrolls together
-            Expanded(
-              child: StreamBuilder<List<UserChat>>(
-                stream: ChatRepository.instance.subscribeToUserChats(_currentUid!),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+            StreamBuilder<List<UserChat>>(
+              stream:
+                  ChatRepository.instance.subscribeToUserChats(_currentUid!),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.error_outline, size: 56, color: Colors.red[300]),
-                          const SizedBox(height: 12),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'Error: ${snapshot.error}',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white70),
-                            ),
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.error_outline,
+                            size: 56, color: Colors.red[300]),
+                        const SizedBox(height: 12),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'Error: ${snapshot.error}',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white70),
                           ),
-                        ],
-                      ),
-                    );
-                  }
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-                  final allChats = snapshot.data ?? [];
+                final allChats = snapshot.data ?? [];
 
-                  final groups = allChats
-                      .where((c) => c.type == ChatType.role || c.type == ChatType.group)
-                      .toList();
+                final groups = allChats
+                    .where((c) =>
+                        c.type == ChatType.role || c.type == ChatType.group)
+                    .toList();
 
-                  final filteredChats = _localSearchQuery.isEmpty
-                      ? allChats
-                      : allChats
-                          .where((c) => (c.title ?? '').toLowerCase().contains(_localSearchQuery))
-                          .toList();
+                // Bottom list shows only DMs (groups already shown above)
+                final directChats =
+                    allChats.where((c) => c.type == ChatType.dm).toList();
 
-                  return CustomScrollView(
+                return NotificationListener<ScrollNotification>(
+                  onNotification: (scrollNotification) {
+                    if (scrollNotification is ScrollUpdateNotification ||
+                        scrollNotification is ScrollEndNotification) {
+                      final isScrolled = scrollNotification.metrics.pixels > 10;
+                      if (isScrolled != _isScrolled && mounted) {
+                        setState(() {
+                          _isScrolled = isScrolled;
+                        });
+                      }
+                    }
+                    return false;
+                  },
+                  child: CustomScrollView(
                     slivers: [
+                      const SliverToBoxAdapter(child: SizedBox(height: 72)),
                       // Search bar
                       SliverToBoxAdapter(
                         child: Padding(
@@ -240,7 +268,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               ? const Center(
                                   child: Text(
                                     'No groups yet',
-                                    style: TextStyle(color: Colors.white54, fontSize: 13),
+                                    style: TextStyle(
+                                        color: Colors.white54, fontSize: 13),
                                   ),
                                 )
                               : ListView.builder(
@@ -263,7 +292,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         child: Container(
                           decoration: const BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                            borderRadius:
+                                BorderRadius.vertical(top: Radius.circular(30)),
                           ),
                           padding: const EdgeInsets.only(top: 9, bottom: 8),
                           alignment: Alignment.center,
@@ -277,53 +307,112 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                         ),
                       ),
-                      // Chat list items
-                      if (filteredChats.isEmpty)
-                        SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: Container(
-                            color: Colors.white,
-                            child: Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.chat_bubble_outline, size: 70, color: Colors.grey[400]),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    allChats.isEmpty ? 'No chats yet' : 'No results',
-                                    style: TextStyle(fontSize: 17, color: Colors.grey[700]),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        )
-                      else
-                        SliverList(
-                          delegate: SliverChildBuilderDelegate(
-                            (context, index) {
-                              final userChat = filteredChats[index];
-                              return Container(
+                      // Chat list items — only this part rebuilds on search
+                      ValueListenableBuilder<String>(
+                        valueListenable: _searchNotifier,
+                        builder: (context, query, _) {
+                          final filteredChats = query.isEmpty
+                              ? directChats
+                              : allChats
+                                  .where((c) => (c.title ?? '')
+                                      .toLowerCase()
+                                      .contains(query))
+                                  .toList();
+
+                          if (filteredChats.isEmpty) {
+                            return SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: Container(
                                 color: Colors.white,
-                                padding: const EdgeInsets.symmetric(horizontal: 12),
-                                child: _ChatListTile(
-                                  userChat: userChat,
-                                  currentUid: _currentUid!,
-                                  onTap: () => _openChat(userChat),
+                                child: Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.chat_bubble_outline,
+                                          size: 70, color: Colors.grey[400]),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        allChats.isEmpty
+                                            ? 'No chats yet'
+                                            : 'No results',
+                                        style: TextStyle(
+                                            fontSize: 17,
+                                            color: Colors.grey[700]),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              );
-                            },
-                            childCount: filteredChats.length,
-                          ),
-                        ),
+                              ),
+                            );
+                          }
+
+                          return SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                final userChat = filteredChats[index];
+                                return Container(
+                                  color: Colors.white,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12),
+                                  child: _ChatListTile(
+                                    userChat: userChat,
+                                    currentUid: _currentUid!,
+                                    onTap: () => _openChat(userChat),
+                                  ),
+                                );
+                              },
+                              childCount: filteredChats.length,
+                            ),
+                          );
+                        },
+                      ),
                       // Fill remaining space with white
                       SliverFillRemaining(
                         hasScrollBody: false,
                         child: Container(color: Colors.white),
                       ),
                     ],
-                  );
-                },
+                  ),
+                );
+              },
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(
+                    sigmaX: _isScrolled ? 5.0 : 0.0,
+                    sigmaY: _isScrolled ? 5.0 : 0.0,
+                  ),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                    decoration: BoxDecoration(
+                      color: _isScrolled
+                          ? Colors.white.withOpacity(0.10)
+                          : Colors.transparent,
+                      border: Border(
+                        bottom: BorderSide(
+                          color: _isScrolled
+                              ? Colors.white.withOpacity(0.25)
+                              : Colors.transparent,
+                          width: 1,
+                        ),
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 4,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child:
+                        _SecondaryChatBar(onMessagesTap: _openStarredMessages),
+                  ),
+                ),
               ),
             ),
           ],
@@ -351,6 +440,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => const NewChatScreen(),
+      ),
+    );
+  }
+
+  void _openStarredMessages() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const StarredMessagesScreen(),
       ),
     );
   }
@@ -390,7 +488,8 @@ class _ChatListTile extends StatelessWidget {
         final hasUnread = userChat.hasUnread(lastMessage?.createdAt);
 
         return StreamBuilder<TypingInfo>(
-          stream: PresenceService.instance.subscribeToTypingWithNames(userChat.chatId),
+          stream: PresenceService.instance
+              .subscribeToTypingWithNames(userChat.chatId),
           builder: (context, typingSnapshot) {
             final typingInfo = typingSnapshot.data;
             final isTyping = typingInfo?.isTyping ?? false;
@@ -398,7 +497,8 @@ class _ChatListTile extends StatelessWidget {
             return InkWell(
               onTap: onTap,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
@@ -421,7 +521,8 @@ class _ChatListTile extends StatelessWidget {
                           DefaultTextStyle.merge(
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: const Color(0xFF8B8B8B),
-                              fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
+                              fontWeight:
+                                  hasUnread ? FontWeight.w600 : FontWeight.w400,
                             ),
                             child: isTyping
                                 ? TypingTextWidget(
@@ -440,7 +541,8 @@ class _ChatListTile extends StatelessWidget {
                     ),
                     const SizedBox(width: 10),
                     StreamBuilder<int>(
-                      stream: ChatRepository.instance.subscribeToUnreadCount(userChat.chatId),
+                      stream: ChatRepository.instance
+                          .subscribeToUnreadCount(userChat.chatId),
                       builder: (context, unreadSnap) {
                         final unreadCount = unreadSnap.data ?? 0;
                         return Column(
@@ -448,7 +550,9 @@ class _ChatListTile extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
                             Text(
-                              lastMessage != null ? _formatTime(lastMessage.createdAt) : '',
+                              lastMessage != null
+                                  ? _formatTime(lastMessage.createdAt)
+                                  : '',
                               style: TextStyle(
                                 color: unreadCount > 0
                                     ? const Color(0xFF8C8C8C)
@@ -460,8 +564,10 @@ class _ChatListTile extends StatelessWidget {
                             const SizedBox(height: 6),
                             if (unreadCount > 0)
                               Container(
-                                constraints: const BoxConstraints(minWidth: 22, minHeight: 22),
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                constraints: const BoxConstraints(
+                                    minWidth: 22, minHeight: 22),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 5, vertical: 2),
                                 alignment: Alignment.center,
                                 decoration: const BoxDecoration(
                                   color: Color(0xFFF04D57),
@@ -495,7 +601,8 @@ class _ChatListTile extends StatelessWidget {
   Widget _buildAvatar() {
     if (userChat.type == ChatType.dm && userChat.peerUid != null) {
       return StreamBuilder<PresenceStatus>(
-        stream: PresenceService.instance.subscribeToUserPresence(userChat.peerUid!),
+        stream:
+            PresenceService.instance.subscribeToUserPresence(userChat.peerUid!),
         builder: (context, snapshot) {
           final isOnline = snapshot.data?.online ?? false;
           return _avatarShell(
@@ -653,7 +760,8 @@ class _ChatSearchBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(30),
           borderSide: BorderSide.none,
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
       ),
       style: const TextStyle(
         color: Color(0xFF1F1F1F),
@@ -692,7 +800,8 @@ class _SecondaryChatBar extends StatelessWidget {
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFFF4C542),
               side: const BorderSide(color: Color(0xFFF4C542), width: 1),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(22)),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
             icon: const Icon(Icons.star, size: 16),
@@ -727,7 +836,8 @@ class _GroupQuickItem extends StatelessWidget {
                 padding: const EdgeInsets.all(1.3),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFE9B23A), width: 1.2),
+                  border:
+                      Border.all(color: const Color(0xFFE9B23A), width: 1.2),
                 ),
                 child: const CircleAvatar(
                   radius: 24,
