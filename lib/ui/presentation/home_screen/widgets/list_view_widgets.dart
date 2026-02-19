@@ -486,32 +486,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                   fontWeight: FontWeight.w500,
                   color: Colors.black,
                 ),
-                child: Padding(
-                  padding: EdgeInsets.only(top: 80.h),
-                  child: SizedBox(
-                    width: SizeConfig().getWidth(190),
-                    height: SizeConfig().getHeight(85),
-                    child: Column(
-                      children: [
-                        CustomBulletPoint(
-                          text: translate('home.In_progress'),
-                          textColor: Colors.black,
-                          countColor: Colors.black,
-                          count: totalProjects,
-                          containerColor: Colors.transparent,
-                        ),
-                        SizedBox(height: 4.h),
-                        CustomBulletPoint(
-                          text: translate('home.Delay'),
-                          textColor: Colors.black,
-                          countColor: Colors.black,
-                          count: delayedProjects,
-                          containerColor: Colors.transparent,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                child: const SizedBox.shrink(),
               ),
             ),
           ),

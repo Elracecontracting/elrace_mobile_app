@@ -11,6 +11,7 @@ class CustomBulletPoint extends StatelessWidget {
   final Color containerColor;
   final String? days;
   final bool isAttendance;
+  final bool showCount;
 
   const CustomBulletPoint({
     super.key,
@@ -22,6 +23,7 @@ class CustomBulletPoint extends StatelessWidget {
     this.days = 'Days',
     this.isAttendance = false,
     required this.containerColor,
+    this.showCount = true,
   });
 
   @override
@@ -58,11 +60,12 @@ class CustomBulletPoint extends StatelessWidget {
               ),
             ),
           ),
-          CountWidget(
-            count: count,
-            countColor: countColor,
-            containerColor: containerColor,
-          ),
+          if (showCount)
+            CountWidget(
+              count: count,
+              countColor: countColor,
+              containerColor: containerColor,
+            ),
 
           // const SizedBox(width: 8),
           // isAttendance

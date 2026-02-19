@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:http/http.dart' as http;
 
 import 'package:el_race/report_module/data/models/company_model.dart';
 import 'package:el_race/report_module/data/models/report_detail_model.dart';
@@ -194,8 +195,27 @@ class PdfService {
     final Map<String, pw.MemoryImage> imageMap = {};
     for (final item in items) {
       if (item.type == 'image') {
-        imageMap[item.image] =
-            pw.MemoryImage(await File(item.image).readAsBytes());
+        try {
+          Uint8List imageBytes;
+          // Check if it's a URL or local path
+          if (item.image.startsWith('http://') || item.image.startsWith('https://')) {
+            // Download image from URL
+            final response = await http.get(Uri.parse(item.image));
+            if (response.statusCode == 200) {
+              imageBytes = response.bodyBytes;
+            } else {
+              continue; // Skip this image if download fails
+            }
+          } else {
+            // Read from local file
+            imageBytes = await File(item.image).readAsBytes();
+          }
+          imageMap[item.image] = pw.MemoryImage(imageBytes);
+        } catch (e) {
+          print('Error loading image ${item.image}: $e');
+          // Skip this image if there's an error
+          continue;
+        }
       }
     }
     return imageMap;

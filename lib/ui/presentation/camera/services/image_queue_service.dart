@@ -139,6 +139,13 @@ class ImageQueueService {
               '✓ Saved image $processedCount/${processedCount + _queue.length}');
         } else {
           debugPrint('✗ Error processing image: ${result.error}');
+          // Still save the original image to gallery even if overlay failed
+          try {
+            await Gal.putImage(task.imagePath, album: 'RCC');
+            debugPrint('⚠ Saved original image without overlay');
+          } catch (saveError) {
+            debugPrint('✗ Failed to save original image: $saveError');
+          }
         }
       } catch (e) {
         debugPrint('✗ Error processing image: $e');

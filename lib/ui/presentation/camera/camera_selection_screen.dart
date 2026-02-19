@@ -42,6 +42,8 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
   String _currentLocation = '';
   bool _isCapturing = false;
   Uint8List? _logoBytes;
+  Timer? _locationRefreshTimer;
+  int _locationRetryCount = 0;
 
   // Image queue service for background processing
   final ImageQueueService _imageQueueService = ImageQueueService();
@@ -72,6 +74,11 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
     _updateTime();
     _loadLogo();
     _fetchLocation();
+
+    // Refresh location every 60 seconds to keep it up-to-date
+    _locationRefreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      _fetchLocation();
+    });
 
     // Listen to queue updates
     _queueCountSubscription = _imageQueueService.queueCount.listen((count) {
@@ -136,6 +143,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         debugPrint('Location services are disabled.');
+        _scheduleLocationRetry();
         return;
       }
 
@@ -145,6 +153,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           debugPrint('Location permissions are denied');
+          _scheduleLocationRetry();
           return;
         }
       }
@@ -154,53 +163,80 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
         return;
       }
 
-      // Get current position
+      // Get current position with timeout
       Position position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.medium,
-      );
+      ).timeout(const Duration(seconds: 10), onTimeout: () {
+        throw Exception('GPS timeout');
+      });
 
-      // Get address from coordinates
-      List<Placemark> placemarks = await placemarkFromCoordinates(
-        position.latitude,
-        position.longitude,
-      );
+      // Try to get address from coordinates
+      String locationText = '';
+      try {
+        List<Placemark> placemarks = await placemarkFromCoordinates(
+          position.latitude,
+          position.longitude,
+        ).timeout(const Duration(seconds: 8));
 
-      if (placemarks.isNotEmpty && mounted) {
-        Placemark place = placemarks.first;
-        String locationText = '';
-        
-        // Show the specific area/neighborhood + emirate/city
-        // Priority: subLocality > thoroughfare > locality
-        if (place.subLocality != null && place.subLocality!.isNotEmpty) {
-          locationText = place.subLocality!;
-        } else if (place.thoroughfare != null && place.thoroughfare!.isNotEmpty) {
-          locationText = place.thoroughfare!;
-        } else if (place.locality != null && place.locality!.isNotEmpty) {
-          locationText = place.locality!;
-        }
-        
-        // Add emirate/city (locality or administrativeArea)
-        String emirate = '';
-        if (place.locality != null && place.locality!.isNotEmpty && place.locality != locationText) {
-          emirate = place.locality!;
-        } else if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
-          emirate = place.administrativeArea!;
-        }
-        
-        if (emirate.isNotEmpty && locationText.isNotEmpty) {
-          locationText = '$locationText, $emirate';
-        } else if (emirate.isNotEmpty) {
-          locationText = emirate;
-        }
+        if (placemarks.isNotEmpty) {
+          Placemark place = placemarks.first;
 
+          // Show the specific area/neighborhood + emirate/city
+          // Priority: subLocality > thoroughfare > locality
+          if (place.subLocality != null && place.subLocality!.isNotEmpty) {
+            locationText = place.subLocality!;
+          } else if (place.thoroughfare != null && place.thoroughfare!.isNotEmpty) {
+            locationText = place.thoroughfare!;
+          } else if (place.locality != null && place.locality!.isNotEmpty) {
+            locationText = place.locality!;
+          }
+
+          // Add emirate/city (locality or administrativeArea)
+          String emirate = '';
+          if (place.locality != null && place.locality!.isNotEmpty && place.locality != locationText) {
+            emirate = place.locality!;
+          } else if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
+            emirate = place.administrativeArea!;
+          }
+
+          if (emirate.isNotEmpty && locationText.isNotEmpty) {
+            locationText = '$locationText, $emirate';
+          } else if (emirate.isNotEmpty) {
+            locationText = emirate;
+          }
+        }
+      } catch (geocodeError) {
+        debugPrint('✗ Reverse geocoding failed: $geocodeError');
+      }
+
+      // Fallback to GPS coordinates if geocoding returned nothing
+      if (locationText.isEmpty) {
+        locationText = '${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
+        debugPrint('⚠ Using GPS coordinates as fallback: $locationText');
+      }
+
+      if (mounted) {
         setState(() {
           _currentLocation = locationText;
         });
+        _locationRetryCount = 0; // Reset retry count on success
         debugPrint('✓ Location fetched: $_currentLocation');
       }
     } catch (e) {
       debugPrint('✗ Error fetching location: $e');
+      _scheduleLocationRetry();
     }
+  }
+
+  /// Retry location fetch with increasing delay (max 3 retries)
+  void _scheduleLocationRetry() {
+    if (_locationRetryCount >= 3 || !mounted) return;
+    _locationRetryCount++;
+    final delay = Duration(seconds: 3 * _locationRetryCount);
+    debugPrint('↻ Retrying location fetch in ${delay.inSeconds}s (attempt $_locationRetryCount/3)');
+    Future.delayed(delay, () {
+      if (mounted) _fetchLocation();
+    });
   }
 
   Future<void> _initializeCamera() async {
@@ -241,6 +277,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
   @override
   void dispose() {
     _restoreSystemUI();
+    _locationRefreshTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     _controller?.dispose();
     _queueCountSubscription?.cancel();

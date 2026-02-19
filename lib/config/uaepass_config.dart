@@ -23,7 +23,9 @@ class UaepassUiMessages {
 /// UAE PASS Configuration
 /// 
 /// Contains all configuration values for UAE PASS integration.
-/// Use [UaepassConfig.staging()] for staging environment.
+/// Use [UaepassConfig.forCurrentEnvironment()] to auto-select based on build mode.
+/// - Debug  → [UaepassConfig.staging()]
+/// - Release → [UaepassConfig.production()]
 /// 
 /// ## Feature Flags
 /// 
@@ -187,6 +189,17 @@ class UaepassConfig {
         uri.path == deepLinkErrorPath;
   }
 
+  /// Returns the appropriate config based on the current build mode.
+  /// - [kDebugMode] → staging
+  /// - Release     → production
+  static UaepassConfig forCurrentEnvironment() {
+    if (kDebugMode) {
+      return staging();
+    }
+    return production();
+  }
+
+  /// Staging configuration (stg-id.uaepass.ae)
   static UaepassConfig staging() {
     return UaepassConfig(
       clientId: 'auh_elrace_mob_stage',
@@ -219,6 +232,46 @@ class UaepassConfig {
       pollingInterval: const Duration(seconds: 3),
       pollingTimeout: const Duration(seconds: 30),
       enableDebugLog: kDebugMode,
+    );
+  }
+
+  /// Production configuration (id.uaepass.ae)
+  ///
+  /// TODO: Replace the placeholder [clientId] with the production client_id
+  ///       once it is provided by UAE PASS.
+  static UaepassConfig production() {
+    return UaepassConfig(
+      // ⚠️  PLACEHOLDER — update with the real production client_id from UAE PASS
+      clientId: 'PRODUCTION_CLIENT_ID_PENDING',
+      redirectUrl: 'https://erp.elrace.com/uaepass/callback',
+      authorizationBaseUrl: 'https://id.uaepass.ae',
+      authorizationPath: '/idshub/authorize',
+      scope: 'urn:uae:digitalid:profile:general',
+      responseType: 'code',
+      acrValues: 'urn:safelayer:tws:policies:authentication:level:low',
+      baseApiUrl: 'https://erp.elrace.com/api/',
+      sessionExchangePath: 'uaepass/mobile/session',
+      resultPollingPath: 'uaepass/result',
+      useBackendRedirectDeepLink: true,
+      enablePollingFallback: true,
+      deepLinkScheme: 'elrace',
+      deepLinkHost: 'uaepass',
+      deepLinkSuccessPath: '/success',
+      deepLinkErrorPath: '/error',
+      extraAuthParams: const {
+        'ui_locales': 'en',
+      },
+      uiMessages: const UaepassUiMessages(
+        existingUsersOnly: 'Existing users only',
+        unverified: 'Unverified / Not eligible',
+        generic: 'Something went wrong',
+        cancelled: 'User cancel',
+      ),
+      buttonAssetPath: 'assets/png/uaepass_button.png',
+      loadingMessage: 'Signing in with UAE PASS...',
+      pollingInterval: const Duration(seconds: 3),
+      pollingTimeout: const Duration(seconds: 30),
+      enableDebugLog: false, // no debug logs in production
     );
   }
 }

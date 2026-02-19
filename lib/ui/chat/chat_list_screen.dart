@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../chat/chat.dart';
@@ -496,6 +497,7 @@ class _ChatListTile extends StatelessWidget {
 
             return InkWell(
               onTap: onTap,
+              onLongPress: () => _showChatActions(context),
               child: Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -562,28 +564,55 @@ class _ChatListTile extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(height: 6),
-                            if (unreadCount > 0)
-                              Container(
-                                constraints: const BoxConstraints(
-                                    minWidth: 22, minHeight: 22),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 5, vertical: 2),
-                                alignment: Alignment.center,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFF04D57),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Text(
-                                  unreadCount > 99 ? '99+' : '$unreadCount',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (userChat.pinned)
+                                  const Padding(
+                                    padding: EdgeInsets.only(right: 4),
+                                    child: Icon(
+                                      Icons.push_pin,
+                                      size: 14,
+                                      color: Color(0xFF8E8E93),
+                                    ),
                                   ),
-                                ),
-                              )
-                            else
-                              const SizedBox(height: 22),
+                                if (userChat.muted)
+                                  const Padding(
+                                    padding: EdgeInsets.only(right: 4),
+                                    child: Icon(
+                                      Icons.volume_off,
+                                      size: 14,
+                                      color: Color(0xFF8E8E93),
+                                    ),
+                                  ),
+                                if (unreadCount > 0)
+                                  Container(
+                                    constraints: const BoxConstraints(
+                                        minWidth: 22, minHeight: 22),
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 5, vertical: 2),
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      color: userChat.muted
+                                          ? const Color(0xFFB0B0B0)
+                                          : const Color(0xFFF04D57),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Text(
+                                      unreadCount > 99
+                                          ? '99+'
+                                          : '$unreadCount',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  const SizedBox(height: 22),
+                              ],
+                            ),
                           ],
                         );
                       },
@@ -702,6 +731,91 @@ class _ChatListTile extends StatelessWidget {
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+
+  void _showChatActions(BuildContext context) {
+    HapticFeedback.mediumImpact();
+
+    final RenderBox box = context.findRenderObject() as RenderBox;
+    final Offset position = box.localToGlobal(Offset.zero);
+    final Size size = box.size;
+
+    final RelativeRect menuPosition = RelativeRect.fromLTRB(
+      position.dx + size.width / 2 - 100,
+      position.dy + size.height,
+      position.dx + size.width / 2 + 100,
+      position.dy,
+    );
+
+    showMenu<String>(
+      context: context,
+      position: menuPosition,
+      elevation: 8,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
+      items: [
+        PopupMenuItem<String>(
+          value: 'pin',
+          height: 48,
+          child: Row(
+            children: [
+              Icon(
+                userChat.pinned ? Icons.push_pin : Icons.push_pin_outlined,
+                color: const Color(0xFF8E8E93),
+                size: 22,
+              ),
+              const SizedBox(width: 14),
+              Text(
+                userChat.pinned ? 'Unpin' : 'Pin',
+                style: const TextStyle(
+                  color: Color(0xFF2C2C2E),
+                  fontSize: 17,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem<String>(
+          value: 'mute',
+          height: 48,
+          child: Row(
+            children: [
+              Icon(
+                userChat.muted ? Icons.volume_up : Icons.volume_off,
+                color: const Color(0xFF8E8E93),
+                size: 22,
+              ),
+              const SizedBox(width: 14),
+              Text(
+                userChat.muted ? 'Unmute' : 'Mute',
+                style: const TextStyle(
+                  color: Color(0xFF2C2C2E),
+                  fontSize: 17,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ).then((value) {
+      if (value == null) return;
+      switch (value) {
+        case 'pin':
+          ChatRepository.instance.togglePin(
+            userChat.chatId,
+            !userChat.pinned,
+          );
+          break;
+        case 'mute':
+          ChatRepository.instance.toggleMute(
+            userChat.chatId,
+            !userChat.muted,
+          );
+          break;
+      }
+    });
   }
 
   String _formatTime(DateTime dateTime) {

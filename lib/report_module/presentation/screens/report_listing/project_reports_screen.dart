@@ -18,6 +18,9 @@ import 'package:provider/provider.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/image_editing_screen.dart';
+import 'package:el_race/report_module/data/services/pdf_service.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 class ProjectReportsScreen extends StatefulWidget {
   final FolderModel folder;
@@ -197,6 +200,16 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
     }
   }
 
+  Future<void> _deleteReport(ReportModel report) async {
+    try {
+      final provider = Provider.of<ReportProvider>(context, listen: false);
+      await provider.deleteReport(reportId: report.id);
+      await _loadReports();
+    } catch (e) {
+      debugPrint('Error deleting report: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredReports = _reports.where((r) {
@@ -322,24 +335,34 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                         child: Center(child: CircularProgressIndicator()),
                       )
                     else
-                      SliverList(
-                        delegate: SliverChildBuilderDelegate(
-                          (context, index) {
-                            final report = filteredReports[index];
-                            return Padding(
-                              padding: EdgeInsets.only(left: 12.w, right: 12.w),
-                              child: _ProjectReportCard(
-                                report: report,
-                                folderName: widget.folder.name,
-                                folderId: widget.folder.id,
-                                onReportUpdated: () async {
-                                  await _loadReports();
-                                },
-                              ),
-                            );
-                          },
-                          childCount: filteredReports.length,
-                        ),
+                      SliverReorderableList(
+                        onReorder: (oldIndex, newIndex) {
+                          setState(() {
+                            if (newIndex > oldIndex) newIndex -= 1;
+                            final item = _reports.removeAt(oldIndex);
+                            _reports.insert(newIndex, item);
+                          });
+                        },
+                        itemCount: filteredReports.length,
+                        itemBuilder: (context, index) {
+                          final report = filteredReports[index];
+                          return Padding(
+                            key: ValueKey(report.id),
+                            padding: EdgeInsets.only(left: 12.w, right: 12.w),
+                            child: _ProjectReportCard(
+                              index: index,
+                              report: report,
+                              folderName: widget.folder.name,
+                              folderId: widget.folder.id,
+                              onReportUpdated: () async {
+                                await _loadReports();
+                              },
+                              onDeleteReport: () async {
+                                await _deleteReport(report);
+                              },
+                            ),
+                          );
+                        },
                       ),
                     SliverToBoxAdapter(child: SizedBox(height: 16.h)),
                   ],
@@ -641,18 +664,53 @@ class _DialogDropdownCard extends StatelessWidget {
   }
 }
 
-class _ProjectReportCard extends StatelessWidget {
+class _ProjectReportCard extends StatefulWidget {
+  final int index;
   final ReportModel report;
   final String folderName;
   final String folderId;
   final VoidCallback? onReportUpdated;
+  final VoidCallback? onDeleteReport;
 
   const _ProjectReportCard({
+    required this.index,
     required this.report,
     required this.folderName,
     required this.folderId,
     this.onReportUpdated,
+    this.onDeleteReport,
   });
+
+  @override
+  State<_ProjectReportCard> createState() => _ProjectReportCardState();
+}
+
+class _ProjectReportCardState extends State<_ProjectReportCard> {
+  bool _isSharing = false;
+
+  Future<void> _shareAsPdf() async {
+    if (_isSharing) return;
+    setState(() => _isSharing = true);
+    try {
+      final provider = Provider.of<ReportProvider>(context, listen: false);
+      final reportDetail = await provider.fetchReportDetailFromApi(widget.report.id);
+      if (reportDetail == null) {
+        if (mounted) setState(() => _isSharing = false);
+        return;
+      }
+      final pdfBytes = await PdfService().generateReportPdf(
+        report: reportDetail,
+        projectName: widget.folderName,
+      );
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/${widget.report.name.replaceAll(' ', '_')}.pdf');
+      await file.writeAsBytes(pdfBytes);
+      await Share.shareXFiles([XFile(file.path)], text: widget.report.name);
+    } catch (e) {
+      debugPrint('Error sharing PDF: $e');
+    }
+    if (mounted) setState(() => _isSharing = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -662,56 +720,59 @@ class _ProjectReportCard extends StatelessWidget {
           context: context,
           barrierDismissible: true,
           builder: (dialogContext) => _ReportPhotosDialog(
-            reportName: report.name.isEmpty ? 'Report Name' : report.name,
-            reportType: report.reportType ?? 'Report Type',
+            reportName: widget.report.name.isEmpty ? 'Report Name' : widget.report.name,
+            reportType: widget.report.reportType ?? 'Report Type',
             isEditing: false,
-            folderId: folderId,
-            report: report,
-            onReportCreated: onReportUpdated,
+            folderId: widget.folderId,
+            report: widget.report,
+            onReportCreated: widget.onReportUpdated,
           ),
         );
       },
-      child: Container(
-        margin: EdgeInsets.only(bottom: 10.h),
-        clipBehavior: Clip.hardEdge,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24.r),
-          border: Border.all(color: const Color(0xFF2C3454), width: 1),
-        ),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(18.w, 14.h, 0, 12.h),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      report.name.isEmpty ? 'Report Name' : report.name,
-                      style: GoogleFonts.inter(
-                        fontSize: 16.sp,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF27304E),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      report.reportType ?? 'Report Type',
-                      style: GoogleFonts.inter(
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w500,
-                        color: const Color(0xFF27304E),
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Container(
+            margin: EdgeInsets.only(bottom: 10.h),
+            clipBehavior: Clip.hardEdge,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24.r),
+              border: Border.all(color: const Color(0xFF2C3454), width: 1),
+            ),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(18.w, 14.h, 0, 12.h),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.report.name.isEmpty ? 'Report Name' : widget.report.name,
+                          style: GoogleFonts.inter(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF27304E),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: 4.h),
+                        Text(
+                          widget.report.reportType ?? 'Report Type',
+                          style: GoogleFonts.inter(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF27304E),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                     SizedBox(height: 14.h),
                     FutureBuilder<ReportDetailModel?>(
-                      future: Provider.of<ReportProvider>(context, listen: false).fetchReportDetailFromApi(report.id),
+                      future: Provider.of<ReportProvider>(context, listen: false).fetchReportDetailFromApi(widget.report.id),
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return SizedBox(
@@ -839,38 +900,131 @@ class _ProjectReportCard extends StatelessWidget {
                 child: Stack(
                   clipBehavior: Clip.hardEdge,
                   children: [
+                    // Chart image
                     Positioned(
-                      top: -2.h,
+                      top: 0.h,
                       right: 0,
                       child: SizedBox(
                         width: 164.w,
                         height: 90.h,
-                        child: Image.asset(
-                          'assets/png/r2.png',
-                          fit: BoxFit.cover,
-                          alignment: Alignment.topRight,
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(8.r),
+                          child: Image.asset(
+                            'assets/png/r2.png',
+                            fit: BoxFit.cover,
+                            alignment: Alignment.topRight,
+                          ),
                         ),
                       ),
                     ),
+                    // Icons without background
                     Positioned(
-                      top: 4.h,
-                      right: 8.w,
+                      top: -10.h,
+                      right: 4.w,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.more_vert,
-                            size: 18.w,
-                            color: const Color(0xFF27304E),
+                          Theme(
+                            data: Theme.of(context).copyWith(
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                            ),
+                            child: PopupMenuButton<String>(
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              splashRadius: 16,
+                              icon: Icon(
+                                Icons.more_vert,
+                                size: 22.w,
+                                color: const Color(0xFF27304E),
+                              ),
+                              onSelected: (value) {
+                                if (value == 'delete') {
+                                  showDialog(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16.r),
+                                      ),
+                                      title: Text(
+                                        'Delete Report',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 18.sp,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF27304E),
+                                        ),
+                                      ),
+                                      content: Text(
+                                        'Are you sure you want to delete this report?',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14.sp,
+                                          color: const Color(0xFF27304E),
+                                        ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(ctx),
+                                          child: Text(
+                                            'Cancel',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFF27304E),
+                                            ),
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: () {
+                                            Navigator.pop(ctx);
+                                            widget.onDeleteReport?.call();
+                                          },
+                                          child: Text(
+                                            'Delete',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFFE81E25),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                              },
+                              itemBuilder: (context) => [
+                                PopupMenuItem<String>(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete_outline, size: 20.w, color: const Color(0xFFE81E25)),
+                                      SizedBox(width: 8.w),
+                                      Text(
+                                        'Delete',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFFE81E25),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          SizedBox(width: 8.w),
-                          Icon(
-                            Icons.list,
-                            size: 20.w,
-                            color: const Color(0xFF27304E),
+                          SizedBox(width: 0.5.w),
+                          ReorderableDragStartListener(
+                            index: widget.index,
+                            child: Icon(
+                              Icons.list,
+                              size: 22.w,
+                              color: const Color(0xFF27304E),
+                            ),
                           ),
                         ],
-                      ),
+                      )
+
                     ),
                   ],
                 ),
@@ -878,6 +1032,37 @@ class _ProjectReportCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+          // Share button - bottom right
+          Positioned(
+            bottom: 20.h,
+            right: 8.w,
+            child: GestureDetector(
+              onTap: _shareAsPdf,
+              child: Container(
+                width: 24.w,
+                height: 24.w,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF27304E),
+                  shape: BoxShape.circle,
+                ),
+                child: _isSharing
+                    ? Padding(
+                        padding: EdgeInsets.all(5.w),
+                        child: const CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Icon(
+                        Icons.share,
+                        size: 12.w,
+                        color: Colors.white,
+                      ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -911,6 +1096,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
   bool _showValidationError = false;
   bool _isUploading = false;
   bool _isLoadingItems = false;
+  String? _uploadErrorMessage;
 
   @override
   void initState() {
@@ -1390,6 +1576,27 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                         ),
                       ),
 
+                    // Upload Error Message (inline)
+                    if (_uploadErrorMessage != null)
+                      Container(
+                        width: double.infinity,
+                        padding: EdgeInsets.all(12.w),
+                        margin: EdgeInsets.only(bottom: 16.h),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE81E25),
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Text(
+                          _uploadErrorMessage!,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+
                     // Submit/Edit or Generate Report Button
                     if (!widget.isEditing)
                       SizedBox(
@@ -1440,12 +1647,14 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                       }
                                       Navigator.pop(context);
                                     } else {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Failed to upload some items. Please try again.'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
+                                      setState(() {
+                                        _uploadErrorMessage = 'Failed to upload some items. Please try again.';
+                                      });
+                                      Future.delayed(const Duration(seconds: 4), () {
+                                        if (mounted) {
+                                          setState(() => _uploadErrorMessage = null);
+                                        }
+                                      });
                                     }
                                   }
                                 },
@@ -1516,16 +1725,14 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                               
                               Navigator.pop(context);
                             } catch (e) {
-                              // Show error
+                              // Show error inside dialog
                               setState(() {
                                 _isUploading = false;
-                                _showValidationError = true;
+                                _uploadErrorMessage = 'Failed to create report. Please try again.';
                               });
-                              Future.delayed(const Duration(seconds: 3), () {
+                              Future.delayed(const Duration(seconds: 4), () {
                                 if (mounted) {
-                                  setState(() {
-                                    _showValidationError = false;
-                                  });
+                                  setState(() => _uploadErrorMessage = null);
                                 }
                               });
                             }

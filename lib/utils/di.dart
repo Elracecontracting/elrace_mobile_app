@@ -59,7 +59,7 @@ Future<void> initDI() async {
     _registerSingletonIfNeeded<AttendanceRepo>(AttendanceRepo());
     _registerSingletonIfNeeded<LoginResponseModel>(LoginResponseModel());
 
-    _registerSingletonIfNeeded<UaepassConfig>(UaepassConfig.staging());
+    _registerSingletonIfNeeded<UaepassConfig>(UaepassConfig.forCurrentEnvironment());
     _registerSingletonIfNeeded<FlutterSecureStorage>(
       const FlutterSecureStorage(),
     );

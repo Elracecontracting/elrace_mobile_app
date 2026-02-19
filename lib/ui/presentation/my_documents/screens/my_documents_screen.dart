@@ -20,6 +20,9 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 
 import '../../../widgets/custom_slider_button.dart';
 import 'attachment_viewer_screen.dart';
+import 'family_documents_tab.dart';
+import 'company_documents_tab.dart';
+import 'share_documents_tab.dart';
 
 class MyDocumentsScreen extends StatefulWidget {
   const MyDocumentsScreen({
@@ -31,6 +34,7 @@ class MyDocumentsScreen extends StatefulWidget {
 }
 
 class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
+  /// 0 = My Documents, 1 = Family Documents, 2 = Company Documents, 3 = Share Documents
   int currentIndex = 0;
   List<Map<String, dynamic>> documents = [];
   bool _loading = false;
@@ -55,7 +59,6 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
         setState(() {
           _query = text.toLowerCase();
         });
-        // Server-side search
         _fetchMyDocuments(keyword: text);
       });
     });
@@ -529,361 +532,367 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
   final List<Map<String, dynamic>> notificationType = [
     {
       'icon': 'assets/png/folder.png',
+      'icon_unfocus': 'assets/png/folder_unfocus.png',
       'title': translate('home.documents'),
     },
     {
-      'icon': 'assets/png/family.png',
+      'icon': 'assets/png/family_focus.png',
+      'icon_unfocus': 'assets/png/family.png',
       'title': translate('home.family_document'),
     },
+    {
+      'icon': 'assets/png/folder.png',
+      'icon_unfocus': 'assets/png/folder_unfocus.png',
+      'title': 'Company Documents',
+    },
+    {
+      'icon': 'assets/png/folder.png',
+      'icon_unfocus': 'assets/png/folder_unfocus.png',
+      'title': 'Share Documents',
+    },
   ];
+
+  String get _currentTitle {
+    switch (currentIndex) {
+      case 0:
+        return translate('home.documents').toUpperCase();
+      case 1:
+        return 'FAMILY DOCUMENT';
+      case 2:
+        return 'COMPANY DOCUMENTS';
+      case 3:
+        return 'SHARE DOCUMENTS';
+      default:
+        return 'DOCUMENTS';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(
-            child: Column(
-              children: [
-                const SizedBox(height: 5),
-                Center(
-                  child: Text(
-                    translate('home.documents'),
-                    style: GoogleFonts.koulen(
-                      fontSize: 26.sp,
-                      fontWeight: FontWeight.w600,
-                      color: appFontColor,
-                      letterSpacing: 1.5,
+      body: Column(
+        children: [
+          const SizedBox(height: 5),
+          Center(
+            child: Text(
+              _currentTitle,
+              style: GoogleFonts.koulen(
+                fontSize: 26.sp,
+                fontWeight: FontWeight.w600,
+                color: appFontColor,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          // ── Tab Bar ──
+          SizedBox(
+            height: 55.w,
+            child: ListView.separated(
+              padding: const EdgeInsets.only(left: 10, right: 10),
+              itemCount: notificationType.length,
+              physics: const BouncingScrollPhysics(),
+              scrollDirection: Axis.horizontal,
+              itemBuilder: (context, index) {
+                final isSelected = index == currentIndex;
+                final item = notificationType[index];
+
+                final String displayIcon = isSelected
+                    ? item['icon'] as String
+                    : item['icon_unfocus'] as String;
+
+                return InkWell(
+                  onTap: () {
+                    setState(() => currentIndex = index);
+                  },
+                  child: Container(
+                    alignment: Alignment.center,
+                    margin: const EdgeInsets.only(top: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: isSelected ? appFontColor : greyText2,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withAlpha((0.1 * 255).toInt()),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
                     ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  height: 55.w,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.only(left: 10, right: 10),
-                    itemCount: notificationType.length,
-                    physics: const BouncingScrollPhysics(),
-                    scrollDirection: Axis.horizontal,
-                    itemBuilder: (context, index) {
-                      String notificationIcon = notificationType[index]['icon'];
-                      String notificationTitle =
-                          notificationType[index]['title'];
-
-                      // Select icon based on selection state
-                      String displayIcon;
-                      if (index == 0) {
-                        // My Documents tab
-                        displayIcon = index == currentIndex
-                            ? notificationIcon
-                            : 'assets/png/folder_unfocus.png';
-                      } else {
-                        // Family Documents tab
-                        displayIcon = index == currentIndex
-                            ? 'assets/png/family_focus.png'
-                            : notificationIcon;
-                      }
-
-                      return InkWell(
-                        onTap: () {
-                          setState(() => currentIndex = index);
-                          _fetchMyDocuments(); // Re-fetch with new family_only value
-                        },
-                        child: Container(
-                          alignment: Alignment.center,
-                          margin: const EdgeInsets.only(top: 6),
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
-                          decoration: BoxDecoration(
-                            color: index == currentIndex
-                                ? appFontColor
-                                : greyText2,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color:
-                                    Colors.black.withAlpha((0.1 * 255).toInt()),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                displayIcon,
-                                height: 25.w,
-                              ),
-                              const SizedBox(
-                                width: 5,
-                              ),
-                              Text(
-                                notificationTitle.toUpperCase(),
-                                style: GoogleFonts.koulen(
-                                  color: index == currentIndex
-                                      ? Colors.white
-                                      : const Color(0xFF1A237E),
-                                  fontSize: 18.sp,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1.7,
-                                ),
-                              ),
-                            ],
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          displayIcon,
+                          height: 25.w,
+                        ),
+                        const SizedBox(width: 5),
+                        Text(
+                          (item['title'] as String).toUpperCase(),
+                          style: GoogleFonts.koulen(
+                            color: isSelected
+                                ? Colors.white
+                                : const Color(0xFF1A237E),
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.3,
                           ),
                         ),
-                      );
-                    },
-                    separatorBuilder: (BuildContext context, int index) =>
-                        const SizedBox(
-                      width: 10,
+                      ],
+                    ),
+                  ),
+                );
+              },
+              separatorBuilder: (BuildContext context, int index) =>
+                  const SizedBox(width: 10),
+            ),
+          ),
+          SizedBox(height: 8.h),
+          // ── Tab Content ──
+          Expanded(
+            child: currentIndex == 0
+                ? _buildMyDocumentsContent()
+                : IndexedStack(
+                    index: currentIndex - 1,
+                    children: const [
+                      FamilyDocumentsTab(),
+                      CompanyDocumentsTab(),
+                      ShareDocumentsTab(),
+                    ],
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Builds the original "My Documents" personal documents content.
+  Widget _buildMyDocumentsContent() {
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        SliverToBoxAdapter(
+          child: Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.only(left: 20.w),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30.18),
+                      border: Border.all(
+                        color: const Color(0xffD9D9D9),
+                      ),
+                    ),
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 13.5.w,
+                        vertical: 8.5.h,
+                      ),
+                      child: Text(
+                        'total : ${_filteredDocs().length}',
+                        style: GoogleFonts.aBeeZee(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w400,
+                          fontStyle: FontStyle.italic,
+                          letterSpacing: .10,
+                          color: const Color(0xff949494),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                // Row(
-                //   mainAxisAlignment: MainAxisAlignment.center,
-                //   children: List.generate(3, (dotIndex) {
-                //     return Container(
-                //       margin: const EdgeInsets.symmetric(horizontal: 4),
-                //       width: 8,
-                //       height: 8,
-                //       decoration: BoxDecoration(
-                //         shape: BoxShape.circle,
-                //         color: dotIndex == currentIndex ? Colors.black : Colors.grey[400],
-                //       ),
-                //     );
-                //   }),
-                // ),
-                SizedBox(height: 8.h),
+              ),
+              SizedBox(height: 8.h),
+              if (_loading)
+                const Padding(
+                  padding: EdgeInsets.all(40),
+                  child: Center(child: CircularProgressIndicator()),
+                )
+              else if (_error != null)
                 Padding(
-                  padding: EdgeInsets.only(left: 20.w),
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(30.18),
-                        border: Border.all(
-                          color: const Color(0xffD9D9D9),
-                        ),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 13.5.w,
-                              vertical: 8.5.h,
-                            ),
-                            child: Text(
-                              'total : ${_filteredDocs().length}',
-                              style: GoogleFonts.aBeeZee(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w400,
-                                fontStyle: FontStyle.italic,
-                                letterSpacing: .10,
-                                color: const Color(0xff949494),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
                   ),
-                ),
-                SizedBox(height: 8.h),
-                if (_loading)
-                  const Padding(
-                    padding: EdgeInsets.all(40),
-                    child: Center(child: CircularProgressIndicator()),
-                  )
-                else if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      _error!,
-                      style: const TextStyle(color: Colors.red),
-                      textAlign: TextAlign.center,
-                    ),
-                  )
-                else
-                  Center(
-                    child: GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _filteredDocs().length +
-                          1, // +1 for Add New Document card
-                      itemBuilder: (context, index) {
-                        // First item is "Add New Document"
-                        if (index == 0) {
-                          return GestureDetector(
-                            onTap: () {
-                              showDocumentDialog(context);
-                            },
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(30.18),
-                                border: Border.all(
-                                  color: const Color(0xffD9D9D9),
-                                ),
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SvgPicture.asset('assets/png/add_doc.svg'),
-                                  SizedBox(height: 10.h),
-                                  Text(
-                                    'Add New Document',
-                                    style: GoogleFonts.aBeeZee(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w400,
-                                      fontStyle: FontStyle.italic,
-                                      letterSpacing: .10,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }
-
-                        // Regular document cards
-                        final item = _filteredDocs()[index - 1];
-
-                        // Check if document is expired
-                        bool isExpired = false;
-                        if (item['expiry_date'] != null &&
-                            item['expiry_date'] != false) {
-                          try {
-                            final expiryDate =
-                                DateTime.parse(item['expiry_date'].toString());
-                            isExpired = expiryDate.isBefore(DateTime.now());
-                          } catch (e) {
-                            // If parsing fails, not expired
-                            isExpired = false;
-                          }
-                        }
-
+                )
+              else
+                Center(
+                  child: GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: _filteredDocs().length + 1,
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
                         return GestureDetector(
                           onTap: () {
-                            if (kDebugMode) {
-                              unawaited(_debugPrintDocumentTapApi(item));
-                            }
-                            unawaited(_openDocumentAttachment(item));
-                          },
-                          onLongPress: () {
-                            _showDocumentDetailsDialog(context, item);
+                            showDocumentDialog(context);
                           },
                           child: Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(30.18),
                               border: Border.all(
-                                color: isExpired
-                                    ? const Color(0xFFBA1719)
-                                    : const Color(0xffD9D9D9),
-                                width: isExpired ? 2 : 1,
+                                color: const Color(0xffD9D9D9),
                               ),
                             ),
-                            child: Padding(
-                              padding: EdgeInsets.symmetric(
-                                vertical: 10.h,
-                                horizontal: 10.w,
-                              ),
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  SizedBox(
-                                    height: 90.h,
-                                    width: double.infinity,
-                                    child: Center(
-                                      child: Image.asset(
-                                        item['icon'],
-                                        height: 90.h,
-                                        width: double.infinity,
-                                        fit: BoxFit.contain,
-                                      ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                SvgPicture.asset('assets/png/add_doc.svg'),
+                                SizedBox(height: 10.h),
+                                Text(
+                                  'Add New Document',
+                                  style: GoogleFonts.aBeeZee(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w400,
+                                    fontStyle: FontStyle.italic,
+                                    letterSpacing: .10,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+
+                      final item = _filteredDocs()[index - 1];
+                      bool isExpired = false;
+                      if (item['expiry_date'] != null &&
+                          item['expiry_date'] != false) {
+                        try {
+                          final expiryDate =
+                              DateTime.parse(item['expiry_date'].toString());
+                          isExpired = expiryDate.isBefore(DateTime.now());
+                        } catch (e) {
+                          isExpired = false;
+                        }
+                      }
+
+                      return GestureDetector(
+                        onTap: () {
+                          if (kDebugMode) {
+                            unawaited(_debugPrintDocumentTapApi(item));
+                          }
+                          unawaited(_openDocumentAttachment(item));
+                        },
+                        onLongPress: () {
+                          _showDocumentDetailsDialog(context, item);
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(30.18),
+                            border: Border.all(
+                              color: isExpired
+                                  ? const Color(0xFFBA1719)
+                                  : const Color(0xffD9D9D9),
+                              width: isExpired ? 2 : 1,
+                            ),
+                          ),
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              vertical: 10.h,
+                              horizontal: 10.w,
+                            ),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  height: 90.h,
+                                  width: double.infinity,
+                                  child: Center(
+                                    child: Image.asset(
+                                      item['icon'],
+                                      height: 90.h,
+                                      width: double.infinity,
+                                      fit: BoxFit.contain,
                                     ),
                                   ),
-                                  SizedBox(height: 10.h),
-                                  Builder(
-                                    builder: (context) {
-                                      final rawName = (item['name'] ?? '').toString().trim();
-                                      final rawType = (item['title'] ?? '').toString().trim();
-                                      final typeLabel = _toTitleCase(
-                                        rawType.replaceAll('_', ' '),
-                                      );
-                                      final nameLabel = _toTitleCase(
-                                        rawName.replaceAll('_', ' '),
-                                      );
-                                      // Match the screenshot: show a human-friendly label under the icon.
-                                      // Prefer the document name only if it looks meaningful; otherwise fallback to the type.
-                                      final displayName =
-                                          _isMeaningfulDocLabel(nameLabel)
-                                              ? nameLabel
-                                              : typeLabel;
-                                      final date = _formatCardDate(item['issue_date']);
+                                ),
+                                SizedBox(height: 10.h),
+                                Builder(
+                                  builder: (context) {
+                                    final rawName =
+                                        (item['name'] ?? '').toString().trim();
+                                    final rawType =
+                                        (item['title'] ?? '').toString().trim();
+                                    final typeLabel = _toTitleCase(
+                                      rawType.replaceAll('_', ' '),
+                                    );
+                                    final nameLabel = _toTitleCase(
+                                      rawName.replaceAll('_', ' '),
+                                    );
+                                    final displayName =
+                                        _isMeaningfulDocLabel(nameLabel)
+                                            ? nameLabel
+                                            : typeLabel;
+                                    final date =
+                                        _formatCardDate(item['issue_date']);
 
-                                      return Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
+                                    return Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          displayName,
+                                          textAlign: TextAlign.center,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: GoogleFonts.aBeeZee(
+                                            fontSize: 14.sp,
+                                            fontWeight: FontWeight.w700,
+                                            letterSpacing: .10,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        if (date.isNotEmpty) ...[
+                                          SizedBox(height: 4.h),
                                           Text(
-                                            displayName,
+                                            date,
                                             textAlign: TextAlign.center,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: GoogleFonts.aBeeZee(
-                                              fontSize: 14.sp,
-                                              fontWeight: FontWeight.w700,
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w400,
                                               letterSpacing: .10,
-                                              color: Colors.black,
+                                              color: const Color(0xff949494),
                                             ),
                                           ),
-                                          if (date.isNotEmpty) ...[
-                                            SizedBox(height: 4.h),
-                                            Text(
-                                              date,
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: GoogleFonts.aBeeZee(
-                                                fontSize: 10.sp,
-                                                fontWeight: FontWeight.w400,
-                                                letterSpacing: .10,
-                                                color: const Color(0xff949494),
-                                              ),
-                                            ),
-                                          ],
                                         ],
-                                      );
-                                    },
-                                  ),
-                                ],
-                              ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
                           ),
-                        );
-                      },
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 2,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 0.78,
-                      ),
+                        ),
+                      );
+                    },
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                      childAspectRatio: 0.78,
                     ),
                   ),
-                SizedBox(height: 20.h),
-              ],
-            ),
+                ),
+              SizedBox(height: 20.h),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
