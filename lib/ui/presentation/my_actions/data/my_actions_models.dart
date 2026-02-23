@@ -26,6 +26,9 @@ class MyActionItem {
   final String status;
   final String employeeName;
   final String employeeImage;
+  final String? reportLink;
+  final String? clientImage;
+  final String? operatingUnit;
 
   const MyActionItem({
     required this.id,
@@ -39,29 +42,65 @@ class MyActionItem {
     this.vendor,
     this.amountTotal,
     this.requestType,
+    this.reportLink,
+    this.clientImage,
+    this.operatingUnit,
   });
 
   factory MyActionItem.fromJson(Map<String, dynamic> json) {
-    final dynamic amountRaw =
-        json['amount_total'] ?? json['amount'] ?? json['total'];
+    // amount: try amount_total (custom), total_amount (Odoo expense sheet), amount, total
+    final dynamic amountRaw = json['amount_total'] ??
+        json['total_amount'] ??
+        json['amount'] ??
+        json['total'];
+
+    // name: try name, display_name (Odoo standard), report_name (reports), then project / request_type
+    final dynamic nameRaw = json['name'] ??
+        json['display_name'] ??
+        json['report_name'] ??
+        json['project'] ??
+        json['request_type'];
+
+    // status: try status (custom), state (Odoo standard)
+    final dynamic statusRaw = json['status'] ?? json['state'];
+
+    // employee: try employee_name, employee (Odoo), requester_name
+    final dynamic empRaw = json['employee_name'] ??
+        json['employee'] ??
+        json['requester_name'];
+
     return MyActionItem(
-      id: (json['id'] as num?)?.toInt() ?? 0,
-      name: (json['name'] ?? json['project'] ?? json['request_type'])
-              ?.toString() ??
-          '',
-      reference: (json['reference'] ?? json['ref'] ?? json['number'])
-          ?.toString(),
-      date: (json['date'] ?? json['updated_at'] ?? json['create_date'])
-          ?.toString(),
-      project: json['project']?.toString(),
-      vendor: json['vendor']?.toString(),
+      id: (json['id'] as num?)?.toInt() ??
+          (json['parent_id'] as num?)?.toInt() ??
+          0,
+      name: _safeString(nameRaw),
+      reference: _safeString(
+          json['reference'] ?? json['ref'] ?? json['number']),
+      date: _safeString(json['date'] ??
+          json['accounting_date'] ??
+          json['updated_at'] ??
+          json['create_date']),
+      project: _safeString(json['project']),
+      vendor: _safeString(json['vendor']),
       amountTotal: amountRaw is num
           ? amountRaw.toDouble()
           : double.tryParse(amountRaw?.toString() ?? ''),
-      requestType: json['request_type']?.toString(),
-      status: json['status']?.toString() ?? '',
-      employeeName: json['employee_name']?.toString() ?? '',
+      requestType: _safeString(json['request_type']),
+      status: _safeString(statusRaw),
+      employeeName: _safeString(empRaw),
       employeeImage: json['employee_image']?.toString() ?? '',
+      reportLink: _safeString(json['report_link']),
+      clientImage: _safeString(json['client_image']),
+      operatingUnit: _safeString(json['operating_unit']),
     );
+  }
+
+  /// Safely convert Odoo values — treats false/true/null as empty string.
+  static String _safeString(dynamic v) {
+    if (v == null || v == false || v == true) return '';
+    final s = v.toString();
+    final lower = s.toLowerCase();
+    if (lower == 'false' || lower == 'null') return '';
+    return s;
   }
 }

@@ -90,6 +90,34 @@ class MyActionsRepository {
 
     final result = json['result'];
 
+    // ── Debug: dump raw response structure for investigation ──
+    print('[MyActions][${type.apiValue}] result type: ${result.runtimeType}');
+    if (result is Map) {
+      print('[MyActions][${type.apiValue}] result keys: ${result.keys.toList()}');
+      final d = result['data'];
+      if (d is Map) {
+        print('[MyActions][${type.apiValue}] data keys: ${d.keys.toList()}');
+        d.forEach((k, v) {
+          if (v is List && v.isNotEmpty) {
+            print('[MyActions][${type.apiValue}] data["$k"] first item keys: ${(v.first as Map?)?.keys.toList()}');
+            print('[MyActions][${type.apiValue}] data["$k"] first item: ${v.first}');
+          }
+        });
+      } else if (d is List && d.isNotEmpty) {
+        print('[MyActions][${type.apiValue}] data is List, first item keys: ${(d.first as Map?)?.keys.toList()}');
+        print('[MyActions][${type.apiValue}] data first item: ${d.first}');
+      }
+      final directList = result[type.responseKey];
+      if (directList is List && directList.isNotEmpty) {
+        print('[MyActions][${type.apiValue}] result["${type.responseKey}"] first item keys: ${(directList.first as Map?)?.keys.toList()}');
+        print('[MyActions][${type.apiValue}] result["${type.responseKey}"] first item: ${directList.first}');
+      }
+    } else if (result is List && result.isNotEmpty) {
+      print('[MyActions][${type.apiValue}] result is List, first item keys: ${(result.first as Map?)?.keys.toList()}');
+      print('[MyActions][${type.apiValue}] result first item: ${result.first}');
+    }
+    // ── End debug ──
+
     // result might be the list/data directly (no wrapping map)
     if (result is List) {
       return result

@@ -4,7 +4,7 @@ import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -23,38 +23,37 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _future = _repo.fetchByType(MyActionsType.reports);
   }
 
+  /// Map status strings to badge assets.
   String _statusBadgeAsset(String status) {
     switch (status.trim().toLowerCase()) {
       case 'approved':
+      case 'approve':
+      case 'done':
+      case 'paid':
         return 'assets/newapp/approvedBadge.png';
       case 'pending':
+      case 'submit':
+      case 'draft':
         return 'assets/newapp/warningBadge.png';
       case 'rejected':
+      case 'cancel':
         return 'assets/newapp/rejectBadge.png';
       default:
         return 'assets/newapp/warningBadge.png';
     }
   }
 
-  String _statusText(String status) {
-    final value = status.trim().toUpperCase();
-    return value.isEmpty ? 'UNKNOWN' : value;
-  }
-
-  String _amountText(MyActionItem item) {
-    if (item.amountTotal != null) {
-      return NumberFormat.decimalPattern().format(item.amountTotal);
+  Future<void> _openReportLink(String url) async {
+    final uri = Uri.tryParse(url);
+    if (uri != null && await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     }
-    if (item.id != 0) {
-      return '${item.id}';
-    }
-    return '-';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF3F3F3),
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
@@ -72,7 +71,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.cloud_off, size: 60.w, color: const Color(0xFFB5B7C1)),
+                      Icon(Icons.cloud_off,
+                          size: 60.w, color: const Color(0xFFB5B7C1)),
                       SizedBox(height: 16.h),
                       Text(
                         'Service not available',
@@ -99,18 +99,67 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
             final items = snapshot.data ?? const <MyActionItem>[];
 
+            // Map API items to display items
+            final reportItems = items.map((item) {
+              return _ReportRequestItem(
+                reportId: item.id,
+                reportName: item.name.trim().isNotEmpty
+                    ? item.name
+                    : 'Report #${item.id}',
+                project: item.project?.trim().isNotEmpty == true
+                    ? item.project!
+                    : '',
+                statusBadgeAsset: _statusBadgeAsset(item.status),
+                statusText: item.status.trim().isNotEmpty
+                    ? item.status[0].toUpperCase() +
+                        item.status.substring(1).toLowerCase()
+                    : '',
+                reportLink: item.reportLink?.trim().isNotEmpty == true
+                    ? item.reportLink!
+                    : '',
+                clientImage: item.clientImage?.trim().isNotEmpty == true
+                    ? item.clientImage!
+                    : '',
+              );
+            }).toList();
+
             return ListView(
-              padding: EdgeInsets.only(top: 10.h, bottom: 80.h),
+              padding: EdgeInsets.only(top: 8.h, bottom: 80.h),
               children: [
-                const _ActionsHeader(
-                  iconAsset: 'assets/png/my-reports-frame.png',
-                  title: 'MY REPORTS',
+                // Header
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: 10.h),
+                  child: Center(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          'assets/png/my-reports-frame.png',
+                          width: 26.w,
+                          height: 26.w,
+                          fit: BoxFit.contain,
+                          color: const Color(0xFFD21B2E),
+                          colorBlendMode: BlendMode.srcIn,
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          'MY REPORTS',
+                          style: GoogleFonts.inter(
+                            fontSize: 18.sp,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF101C36),
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                SizedBox(height: 12.h),
-                if (items.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 30.h),
+
+                if (reportItems.isEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(top: 24.h),
+                    child: Center(
                       child: Text(
                         'No reports found.',
                         style: GoogleFonts.inter(
@@ -122,18 +171,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     ),
                   )
                 else
-                  ...items.map(
+                  ...reportItems.map(
                     (item) => Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 12.w, vertical: 7.h),
-                      child: _ReportCard(
-                        projectName:
-                            item.name.trim().isEmpty ? 'PROJECT NAME' : item.name,
-                        companyName: item.employeeName.trim().isEmpty
-                            ? 'Company name'
-                            : item.employeeName,
-                        amountText: _amountText(item),
-                        statusBadgeAsset: _statusBadgeAsset(item.status),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 16.w, vertical: 7.h),
+                      child: _ReportRequestCard(
+                        item: item,
+                        onOpenLink: item.reportLink.isNotEmpty
+                            ? () => _openReportLink(item.reportLink)
+                            : null,
                       ),
                     ),
                   ),
@@ -146,104 +192,155 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 }
 
-class _ActionsHeader extends StatelessWidget {
-  final String iconAsset;
-  final String title;
+/* ───────────────────────────── Card ───────────────────────────── */
 
-  const _ActionsHeader({
-    required this.iconAsset,
-    required this.title,
-  });
+class _ReportRequestCard extends StatelessWidget {
+  final _ReportRequestItem item;
+  final VoidCallback? onOpenLink;
 
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            iconAsset,
-            width: 30.w,
-            height: 30.w,
-            fit: BoxFit.contain,
-            color: const Color(0xFFD21B2E),
-            colorBlendMode: BlendMode.srcIn,
-          ),
-          SizedBox(width: 8.w),
-          Text(
-            title,
-            style: GoogleFonts.inter(
-              fontSize: 16.sp,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF171A2E),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ReportCard extends StatelessWidget {
-  final String projectName;
-  final String companyName;
-  final String amountText;
-  final String statusBadgeAsset;
-
-  const _ReportCard({
-    required this.projectName,
-    required this.companyName,
-    required this.amountText,
-    required this.statusBadgeAsset,
-  });
+  const _ReportRequestCard({required this.item, this.onOpenLink});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 132.h,
+      height: 152.h,
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F3F3),
-        borderRadius: BorderRadius.circular(28.r),
-        border: Border.all(color: const Color(0xFF8E8E8E), width: 1),
+        color: const Color(0xFFF9F9F9),
+        borderRadius: BorderRadius.circular(30.r),
+        border: Border.all(color: const Color(0xFF9F9F9F), width: 1),
       ),
       child: Stack(
         children: [
-          _StatusRibbon(assetPath: statusBadgeAsset),
+          // Status ribbon (top-left corner)
+          Positioned(
+            top: 0,
+            left: 0,
+            child: ClipRRect(
+              borderRadius:
+                  BorderRadius.only(topLeft: Radius.circular(30.r)),
+              child: Image.asset(
+                item.statusBadgeAsset,
+                width: 73.w,
+                height: 41.h,
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
+
+          // Content
           Padding(
-            padding: EdgeInsets.fromLTRB(18.w, 18.h, 18.w, 14.h),
+            padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 12.h),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SizedBox(height: 8.h),
+                // Report ID (centered, blue)
+                Center(
+                  child: Text(
+                    'Report #${item.reportId}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0A3887),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 6.h),
+
+                // Report name (left-aligned, bold)
                 Text(
-                  projectName.toUpperCase(),
-                  maxLines: 1,
+                  item.reportName.toUpperCase(),
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
-                    fontSize: 13.sp,
+                    fontSize: 12.sp,
                     fontWeight: FontWeight.w700,
-                    color: Colors.black,
+                    color: const Color(0xFF111111),
+                    height: 1.15,
                   ),
                 ),
                 SizedBox(height: 2.h),
-                Text(
-                  companyName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.lexendDeca(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF484848).withOpacity(0.72),
+
+                // Project name (if available)
+                if (item.project.isNotEmpty)
+                  Text(
+                    item.project,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF777777),
+                    ),
                   ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  amountText,
-                  style: GoogleFonts.inter(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF686868),
-                  ),
+
+                const Spacer(),
+
+                // Bottom row: status left + report link icon right
+                Row(
+                  children: [
+                    // Status text
+                    if (item.statusText.isNotEmpty)
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                            horizontal: 10.w, vertical: 3.h),
+                        decoration: BoxDecoration(
+                          color: _statusBgColor(item.statusText),
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Text(
+                          item.statusText,
+                          style: GoogleFonts.inter(
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w700,
+                            color: _statusTextColor(item.statusText),
+                          ),
+                        ),
+                      ),
+                    const Spacer(),
+                    // Download / view link button
+                    if (onOpenLink != null)
+                      GestureDetector(
+                        onTap: onOpenLink,
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 10.w, vertical: 4.h),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0A3887),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.picture_as_pdf_rounded,
+                                size: 14.w,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: 4.w),
+                              Text(
+                                'View PDF',
+                                style: GoogleFonts.inter(
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
+                        'No file',
+                        style: GoogleFonts.inter(
+                          fontSize: 9.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFB8B8B8),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
@@ -252,25 +349,54 @@ class _ReportCard extends StatelessWidget {
       ),
     );
   }
+
+  Color _statusBgColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return const Color(0xFFE8F5E9);
+      case 'pending':
+      case 'draft':
+        return const Color(0xFFFFF3E0);
+      case 'rejected':
+        return const Color(0xFFFFEBEE);
+      default:
+        return const Color(0xFFF5F5F5);
+    }
+  }
+
+  Color _statusTextColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return const Color(0xFF2E7D32);
+      case 'pending':
+      case 'draft':
+        return const Color(0xFFE65100);
+      case 'rejected':
+        return const Color(0xFFC62828);
+      default:
+        return const Color(0xFF616161);
+    }
+  }
 }
 
-class _StatusRibbon extends StatelessWidget {
-  final String assetPath;
+/* ──────────────────────── Data model ──────────────────────── */
 
-  const _StatusRibbon({
-    required this.assetPath,
+class _ReportRequestItem {
+  final int reportId;
+  final String reportName;
+  final String project;
+  final String statusBadgeAsset;
+  final String statusText;
+  final String reportLink;
+  final String clientImage;
+
+  const _ReportRequestItem({
+    required this.reportId,
+    required this.reportName,
+    required this.project,
+    required this.statusBadgeAsset,
+    required this.statusText,
+    required this.reportLink,
+    required this.clientImage,
   });
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      top: 0,
-      left: 0,
-      child: Image.asset(
-        assetPath,
-        width: 84.w,
-        fit: BoxFit.contain,
-      ),
-    );
-  }
 }
