@@ -16,6 +16,7 @@ class MyActionsRepository {
     MyActionsType type, {
     int page = 1,
     int perPage = 50,
+    String keyword = '',
   }) async {
     final token = SharedPref.getLoginDataOrNull()?.result?.token;
     if (token == null || token.isEmpty) {
@@ -28,13 +29,18 @@ class MyActionsRepository {
       'Authorization': 'Bearer $token',
     };
 
+    final Map<String, dynamic> params = {
+      'type': type.apiValue,
+      'page': page,
+      'per_page': perPage,
+    };
+    if (keyword.trim().isNotEmpty) {
+      params['keyword'] = keyword.trim();
+    }
+
     final body = {
       'jsonrpc': '2.0',
-      'params': {
-        'type': type.apiValue,
-        'page': page,
-        'per_page': perPage,
-      },
+      'params': params,
     };
 
     final Response? response = await _apiQuery.postQuery(
@@ -63,30 +69,86 @@ class MyActionsRepository {
     }
 
     final Map<String, dynamic> json = Map<String, dynamic>.from(payload);
+
+    // Handle JSON-RPC error envelope from Odoo
+    if (json.containsKey('error') && json['error'] is Map) {
+      final err = Map<String, dynamic>.from(json['error'] as Map);
+      // Odoo nests the real message inside error.data.message
+      final errData = err['data'];
+      String message;
+      if (errData is Map) {
+        message = errData['message']?.toString() ??
+            errData['name']?.toString() ??
+            err['message']?.toString() ??
+            'Odoo Server Error';
+      } else {
+        message = err['message']?.toString() ?? 'Odoo Server Error';
+      }
+      print('[MyActions] Odoo error for type=${type.apiValue}: $message');
+      throw Exception(message);
+    }
+
     final result = json['result'];
+
+    // result might be the list/data directly (no wrapping map)
+    if (result is List) {
+      return result
+          .whereType<Map>()
+          .map((e) => MyActionItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+
     if (result is! Map) {
-      throw Exception('Malformed my_actions response');
+      // Log for debugging, then return empty instead of crashing
+      print(
+          '[MyActions] Unexpected result type: ${result.runtimeType}, value: $result');
+      return const <MyActionItem>[];
     }
 
     final status = result['status']?.toString();
-    if (status != 'success') {
+    if (status != null && status != 'success') {
       final message = result['message']?.toString() ?? 'Unknown error';
       throw Exception(message);
     }
 
+    // Try the expected nested structure first: result.data.<key>
     final data = result['data'];
-    if (data is! Map) {
-      return const <MyActionItem>[];
+    if (data is Map) {
+      final list = data[type.responseKey];
+      if (list is List) {
+        return list
+            .whereType<Map>()
+            .map((e) => MyActionItem.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
+      }
     }
 
-    final list = data[type.responseKey];
-    if (list is! List) {
-      return const <MyActionItem>[];
+    // Fallback: result.<key> directly (flat response)
+    final directList = result[type.responseKey];
+    if (directList is List) {
+      return directList
+          .whereType<Map>()
+          .map((e) => MyActionItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
     }
 
-    return list
-        .whereType<Map>()
-        .map((e) => MyActionItem.fromJson(Map<String, dynamic>.from(e)))
-        .toList();
+    // Fallback: result.data is a list
+    if (data is List) {
+      return data
+          .whereType<Map>()
+          .map((e) => MyActionItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+
+    // Fallback: result.records (some Odoo endpoints)
+    final records = result['records'];
+    if (records is List) {
+      return records
+          .whereType<Map>()
+          .map((e) => MyActionItem.fromJson(Map<String, dynamic>.from(e)))
+          .toList();
+    }
+
+    return const <MyActionItem>[];
   }
 }

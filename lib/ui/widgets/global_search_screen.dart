@@ -130,6 +130,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       {'value': 'lpo', 'label': 'LPO', 'icon': Icons.description},
       {'value': 'petty_cash', 'label': 'Petty Cash', 'icon': Icons.receipt},
       {'value': 'projects', 'label': 'My Projects', 'icon': Icons.work},
+      {'value': 'my_actions', 'label': 'My Actions', 'icon': Icons.assignment},
     ];
 
     return Container(
@@ -244,6 +245,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           return _buildPettyCashSkeleton();
         } else if (_selectedCategory == 'lpo') {
           return _buildLpoSkeleton();
+        } else if (_selectedCategory == 'my_actions') {
+          return _buildGenericSkeleton();
         } else {
           return _buildGenericSkeleton();
         }
@@ -410,6 +413,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       );
     } else if (item.category == 'petty_cash') {
       return _buildPettyCashCard(item);
+    } else if (item.category == 'my_actions') {
+      return _buildMyActionsCard(item, keyword);
     }
 
     // Fallback to generic card for other categories
@@ -659,6 +664,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         return Icons.folder;
       case 'tasks':
         return Icons.task;
+      case 'my_actions':
+        return Icons.assignment;
       default:
         return Icons.search;
     }
@@ -679,6 +686,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         return Colors.teal;
       case 'tasks':
         return appFontColor;
+      case 'my_actions':
+        return const Color(0xFF1A2540);
       default:
         return Colors.grey;
     }
@@ -959,6 +968,191 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               const SizedBox(width: 5),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  /// Build My Actions search result card
+  Widget _buildMyActionsCard(GlobalSearchItem item, String keyword) {
+    final data = item.additionalData ?? {};
+    final status = (data['status'] ?? '').toString().trim();
+    final employeeName = (data['employee_name'] ?? '').toString();
+    final requestType = (data['request_type'] ?? '').toString();
+    final reference = (data['reference'] ?? '').toString();
+    final vendor = (data['vendor'] ?? '').toString();
+    final amountTotal = data['amount_total'];
+    final date = (data['date'] ?? '').toString();
+
+    String statusBadge;
+    Color statusColor;
+    switch (status.toLowerCase()) {
+      case 'approved':
+        statusBadge = 'APPROVED';
+        statusColor = Colors.green;
+        break;
+      case 'rejected':
+        statusBadge = 'REJECTED';
+        statusColor = Colors.red;
+        break;
+      case 'pending':
+      default:
+        statusBadge = status.isNotEmpty ? status.toUpperCase() : 'PENDING';
+        statusColor = Colors.orange;
+        break;
+    }
+
+    String formattedDate = '--';
+    if (date.isNotEmpty) {
+      try {
+        final dt = DateTime.parse(date);
+        formattedDate = DateFormat('dd/MM/yy').format(dt);
+      } catch (_) {
+        formattedDate = date;
+      }
+    }
+
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      child: Container(
+        padding: EdgeInsets.all(14.w),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16.r),
+          color: Colors.white,
+          border: Border.all(color: Colors.grey[200]!),
+        ),
+        child: Row(
+          children: [
+            // Status indicator
+            Container(
+              width: 4.w,
+              height: 60.h,
+              decoration: BoxDecoration(
+                color: statusColor,
+                borderRadius: BorderRadius.circular(4.r),
+              ),
+            ),
+            SizedBox(width: 12.w),
+            // Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Title / Name
+                  _buildHighlightedText(
+                    item.title,
+                    keyword,
+                    style: GoogleFonts.inter(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0D3E7F),
+                    ),
+                  ),
+                  if (reference.isNotEmpty) ...[
+                    SizedBox(height: 2.h),
+                    Text(
+                      reference,
+                      style: GoogleFonts.inter(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey[600],
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                  SizedBox(height: 4.h),
+                  Row(
+                    children: [
+                      if (employeeName.isNotEmpty) ...[
+                        Icon(Icons.person_outline, size: 14.sp, color: Colors.grey[500]),
+                        SizedBox(width: 4.w),
+                        Flexible(
+                          child: Text(
+                            employeeName,
+                            style: GoogleFonts.inter(
+                              fontSize: 11.sp,
+                              color: Colors.grey[600],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                      if (requestType.isNotEmpty) ...[
+                        SizedBox(width: 8.w),
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A2540).withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(4.r),
+                          ),
+                          child: Text(
+                            requestType,
+                            style: GoogleFonts.inter(
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF1A2540),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (vendor.isNotEmpty) ...[
+                    SizedBox(height: 2.h),
+                    Text(
+                      vendor,
+                      style: GoogleFonts.inter(fontSize: 11.sp, color: Colors.grey[500]),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            SizedBox(width: 8.w),
+            // Right side: amount + date + status
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (amountTotal != null && amountTotal != 0)
+                  Text(
+                    NumberFormat.decimalPattern().format(amountTotal is num ? amountTotal : double.tryParse(amountTotal.toString()) ?? 0),
+                    style: GoogleFonts.inter(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF0D3E7F),
+                    ),
+                  ),
+                SizedBox(height: 4.h),
+                Text(
+                  formattedDate,
+                  style: GoogleFonts.inter(fontSize: 11.sp, color: Colors.grey[500]),
+                ),
+                SizedBox(height: 4.h),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.h),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8.r),
+                  ),
+                  child: Text(
+                    statusBadge,
+                    style: GoogleFonts.inter(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

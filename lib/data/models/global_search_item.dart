@@ -59,6 +59,8 @@ class GlobalSearchItem {
             'Document #${json['id']}';
       case 'tasks':
         return json['name'] ?? 'Task #${json['id']}';
+      case 'my_actions':
+        return json['name'] ?? 'Action #${json['id']}';
       default:
         return json['name'] ?? 'Item #${json['id']}';
     }
@@ -91,6 +93,15 @@ class GlobalSearchItem {
         final project = json['project_name'] ?? json['project_id'];
         final stage = json['stage_name'] ?? json['stage_id'];
         return '${project ?? ''} ${stage != null ? '• $stage' : ''}'.trim();
+      case 'my_actions':
+        final employee = json['employee_name'];
+        final status = json['status'];
+        final vendor = json['vendor'];
+        return [
+          if (employee != null) employee.toString(),
+          if (status != null) status.toString().toUpperCase(),
+          if (vendor != null && vendor.toString().isNotEmpty) vendor.toString(),
+        ].join(' • ');
       default:
         return null;
     }
@@ -120,6 +131,8 @@ class GlobalSearchItem {
         return 'Document';
       case 'tasks':
         return 'Task';
+      case 'my_actions':
+        return 'My Actions';
       default:
         return category;
     }

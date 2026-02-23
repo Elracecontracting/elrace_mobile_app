@@ -1,6 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/models/global_search_item.dart';
+import 'package:el_race/ui/presentation/my_actions/data/my_actions_models.dart';
+import 'package:el_race/ui/presentation/my_actions/data/my_actions_repository.dart';
 
 /// Exception for global search API errors
 class GlobalSearchApiException implements Exception {
@@ -48,6 +50,7 @@ class GlobalSearchApiService {
       'notes',
       'documents',
       'tasks',
+      'my_actions',
     ];
 
     if (!validCategories.contains(category)) {
@@ -59,6 +62,11 @@ class GlobalSearchApiService {
     // Validate keyword
     if (keyword.trim().isEmpty) {
       return [];
+    }
+
+    // my_actions uses its own endpoint with keyword param
+    if (category == 'my_actions') {
+      return _searchMyActions(keyword: keyword.trim());
     }
 
     try {
@@ -106,6 +114,51 @@ class GlobalSearchApiService {
       if (e is GlobalSearchApiException) rethrow;
       throw GlobalSearchApiException('Unexpected error: ${e.toString()}');
     }
+  }
+
+  /// Search my_actions via its own API with keyword
+  Future<List<GlobalSearchItem>> _searchMyActions({required String keyword}) async {
+    final repo = MyActionsRepository();
+    final allResults = <GlobalSearchItem>[];
+
+    // Search across all action types
+    final types = [
+      MyActionsType.hr,
+      MyActionsType.rfq,
+      MyActionsType.invoice,
+      MyActionsType.ptsh,
+    ];
+
+    final futures = types.map((type) => repo.fetchByType(type, keyword: keyword).catchError((_) => <MyActionItem>[]));
+    final results = await Future.wait(futures);
+
+    for (final items in results) {
+      for (final item in items) {
+        allResults.add(GlobalSearchItem(
+          id: item.id,
+          title: item.name,
+          subtitle: [
+            if (item.employeeName.isNotEmpty) item.employeeName,
+            if (item.status.isNotEmpty) item.status.toUpperCase(),
+            if (item.vendor != null && item.vendor!.isNotEmpty) item.vendor!,
+          ].join(' • '),
+          category: 'my_actions',
+          additionalData: {
+            'reference': item.reference,
+            'date': item.date,
+            'project': item.project,
+            'vendor': item.vendor,
+            'amount_total': item.amountTotal,
+            'request_type': item.requestType,
+            'status': item.status,
+            'employee_name': item.employeeName,
+            'employee_image': item.employeeImage,
+          },
+        ));
+      }
+    }
+
+    return allResults;
   }
 
   /// Parse API response

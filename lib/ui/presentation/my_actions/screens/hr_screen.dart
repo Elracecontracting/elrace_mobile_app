@@ -177,7 +177,6 @@ class _HrRequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 132.h,
       decoration: BoxDecoration(
         color: const Color(0xFFF3F3F3),
         borderRadius: BorderRadius.circular(28.r),
@@ -232,7 +231,7 @@ class _HrRequestCard extends StatelessWidget {
                     color: const Color(0xFF686868),
                   ),
                 ),
-                const Spacer(),
+                SizedBox(height: 8.h),
                 Align(
                   alignment: Alignment.bottomRight,
                   child: Column(

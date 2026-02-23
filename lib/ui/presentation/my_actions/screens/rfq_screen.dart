@@ -1,6 +1,6 @@
-import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_models.dart';
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_repository.dart';
+import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,6 +16,8 @@ class RfqScreen extends StatefulWidget {
 class _RfqScreenState extends State<RfqScreen> {
   final MyActionsRepository _repo = MyActionsRepository();
   late final Future<List<MyActionItem>> _future;
+  final DateFormat _sectionDateFormat = DateFormat('dd/MM/yyyy');
+  final DateFormat _updatedDateFormat = DateFormat('MM/dd/yyyy');
 
   @override
   void initState() {
@@ -38,13 +40,35 @@ class _RfqScreenState extends State<RfqScreen> {
 
   String _formatAmount(double? amount) {
     if (amount == null) return '';
-    return NumberFormat.decimalPattern().format(amount);
+    return '${NumberFormat.decimalPattern().format(amount)} M';
+  }
+
+  DateTime? _parseDate(String? rawDate) {
+    if (rawDate == null || rawDate.trim().isEmpty) {
+      return null;
+    }
+    final normalized = rawDate.trim().replaceFirst(' ', 'T');
+    return DateTime.tryParse(normalized) ?? DateTime.tryParse(rawDate.trim());
+  }
+
+  String _sectionTitle(DateTime? dateTime) {
+    if (dateTime == null) return 'today';
+    final now = DateTime.now();
+    final isToday = now.year == dateTime.year &&
+        now.month == dateTime.month &&
+        now.day == dateTime.day;
+    return isToday ? 'today' : _sectionDateFormat.format(dateTime);
+  }
+
+  String _formatUpdatedDate(DateTime? dateTime) {
+    if (dateTime == null) return '--/--/----';
+    return _updatedDateFormat.format(dateTime);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF3F3F3),
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
@@ -56,29 +80,75 @@ class _RfqScreenState extends State<RfqScreen> {
             }
 
             if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
+              return Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.w),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.cloud_off,
+                          size: 60.w, color: const Color(0xFFB5B7C1)),
+                      SizedBox(height: 16.h),
+                      Text(
+                        'Service not available',
+                        style: GoogleFonts.inter(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF5A5A5A),
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'This feature is currently unavailable.\nPlease try again later.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 13.sp,
+                          color: const Color(0xFF9AA0A6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
             }
 
             final items = snapshot.data ?? const <MyActionItem>[];
-            final sectionItems = items
-                .map(
-                  (e) => _RfqRequestItem(
-                    requestNo: e.name,
-                    title: e.project ?? '',
-                    subtitle: e.vendor ?? '',
-                    amount: _formatAmount(e.amountTotal),
-                    statusBadgeAsset: _statusBadgeAsset(e.status),
-                    employeeImage: e.employeeImage,
-                  ),
-                )
-                .toList();
+            final sectionItems = items.map((item) {
+              final updatedDate = _parseDate(item.date);
+              return _RfqRequestItem(
+                requestNo: (item.reference?.trim().isNotEmpty == true)
+                    ? item.reference!.trim()
+                    : item.name,
+                title: item.project ?? '',
+                workOrder: item.vendor ?? '',
+                employeeName: item.employeeName,
+                amount: _formatAmount(item.amountTotal),
+                statusBadgeAsset: _statusBadgeAsset(item.status),
+                lastUpdated: _formatUpdatedDate(updatedDate),
+                updatedDate: updatedDate,
+              );
+            }).toList();
 
-            final sections = <_RfqSection>[
-              _RfqSection(
-                title: 'today',
-                items: sectionItems,
-              ),
-            ];
+            sectionItems.sort((a, b) {
+              final aDate = a.updatedDate ?? DateTime(1970, 1, 1);
+              final bDate = b.updatedDate ?? DateTime(1970, 1, 1);
+              return bDate.compareTo(aDate);
+            });
+
+            final grouped = <String, List<_RfqRequestItem>>{};
+            final orderedTitles = <String>[];
+            for (final item in sectionItems) {
+              final title = _sectionTitle(item.updatedDate);
+              if (!grouped.containsKey(title)) {
+                grouped[title] = <_RfqRequestItem>[];
+                orderedTitles.add(title);
+              }
+              grouped[title]!.add(item);
+            }
+
+            final sections = orderedTitles
+                .map((title) => _RfqSection(title: title, items: grouped[title]!))
+                .toList();
 
             return ListView(
               padding: EdgeInsets.only(top: 8.h, bottom: 80.h),
@@ -101,7 +171,7 @@ class _RfqScreenState extends State<RfqScreen> {
                           style: GoogleFonts.inter(
                             fontSize: 18.sp,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFFB88700),
+                            color: const Color(0xFF101C36),
                             letterSpacing: 0.2,
                           ),
                         ),
@@ -130,8 +200,8 @@ class _RfqScreenState extends State<RfqScreen> {
                       SizedBox(height: 10.h),
                       ...section.items.map(
                         (item) => Padding(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 16.w, vertical: 7.h),
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
                           child: _RfqRequestCard(item: item),
                         ),
                       ),
@@ -159,9 +229,9 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title,
         style: GoogleFonts.inter(
-          fontSize: 14.sp,
+          fontSize: 16.sp,
           fontWeight: FontWeight.w700,
-          color: const Color(0xFF9AA0A6),
+          color: const Color(0xFF767676),
         ),
       ),
     );
@@ -176,135 +246,118 @@ class _RfqRequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 84.h,
+      height: 152.h,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(50.r),
-        border: Border.all(color: const Color(0xFFBDBDBD), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(15),
-            blurRadius: 10,
-            offset: const Offset(0, 3),
-          )
-        ],
+        color: const Color(0xFFF9F9F9),
+        borderRadius: BorderRadius.circular(30.r),
+        border: Border.all(color: const Color(0xFF9F9F9F), width: 1),
       ),
-      child: Row(
+      child: Stack(
         children: [
-          SizedBox(width: 10.w),
-          _RfqAvatar(imageUrl: item.employeeImage),
-          SizedBox(width: 10.w),
-          _DividerLine(height: 52.h),
-          SizedBox(width: 12.w),
-          Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: 10.w),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
+          Positioned(
+            top: 0,
+            left: 0,
+            child: ClipRRect(
+              borderRadius: BorderRadius.only(topLeft: Radius.circular(30.r)),
+              child: _StatusBadge(assetPath: item.statusBadgeAsset),
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 12.h),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Text(
                     item.requestNo,
-                    style: GoogleFonts.inter(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0B2B7A),
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    item.title.toUpperCase(),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.inter(
                       fontSize: 13.sp,
                       fontWeight: FontWeight.w700,
-                      color: Colors.black,
+                      color: const Color(0xFF0A3887),
                     ),
                   ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    item.subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.lexendDeca(
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF484848).withOpacity(0.72),
-                    ),
+                ),
+                SizedBox(height: 6.h),
+                Text(
+                  item.title.toUpperCase(),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF111111),
+                    height: 1.15,
                   ),
-                ],
-              ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  item.workOrder,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF777777),
+                  ),
+                ),
+                Text(
+                  item.employeeName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF777777),
+                  ),
+                ),
+                const Spacer(),
+                Row(
+                  children: [
+                    SizedBox(width: 86.w),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          item.amount,
+                          style: GoogleFonts.inter(
+                            fontSize: 17.sp,
+                            fontWeight: FontWeight.w800,
+                            color: const Color(0xFF073A85),
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(
+                      width: 92.w,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            'Last Updated',
+                            style: GoogleFonts.inter(
+                              fontSize: 9.sp,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFFB8B8B8),
+                            ),
+                          ),
+                          Text(
+                            item.lastUpdated,
+                            style: GoogleFonts.inter(
+                              fontSize: 9.sp,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFFB8B8B8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          ),
-          _DividerLine(height: 52.h),
-          SizedBox(width: 12.w),
-          Text(
-            item.amount,
-            style: GoogleFonts.inter(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF0B2B7A),
-              letterSpacing: 0.2,
-            ),
-          ),
-          SizedBox(width: 12.w),
-          Padding(
-            padding: EdgeInsets.only(right: 14.w),
-            child: _StatusBadge(assetPath: item.statusBadgeAsset),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _DividerLine extends StatelessWidget {
-  final double height;
-
-  const _DividerLine({required this.height});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 1,
-      height: height,
-      color: const Color(0xFFBDBDBD),
-    );
-  }
-}
-
-class _RfqAvatar extends StatelessWidget {
-  final String imageUrl;
-
-  const _RfqAvatar({required this.imageUrl});
-
-  @override
-  Widget build(BuildContext context) {
-    final hasImage = imageUrl.trim().isNotEmpty;
-
-    return Container(
-      width: 54.w,
-      height: 54.w,
-      padding: EdgeInsets.all(3.w),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFB10D0D), width: 2),
-      ),
-      child: ClipOval(
-        child: hasImage
-            ? Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Image.asset('assets/png/rfq-icon.png',
-                      fit: BoxFit.cover);
-                },
-              )
-            : Image.asset(
-                'assets/png/rfq-icon.png',
-                fit: BoxFit.cover,
-              ),
       ),
     );
   }
@@ -319,7 +372,8 @@ class _StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     return Image.asset(
       assetPath,
-      width: 34.w,
+      width: 73.w,
+      height: 41.h,
       fit: BoxFit.contain,
     );
   }
@@ -335,17 +389,21 @@ class _RfqSection {
 class _RfqRequestItem {
   final String requestNo;
   final String title;
-  final String subtitle;
+  final String workOrder;
+  final String employeeName;
   final String amount;
   final String statusBadgeAsset;
-  final String employeeImage;
+  final String lastUpdated;
+  final DateTime? updatedDate;
 
   const _RfqRequestItem({
     required this.requestNo,
     required this.title,
-    required this.subtitle,
+    required this.workOrder,
+    required this.employeeName,
     required this.amount,
     required this.statusBadgeAsset,
-    required this.employeeImage,
+    required this.lastUpdated,
+    required this.updatedDate,
   });
 }

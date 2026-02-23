@@ -66,7 +66,35 @@ class _ReportsScreenState extends State<ReportsScreen> {
             }
 
             if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
+              return Center(
+                child: Padding(
+                  padding: EdgeInsets.all(20.w),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.cloud_off, size: 60.w, color: const Color(0xFFB5B7C1)),
+                      SizedBox(height: 16.h),
+                      Text(
+                        'Service not available',
+                        style: GoogleFonts.inter(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF5A5A5A),
+                        ),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'This feature is currently unavailable.\nPlease try again later.',
+                        textAlign: TextAlign.center,
+                        style: GoogleFonts.inter(
+                          fontSize: 13.sp,
+                          color: const Color(0xFF9AA0A6),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
             }
 
             final items = snapshot.data ?? const <MyActionItem>[];
