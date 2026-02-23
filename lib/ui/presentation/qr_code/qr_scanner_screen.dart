@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:el_race/ui/presentation/qr_code/data/qr_login_service.dart';
@@ -13,11 +14,28 @@ class QrScannerScreen extends StatefulWidget {
 class _QrScannerScreenState extends State<QrScannerScreen> {
   final QrLoginService _qrLoginService = QrLoginService();
   MobileScannerController cameraController = MobileScannerController();
+  StreamSubscription<BarcodeCapture>? _barcodeSubscription;
   bool _isProcessing = false;
   bool _isTorchOn = false;
 
   @override
+  void initState() {
+    super.initState();
+    _barcodeSubscription = cameraController.barcodes.listen((capture) {
+      final List<Barcode> barcodes = capture.barcodes;
+      for (final barcode in barcodes) {
+        final String? code = barcode.rawValue;
+        if (code != null && !_isProcessing) {
+          _handleQrScan(code);
+          break;
+        }
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    _barcodeSubscription?.cancel();
     cameraController.dispose();
     super.dispose();
   }
@@ -122,16 +140,6 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
           // Camera Scanner
           MobileScanner(
             controller: cameraController,
-            onDetect: (capture) {
-              final List<Barcode> barcodes = capture.barcodes;
-              for (final barcode in barcodes) {
-                final String? code = barcode.rawValue;
-                if (code != null && !_isProcessing) {
-                  _handleQrScan(code);
-                  break;
-                }
-              }
-            },
           ),
 
           // Scanning Frame Overlay

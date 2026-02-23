@@ -1,9 +1,10 @@
-import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_models.dart';
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_repository.dart';
+import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class TimesheetScreen extends StatefulWidget {
   const TimesheetScreen({super.key});
@@ -22,6 +23,31 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
     _future = _repo.fetchByType(MyActionsType.timesheet);
   }
 
+  String _statusBadgeAsset(String status) {
+    switch (status.trim().toLowerCase()) {
+      case 'approved':
+        return 'assets/newapp/approvedBadge.png';
+      case 'pending':
+        return 'assets/newapp/warningBadge.png';
+      case 'rejected':
+        return 'assets/newapp/rejectBadge.png';
+      default:
+        return 'assets/newapp/warningBadge.png';
+    }
+  }
+
+  String _statusText(String status) {
+    final value = status.trim().toUpperCase();
+    return value.isEmpty ? 'UNKNOWN' : value;
+  }
+
+  String _formatDate(String? dateRaw) {
+    if (dateRaw == null || dateRaw.trim().isEmpty) return '-- -- ----';
+    final parsed = DateTime.tryParse(dateRaw);
+    if (parsed == null) return dateRaw;
+    return DateFormat('dd MMM yyyy').format(parsed);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,267 +55,216 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
-        child: Column(
-          children: [
-            // Title Bar with Add Button
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Center(
+        child: FutureBuilder<List<MyActionItem>>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (snapshot.hasError) {
+              return Center(child: Text('Error: ${snapshot.error}'));
+            }
+
+            final items = snapshot.data ?? const <MyActionItem>[];
+
+            return ListView(
+              padding: EdgeInsets.only(top: 10.h, bottom: 80.h),
+              children: [
+                const _ActionsHeader(
+                  iconAsset: 'assets/png/my-req-frame.png',
+                  title: 'TIMESHEETS',
+                ),
+                SizedBox(height: 12.h),
+                if (items.isEmpty)
+                  Center(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 30.h),
                       child: Text(
-                        'TIME SHEET',
+                        'No timesheets found.',
                         style: GoogleFonts.inter(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black,
-                          letterSpacing: 1.5,
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF5A5A5A),
                         ),
+                      ),
+                    ),
+                  )
+                else
+                  ...items.map(
+                    (item) => Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12.w, vertical: 7.h),
+                      child: _TimesheetCard(
+                        clientName:
+                            item.project?.trim().isNotEmpty == true ? item.project! : 'Client Name',
+                        projectName:
+                            item.name.trim().isEmpty ? 'PROJECT NAME' : item.name,
+                        formanName: item.employeeName.trim().isEmpty
+                            ? 'Forman Name'
+                            : item.employeeName,
+                        dateText: _formatDate(item.date),
+                        statusBadgeAsset: _statusBadgeAsset(item.status),
                       ),
                     ),
                   ),
-                  Container(
-                    width: 36.w,
-                    height: 36.w,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFF1E3A8A),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          // TODO: Add new timesheet
-                        },
-                        borderRadius: BorderRadius.circular(18.r),
-                        child: Icon(
-                          Icons.add,
-                          color: Colors.white,
-                          size: 22.w,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            
-            // List
-            Expanded(
-              child: FutureBuilder<List<MyActionItem>>(
-                future: _future,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(20.w),
-                        child: Text(
-                          'Error: ${snapshot.error}',
-                          style: GoogleFonts.inter(
-                            fontSize: 14.sp,
-                            color: Colors.red,
-                          ),
-                        ),
-                      ),
-                    );
-                  }
-
-                  final items = snapshot.data ?? const <MyActionItem>[];
-
-                  if (items.isEmpty) {
-                    return Center(
-                      child: Text(
-                        'No timesheets found',
-                        style: GoogleFonts.inter(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w500,
-                          color: const Color(0xFF9AA0A6),
-                        ),
-                      ),
-                    );
-                  }
-
-                  return ListView.builder(
-                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      return _TimesheetCard(
-                        index: index + 1,
-                        name: items[index].employeeName,
-                        projectName: items[index].name,
-                        client: 'Abu Dhabi Police',
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ),
     );
   }
 }
 
+class _ActionsHeader extends StatelessWidget {
+  final String iconAsset;
+  final String title;
+
+  const _ActionsHeader({
+    required this.iconAsset,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            iconAsset,
+            width: 30.w,
+            height: 30.w,
+            fit: BoxFit.contain,
+            color: const Color(0xFFD21B2E),
+            colorBlendMode: BlendMode.srcIn,
+          ),
+          SizedBox(width: 8.w),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF171A2E),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _TimesheetCard extends StatelessWidget {
-  final int index;
-  final String name;
+  final String clientName;
   final String projectName;
-  final String client;
+  final String formanName;
+  final String dateText;
+  final String statusBadgeAsset;
 
   const _TimesheetCard({
-    required this.index,
-    required this.name,
+    required this.clientName,
     required this.projectName,
-    required this.client,
+    required this.formanName,
+    required this.dateText,
+    required this.statusBadgeAsset,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.only(bottom: 16.h),
-      height: 100.h,
+      constraints: BoxConstraints(minHeight: 132.h),
       decoration: BoxDecoration(
-        color: const Color(0xFFE8E8E8),
-        borderRadius: BorderRadius.circular(16.r),
+        color: const Color(0xFFF3F3F3),
+        borderRadius: BorderRadius.circular(28.r),
+        border: Border.all(color: const Color(0xFF8E8E8E), width: 1),
       ),
       child: Stack(
         children: [
-          // Background icon
-          Positioned(
-            right: 0,
-            top: 0,
-            bottom: 0,
-            child: Opacity(
-              opacity: 0.2,
-              child: Image.asset(
-                'assets/png/tsIcon.png',
-                width: 120.w,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const SizedBox(),
-              ),
-            ),
-          ),
-          // Content
-          Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: () {
-                // TODO: Navigate to timesheet details
-              },
-              borderRadius: BorderRadius.circular(16.r),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-                child: Row(
+          _StatusRibbon(assetPath: statusBadgeAsset),
+          Padding(
+            padding: EdgeInsets.fromLTRB(18.w, 18.h, 18.w, 14.h),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Text(
+                    clientName,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.inter(
+                      fontSize: 17.sp,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF0D3E7F),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Text(
+                  projectName.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                ),
+                SizedBox(height: 2.h),
+                Text(
+                  formanName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.lexendDeca(
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF484848).withOpacity(0.72),
+                  ),
+                ),
+                SizedBox(height: 8.h),
+                Row(
                   children: [
-                    // Number
-                    Container(
-                      width: 28.w,
-                      alignment: Alignment.center,
-                      child: Text(
-                        '$index',
-                        style: GoogleFonts.inter(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 12.w),
-                    // Employee Info
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            name.toUpperCase(),
-                            style: GoogleFonts.inter(
-                              fontSize: 13.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black,
-                              height: 1.2,
-                              letterSpacing: 0.3,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 6.h),
-                          RichText(
-                            text: TextSpan(
-                              style: GoogleFonts.inter(
-                                fontSize: 11.sp,
-                                height: 1.4,
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: 'Project Name: ',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFFDC2626),
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: projectName,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFFDC2626),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          SizedBox(height: 2.h),
-                          RichText(
-                            text: TextSpan(
-                              style: GoogleFonts.inter(
-                                fontSize: 11.sp,
-                                height: 1.4,
-                              ),
-                              children: [
-                                TextSpan(
-                                  text: 'Client: ',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFFDC2626),
-                                  ),
-                                ),
-                                TextSpan(
-                                  text: client,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFFDC2626),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                    SizedBox(width: 8.w),
-                    // Arrow
                     Icon(
-                      Icons.chevron_right,
-                      color: Colors.black,
-                      size: 24.w,
+                      Icons.calendar_month_outlined,
+                      color: const Color(0xFF0D3E7F),
+                      size: 26.w,
+                    ),
+                    SizedBox(width: 10.w),
+                    Text(
+                      dateText,
+                      style: GoogleFonts.inter(
+                        fontSize: 17.sp,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF0D3E7F),
+                      ),
                     ),
                   ],
                 ),
-              ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StatusRibbon extends StatelessWidget {
+  final String assetPath;
+
+  const _StatusRibbon({
+    required this.assetPath,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 0,
+      left: 0,
+      child: Image.asset(
+        assetPath,
+        width: 84.w,
+        fit: BoxFit.contain,
       ),
     );
   }

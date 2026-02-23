@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_models.dart';
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_repository.dart';
@@ -25,16 +23,16 @@ class _InvoiceMyActionsScreenState extends State<InvoiceMyActionsScreen> {
     _future = _repo.fetchByType(MyActionsType.invoice);
   }
 
-  Color _statusColor(String status) {
+  String _statusBadgeAsset(String status) {
     switch (status.trim().toLowerCase()) {
       case 'approved':
-        return const Color(0xFF0B8B4B);
+        return 'assets/newapp/approvedBadge.png';
       case 'pending':
-        return const Color(0xFFF4A11A);
+        return 'assets/newapp/warningBadge.png';
       case 'rejected':
-        return const Color(0xFFB10D0D);
+        return 'assets/newapp/rejectBadge.png';
       default:
-        return const Color(0xFF9AA0A6);
+        return 'assets/newapp/warningBadge.png';
     }
   }
 
@@ -71,7 +69,7 @@ class _InvoiceMyActionsScreenState extends State<InvoiceMyActionsScreen> {
                         : (e.project ?? ''),
                     subtitle: e.employeeName,
                     amount: _formatAmount(e.amountTotal),
-                    statusColor: _statusColor(e.status),
+                    statusBadgeAsset: _statusBadgeAsset(e.status),
                     employeeImage: e.employeeImage,
                   ),
                 )
@@ -219,14 +217,13 @@ class _InvoiceRequestCard extends StatelessWidget {
                   ),
                   SizedBox(height: 4.h),
                   Text(
-                    item.title,
+                    item.title.toUpperCase(),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF0E0E0E),
-                      letterSpacing: 0.2,
+                    style: GoogleFonts.poppins(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
                     ),
                   ),
                   SizedBox(height: 4.h),
@@ -234,11 +231,10 @@ class _InvoiceRequestCard extends StatelessWidget {
                     item.subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF0B2B7A),
-                      letterSpacing: 0.2,
+                    style: GoogleFonts.lexendDeca(
+                      fontSize: 11.sp,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF484848).withOpacity(0.72),
                     ),
                   ),
                 ],
@@ -259,7 +255,7 @@ class _InvoiceRequestCard extends StatelessWidget {
           SizedBox(width: 12.w),
           Padding(
             padding: EdgeInsets.only(right: 14.w),
-            child: _StatusBadge(color: item.statusColor),
+            child: _StatusBadge(assetPath: item.statusBadgeAsset),
           ),
         ],
       ),
@@ -319,61 +315,17 @@ class _InvoiceAvatar extends StatelessWidget {
 }
 
 class _StatusBadge extends StatelessWidget {
-  final Color color;
+  final String assetPath;
 
-  const _StatusBadge({required this.color});
+  const _StatusBadge({required this.assetPath});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 26.w,
-      height: 26.w,
-      child: CustomPaint(
-        painter: _BurstPainter(color: color),
-      ),
+    return Image.asset(
+      assetPath,
+      width: 34.w,
+      fit: BoxFit.contain,
     );
-  }
-}
-
-class _BurstPainter extends CustomPainter {
-  final Color color;
-
-  const _BurstPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..style = PaintingStyle.fill;
-
-    final center = Offset(size.width / 2, size.height / 2);
-    final outerRadius = size.width / 2;
-    final innerRadius = outerRadius * 0.78;
-    const points = 16;
-
-    final path = Path();
-    for (var i = 0; i < points * 2; i++) {
-      final isOuter = i.isEven;
-      final radius = isOuter ? outerRadius : innerRadius;
-      final angle = (math.pi / points) * i - math.pi / 2;
-      final point = Offset(
-        center.dx + radius * math.cos(angle),
-        center.dy + radius * math.sin(angle),
-      );
-      if (i == 0) {
-        path.moveTo(point.dx, point.dy);
-      } else {
-        path.lineTo(point.dx, point.dy);
-      }
-    }
-    path.close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _BurstPainter oldDelegate) {
-    return oldDelegate.color != color;
   }
 }
 
@@ -389,7 +341,7 @@ class _InvoiceRequestItem {
   final String title;
   final String subtitle;
   final String amount;
-  final Color statusColor;
+  final String statusBadgeAsset;
   final String employeeImage;
 
   const _InvoiceRequestItem({
@@ -397,7 +349,7 @@ class _InvoiceRequestItem {
     required this.title,
     required this.subtitle,
     required this.amount,
-    required this.statusColor,
+    required this.statusBadgeAsset,
     required this.employeeImage,
   });
 }

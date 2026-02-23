@@ -180,9 +180,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
       child: Scaffold(
           appBar: const HeaderWidget(),
           extendBody: false,
-          bottomNavigationBar: const CustomBottomNavBar(
-            isMain: false,
-          ),
           backgroundColor: Colors.white,
           body: Stack(
             children: [
@@ -196,9 +193,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         return SingleChildScrollView(
                           physics: const BouncingScrollPhysics(),
                           padding: EdgeInsets.only(
-                            bottom: kBottomNavigationBarHeight +
-                                context.systemBottomInset +
-                                16,
+                            bottom: context.systemBottomInset + 16,
                           ),
                           child: Column(
                             children: [

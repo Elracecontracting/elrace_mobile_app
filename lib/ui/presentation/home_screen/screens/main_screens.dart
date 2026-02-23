@@ -79,6 +79,12 @@ class _MainScreenState extends State<MainScreen> {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
+        // If not on home tab, go back to home tab instead of exiting
+        if (bloc.currentIndex != 1) {
+          bloc.add(const ChangeCurrentIndex(index: 1));
+          return;
+        }
+
         final shouldPop = await _onWillPop();
         if (shouldPop) {
           // Close the app properly instead of navigating to a black screen

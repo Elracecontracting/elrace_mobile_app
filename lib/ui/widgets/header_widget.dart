@@ -192,7 +192,10 @@ class _HeaderWidgetState extends State<HeaderWidget> {
               //left: SizeConfig().getWidth(15),
               child: GestureDetector(
                 onTap: () {
-                  // Navigate to home screen
+                  // Navigate to home screen from anywhere
+                  // First pop all pushed routes back to the home screen
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                  // Then reset to the main home tab
                   final bloc = HomeBloc.get(context);
                   bloc.add(ChangeCurrentIndex(index: 1));
                 },

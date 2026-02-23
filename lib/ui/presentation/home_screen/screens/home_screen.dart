@@ -21,6 +21,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:get/get.dart';
 import 'package:location/location.dart';
+import 'package:el_race/core/services/app_config_service.dart';
 import '../../tasks_dashboard/screens/tasks_dashboard_screen.dart';
 import '../../tasks/data/task_model.dart';
 
@@ -66,12 +67,20 @@ class _HomeScreenState extends State<HomeScreenPage>
     _checkLocationService(); // Check location service on initialization
     _locationBloc.add(GetCurrentLocationET());
 
-    // Pre-load face recognition models in background
-    // This prevents lag when opening face registration for the first time
-    _preloadFaceModels();
+    // In Test Mode: skip face recognition entirely (Apple review compliance)
+    if (!AppConfigService.instance.isTestMode) {
+      // Pre-load face recognition models in background
+      // This prevents lag when opening face registration for the first time
+      _preloadFaceModels();
 
-    // Check if face registration is pending
-    _checkFaceRegistration();
+      // Check if face registration is pending
+      _checkFaceRegistration();
+    } else {
+      print('🧪 TEST MODE: Skipping face registration and model preloading');
+      // Clear any pending face verification flags
+      SharedPref().setPreferencesBoolean('pendingFaceVerification', false);
+      SharedPref().setPreferencesBoolean('isFaceRegistrationInProgress', false);
+    }
     // List of pages or widgets that you want to display for each navigation ite
   }
 

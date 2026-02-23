@@ -22,15 +22,16 @@ class HrRequestsMenuPage extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         onTap: onTap,
         child: Container(
-          width: 0.75.sw,
-          padding: EdgeInsets.symmetric(vertical: 14.h),
+          width: double.infinity,
+          margin: EdgeInsets.symmetric(horizontal: 24.w),
+          padding: EdgeInsets.symmetric(vertical: 20.h),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: const Color(0xFFE1E5EA), width: 1),
+            border: Border.all(color: const Color(0xFFDDE1E7), width: 1.5),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withOpacity(0.06),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -39,11 +40,11 @@ class HrRequestsMenuPage extends StatelessWidget {
           alignment: Alignment.center,
           child: Text(
             label,
-            style: GoogleFonts.koulen(
-              fontSize: 18.sp,
-              fontWeight: FontWeight.w400,
-              letterSpacing: 1.2,
-              color: const Color(0xFF151544),
+            style: GoogleFonts.poppins(
+              fontSize: 22.sp,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 2.2,
+              color: const Color(0xFF1A1A53),
             ),
           ),
         ),
@@ -67,14 +68,14 @@ class HrRequestsMenuPage extends StatelessWidget {
               children: [
                 Text(
                   'HR REQUESTS',
-                  style: GoogleFonts.koulen(
-                    fontSize: 20.sp,
-                    fontWeight: FontWeight.w400,
-                    letterSpacing: 2.0,
-                    color: const Color(0xFF151544),
+                  style: GoogleFonts.poppins(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 2.5,
+                    color: const Color(0xFF1A1A53),
                   ),
                 ),
-                SizedBox(height: 18.h),
+                SizedBox(height: 20.h),
                 _pillButton(
                   context: context,
                   label: 'Sick Leave',

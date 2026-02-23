@@ -392,9 +392,7 @@ class _ProfileBoxWithSlideAnimationState
 
   @override
   Widget build(BuildContext context) {
-    return SharedPref.isUserAuthenticated() == false
-        ? const SizedBox.shrink()
-        : Consumer<ProfileBoxProvider>(
+    return Consumer<ProfileBoxProvider>(
             builder: (context, profileBoxProvider, child) {
               final isAuthenticated = SharedPref.isUserAuthenticated();
               if (isAuthenticated == false) return const SizedBox.shrink();

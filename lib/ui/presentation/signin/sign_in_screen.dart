@@ -16,6 +16,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'package:el_race/core/biometric/face_recognition/face_recognition_di.dart';
 import 'package:el_race/core/biometric/face_recognition/data/services/face_embedding_storage_service.dart';
+import 'package:el_race/core/services/app_config_service.dart';
 
 import '../home_screen/screens/home_screen.dart';
 
@@ -187,9 +188,15 @@ class _SignInScreenState extends State<SignInScreen> {
           SharedPref().setPreferencesBoolean('isRegistered', true);
 
           // ✅ Face Recognition with LOCAL storage only
-          SharedPref().setPreferencesBoolean('pendingFaceVerification', true);
+          // In Test Mode: skip face verification (Apple review compliance)
+          final isTestMode = AppConfigService.instance.isTestMode;
+          SharedPref().setPreferencesBoolean(
+              'pendingFaceVerification', !isTestMode);
           SharedPref()
               .setPreferencesBoolean('isFaceRegistrationInProgress', false);
+          if (isTestMode) {
+            print('🧪 TEST MODE: Skipping face verification after login');
+          }
 
           // Navigate to HomeScreen - face registration will be triggered
           // Using pushAndRemoveUntil to remove all previous routes including login screen

@@ -159,44 +159,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildGlassTopHeader() {
-    final isGroupChat = widget.chatType != ChatType.dm;
-    final headerIcon = isGroupChat ? Icons.groups_rounded : Icons.chat_bubble_outline;
-    final headerTitle = isGroupChat ? 'Group Media Chat' : 'Private Chat';
-
     return Column(
       children: [
-        ClipRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 7, sigmaY: 7),
-            child: Container(
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.08),
-                border: Border(
-                  bottom: BorderSide(
-                    color: Colors.white.withValues(alpha: 0.10),
-                    width: 0.8,
-                  ),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(headerIcon, color: Colors.white, size: 20),
-                  const SizedBox(width: 6),
-                  Text(
-                    headerTitle,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
         Container(
           decoration: const BoxDecoration(
             color: AppColors.primaryColor,

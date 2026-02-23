@@ -36,6 +36,7 @@ import 'package:el_race/data/services/counter_reset_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -288,6 +289,18 @@ void main() async {
   // Request essential permissions at app start
   await _requestEssentialPermissions();
 
+  // شريط التنقل السفلي أسود وتحت التطبيق (لا يتداخل مع المحتوى)
+  await SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.manual,
+    overlays: SystemUiOverlay.values,
+  );
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      systemNavigationBarColor: Colors.black,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
+
   runApp(
     BlocProvider(
       create: (_) => ApprovalBloc(),
@@ -405,13 +418,12 @@ class MyApp extends StatelessWidget {
                         colorScheme: ColorScheme.fromSeed(
                             seedColor: Colors.deepPurple),
                         useMaterial3: true,
-                        textTheme: TextTheme(
-                          displayLarge: GoogleFonts.koulen(
-                              fontSize: 28, fontWeight: FontWeight.w400),
-                          titleMedium: GoogleFonts.inter(
-                              fontSize: 16, fontWeight: FontWeight.w600),
-                          bodyMedium: GoogleFonts.inter(fontSize: 14),
-                        ),
+                        fontFamily: GoogleFonts.poppins().fontFamily,
+                        textTheme: GoogleFonts.poppinsTextTheme(const TextTheme(
+                          displayLarge: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+                          titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          bodyMedium: TextStyle(fontSize: 14),
+                        )),
                       ),
                       child: const ProfileBoxWithSlideAnimation(),
                     ),
@@ -424,13 +436,12 @@ class MyApp extends StatelessWidget {
                 colorScheme:
                     ColorScheme.fromSeed(seedColor: Colors.deepPurple),
                 useMaterial3: true,
-                textTheme: TextTheme(
-                  displayLarge: GoogleFonts.koulen(
-                      fontSize: 28, fontWeight: FontWeight.w400),
-                  titleMedium: GoogleFonts.inter(
-                      fontSize: 16, fontWeight: FontWeight.w600),
-                  bodyMedium: GoogleFonts.inter(fontSize: 14),
-                ),
+                fontFamily: GoogleFonts.poppins().fontFamily,
+                textTheme: GoogleFonts.poppinsTextTheme(const TextTheme(
+                  displayLarge: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+                  titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  bodyMedium: TextStyle(fontSize: 14),
+                )),
               ),
               localizationsDelegates: [
                 localizationDelegate,

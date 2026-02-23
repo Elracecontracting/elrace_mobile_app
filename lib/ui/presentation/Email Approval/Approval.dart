@@ -8,7 +8,6 @@ import 'package:el_race/ui/presentation/Email%20Approval/widgets/all_approvals_o
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/hr_and_pettycash_card.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/invoice_and_rfq_card.dart';
 import 'package:el_race/utils/color_utils.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -36,23 +35,28 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   List<dynamic> pettyCashItems = [];
   List<dynamic> allItems = [];
   List<dynamic> approvalItems = [];
-  bool isLoading = false;
   String error = '';
-  
+
+  // Per-category loading/loaded/error state — no full-screen blocking loader
+  final Map<String, bool> _categoryLoading = {};
+  final Map<String, bool> _categoryLoaded = {};
+  Map<String, String> categoryErrors = {};
+
   // Delayed requests count from API
   int delayedCount = 0;
+  bool _delayedLoading = false;
   final DelayedApprovalsRepository _delayedRepo = DelayedApprovalsRepository();
   bool _isScrolled = false;
-
-  // Add a field to store errors per category
-  Map<String, String> categoryErrors = {};
 
   @override
   void initState() {
     super.initState();
     selectedCategoryKey = categoryKeys.first;
     searchController.addListener(_onSearchChanged);
-    _fetchApprovalData();
+    // Show the screen immediately — load all categories in background in parallel.
+    // Delayed count is also fired in background.
+    _loadAllCategoriesInBackground();
+    _fetchDelayedCount();
   }
 
   @override
@@ -124,9 +128,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
     final body = jsonEncode({
       "jsonrpc": "2.0",
-      "params": {
-        "group_type": groupType,
-      },
+      "params": {"group_type": groupType},
     });
 
     final request = http.Request('GET', url)
@@ -136,126 +138,64 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
 
-    // Detailed HR list logging
-    if (kDebugMode && groupType == 'hr') {
-      debugPrint('=========== HR LIST API RESPONSE START ===========');
-      debugPrint('URL: ${request.url}');
-      debugPrint('Group Type: $groupType');
-      debugPrint('Status: ${response.statusCode}');
-      try {
-        final decoded = jsonDecode(response.body);
-        final hrRequests = decoded['result']?['data']?['human_resources'];
-        debugPrint('HR count from API: ${hrRequests?.length ?? 0}');
-        debugPrint('HR IDs: ${hrRequests?.map((e) => e['id']).toList()}');
-        const encoder = JsonEncoder.withIndent('  ');
-        final pretty = encoder.convert(decoded);
-        // Print in chunks to avoid truncation
-        const chunkSize = 900;
-        for (var i = 0; i < pretty.length; i += chunkSize) {
-          final end = i + chunkSize > pretty.length ? pretty.length : i + chunkSize;
-          debugPrint(pretty.substring(i, end));
-        }
-      } catch (_) {
-        debugPrint(response.body);
-      }
-      debugPrint('=========== HR LIST API RESPONSE END ===========');
-    }
-
-    // Detailed invoice list logging
-    if (kDebugMode && groupType == 'invoice') {
-      debugPrint('=========== INVOICE LIST API RESPONSE START ===========');
-      debugPrint('URL: ${request.url}');
-      debugPrint('Group Type: $groupType');
-      debugPrint('Status: ${response.statusCode}');
-      try {
-        final decoded = jsonDecode(response.body);
-        final invoices = decoded['result']?['data']?['invoices'];
-        debugPrint('Invoice count from API: ${invoices?.length ?? 0}');
-        debugPrint('Invoice IDs: ${invoices?.map((e) => e['id']).toList()}');
-        const encoder = JsonEncoder.withIndent('  ');
-        final pretty = encoder.convert(decoded);
-        // Print in chunks to avoid truncation
-        const chunkSize = 900;
-        for (var i = 0; i < pretty.length; i += chunkSize) {
-          final end = i + chunkSize > pretty.length ? pretty.length : i + chunkSize;
-          debugPrint(pretty.substring(i, end));
-        }
-      } catch (_) {
-        debugPrint(response.body);
-      }
-      debugPrint('=========== INVOICE LIST API RESPONSE END ===========');
-    }
+    debugPrint('[$groupType] status=${response.statusCode}');
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-
-      // Actual key mapping
       const Map<String, String> responseKeys = {
         "hr": "human_resources",
         "rfq": "rfq",
         "invoice": "invoices",
         "petty_cash": "petty_cash",
       };
-
       final actualKey = responseKeys[groupType] ?? groupType;
-
       return data['result']['data'][actualKey] ?? [];
     } else {
       throw Exception("Failed to fetch $groupType: ${response.statusCode}");
     }
   }
 
-  Future<List<dynamic>> _safeFetch(String groupType) async {
+  /// Loads a single category in the background and updates state when done.
+  Future<void> _loadCategory(String categoryKey) async {
+    if (_categoryLoading[categoryKey] == true) return; // already in-flight
+    if (_categoryLoaded[categoryKey] == true) return;  // already done
+
+    setState(() => _categoryLoading[categoryKey] = true);
+
     try {
-      return await _fetchCategoryData(groupType);
+      final items = await _fetchCategoryData(categoryKey);
+      if (!mounted) return;
+      setState(() {
+        switch (categoryKey) {
+          case 'hr':
+            hrItems = items.map((i) => {...i, 'category': 'HR'}).toList();
+          case 'rfq':
+            rfqItems = items.map((i) => {...i, 'category': 'RFQ'}).toList();
+          case 'invoice':
+            invoiceItems = items.map((i) => {...i, 'category': 'INVOICE'}).toList();
+          case 'petty_cash':
+            pettyCashItems = items.map((i) => {...i, 'category': 'PETTY CASH'}).toList();
+        }
+        allItems = [...hrItems, ...rfqItems, ...invoiceItems, ...pettyCashItems];
+        approvalItems = _getFilteredItems();
+        _categoryLoading[categoryKey] = false;
+        _categoryLoaded[categoryKey] = true;
+      });
     } catch (e) {
-      categoryErrors[groupType] = e.toString();
-      return [];
+      if (!mounted) return;
+      setState(() {
+        categoryErrors[categoryKey] = e.toString();
+        _categoryLoading[categoryKey] = false;
+      });
     }
   }
 
-  Future<void> _fetchApprovalData() async {
-    setState(() {
-      isLoading = true;
-      error = '';
-      categoryErrors.clear();
-    });
-
-    try {
-      final results = await Future.wait([
-        _safeFetch("hr"),
-        _safeFetch("rfq"),
-        _safeFetch("invoice"),
-        _safeFetch("petty_cash"),
-      ]);
-
-      // Add category info to each item (preserve original 'type' field from API)
-      hrItems = results[0].map((item) => {...item, 'category': 'HR'}).toList();
-      rfqItems = results[1].map((item) => {...item, 'category': 'RFQ'}).toList();
-      invoiceItems =
-          results[2].map((item) => {...item, 'category': 'INVOICE'}).toList();
-      pettyCashItems =
-          results[3].map((item) => {...item, 'category': 'PETTY CASH'}).toList();
-
-      allItems = [...hrItems, ...rfqItems, ...invoiceItems, ...pettyCashItems];
-
-      // Fetch delayed requests count
-      await _fetchDelayedCount();
-
-      setState(() {
-        approvalItems = _getFilteredItems();
-        isLoading = false;
-        // If all failed, show a general error
-        if (categoryErrors.length == 4) {
-          error = 'Failed to fetch all approval categories.';
-        }
-      });
-    } catch (e) {
-      setState(() {
-        error = e.toString();
-        isLoading = false;
-      });
-    }
+  /// Fires all 4 categories in parallel without blocking the UI.
+  void _loadAllCategoriesInBackground() {
+    _loadCategory('hr');
+    _loadCategory('rfq');
+    _loadCategory('invoice');
+    _loadCategory('petty_cash');
   }
 
   List<dynamic> _getApprovalListForSelectedCategory() {
@@ -292,14 +232,18 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   }
 
   Future<void> _fetchDelayedCount() async {
+    setState(() => _delayedLoading = true);
     try {
-      final response = await _delayedRepo.fetchDelayedApprovals();
+      final counters = await _delayedRepo.fetchCounters();
+      if (!mounted) return;
       setState(() {
-        delayedCount = response.totalCount;
+        delayedCount = counters.totalCount;
+        _delayedLoading = false;
       });
     } catch (e) {
-      // If delayed API fails, keep count as 0
       debugPrint('Failed to fetch delayed count: $e');
+      if (!mounted) return;
+      setState(() => _delayedLoading = false);
     }
   }
 
@@ -430,12 +374,13 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                                 _isScrolled = false;
                               });
                               _scrollToSelectedTab(index);
-                              // Force reset after frame
+                              // Trigger category load on tap (no-op if already loading/loaded)
+                              if (categoryKey != _CategoryKeys.all) {
+                                _loadCategory(_categoryApiKey(categoryKey));
+                              }
                               WidgetsBinding.instance.addPostFrameCallback((_) {
                                 if (mounted && _isScrolled) {
-                                  setState(() {
-                                    _isScrolled = false;
-                                  });
+                                  setState(() { _isScrolled = false; });
                                 }
                               });
                             },
@@ -461,14 +406,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   }
 
   body() {
-    if (isLoading) {
-      return const Expanded(
-        child: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
+    // ALL tab: show instantly with live-updating counts as categories load in background
     if (selectedCategoryKey == _CategoryKeys.all) {
       return AllApprovalsOverview(
         invoiceCount: invoiceItems.length,
@@ -485,16 +423,58 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
           );
         },
       );
-    } else if (selectedCategoryKey == _CategoryKeys.hr) {
+    }
+
+    // For specific category tabs: show spinner only while that category is loading
+    final apiKey = _categoryApiKey(selectedCategoryKey);
+    final isLoadingCategory = _categoryLoading[apiKey] == true;
+    final hasError = categoryErrors.containsKey(apiKey);
+
+    if (isLoadingCategory) {
+      return const Expanded(
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (hasError) {
+      return Expanded(
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 40),
+              const SizedBox(height: 8),
+              Text(categoryErrors[apiKey]!, textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: () => _loadCategory(apiKey),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (selectedCategoryKey == _CategoryKeys.hr ||
+        selectedCategoryKey == _CategoryKeys.pettyCash) {
       return HrAndPettycashCard(approvalItems: approvalItems);
-    } else if (selectedCategoryKey == _CategoryKeys.pettyCash) {
-      return HrAndPettycashCard(approvalItems: approvalItems);
-    } else if (selectedCategoryKey == _CategoryKeys.rfq) {
+    } else if (selectedCategoryKey == _CategoryKeys.rfq ||
+        selectedCategoryKey == _CategoryKeys.invoice) {
       return InvoiceAndRfqCard(approvalItems: approvalItems);
-    } else if (selectedCategoryKey == _CategoryKeys.invoice) {
-      return InvoiceAndRfqCard(approvalItems: approvalItems);
-    } else {
-      return const SizedBox.shrink();
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  /// Maps a category UI key to the API group_type string.
+  String _categoryApiKey(String categoryKey) {
+    switch (categoryKey) {
+      case _CategoryKeys.hr: return 'hr';
+      case _CategoryKeys.rfq: return 'rfq';
+      case _CategoryKeys.invoice: return 'invoice';
+      case _CategoryKeys.pettyCash: return 'petty_cash';
+      default: return categoryKey;
     }
   }
 

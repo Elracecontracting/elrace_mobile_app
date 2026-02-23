@@ -4,6 +4,7 @@ import 'dart:math' show min, max;
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:dio/dio.dart';
 
 import '../models/models.dart';
 import '../repositories/chat_repository.dart';
@@ -54,6 +55,70 @@ class FirebaseChatAuthService {
   
   /// Get current role chat ID
   String? get currentRoleChatId => _currentRoleChatId;
+
+  /// Wait for Firebase Auth to fully hydrate persisted session.
+  /// 
+  /// On app restart, Firebase Auth may not have the persisted user
+  /// ready immediately. This waits for the first auth state emission.
+  Future<User?> waitForAuthReady() async {
+    try {
+      print('⏳ FirebaseChatAuth: Waiting for Firebase Auth to hydrate...');
+      final user = await _auth.authStateChanges().first.timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          print('⚠️ FirebaseChatAuth: Auth hydration timeout, currentUser=${_auth.currentUser?.uid}');
+          return _auth.currentUser;
+        },
+      );
+      print('✅ FirebaseChatAuth: Auth ready, user=${user?.uid ?? "null"}');
+      return user;
+    } catch (e) {
+      print('⚠️ FirebaseChatAuth: Error waiting for auth: $e');
+      return _auth.currentUser;
+    }
+  }
+
+  /// Refresh the Firebase custom token from the backend.
+  /// 
+  /// Calls the login API endpoint with a special refresh request
+  /// using the stored backend JWT token to get a new Firebase custom token.
+  Future<String?> refreshFirebaseCustomToken(String backendToken) async {
+    try {
+      print('🔄 FirebaseChatAuth: Requesting fresh Firebase token from backend...');
+      
+      final dio = Dio();
+      final response = await dio.post(
+        'https://erp.elrace.com/api/firebase/refresh_token',
+        data: jsonEncode({
+          "jsonrpc": "2.0",
+          "params": {}
+        }),
+        options: Options(
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $backendToken',
+          },
+        ),
+      ).timeout(const Duration(seconds: 15));
+
+      if (response.data != null) {
+        final result = response.data['result'];
+        if (result != null) {
+          final newToken = result['firebase_custom_token']?.toString();
+          if (newToken != null && newToken.isNotEmpty && newToken != 'false') {
+            print('✅ FirebaseChatAuth: Got fresh Firebase token (${newToken.length} chars)');
+            return newToken;
+          }
+        }
+      }
+      
+      print('⚠️ FirebaseChatAuth: Backend did not return a fresh Firebase token');
+      return null;
+    } catch (e) {
+      print('⚠️ FirebaseChatAuth: Could not refresh Firebase token: $e');
+      return null;
+    }
+  }
 
   /// Main setup method - call this after backend login success.
   /// 

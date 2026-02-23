@@ -75,6 +75,12 @@ class _ScannerCameraScreenState extends State<ScannerCameraScreen>
       SystemUiMode.manual,
       overlays: SystemUiOverlay.values,
     );
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        systemNavigationBarColor: Colors.black,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+    );
   }
 
   @override

@@ -13,6 +13,7 @@ import 'package:el_race/ui/presentation/media/screens/media_list_screen.dart';
 import 'package:el_race/ui/presentation/my_documents/screens/my_documents_screen.dart';
 import 'package:el_race/ui/presentation/my_notes/screens/my_notes_screen.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/screens/my_project.dart';
+import 'package:el_race/ui/presentation/my_request/HrRequestsMenuPage.dart';
 import 'package:el_race/ui/presentation/my_request/MyRequestsPage.dart';
 import 'package:el_race/ui/presentation/task_sheet/task_sheet_screen.dart';
 import 'package:el_race/ui/presentation/tasks/logic/tasks_provider.dart';
@@ -569,7 +570,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           GrayCardComponent(
             cardTitle: 'HR Requests',
             backgroundImagePath: 'assets/newapp/blue_widget_background.png',
-            onClick: isReorderMode ? null : () => Util.pushPage(const MyRequestsPage(), context),
+            onClick: isReorderMode ? null : () => Util.pushPage(const HrRequestsMenuPage(), context),
             childWidget: const SizedBox.shrink(),
           ),
           Positioned.fill(

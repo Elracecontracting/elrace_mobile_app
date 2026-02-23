@@ -313,7 +313,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         valueListenable: _searchNotifier,
                         builder: (context, query, _) {
                           final filteredChats = query.isEmpty
-                              ? directChats
+                              ? allChats
                               : allChats
                                   .where((c) => (c.title ?? '')
                                       .toLowerCase()

@@ -234,3 +234,153 @@ class DelayedApprovalsResponse {
       invoiceItems.isEmpty &&
       pettyCashItems.isEmpty;
 }
+
+/// Counters-only response from /api/my_delayed_approvals/counters
+class DelayedCountersResponse {
+  final int hrCount;
+  final int rfqCount;
+  final int invoiceCount;
+  final int pettyCashCount;
+
+  DelayedCountersResponse({
+    required this.hrCount,
+    required this.rfqCount,
+    required this.invoiceCount,
+    required this.pettyCashCount,
+  });
+
+  int get totalCount => hrCount + rfqCount + invoiceCount + pettyCashCount;
+
+  factory DelayedCountersResponse.fromJson(Map<String, dynamic> json) {
+    final result = json['result'] ?? {};
+    final data = result['data'] ?? {};
+    return DelayedCountersResponse(
+      hrCount: data['hr'] ?? 0,
+      rfqCount: data['rfq'] ?? 0,
+      invoiceCount: data['invoice'] ?? 0,
+      pettyCashCount: data['petty_cash'] ?? 0,
+    );
+  }
+}
+
+/// Details response from /api/my_delayed_approvals/details?type=...
+/// Returns a normalized list of cards for the requested category.
+class DelayedDetailsResponse {
+  final String type;
+  final List<DelayedHrItem> hrItems;
+  final List<DelayedRfqItem> rfqItems;
+  final List<DelayedInvoiceItem> invoiceItems;
+  final List<DelayedPettyCashItem> pettyCashItems;
+
+  DelayedDetailsResponse({
+    required this.type,
+    this.hrItems = const [],
+    this.rfqItems = const [],
+    this.invoiceItems = const [],
+    this.pettyCashItems = const [],
+  });
+
+  factory DelayedDetailsResponse.fromJson(
+      Map<String, dynamic> json, String type) {
+    final result = json['result'] ?? {};
+    final data = result['data'] ?? {};
+
+    // Backend may return the list under the type key, or directly as a list
+    List<dynamic> rawList = [];
+    if (data is List) {
+      rawList = data;
+    } else if (data is Map) {
+      rawList = (data[type] as List<dynamic>?) ?? [];
+    }
+
+    switch (type.toLowerCase()) {
+      case 'hr':
+        return DelayedDetailsResponse(
+          type: type,
+          hrItems: rawList
+              .map((e) => DelayedHrItem.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        );
+      case 'rfq':
+        return DelayedDetailsResponse(
+          type: type,
+          rfqItems: rawList
+              .map((e) => DelayedRfqItem.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        );
+      case 'invoice':
+        return DelayedDetailsResponse(
+          type: type,
+          invoiceItems: rawList
+              .map((e) =>
+                  DelayedInvoiceItem.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        );
+      case 'petty_cash':
+        return DelayedDetailsResponse(
+          type: type,
+          pettyCashItems: rawList
+              .map((e) =>
+                  DelayedPettyCashItem.fromJson(e as Map<String, dynamic>))
+              .toList(),
+        );
+      default:
+        return DelayedDetailsResponse(type: type);
+    }
+  }
+
+  /// Returns the items as normalized card maps ready for display.
+  List<Map<String, dynamic>> toCardItems() {
+    final List<Map<String, dynamic>> items = [];
+
+    for (final item in hrItems) {
+      items.add({
+        'type': 'HR',
+        'id': item.id,
+        'reqNo': item.name,
+        'requestType': item.requestType,
+        'employeeName': item.validatorName,
+        'empCode': item.validatorEmpId,
+        'employeeImageUrl': item.validatorImage,
+        'daysDelayed': item.daysDelayed,
+      });
+    }
+    for (final item in rfqItems) {
+      items.add({
+        'type': 'RFQ',
+        'id': item.id,
+        'reqNo': item.name,
+        'requestType': item.project,
+        'employeeName': item.reviewerName,
+        'empCode': item.reviewerEmpId,
+        'employeeImageUrl': item.reviewerImage,
+        'daysDelayed': item.daysDelayed,
+      });
+    }
+    for (final item in invoiceItems) {
+      items.add({
+        'type': 'INVOICE',
+        'id': item.id,
+        'reqNo': item.name,
+        'requestType': item.project,
+        'employeeName': item.reviewerName,
+        'empCode': item.reviewerEmpId,
+        'employeeImageUrl': item.reviewerImage,
+        'daysDelayed': item.daysDelayed,
+      });
+    }
+    for (final item in pettyCashItems) {
+      items.add({
+        'type': 'PETTY CASH',
+        'id': item.id,
+        'reqNo': item.name,
+        'requestType': item.project,
+        'employeeName': item.reviewerName,
+        'empCode': item.reviewerEmpId,
+        'employeeImageUrl': item.reviewerImage,
+        'daysDelayed': item.daysDelayed,
+      });
+    }
+    return items;
+  }
+}

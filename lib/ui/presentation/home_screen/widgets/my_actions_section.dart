@@ -7,6 +7,9 @@ import 'package:el_race/ui/presentation/my_actions/screens/hr_screen.dart';
 import 'package:el_race/ui/presentation/my_actions/screens/rfq_screen.dart';
 import 'package:el_race/ui/presentation/my_actions/screens/petty_cash_my_action_screen.dart';
 import 'package:el_race/ui/presentation/my_actions/screens/invoice_my_actions_screen.dart';
+import 'package:el_race/ui/presentation/my_actions/screens/signatures_screen.dart';
+import 'package:el_race/ui/presentation/my_actions/screens/reports_screen.dart';
+import 'package:el_race/ui/presentation/my_actions/screens/timesheet_screen.dart';
 import 'package:el_race/utils/custom_navigate.dart';
 
 class MyActionsSection extends StatelessWidget {
@@ -98,15 +101,13 @@ class MyActionsSection extends StatelessWidget {
                 iconAsset: 'assets/png/signarute-frame.png',
                 label: 'Signature',
                 onTap: () {
-                  // TODO: Navigate to Signature screen
-                },
-              ),
-              SizedBox(width: 12.w),
-              _MyActionTile(
-                iconAsset: 'assets/png/my-req-frame.png',
-                label: 'My Req',
-                onTap: () {
-                  // TODO: Navigate to My Requests screen
+                  Navigator.push(
+                    context,
+                    SlideRightPageRoute(
+                      child: const SignaturesScreen(),
+                      settings: const RouteSettings(name: '/signatures'),
+                    ),
+                  );
                 },
               ),
               SizedBox(width: 12.w),
@@ -114,7 +115,13 @@ class MyActionsSection extends StatelessWidget {
                 iconAsset: 'assets/png/my-reports-frame.png',
                 label: 'My Reports',
                 onTap: () {
-                  // TODO: Navigate to My Reports screen
+                  Navigator.push(
+                    context,
+                    SlideRightPageRoute(
+                      child: const ReportsScreen(),
+                      settings: const RouteSettings(name: '/reports'),
+                    ),
+                  );
                 },
               ),
               SizedBox(width: 12.w),
@@ -122,7 +129,13 @@ class MyActionsSection extends StatelessWidget {
                 iconAsset: 'assets/png/time-sheet-frame.png',
                 label: 'Timesheets',
                 onTap: () {
-                  // TODO: Navigate to Timesheets screen
+                  Navigator.push(
+                    context,
+                    SlideRightPageRoute(
+                      child: const TimesheetScreen(),
+                      settings: const RouteSettings(name: '/timesheet'),
+                    ),
+                  );
                 },
               ),
               SizedBox(width: 20.w),

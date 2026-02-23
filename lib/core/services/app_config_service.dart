@@ -26,10 +26,18 @@ class AppConfigService {
       final dio = Dio(BaseOptions(
         connectTimeout: const Duration(seconds: 8),
         receiveTimeout: const Duration(seconds: 8),
+        headers: {'Content-Type': 'application/json'},
       ));
 
       const String url = '${UrlUtil.baseUrl}app/config';
-      final resp = await dio.get(url);
+      final resp = await dio.get(url, data: {});
+
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      print('🔧 AppConfigService API Response:');
+      print('📡 URL: $url');
+      print('📊 Status Code: ${resp.statusCode}');
+      print('📦 Raw Response: ${resp.data}');
+      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       // Response can be jsonrpc envelope: { jsonrpc, id, result: { success, isTestMode } }
       final data = resp.data;
@@ -58,6 +66,7 @@ class AppConfigService {
 
       if (remoteIsTest != null) {
         _isTestMode = remoteIsTest;
+        print('✅ AppConfigService: isTestMode = $_isTestMode');
         try {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setBool(_cacheKeyIsTestMode, _isTestMode);

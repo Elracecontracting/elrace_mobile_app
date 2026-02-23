@@ -49,12 +49,8 @@ class ChatAvatar extends StatelessWidget {
     if (isGroup) {
       return CircleAvatar(
         radius: radius,
-        backgroundColor: Colors.purple[100],
-        child: Icon(
-          Icons.group,
-          color: Colors.purple[700],
-          size: radius * 0.8,
-        ),
+        backgroundColor: Colors.transparent,
+        backgroundImage: const AssetImage('assets/newapp/grouplogo.png'),
       );
     }
 

@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_models.dart';
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_repository.dart';
@@ -24,18 +22,18 @@ class _SignaturesScreenState extends State<SignaturesScreen> {
     _future = _repo.fetchByType(MyActionsType.signatures);
   }
 
-  Color _statusColor(String status) {
+  String _statusBadgeAsset(String status) {
     switch (status.trim().toLowerCase()) {
       case 'approved':
       case 'signed':
-        return const Color(0xFF16A34A);
+        return 'assets/newapp/approvedBadge.png';
       case 'pending':
       case 'waiting':
-        return const Color(0xFFF59E0B);
+        return 'assets/newapp/warningBadge.png';
       case 'rejected':
-        return const Color(0xFFDC2626);
+        return 'assets/newapp/rejectBadge.png';
       default:
-        return const Color(0xFF9AA0A6);
+        return 'assets/newapp/warningBadge.png';
     }
   }
 
@@ -126,7 +124,7 @@ class _SignaturesScreenState extends State<SignaturesScreen> {
                   (item) => _SignatureCard(
                     name: item.name,
                     employeeName: item.employeeName,
-                    statusColor: _statusColor(item.status),
+                    statusBadgeAsset: _statusBadgeAsset(item.status),
                     employeeImage: item.employeeImage,
                   ),
                 ),
@@ -142,13 +140,13 @@ class _SignaturesScreenState extends State<SignaturesScreen> {
 class _SignatureCard extends StatelessWidget {
   final String name;
   final String employeeName;
-  final Color statusColor;
+  final String statusBadgeAsset;
   final String employeeImage;
 
   const _SignatureCard({
     required this.name,
     required this.employeeName,
-    required this.statusColor,
+    required this.statusBadgeAsset,
     required this.employeeImage,
   });
 
@@ -208,11 +206,11 @@ class _SignatureCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name,
-                  style: GoogleFonts.inter(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF151544),
+                  name.toUpperCase(),
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -220,10 +218,10 @@ class _SignatureCard extends StatelessWidget {
                 SizedBox(height: 4.h),
                 Text(
                   employeeName,
-                  style: GoogleFonts.inter(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0xFF9AA0A6),
+                  style: GoogleFonts.lexendDeca(
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF484848).withOpacity(0.72),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -232,13 +230,10 @@ class _SignatureCard extends StatelessWidget {
             ),
           ),
           SizedBox(width: 8.w),
-          Container(
-            width: 8.w,
-            height: 8.w,
-            decoration: BoxDecoration(
-              color: statusColor,
-              shape: BoxShape.circle,
-            ),
+          Image.asset(
+            statusBadgeAsset,
+            width: 34.w,
+            fit: BoxFit.contain,
           ),
         ],
       ),

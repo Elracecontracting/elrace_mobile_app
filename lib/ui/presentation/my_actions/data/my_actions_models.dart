@@ -17,6 +17,8 @@ class MyActionsType {
 class MyActionItem {
   final int id;
   final String name;
+  final String? reference;
+  final String? date;
   final String? project;
   final String? vendor;
   final double? amountTotal;
@@ -31,6 +33,8 @@ class MyActionItem {
     required this.status,
     required this.employeeName,
     required this.employeeImage,
+    this.reference,
+    this.date,
     this.project,
     this.vendor,
     this.amountTotal,
@@ -38,12 +42,22 @@ class MyActionItem {
   });
 
   factory MyActionItem.fromJson(Map<String, dynamic> json) {
+    final dynamic amountRaw =
+        json['amount_total'] ?? json['amount'] ?? json['total'];
     return MyActionItem(
       id: (json['id'] as num?)?.toInt() ?? 0,
-      name: json['name']?.toString() ?? '',
+      name: (json['name'] ?? json['project'] ?? json['request_type'])
+              ?.toString() ??
+          '',
+      reference: (json['reference'] ?? json['ref'] ?? json['number'])
+          ?.toString(),
+      date: (json['date'] ?? json['updated_at'] ?? json['create_date'])
+          ?.toString(),
       project: json['project']?.toString(),
       vendor: json['vendor']?.toString(),
-      amountTotal: (json['amount_total'] as num?)?.toDouble(),
+      amountTotal: amountRaw is num
+          ? amountRaw.toDouble()
+          : double.tryParse(amountRaw?.toString() ?? ''),
       requestType: json['request_type']?.toString(),
       status: json['status']?.toString() ?? '',
       employeeName: json['employee_name']?.toString() ?? '',
