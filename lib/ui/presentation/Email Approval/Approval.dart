@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/delayed/data/delayed_approvals_repository.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/delayed/screens/delayed_requests_screen.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/all_approvals_overview.dart';
@@ -267,15 +268,15 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   String _iconFor(String categoryKey) {
     switch (categoryKey) {
       case _CategoryKeys.all:
-        return "assets/png/all-icon.png";
+        return "assets/svg/all-icon.svg";
       case _CategoryKeys.hr:
-        return "assets/png/hr-icon.png";
+        return "assets/svg/hr-icon.svg";
       case _CategoryKeys.rfq:
-        return "assets/png/rfq-icon.png";
+        return "assets/svg/rfq-icon.svg";
       case _CategoryKeys.invoice:
-        return "assets/png/invoice-icon.png";
+        return "assets/svg/invoice-icon.svg";
       case _CategoryKeys.pettyCash:
-        return "assets/png/petty-cash-icon.png";
+        return "assets/svg/petty-cash-icon.svg";
       default:
         return "assets/icons/default.png";
     }
@@ -513,13 +514,11 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
             ),
             child: Center(
-              child: Image.asset(
+              child: SvgPicture.asset(
                 icon,
-                height: 50.w,
-                width: 37.w,
+                height: 44.w,
+                width: 44.w,
                 fit: BoxFit.contain,
-                filterQuality: FilterQuality.high,
-                isAntiAlias: true,
               ),
             ),
           ),

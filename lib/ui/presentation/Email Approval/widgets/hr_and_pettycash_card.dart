@@ -171,16 +171,17 @@ class HrAndPettycashCard extends StatelessWidget {
   Widget _buildPettyCashCard({
     required dynamic item,
     required String refNo,
-    required String employeeName,
+    required String title,
     required String subtitle,
+    required String date,
     required String amount,
   }) {
     final amountText = _formatAmountForCard(amount);
 
     return Container(
-      height: 125.w,
       width: 350.w,
-      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 1.w),
+      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.w),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.w),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
@@ -191,138 +192,112 @@ class HrAndPettycashCard extends StatelessWidget {
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(22.r),
-        border: Border.all(color: const Color(0xFF5F666F), width: 1),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: const Color(0xFF7B828B), width: 1),
       ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                SizedBox(width: 54.w + 12.w + 2.w + 14.w),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        refNo.toUpperCase(),
-                        style: GoogleFonts.nunito(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0B2D5E),
-                          letterSpacing: 0.4,
-                          height: 1.0,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.start,
-                      ),
-                    ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44.w,
+                height: 44.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.95),
+                    width: 2,
                   ),
                 ),
-              ],
-            ),
-            SizedBox(height: 6.w),
-            SizedBox(
-              height: 54.w,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 54.w,
-                    height: 54.w,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.95), width: 2),
-                    ),
-                    child: ClipOval(
-                      child: _buildEmployeeImage(
-                        item["requester_image"] ?? 
-                        item["employee_image"] ?? 
-                        item["emp_image"] ?? 
-                        item["image_emp"], 
-                        54.w
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 12.w),
-                  Container(
-                    width: 2.w,
-                    height: 54.w,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
-                      borderRadius: BorderRadius.circular(2.r),
-                    ),
-                  ),
-                  SizedBox(width: 14.w),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          employeeName.toUpperCase(),
-                          style: GoogleFonts.nunito(
-                            fontSize: 17.sp,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF0E0E10),
-                            letterSpacing: 0.2,
-                            height: 1.0,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: 2.w),
-                        Text(
-                          subtitle.toUpperCase(),
-                          style: GoogleFonts.nunito(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w800,
-                            color: const Color(0xFF6B717B),
-                            letterSpacing: 0.2,
-                            height: 1.0,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                child: ClipOval(
+                  child: _buildEmployeeImage(
+                      item["requester_image"] ??
+                          item["employee_image"] ??
+                          item["emp_image"] ??
+                          item["image_emp"],
+                      44.w),
+                ),
               ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    refNo.toUpperCase(),
+                    style: GoogleFonts.nunito(
+                      fontSize: 21.sp,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF0B387A),
+                      letterSpacing: 0.4,
+                      height: 1.0,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+              SizedBox(width: 54.w),
+            ],
+          ),
+          SizedBox(height: 10.w),
+          Text(
+            title.toUpperCase(),
+            style: GoogleFonts.nunito(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFF0F1114),
+              letterSpacing: 0.2,
+              height: 1.1,
             ),
-            SizedBox(height: 4.w),
-            Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: 3.w),
+          Text(
+            subtitle.toUpperCase(),
+            style: GoogleFonts.nunito(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF737A83),
+              letterSpacing: 0.4,
+              height: 1.1,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: 8.w),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
                 child: Text(
-                  amountText,
+                  date,
                   style: GoogleFonts.nunito(
-                    fontSize: 22.sp,
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFF0B2D5E),
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF707780),
                     letterSpacing: 0.3,
-                    height: 1.0,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
                 ),
               ),
-            ),
-          ],
-        ),
+              SizedBox(width: 8.w),
+              Text(
+                amountText,
+                style: GoogleFonts.nunito(
+                  fontSize: 26.sp,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF0B387A),
+                  letterSpacing: 0.2,
+                  height: 1.0,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -492,6 +467,16 @@ class HrAndPettycashCard extends StatelessWidget {
                 item["submission_date"],
               "");
 
+          String pettySubtitle = _getSafeString(
+              item["project_title"] ??
+                  item["project_name"] ??
+                  item["project"] ??
+                  item["client_name"] ??
+                  item["client"] ??
+                  item["partner_name"] ??
+                  item["location"],
+              "N/A");
+
           return GestureDetector(
             onTap: () async {
               // Mark item as viewed
@@ -551,8 +536,9 @@ class HrAndPettycashCard extends StatelessWidget {
                 : _buildPettyCashCard(
                     item: item,
                     refNo: reqNo,
-                    employeeName: employeeName,
-                    subtitle: date.isNotEmpty ? date : 'N/A',
+                    title: employeeName,
+                    subtitle: pettySubtitle,
+                    date: date.isNotEmpty ? date : 'N/A',
                     amount: amount,
                   ),
           );
