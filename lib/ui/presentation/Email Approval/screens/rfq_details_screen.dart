@@ -314,16 +314,6 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
       _formData['total'],
     ], fallback: '');
 
-    final previous = _pick([
-      _formData['previous_amount'],
-      _formData['previous'],
-    ], fallback: '');
-
-    final retention = _pick([
-      _formData['retention'],
-      _formData['retention_percent'],
-    ], fallback: '');
-
     final userId =
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
 
@@ -567,60 +557,6 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                                     size: 11.sp,
                                                     weight: FontWeight.w900,
                                                     color: const Color(0xFFBA1719)),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(width: 10.w),
-                                        Expanded(
-                                          child: Container(
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 10.w, vertical: 8.w),
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(10.r),
-                                              border: Border.all(
-                                                  color: const Color(0xFFBDBDBD)),
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                _value('Previous',
-                                                    size: 11.sp,
-                                                    weight: FontWeight.w900),
-                                                SizedBox(height: 4.w),
-                                                _value(previous,
-                                                    size: 11.sp,
-                                                    weight: FontWeight.w900,
-                                                    color: const Color(0xFF6B717B)),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(width: 10.w),
-                                        Expanded(
-                                          child: Container(
-                                            padding: EdgeInsets.symmetric(
-                                                horizontal: 10.w, vertical: 8.w),
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(10.r),
-                                              border: Border.all(
-                                                  color: const Color(0xFFBDBDBD)),
-                                            ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                _value('Retention',
-                                                    size: 11.sp,
-                                                    weight: FontWeight.w900),
-                                                SizedBox(height: 4.w),
-                                                _value(retention,
-                                                    size: 11.sp,
-                                                    weight: FontWeight.w900,
-                                                    color: const Color(0xFF6B717B)),
                                               ],
                                             ),
                                           ),
