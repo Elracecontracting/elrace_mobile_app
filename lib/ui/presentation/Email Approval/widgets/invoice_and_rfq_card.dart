@@ -13,8 +13,9 @@ import 'package:intl/intl.dart';
 class InvoiceAndRfqCard extends StatelessWidget {
   final List<dynamic> approvalItems;
   final VoidCallback? onRefresh;
+  final String categoryType;
   const InvoiceAndRfqCard(
-      {super.key, required this.approvalItems, this.onRefresh});
+      {super.key, required this.approvalItems, this.onRefresh, this.categoryType = ''});
 
   String _formatAmountForCard(String raw) {
     final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
@@ -265,7 +266,9 @@ class InvoiceAndRfqCard extends StatelessWidget {
         separatorBuilder: (context, index) => const SizedBox(height: 1),
         itemBuilder: (context, index) {
           final item = approvalItems[index];
-          String type = item["type"] ?? "";
+          String type = (item["type"]?.toString().isNotEmpty == true)
+              ? item["type"].toString()
+              : categoryType;
           String id = item["id"]?.toString() ?? "";
           final isRfq = type.toString().toUpperCase() == 'RFQ';
 
@@ -345,6 +348,7 @@ class InvoiceAndRfqCard extends StatelessWidget {
                               builder: (_) => RfqDetailsScreen(
                                 requestId: id,
                                 type: type,
+                                initialData: Map<String, dynamic>.from(item as Map),
                               ),
                             ),
                           )

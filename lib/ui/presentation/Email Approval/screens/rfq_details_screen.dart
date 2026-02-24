@@ -14,11 +14,13 @@ import 'package:el_race/ui/widgets/header_widget.dart';
 class RfqDetailsScreen extends StatefulWidget {
   final String requestId;
   final String type;
+  final Map<String, dynamic>? initialData;
 
   const RfqDetailsScreen({
     super.key,
     required this.requestId,
     required this.type,
+    this.initialData,
   });
 
   @override
@@ -34,14 +36,22 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    // Pre-populate with card data immediately so screen isn't blank
+    if (widget.initialData != null) {
+      _formData = Map<String, dynamic>.from(widget.initialData!);
+    }
     _fetchRfqDetails();
   }
 
   String _pick(List<dynamic> values, {String fallback = ''}) {
     for (var val in values) {
-      if (val != null && val.toString().trim().isNotEmpty) {
-        return val.toString();
-      }
+      if (val == null || val == false || val == true) continue;
+      final str = val.toString().trim();
+      if (str.isEmpty ||
+          str.toLowerCase() == 'false' ||
+          str.toLowerCase() == 'true' ||
+          str.toLowerCase() == 'null') continue;
+      return str;
     }
     return fallback;
   }
@@ -77,20 +87,29 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
         final attachmentList = result['attachment_ids'] as List? ?? [];
 
         setState(() {
-          _formData = Map<String, dynamic>.from(formData);
+          // Merge: start with initialData (card fields), then overlay API response
+          final merged = Map<String, dynamic>.from(_formData);
+          merged.addAll(Map<String, dynamic>.from(formData));
+          _formData = merged;
           _attachmentIds = attachmentList.map((e) => e.toString()).toList();
           _isLoading = false;
         });
       } else {
         setState(() {
-          _error = 'Failed to load RFQ details';
+          // Keep pre-populated card data even if API fails
           _isLoading = false;
+          if (_formData.isEmpty) {
+            _error = 'Failed to load RFQ details';
+          }
         });
       }
     } catch (e) {
       setState(() {
-        _error = 'Error loading RFQ details: $e';
         _isLoading = false;
+        // Only show error if we have no pre-populated data to show
+        if (_formData.isEmpty) {
+          _error = 'Error loading RFQ details: $e';
+        }
       });
     }
   }
@@ -241,8 +260,9 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
       _formData['vendor'],
       _formData['partner_name'],
       _formData['client_name'],
+      _formData['client'],
       _formData['supplier'],
-    ], fallback: 'Vendor Name');
+    ], fallback: '');
 
     final projectName = _pick([
       _formData['project_name'],
@@ -293,7 +313,7 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
       appBar: HeaderWidget(),
       body: SafeArea(
         top: false,
-        child: _isLoading
+        child: (_isLoading && _formData.isEmpty)
             ? const Center(child: CircularProgressIndicator())
             : _error.isNotEmpty
                 ? Center(
@@ -312,6 +332,12 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                   )
                 : Column(
                     children: [
+                      if (_isLoading && _formData.isNotEmpty)
+                        const LinearProgressIndicator(
+                          backgroundColor: Color(0xFFE0E0E0),
+                          color: Color(0xFF0A3887),
+                          minHeight: 3,
+                        ),
                       Expanded(
                         child: SingleChildScrollView(
                           padding: EdgeInsets.symmetric(

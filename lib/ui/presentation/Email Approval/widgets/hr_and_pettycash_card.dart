@@ -15,8 +15,9 @@ import 'package:intl/intl.dart';
 class HrAndPettycashCard extends StatelessWidget {
   final List<dynamic> approvalItems;
   final VoidCallback? onRefresh;
+  final String categoryType;
   const HrAndPettycashCard(
-      {super.key, required this.approvalItems, this.onRefresh});
+      {super.key, required this.approvalItems, this.onRefresh, this.categoryType = ''});
 
   String _formatAmountForCard(String raw) {
     final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
@@ -425,7 +426,11 @@ class HrAndPettycashCard extends StatelessWidget {
         separatorBuilder: (context, index) => const SizedBox(height: 1),
         itemBuilder: (context, index) {
           final item = approvalItems[index];
-          String category = item["category"] ?? item["type"] ?? "";
+          String category = (item["category"]?.toString().isNotEmpty == true)
+              ? item["category"].toString()
+              : (item["type"]?.toString().isNotEmpty == true)
+                  ? item["type"].toString()
+                  : categoryType;
           String type = item["type"] ?? "";
           String id = item["id"]?.toString() ?? "";
           final isHr = category.toString().toUpperCase() == 'HR';
@@ -513,6 +518,7 @@ class HrAndPettycashCard extends StatelessWidget {
                               builder: (_) => PettyCashDetailsScreen(
                                 requestId: id,
                                 type: category,
+                                initialData: Map<String, dynamic>.from(item as Map),
                               ),
                             ),
                           )

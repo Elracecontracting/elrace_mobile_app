@@ -458,10 +458,16 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
     if (selectedCategoryKey == _CategoryKeys.hr ||
         selectedCategoryKey == _CategoryKeys.pettyCash) {
-      return HrAndPettycashCard(approvalItems: approvalItems);
+      return HrAndPettycashCard(
+        approvalItems: approvalItems,
+        categoryType: selectedCategoryKey,
+      );
     } else if (selectedCategoryKey == _CategoryKeys.rfq ||
         selectedCategoryKey == _CategoryKeys.invoice) {
-      return InvoiceAndRfqCard(approvalItems: approvalItems);
+      return InvoiceAndRfqCard(
+        approvalItems: approvalItems,
+        categoryType: selectedCategoryKey,
+      );
     }
 
     return const SizedBox.shrink();
