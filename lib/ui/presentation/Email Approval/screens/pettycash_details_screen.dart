@@ -66,7 +66,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': 'Bearer \$token',
+      'Authorization': 'Bearer $token',
     };
 
     final url = Uri.parse('https://erp.elrace.com/api/get_petty_cash_details');
@@ -77,6 +77,13 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       },
     });
 
+    print('══════════ [PETTYCASH] API REQUEST ══════════');
+    print('[PETTYCASH] URL: $url');
+    print('[PETTYCASH] METHOD: GET');
+    print('[PETTYCASH] HEADERS: ${headers.map((k, v) => MapEntry(k, k == "Authorization" ? "Bearer ***" : v))}');
+    print('[PETTYCASH] BODY: $body');
+    print('═════════════════════════════════════════════');
+
     try {
       final request = http.Request('GET', url)
         ..headers.addAll(headers)
@@ -84,12 +91,22 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
+
+      print('══════════ [PETTYCASH] API RESPONSE ══════════');
+      print('[PETTYCASH] STATUS: ${response.statusCode}');
+      print('[PETTYCASH] BODY: ${response.body}');
+      print('══════════════════════════════════════════════');
+
       final data = jsonDecode(response.body);
 
       if (data['result'] != null) {
         final result = data['result'] as Map;
         final formData = result['data'] as Map? ?? {};
         final attachmentList = result['attachment_ids'] as List? ?? [];
+
+        print('[PETTYCASH] PARSED formData keys: ${formData.keys.toList()}');
+        print('[PETTYCASH] PARSED formData: $formData');
+        print('[PETTYCASH] PARSED attachmentIds: $attachmentList');
 
         setState(() {
           final merged = Map<String, dynamic>.from(_formData);
@@ -99,6 +116,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
           _isLoading = false;
         });
       } else {
+        print('[PETTYCASH] ERROR: result is null. Full response: ${response.body}');
         setState(() {
           _isLoading = false;
           if (_formData.isEmpty) {
@@ -107,6 +125,9 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
         });
       }
     } catch (e) {
+      print('══════════ [PETTYCASH] API ERROR ══════════');
+      print('[PETTYCASH] EXCEPTION: $e');
+      print('═══════════════════════════════════════════');
       setState(() {
         _isLoading = false;
         if (_formData.isEmpty) {
@@ -127,7 +148,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     final headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'Authorization': 'Bearer \$token',
+      'Authorization': 'Bearer $token',
     };
 
     final data = {
@@ -190,7 +211,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
         Navigator.of(context).pop();
       }
       Fluttertoast.showToast(
-        msg: 'Error: \$e',
+        msg: 'Error: $e',
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.CENTER,
         backgroundColor: Colors.black,

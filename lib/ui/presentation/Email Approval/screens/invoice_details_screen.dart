@@ -72,6 +72,13 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       },
     });
 
+    print('══════════ [INVOICE] API REQUEST ══════════');
+    print('[INVOICE] URL: $url');
+    print('[INVOICE] METHOD: GET');
+    print('[INVOICE] HEADERS: ${headers.map((k, v) => MapEntry(k, k == "Authorization" ? "Bearer ***" : v))}');
+    print('[INVOICE] BODY: $body');
+    print('══════════════════════════════════════════');
+
     try {
       final request = http.Request('GET', url)
         ..headers.addAll(headers)
@@ -79,6 +86,11 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
+
+      print('══════════ [INVOICE] API RESPONSE ══════════');
+      print('[INVOICE] STATUS: ${response.statusCode}');
+      print('[INVOICE] BODY: ${response.body}');
+      print('════════════════════════════════════════════');
 
       if (response.statusCode != 200) {
         throw Exception('Failed to load invoice details: ${response.statusCode}');
@@ -90,6 +102,11 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
           <String, dynamic>{};
       final attachmentIds = (result?['attachment_ids'] as List?) ?? const [];
 
+      print('[INVOICE] PARSED result keys: ${result?.keys.toList()}');
+      print('[INVOICE] PARSED formView keys: ${formView.keys.toList()}');
+      print('[INVOICE] PARSED formView: $formView');
+      print('[INVOICE] PARSED attachmentIds: $attachmentIds');
+
       if (!mounted) return;
       setState(() {
         _formData = formView;
@@ -98,6 +115,9 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
         _error = '';
       });
     } catch (e) {
+      print('══════════ [INVOICE] API ERROR ══════════');
+      print('[INVOICE] EXCEPTION: $e');
+      print('═════════════════════════════════════════');
       if (!mounted) return;
       setState(() {
         _error = e.toString();

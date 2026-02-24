@@ -72,6 +72,13 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
       },
     });
 
+    print('══════════ [RFQ] API REQUEST ══════════');
+    print('[RFQ] URL: $url');
+    print('[RFQ] METHOD: GET');
+    print('[RFQ] HEADERS: ${headers.map((k, v) => MapEntry(k, k == "Authorization" ? "Bearer ***" : v))}');
+    print('[RFQ] BODY: $body');
+    print('═══════════════════════════════════════');
+
     try {
       final request = http.Request('GET', url)
         ..headers.addAll(headers)
@@ -79,12 +86,22 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
+
+      print('══════════ [RFQ] API RESPONSE ══════════');
+      print('[RFQ] STATUS: ${response.statusCode}');
+      print('[RFQ] BODY: ${response.body}');
+      print('════════════════════════════════════════');
+
       final data = jsonDecode(response.body);
 
       if (data['result'] != null) {
         final result = data['result'] as Map;
         final formData = result['data'] as Map? ?? {};
         final attachmentList = result['attachment_ids'] as List? ?? [];
+
+        print('[RFQ] PARSED formData keys: ${formData.keys.toList()}');
+        print('[RFQ] PARSED formData: $formData');
+        print('[RFQ] PARSED attachmentIds: $attachmentList');
 
         setState(() {
           // Merge: start with initialData (card fields), then overlay API response
@@ -95,6 +112,7 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
           _isLoading = false;
         });
       } else {
+        print('[RFQ] ERROR: result is null. Full response: ${response.body}');
         setState(() {
           // Keep pre-populated card data even if API fails
           _isLoading = false;
@@ -104,6 +122,9 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
         });
       }
     } catch (e) {
+      print('══════════ [RFQ] API ERROR ══════════');
+      print('[RFQ] EXCEPTION: $e');
+      print('══════════════════════════════════════');
       setState(() {
         _isLoading = false;
         // Only show error if we have no pre-populated data to show

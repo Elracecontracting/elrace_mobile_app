@@ -243,6 +243,132 @@ class InvoiceAndRfqCard extends StatelessWidget {
     );
   }
 
+  Widget _buildInvoiceCard({
+    required dynamic item,
+    required String refNo,
+    required String title,
+    required String client,
+    required String date,
+    required String amount,
+  }) {
+    final amountText = _formatAmountForCard(amount);
+
+    return Container(
+      width: 350.w,
+      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.w),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.w),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [
+            Color(0xFFE1E4E8),
+            Color(0xFFB9C0CB),
+          ],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(22.r),
+        border: Border.all(color: const Color(0xFF7B828B), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 48.w,
+                height: 48.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.95), width: 2),
+                ),
+                child: ClipOval(
+                  child: _buildEmployeeImage(item["image_emp"], 48.w),
+                ),
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    refNo.toUpperCase(),
+                    style: GoogleFonts.nunito(
+                      fontSize: 21.sp,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF0B387A),
+                      letterSpacing: 0.4,
+                      height: 1.0,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+              SizedBox(width: 58.w),
+            ],
+          ),
+          SizedBox(height: 10.w),
+          Text(
+            title.toUpperCase(),
+            style: GoogleFonts.nunito(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFF0F1114),
+              letterSpacing: 0.2,
+              height: 1.1,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: 3.w),
+          Text(
+            client.toUpperCase(),
+            style: GoogleFonts.nunito(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF737A83),
+              letterSpacing: 0.4,
+              height: 1.1,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: 8.w),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Text(
+                  date,
+                  style: GoogleFonts.nunito(
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF707780),
+                    letterSpacing: 0.3,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(width: 8.w),
+              Text(
+                amountText,
+                style: GoogleFonts.nunito(
+                  fontSize: 26.sp,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF0B387A),
+                  letterSpacing: 0.2,
+                  height: 1.0,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (approvalItems.isEmpty) {
@@ -322,6 +448,24 @@ class InvoiceAndRfqCard extends StatelessWidget {
             fallback: "",
           );
 
+          final invoiceTitle = _getSafeString(
+            item["project_title"] ?? item["project"] ?? item["name"],
+            fallback: 'N/A',
+          );
+
+          final invoiceClient = _getSafeString(
+            item["client_name"] ?? item["client"] ?? item["partner_name"],
+            fallback: 'N/A',
+          );
+
+          final invoiceDate = _getSafeString(
+            item["date"] ??
+                item["invoice_date"] ??
+                item["request_date"] ??
+                item["create_date"],
+            fallback: 'N/A',
+          );
+
           return GestureDetector(
             onTap: () async {
               // Mark item as viewed
@@ -378,16 +522,12 @@ class InvoiceAndRfqCard extends StatelessWidget {
                     subtitle: subtitle,
                     amount: amount,
                   )
-                : _buildRfqCard(
+                : _buildInvoiceCard(
                     item: item,
                     refNo: refNo,
-                    vendor: _getSafeString(
-                      item["project_title"] ?? item["project"] ?? item["name"],
-                    ),
-                    subtitle: _getSafeString(
-                      item["client_name"] ?? item["client"] ?? item["partner_name"],
-                      fallback: 'N/A',
-                    ),
+                    title: invoiceTitle,
+                    client: invoiceClient,
+                    date: invoiceDate,
                     amount: amount,
                   ),
           );
