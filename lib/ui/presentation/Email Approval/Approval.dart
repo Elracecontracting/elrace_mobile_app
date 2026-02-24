@@ -494,70 +494,33 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       clipBehavior: Clip.none,
       children: [
         Container(
-          width: 90.w,
+          width: 85.w,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
-            // Shadow for depth
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha((0.08 * 255).toInt()),
-                blurRadius: 4,
-                spreadRadius: 2,
-                offset: const Offset(0, 0),
-              ),
-            ],
+            border: Border.all(
+              color: const Color(0xFF8E8E8E),
+              width: 1.2,
+            ),
+         
           ),
           child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        
+            padding: const EdgeInsets.symmetric(vertical: 10),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
               // Solid/gradient based on selection
               color: isSelected ? const Color(0xFF1A2540) : null,
-              gradient: isSelected
-                  ? null
-                  : const LinearGradient(
-                      colors: [Color(0xffD6D6D6), Color(0xffADB2BD)],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-              // Glass border
-              border: Border.all(
-                color: isSelected
-                    ? Colors.white.withOpacity(0.03)
-                    : Colors.grey.withOpacity(0.03),
-                width: 1,
-              ),
+
             ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  icon,
-                  height: 30.w,
-                  width: 30.w,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  title,
-                  style: GoogleFonts.koulen(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.bold,
-                    color: isSelected
-                        ? Colors.white
-                        : appFontColor, // White for active, blue for inactive
-                    letterSpacing: 1.0,
-                    shadows: isSelected
-                        ? [
-                            Shadow(
-                              color: Colors.black.withOpacity(0.03),
-                              offset: const Offset(0, 1),
-                              blurRadius: 2,
-                            ),
-                          ]
-                        : null,
-                  ),
-                ),
-              ],
+            child: Center(
+              child: Image.asset(
+                icon,
+                height: 50.w,
+                width: 37.w,
+                fit: BoxFit.contain,
+                filterQuality: FilterQuality.high,
+                isAntiAlias: true,
+              ),
             ),
           ),
         ),
