@@ -35,135 +35,119 @@ class HrAndPettycashCard extends StatelessWidget {
     required String requestType,
     required String employeeName,
     required String empCode,
+    required String date,
   }) {
     return Container(
-      height: 112.w,
       width: 350.w,
-      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 1.w),
+      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.w),
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.w),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
             Color(0xFFE1E4E8),
             Color(0xFFB9C0CB),
           ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(22.r),
-        border: Border.all(color: const Color(0xFF5F666F), width: 1),
+        border: Border.all(color: const Color(0xFF7B828B), width: 1),
       ),
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                SizedBox(width: 50.w + 12.w + 2.w + 14.w),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        reqNo.toUpperCase(),
-                        style: GoogleFonts.nunito(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0B2D5E),
-                          letterSpacing: 0.5,
-                          height: 1.0,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.start,
-                      ),
-                    ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44.w,
+                height: 44.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.95),
+                    width: 2,
                   ),
                 ),
-              ],
-            ),
-            SizedBox(height: 6.w),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 50.w,
-                    height: 50.w,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.9), width: 2),
-                    ),
-                    child: ClipOval(
-                      child: _buildEmployeeImage(
-                        item["requester_image"] ?? 
-                        item["employee_image"] ?? 
-                        item["emp_image"] ?? 
-                        item["image_emp"], 
-                        50.w
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 12.w),
-                  Container(
-                    width: 2.w,
-                    height: 54.w,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(2.r),
-                    ),
-                  ),
-                  SizedBox(width: 14.w),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          requestType.toUpperCase(),
-                          style: GoogleFonts.nunito(
-                            fontSize: 17.sp,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF0E0E10),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: 1.5.w),
-                        Text(
-                          employeeName.toUpperCase(),
-                          style: GoogleFonts.nunito(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF0B2D5E),
-                            letterSpacing: 0.3,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: 1.5.w),
-                        Text(
-                          empCode,
-                          style: GoogleFonts.nunito(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF6B717B),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                child: ClipOval(
+                  child: _buildEmployeeImage(
+                      item["requester_image"] ??
+                          item["employee_image"] ??
+                          item["emp_image"] ??
+                          item["image_emp"],
+                      44.w),
+                ),
               ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    reqNo.toUpperCase(),
+                    style: GoogleFonts.nunito(
+                      fontSize: 21.sp,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF0B387A),
+                      letterSpacing: 0.4,
+                      height: 1.0,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+              SizedBox(width: 54.w),
+            ],
+          ),
+          SizedBox(height: 10.w),
+          Text(
+            requestType.toUpperCase(),
+            style: GoogleFonts.nunito(
+              fontSize: 16.sp,
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFF0F1114),
+              letterSpacing: 0.2,
+              height: 1.1,
             ),
-          ],
-        ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: 2.w),
+          Text(
+            employeeName,
+            style: GoogleFonts.nunito(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF5B616A),
+              height: 1.1,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: 1.5.w),
+          Text(
+            empCode,
+            style: GoogleFonts.nunito(
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF6B717B),
+              height: 1.1,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: 8.w),
+          Text(
+            date,
+            style: GoogleFonts.nunito(
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF707780),
+              letterSpacing: 0.3,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }
@@ -532,6 +516,7 @@ class HrAndPettycashCard extends StatelessWidget {
                     requestType: requestType,
                     employeeName: employeeName,
                     empCode: empCode,
+                    date: date.isNotEmpty ? date : 'N/A',
                   )
                 : _buildPettyCashCard(
                     item: item,
