@@ -708,6 +708,14 @@ class _ProjectReportCard extends StatefulWidget {
 
 class _ProjectReportCardState extends State<_ProjectReportCard> {
   bool _isSharing = false;
+  late Future<ReportDetailModel?> _reportDetailFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _reportDetailFuture = Provider.of<ReportProvider>(context, listen: false)
+        .fetchReportDetailFromApi(widget.report.id);
+  }
 
   Future<void> _shareAsPdf() async {
     if (_isSharing) return;
@@ -795,7 +803,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                         ),
                     SizedBox(height: 14.h),
                     FutureBuilder<ReportDetailModel?>(
-                      future: Provider.of<ReportProvider>(context, listen: false).fetchReportDetailFromApi(widget.report.id),
+                      future: _reportDetailFuture,
                       builder: (context, snapshot) {
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return SizedBox(
@@ -1869,11 +1877,22 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
               ),
               Row(
                 children: [
-                  _buildParagraphIconButton(() => _formatAlignLeft(item)),
+                  _buildParagraphIconButton(
+                    () => _formatAlignLeft(item),
+                    isActive: item.listMode == 'paragraph',
+                  ),
                   const SizedBox(width: 8),
-                  _buildIconButton(Icons.format_list_bulleted, () => _formatBulletList(item)),
+                  _buildIconButton(
+                    Icons.format_list_bulleted,
+                    () => _formatBulletList(item),
+                    isActive: item.listMode == 'bullet',
+                  ),
                   const SizedBox(width: 8),
-                  _buildIconButton(Icons.format_list_numbered, () => _formatNumberedList(item)),
+                  _buildIconButton(
+                    Icons.format_list_numbered,
+                    () => _formatNumberedList(item),
+                    isActive: item.listMode == 'numbered',
+                  ),
                 ],
               ),
             ],
@@ -1903,7 +1922,8 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
     );
   }
 
-  Widget _buildIconButton(IconData icon, VoidCallback onTap) {
+  Widget _buildIconButton(IconData icon, VoidCallback onTap,
+      {bool isActive = false}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(6),
@@ -1911,32 +1931,39 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isActive ? Colors.black87 : Colors.white,
           borderRadius: BorderRadius.circular(6),
           border: Border.all(color: Colors.grey[300]!),
         ),
         child: Icon(
           icon,
           size: 18,
-          color: Colors.grey[700],
+          color: isActive ? Colors.white : Colors.grey[700],
         ),
       ),
     );
   }
 
-  Widget _buildParagraphIconButton(VoidCallback onTap) {
+  Widget _buildParagraphIconButton(VoidCallback onTap,
+      {bool isActive = false}) {
     return SizedBox(
-      width: 34,
-      height: 28,
+      width: 32,
+      height: 32,
       child: Material(
-        color: Colors.grey.shade200,
+        color: isActive ? Colors.black87 : Colors.white,
         borderRadius: BorderRadius.circular(6),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(6),
           child: Padding(
-            padding: const EdgeInsets.all(4),
-            child: Image.asset('assets/png/paragraphIcon.png', fit: BoxFit.contain),
+            padding: const EdgeInsets.all(6),
+            child: ColorFiltered(
+              colorFilter: isActive
+                  ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+                  : const ColorFilter.mode(Colors.transparent, BlendMode.srcOver),
+              child:
+                  Image.asset('assets/png/paragraphIcon.png', fit: BoxFit.contain),
+            ),
           ),
         ),
       ),
@@ -1944,90 +1971,101 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
   }
 
   void _formatAlignLeft(_PhotoItem item) {
+    item.listMode = 'paragraph';
+
+    final text = item.descriptionController.text;
+    if (text.isEmpty) {
+      setState(() {});
+      return;
+    }
+
+    // Remove bullet/number prefixes from ALL lines
+    final lines = text.split('\n');
+    final cleanedLines = lines.map((line) {
+      return line.replaceFirst(RegExp(r'^\s*•\s?'), '').replaceFirst(RegExp(r'^\s*\d+\.\s?'), '');
+    }).toList();
+
+    final newText = cleanedLines.join('\n');
+    if (newText != text) {
+      final newCursor = newText.length.clamp(0, newText.length);
+      item.descriptionController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: newCursor),
+      );
+      item.description = newText;
+    }
+
     setState(() {});
   }
 
   void _handleDescriptionChange(String value, _PhotoItem item) {
     item.description = value;
-    if (value.endsWith('\n')) {
-      final lines = value.split('\n');
-      if (lines.length >= 2) {
-        final previousLine = lines[lines.length - 2].trim();
+    if (!value.endsWith('\n')) return;
+    if (item.listMode == 'paragraph') return;
 
-        // Check if previous line starts with bullet point
-        if (previousLine.startsWith('• ')) {
-          final newText = '${value}• ';
-          item.descriptionController.value = TextEditingValue(
-            text: newText,
-            selection: TextSelection.fromPosition(
-              TextPosition(offset: newText.length),
-            ),
-          );
-          item.description = newText;
-          return;
-        }
+    if (item.listMode == 'bullet') {
+      final newText = '${value}• ';
+      item.descriptionController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.fromPosition(
+          TextPosition(offset: newText.length),
+        ),
+      );
+      item.description = newText;
+      return;
+    }
 
-        // Check if previous line starts with number
-        final numberMatch = RegExp(r'^(\d+)\.\s').firstMatch(previousLine);
-        if (numberMatch != null) {
-          final nextNumber = int.parse(numberMatch.group(1)!) + 1;
-          final newText = '$value$nextNumber. ';
-          item.descriptionController.value = TextEditingValue(
-            text: newText,
-            selection: TextSelection.fromPosition(
-              TextPosition(offset: newText.length),
-            ),
-          );
-          item.description = newText;
-          return;
-        }
-      }
+    if (item.listMode == 'numbered') {
+      final nextNumber = _getNextNumber(value);
+      final newText = '$value$nextNumber. ';
+      item.descriptionController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.fromPosition(
+          TextPosition(offset: newText.length),
+        ),
+      );
+      item.description = newText;
     }
   }
 
   void _formatBulletList(_PhotoItem item) {
-    final text = item.descriptionController.text;
-    if (text.isEmpty) return;
-
-    final lines = text.split('\n');
-    final formattedLines = lines.where((line) => line.trim().isNotEmpty).map((line) {
-      final trimmed = line.trim();
-      if (trimmed.startsWith('• ')) return trimmed;
-      if (RegExp(r'^\d+\.\s').hasMatch(trimmed)) {
-        return '• ${trimmed.replaceFirst(RegExp(r'^\d+\.\s'), '')}';
-      }
-      return '• $trimmed';
-    }).join('\n');
-
-    item.descriptionController.text = formattedLines;
-    item.descriptionController.selection = TextSelection.fromPosition(
-      TextPosition(offset: formattedLines.length),
-    );
-    item.description = formattedLines;
+    item.listMode = 'bullet';
+    _insertPrefixForNewMode(item, prefix: '• ');
+    setState(() {});
   }
 
   void _formatNumberedList(_PhotoItem item) {
+    item.listMode = 'numbered';
+    final nextNumber = _getNextNumber(item.descriptionController.text);
+    _insertPrefixForNewMode(item, prefix: '$nextNumber. ');
+    setState(() {});
+  }
+
+  int _getNextNumber(String text) {
+    final matches = RegExp(r'^(\d+)\.\s', multiLine: true).allMatches(text);
+    if (matches.isEmpty) return 1;
+    final last = int.tryParse(matches.last.group(1) ?? '0') ?? 0;
+    return last + 1;
+  }
+
+  void _insertPrefixForNewMode(_PhotoItem item, {required String prefix}) {
     final text = item.descriptionController.text;
-    if (text.isEmpty) return;
+    final selection = item.descriptionController.selection;
+    final cursor =
+        selection.isValid && selection.baseOffset >= 0 ? selection.baseOffset : text.length;
 
-    final lines = text.split('\n');
-    int number = 1;
-    final formattedLines = lines.where((line) => line.trim().isNotEmpty).map((line) {
-      final trimmed = line.trim();
-      if (trimmed.startsWith('• ')) {
-        return '${number++}. ${trimmed.substring(2)}';
-      }
-      if (RegExp(r'^\d+\.\s').hasMatch(trimmed)) {
-        return '${number++}. ${trimmed.replaceFirst(RegExp(r'^\d+\.\s'), '')}';
-      }
-      return '${number++}. $trimmed';
-    }).join('\n');
+    final before = text.substring(0, cursor);
+    final after = text.substring(cursor);
 
-    item.descriptionController.text = formattedLines;
-    item.descriptionController.selection = TextSelection.fromPosition(
-      TextPosition(offset: formattedLines.length),
+    final needsNewLine = before.isNotEmpty && !before.endsWith('\n');
+    final insertion = needsNewLine ? '\n$prefix' : prefix;
+    final newText = '$before$insertion$after';
+
+    item.descriptionController.value = TextEditingValue(
+      text: newText,
+      selection: TextSelection.collapsed(offset: before.length + insertion.length),
     );
-    item.description = formattedLines;
+    item.description = newText;
   }
 }
 
@@ -2036,6 +2074,7 @@ class _PhotoItem {
   String? imagePath;
   String? location;
   String description = '';
+  String listMode = 'paragraph';
   final TextEditingController locationController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
 }

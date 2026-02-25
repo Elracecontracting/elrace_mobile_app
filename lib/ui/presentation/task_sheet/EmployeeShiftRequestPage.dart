@@ -27,6 +27,8 @@ class EmployeeShiftRequestPage extends StatefulWidget {
 class _EmployeeShiftRequestPageState extends State<EmployeeShiftRequestPage> {
   String? selectedEmployee;
   final TextEditingController noteController = TextEditingController();
+  // 'none' | 'bullet' | 'numbered'
+  String _listMode = 'none';
   List<Map<String, dynamic>> employees = [];
   String? selectedEmployeeId;
   bool isLoading = true;
@@ -896,11 +898,11 @@ class _EmployeeShiftRequestPageState extends State<EmployeeShiftRequestPage> {
                 ),
               ),
               const Spacer(),
-              _buildMiniImageButton('assets/png/paragraphIcon.png', tooltip: 'Paragraph', onPressed: _insertParagraph),
+              _buildMiniImageButton('assets/png/paragraphIcon.png', tooltip: 'Paragraph', isActive: _listMode == 'none', onPressed: _insertParagraph),
               const SizedBox(width: 6),
-              _buildMiniIconButton(Icons.format_list_numbered, tooltip: 'Numbered list', onPressed: _insertNumberedList),
+              _buildMiniIconButton(Icons.format_list_numbered, tooltip: 'Numbered list', isActive: _listMode == 'numbered', onPressed: _insertNumberedList),
               const SizedBox(width: 6),
-              _buildMiniIconButton(Icons.format_list_bulleted, tooltip: 'Bulleted list', onPressed: _insertBulletList),
+              _buildMiniIconButton(Icons.format_list_bulleted, tooltip: 'Bulleted list', isActive: _listMode == 'bullet', onPressed: _insertBulletList),
             ],
           ),
           const SizedBox(height: 8),
@@ -921,6 +923,7 @@ class _EmployeeShiftRequestPageState extends State<EmployeeShiftRequestPage> {
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
               ),
+              onChanged: _onNoteChanged,
             ),
           ),
         ],
@@ -941,11 +944,72 @@ class _EmployeeShiftRequestPageState extends State<EmployeeShiftRequestPage> {
     noteController.selection = TextSelection.collapsed(offset: newPos);
   }
 
+  void _onNoteChanged(String value) {
+    if (_listMode == 'none') return;
+    if (!value.endsWith('\n')) return;
+
+    final lines = value.split('\n');
+    // lines.last is the empty string after the trailing \n
+    // second-to-last is the just-finished line
+    if (lines.length < 2) return;
+    final prevLine = lines[lines.length - 2];
+
+    if (_listMode == 'bullet') {
+      if (prevLine == '• ') {
+        // Empty bullet → exit list mode and remove the empty bullet line
+        final suffix = '\n• ';
+        final newText = value.endsWith(suffix)
+            ? value.substring(0, value.length - suffix.length) + '\n'
+            : value;
+        noteController.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: newText.length),
+        );
+        setState(() => _listMode = 'none');
+      } else if (prevLine.startsWith('• ')) {
+        final newText = '${value}• ';
+        noteController.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: newText.length),
+        );
+      }
+    } else if (_listMode == 'numbered') {
+      final emptyNumbered = RegExp(r'^\d+\.\s*$');
+      if (emptyNumbered.hasMatch(prevLine)) {
+        // Empty numbered line → exit list mode
+        final removeLen = prevLine.length + 1; // +1 for the \n before it
+        final cutAt = value.length - 1 - removeLen; // -1 for the trailing \n
+        final newText = value.substring(0, cutAt < 0 ? 0 : cutAt) + '\n';
+        noteController.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: newText.length),
+        );
+        setState(() => _listMode = 'none');
+      } else if (RegExp(r'^\d+\.\s').hasMatch(prevLine)) {
+        final allLines = value.split('\n');
+        int count = 0;
+        for (final l in allLines) {
+          if (RegExp(r'^\d+\.\s').hasMatch(l)) count++;
+        }
+        final newText = '${value}${count + 1}. ';
+        noteController.value = TextEditingValue(
+          text: newText,
+          selection: TextSelection.collapsed(offset: newText.length),
+        );
+      }
+    }
+  }
+
   void _insertParagraph() {
-    _insertAtCursor('\n');
+    setState(() => _listMode = 'none');
   }
 
   void _insertNumberedList() {
+    if (_listMode == 'numbered') {
+      setState(() => _listMode = 'none');
+      return;
+    }
+    setState(() => _listMode = 'numbered');
     final text = noteController.text;
     final lines = text.split('\n');
     int count = 0;
@@ -956,24 +1020,34 @@ class _EmployeeShiftRequestPageState extends State<EmployeeShiftRequestPage> {
   }
 
   void _insertBulletList() {
+    if (_listMode == 'bullet') {
+      setState(() => _listMode = 'none');
+      return;
+    }
+    setState(() => _listMode = 'bullet');
     _insertAtCursor('• ');
   }
 
-  Widget _buildMiniImageButton(String assetPath, {String? tooltip, VoidCallback? onPressed}) {
+  Widget _buildMiniImageButton(String assetPath, {String? tooltip, bool isActive = false, VoidCallback? onPressed}) {
     return SizedBox(
       width: 34,
       height: 28,
       child: Tooltip(
         message: tooltip ?? '',
         child: Material(
-          color: Colors.grey.shade200,
+          color: isActive ? Colors.black87 : Colors.grey.shade200,
           borderRadius: BorderRadius.circular(6),
           child: InkWell(
             onTap: onPressed,
             borderRadius: BorderRadius.circular(6),
             child: Padding(
               padding: const EdgeInsets.all(4),
-              child: Image.asset(assetPath, fit: BoxFit.contain),
+              child: ColorFiltered(
+                colorFilter: isActive
+                    ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
+                    : const ColorFilter.mode(Colors.transparent, BlendMode.dst),
+                child: Image.asset(assetPath, fit: BoxFit.contain),
+              ),
             ),
           ),
         ),
@@ -981,19 +1055,19 @@ class _EmployeeShiftRequestPageState extends State<EmployeeShiftRequestPage> {
     );
   }
 
-  Widget _buildMiniIconButton(IconData icon, {String? tooltip, VoidCallback? onPressed}) {
+  Widget _buildMiniIconButton(IconData icon, {String? tooltip, bool isActive = false, VoidCallback? onPressed}) {
     return SizedBox(
       width: 34,
       height: 28,
       child: Tooltip(
         message: tooltip ?? '',
         child: Material(
-          color: Colors.grey.shade200,
+          color: isActive ? Colors.black87 : Colors.grey.shade200,
           borderRadius: BorderRadius.circular(6),
           child: InkWell(
             onTap: onPressed,
             borderRadius: BorderRadius.circular(6),
-            child: Icon(icon, size: 16, color: Colors.black87),
+            child: Icon(icon, size: 16, color: isActive ? Colors.white : Colors.black87),
           ),
         ),
       ),

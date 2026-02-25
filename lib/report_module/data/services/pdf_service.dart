@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:image/image.dart' as img;
 
 import 'package:el_race/report_module/data/models/company_model.dart';
 import 'package:el_race/report_module/data/models/report_detail_model.dart';
@@ -20,13 +21,19 @@ class PdfService {
   }) async {
     final pdf = pw.Document();
     CompanyModel companyData = CompanyRepository.company!;
-    LoginResponseModel? userData = (await userRepo.getLoginResponse());
 
-    final imageMap = await loadReportImages(report.reportItems);
-    Uint8List logo = await _loadAssetAsBytes(companyData.logo);
-    final supportedFont =
-        await rootBundle.load("assets/fonts/arbicsupport.ttf");
-    final notoSanArabic = pw.Font.ttf(supportedFont);
+    // Run all async operations in parallel
+    final results = await Future.wait([
+      userRepo.getLoginResponse(),
+      loadReportImages(report.reportItems),
+      _loadAssetAsBytes(companyData.logo),
+      rootBundle.load("assets/fonts/arbicsupport.ttf"),
+    ]);
+
+    final LoginResponseModel? userData = results[0] as LoginResponseModel?;
+    final imageMap = results[1] as Map<String, pw.MemoryImage>;
+    final Uint8List logo = results[2] as Uint8List;
+    final notoSanArabic = pw.Font.ttf(results[3] as ByteData);
     pdf.addPage(
       pw.MultiPage(
         pageFormat: PdfPageFormat.a4,
@@ -192,33 +199,62 @@ class PdfService {
 
   Future<Map<String, pw.MemoryImage>> loadReportImages(
       List<ReportItemModel> items) async {
+    final imageItems = items.where((item) => item.type == 'image').toList();
     final Map<String, pw.MemoryImage> imageMap = {};
-    for (final item in items) {
-      if (item.type == 'image') {
-        try {
-          Uint8List imageBytes;
-          // Check if it's a URL or local path
-          if (item.image.startsWith('http://') || item.image.startsWith('https://')) {
-            // Download image from URL
-            final response = await http.get(Uri.parse(item.image));
-            if (response.statusCode == 200) {
-              imageBytes = response.bodyBytes;
+
+    // Process in batches of 3 to avoid saturating mobile bandwidth
+    const batchSize = 3;
+    for (int i = 0; i < imageItems.length; i += batchSize) {
+      final batch = imageItems.skip(i).take(batchSize).toList();
+      final batchResults = await Future.wait(
+        batch.map((item) async {
+          try {
+            Uint8List imageBytes;
+            if (item.image.startsWith('http://') ||
+                item.image.startsWith('https://')) {
+              final response = await http
+                  .get(Uri.parse(item.image))
+                  .timeout(const Duration(seconds: 45));
+              if (response.statusCode == 200) {
+                imageBytes = response.bodyBytes;
+              } else {
+                return null;
+              }
             } else {
-              continue; // Skip this image if download fails
+              imageBytes = await File(item.image).readAsBytes();
             }
-          } else {
-            // Read from local file
-            imageBytes = await File(item.image).readAsBytes();
+            // Resize image to max 800px to reduce PDF size & generation time
+            imageBytes = _resizeImage(imageBytes);
+            return MapEntry(item.image, pw.MemoryImage(imageBytes));
+          } catch (e) {
+            print('Error loading image ${item.image}: $e');
+            return null;
           }
-          imageMap[item.image] = pw.MemoryImage(imageBytes);
-        } catch (e) {
-          print('Error loading image ${item.image}: $e');
-          // Skip this image if there's an error
-          continue;
-        }
+        }),
+      );
+      for (final entry in batchResults) {
+        if (entry != null) imageMap[entry.key] = entry.value;
       }
     }
+
     return imageMap;
+  }
+
+  Uint8List _resizeImage(Uint8List bytes) {
+    try {
+      final decoded = img.decodeImage(bytes);
+      if (decoded == null) return bytes;
+      if (decoded.width <= 800 && decoded.height <= 800) return bytes;
+      final resized = img.copyResize(
+        decoded,
+        width: decoded.width > decoded.height ? 800 : -1,
+        height: decoded.height >= decoded.width ? 800 : -1,
+        interpolation: img.Interpolation.linear,
+      );
+      return Uint8List.fromList(img.encodeJpg(resized, quality: 75));
+    } catch (e) {
+      return bytes;
+    }
   }
 
   _buildBody(pw.Context context, logo, ReportDetailModel reportDetail,

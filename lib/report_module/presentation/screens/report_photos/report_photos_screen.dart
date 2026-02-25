@@ -278,14 +278,20 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
                         ),
                       ),
                     ),
-                    GestureDetector(
+                    InkWell(
                       onTap: () {
-                        setState(() => _isButtonExpanded = !_isButtonExpanded);
+                        if (!_isButtonExpanded) {
+                          setState(() => _isButtonExpanded = true);
+                        } else {
+                          _showImageSourceDialog();
+                        }
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 260),
                         curve: Curves.easeOutCubic,
-                        width: 44.w,
+                        width: _isButtonExpanded ? 170.w : 44.w,
+                        height: 42.h,
+                        clipBehavior: Clip.hardEdge,
                         decoration: BoxDecoration(
                           color: const Color(0xFF27304E),
                           borderRadius: BorderRadius.only(
@@ -294,39 +300,57 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
                                 _isButtonExpanded ? 0 : 14.r),
                           ),
                         ),
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 10.w, vertical: 10.h),
-                        child: Icon(Icons.add,
-                                size: 26.w, color: Colors.white),
+                        padding: EdgeInsets.symmetric(horizontal: 8.w),
+                        child: Row(
+                          children: [
+                            Icon(Icons.add,
+                                size: 22.w, color: Colors.white),
+                            Expanded(
+                              child: ClipRect(
+                                child: AnimatedAlign(
+                                  duration: const Duration(milliseconds: 260),
+                                  curve: Curves.easeOutCubic,
+                                  alignment: Alignment.centerRight,
+                                  widthFactor: _isButtonExpanded ? 1 : 0,
+                                  child: Padding(
+                                    padding: EdgeInsetsDirectional.only(start: 4.w),
+                                    child: Text(
+                                      'Add Photos',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.clip,
+                                      style: GoogleFonts.inter(
+                                        fontSize: 13.sp,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-              // Expanded menu options
+              // Expanded menu option (Generate PDF)
               if (_isButtonExpanded)
                 Align(
                   alignment: Alignment.centerRight,
                   child: Container(
-                    width: 180.w,
+                    width: 170.w,
                     decoration: BoxDecoration(
                       color: const Color(0xFF27304E),
                       borderRadius: BorderRadius.only(
                         bottomLeft: Radius.circular(14.r),
                       ),
                     ),
-                    child: Column(
-                      children: [
-                        _menuButton('Add Photos', () {
-                          setState(() => _isButtonExpanded = false);
-                          _showImageSourceDialog();
-                        }),
-                        _menuButton('Generate PDF', () {
-                          setState(() => _isButtonExpanded = false);
-                          _openPdfGenerationPage();
-                        }),
-                      ],
-                    ),
+                    child: _menuButton('Generate PDF', () {
+                      setState(() => _isButtonExpanded = false);
+                      _openPdfGenerationPage();
+                    }),
                   ),
                 ),
               SizedBox(height: 12.h),
@@ -354,6 +378,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
         child: Text(
           label,
+          textAlign: TextAlign.right,
           style: GoogleFonts.inter(
             fontSize: 13.sp,
             fontWeight: FontWeight.w700,

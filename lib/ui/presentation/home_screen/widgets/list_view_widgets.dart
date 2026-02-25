@@ -23,6 +23,7 @@ import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -714,6 +715,14 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                 backgroundImagePath: 'assets/newapp/blue_widget_background.png',
                 onClick: isReorderMode ? null : () => Util.pushPage(const AttendancePage(), context),
                 childWidget: const SizedBox.shrink(),
+              ),
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: SvgPicture.asset(
+                    'assets/svg/attendance-effect.svg',
+                    fit: BoxFit.cover,
+                  ),
+                ),
               ),
               const Positioned.fill(
                 child: IgnorePointer(
