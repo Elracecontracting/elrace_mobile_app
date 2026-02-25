@@ -525,7 +525,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                     bottomRight: Radius.circular(23),
                   ),
                   child: Image.asset(
-                    'assets/png/finger.gif',
+                    'assets/gif/finger-print.gif',
                     width: 150,
                     height: 160,
                     fit: BoxFit.cover,

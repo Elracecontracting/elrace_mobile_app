@@ -1,11 +1,13 @@
 import 'dart:typed_data';
 
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 /// Simple PDF viewer for LPO reports - loads PDF from URL and displays in-app.
 class LpoPdfViewerScreen extends StatefulWidget {
@@ -39,8 +41,13 @@ class _LpoPdfViewerScreenState extends State<LpoPdfViewerScreen> {
     try {
       final response = await http.get(Uri.parse(widget.pdfUrl));
       if (response.statusCode == 200) {
+        final empId =
+            SharedPref.getLoginData().result?.data?.emp_id ?? '';
+        final Uint8List watermarked = empId.isNotEmpty
+            ? _addWatermarkToPdf(response.bodyBytes, empId)
+            : response.bodyBytes;
         setState(() {
-          _pdfBytes = response.bodyBytes;
+          _pdfBytes = watermarked;
           _loading = false;
         });
       } else {
@@ -54,6 +61,58 @@ class _LpoPdfViewerScreenState extends State<LpoPdfViewerScreen> {
         _error = 'Error loading PDF: $e';
         _loading = false;
       });
+    }
+  }
+
+  Uint8List _addWatermarkToPdf(Uint8List pdfBytes, String empId) {
+    try {
+      final PdfDocument document =
+          PdfDocument(inputBytes: pdfBytes);
+      final PdfFont font = PdfStandardFont(
+        PdfFontFamily.helvetica,
+        28,
+        style: PdfFontStyle.bold,
+      );
+      final PdfBrush brush = PdfSolidBrush(PdfColor(180, 180, 180));
+
+      const int cols = 3;
+      const int rows = 6;
+      const double rotateDeg = -30;
+
+      for (int i = 0; i < document.pages.count; i++) {
+        final PdfPage page = document.pages[i];
+        final Size pageSize = page.getClientSize();
+        final double cellW = pageSize.width / cols;
+        final double cellH = pageSize.height / rows;
+        final PdfGraphics graphics = page.graphics;
+
+        for (int row = 0; row < rows; row++) {
+          for (int col = 0; col < cols; col++) {
+            final double cx = cellW * col + cellW / 2;
+            final double cy = cellH * row + cellH / 2;
+
+            final PdfGraphicsState state = graphics.save();
+            graphics
+              ..setTransparency(0.18)
+              ..translateTransform(cx, cy)
+              ..rotateTransform(rotateDeg)
+              ..drawString(
+                empId,
+                font,
+                brush: brush,
+                bounds: Rect.fromLTWH(-60, -20, 120, 40),
+              );
+            graphics.restore(state);
+          }
+        }
+      }
+
+      final List<int> bytes = document.saveSync();
+      document.dispose();
+      return Uint8List.fromList(bytes);
+    } catch (e) {
+      debugPrint('Watermark error: $e');
+      return pdfBytes;
     }
   }
 

@@ -34,11 +34,15 @@ class PdfService {
     final imageMap = results[1] as Map<String, pw.MemoryImage>;
     final Uint8List logo = results[2] as Uint8List;
     final notoSanArabic = pw.Font.ttf(results[3] as ByteData);
+    final String profileId = userData?.result?.data?.emp_id ?? '';
     pdf.addPage(
       pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin:
-            const pw.EdgeInsets.only(left: 32, right: 32, bottom: 20, top: 5),
+        pageTheme: pw.PageTheme(
+          pageFormat: PdfPageFormat.a4,
+          margin: const pw.EdgeInsets.only(
+              left: 32, right: 32, bottom: 20, top: 5),
+          buildBackground: (context) => _buildWatermark(context, profileId),
+        ),
         header: (context) =>
             _buildHeader(context, logo, report, projectName, notoSanArabic),
         footer: (context) => _buildFooter(context),
@@ -485,6 +489,48 @@ class PdfService {
   Future<Uint8List> _loadAssetAsBytes(String assetPath) async {
     final ByteData data = await rootBundle.load(assetPath);
     return data.buffer.asUint8List();
+  }
+
+  pw.Widget _buildWatermark(pw.Context context, String watermarkText) {
+    if (watermarkText.isEmpty) return pw.SizedBox();
+
+    const double angle = -0.5236; // -30 degrees
+    const double fontSize = 40;
+    const int cols = 3;
+    const int rows = 6;
+
+    final textStyle = pw.TextStyle(
+      color: PdfColors.grey300,
+      fontSize: fontSize,
+      fontWeight: pw.FontWeight.bold,
+    );
+
+    return pw.FullPage(
+      ignoreMargins: true,
+      child: pw.Column(
+        children: List.generate(
+          rows,
+          (row) => pw.Expanded(
+            child: pw.Row(
+              children: List.generate(
+                cols,
+                (col) => pw.Expanded(
+                  child: pw.Center(
+                    child: pw.Transform.rotate(
+                      angle: angle,
+                      child: pw.Text(
+                        watermarkText,
+                        style: textStyle,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   pw.Widget buildTableBody(

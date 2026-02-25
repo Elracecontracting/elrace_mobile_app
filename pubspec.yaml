@@ -121,6 +121,7 @@ dependencies:
   mobile_scanner: ^7.0.0
   app_links: ^6.3.3
   syncfusion_flutter_pdfviewer: ^28.1.33
+  syncfusion_flutter_pdf: ^28.1.33
   chewie: ^1.8.5
   youtube_player_flutter: ^9.1.1
   timezone: ^0.10.1
