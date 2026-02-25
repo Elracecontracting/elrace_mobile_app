@@ -261,7 +261,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
 
       _controller = CameraController(
         backCamera,
-        ResolutionPreset.medium,
+        ResolutionPreset.max,
         enableAudio: false,
       );
 
@@ -360,7 +360,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
         img.Image? logo = img.decodeImage(_logoBytes!);
         if (logo != null) {
           // Resize logo with high quality interpolation
-          final int logoWidth = (baseImage.width * 0.28).toInt();
+          final int logoWidth = (baseImage.width * 0.22).toInt();
           final int logoHeight = (logoWidth * logo.height / logo.width).toInt();
           logo = img.copyResize(
             logo,
@@ -380,8 +380,8 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
       }
 
       // Draw date, time, and location text with shadow (all same font, aligned)
-      final font = img.arial24;
-      final shadowOffset = 1;
+      final font = img.arial48;
+      final shadowOffset = 2;
 
       // Measure actual text widths using font metrics
       int measureWidth(img.BitmapFont f, String text) {
@@ -406,70 +406,28 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
       if (locationTextWidth > maxWidth) maxWidth = locationTextWidth;
 
       final int rightEdge = baseImage.width - padding;
-      final int lineHeight = font.lineHeight + 6;
+      final int lineHeight = font.lineHeight + 10;
       final int totalLines = _currentLocation.isNotEmpty ? 3 : 2;
       int currentY = baseImage.height - padding - (lineHeight * totalLines);
 
-      // Draw time (right-aligned)
+      // Draw time (right-aligned) — matching live preview colors
       final int timeX = rightEdge - timeTextWidth;
-      img.drawString(
-        baseImage,
-        _currentTime,
-        font: font,
-        x: timeX + shadowOffset,
-        y: currentY + shadowOffset,
-        color: img.ColorRgb8(50, 50, 50),
-      );
-      img.drawString(
-        baseImage,
-        _currentTime,
-        font: font,
-        x: timeX,
-        y: currentY,
-        color: img.ColorRgb8(255, 255, 255),
-      );
+      img.drawString(baseImage, _currentTime, font: font, x: timeX + shadowOffset, y: currentY + shadowOffset, color: img.ColorRgb8(130, 130, 130));
+      img.drawString(baseImage, _currentTime, font: font, x: timeX, y: currentY, color: img.ColorRgb8(205, 205, 205));
 
       currentY += lineHeight;
 
       // Draw date (right-aligned)
       final int dateX = rightEdge - dateTextWidth;
-      img.drawString(
-        baseImage,
-        _currentDate,
-        font: font,
-        x: dateX + shadowOffset,
-        y: currentY + shadowOffset,
-        color: img.ColorRgb8(50, 50, 50),
-      );
-      img.drawString(
-        baseImage,
-        _currentDate,
-        font: font,
-        x: dateX,
-        y: currentY,
-        color: img.ColorRgb8(255, 255, 255),
-      );
+      img.drawString(baseImage, _currentDate, font: font, x: dateX + shadowOffset, y: currentY + shadowOffset, color: img.ColorRgb8(130, 130, 130));
+      img.drawString(baseImage, _currentDate, font: font, x: dateX, y: currentY, color: img.ColorRgb8(205, 205, 205));
 
       // Draw location (right-aligned)
       if (_currentLocation.isNotEmpty) {
         currentY += lineHeight;
         final int locationX = rightEdge - locationTextWidth;
-        img.drawString(
-          baseImage,
-          _currentLocation,
-          font: font,
-          x: locationX + shadowOffset,
-          y: currentY + shadowOffset,
-          color: img.ColorRgb8(50, 50, 50),
-        );
-        img.drawString(
-          baseImage,
-          _currentLocation,
-          font: font,
-          x: locationX,
-          y: currentY,
-          color: img.ColorRgb8(255, 255, 255),
-        );
+        img.drawString(baseImage, _currentLocation, font: font, x: locationX + shadowOffset, y: currentY + shadowOffset, color: img.ColorRgb8(130, 130, 130));
+        img.drawString(baseImage, _currentLocation, font: font, x: locationX, y: currentY, color: img.ColorRgb8(205, 205, 205));
       }
 
       // Save the result with optimized quality
@@ -948,7 +906,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                     alignment: Alignment.topLeft,
                     child: Image.asset(
                       'assets/logo/rcc2.png',
-                      height: 35.h,
+                      height: 27.h,
                       filterQuality: FilterQuality.high,
                     ),
                   ),
@@ -1017,31 +975,31 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                     _currentTime,
                     style: GoogleFonts.inter(
                       fontSize: 16.sp,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[200]!.withOpacity(0.85),
+                      fontWeight: FontWeight.w400,
                       shadows: [
                         Shadow(
-                          color: Colors.black.withOpacity(0.5),
+                          color: Colors.grey.withOpacity(0.5),
                           offset: const Offset(-1, -1),
                           blurRadius: 2,
                         ),
                         Shadow(
-                          color: Colors.black.withOpacity(0.5),
+                          color: Colors.grey.withOpacity(0.5),
                           offset: const Offset(1, -1),
                           blurRadius: 2,
                         ),
                         Shadow(
-                          color: Colors.black.withOpacity(0.5),
+                          color: Colors.grey.withOpacity(0.5),
                           offset: const Offset(1, 1),
                           blurRadius: 2,
                         ),
                         Shadow(
-                          color: Colors.black.withOpacity(0.5),
+                          color: Colors.grey.withOpacity(0.5),
                           offset: const Offset(-1, 1),
                           blurRadius: 2,
                         ),
                         Shadow(
-                          color: Colors.black.withOpacity(0.3),
+                          color: Colors.grey.withOpacity(0.3),
                           offset: const Offset(0, 0),
                           blurRadius: 4,
                         ),
@@ -1053,31 +1011,31 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                     _currentDate,
                     style: GoogleFonts.inter(
                       fontSize: 16.sp,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[200]!.withOpacity(0.85),
+                      fontWeight: FontWeight.w400,
                       shadows: [
                         Shadow(
-                          color: Colors.black.withOpacity(0.5),
+                          color: Colors.grey.withOpacity(0.5),
                           offset: const Offset(-1, -1),
                           blurRadius: 2,
                         ),
                         Shadow(
-                          color: Colors.black.withOpacity(0.5),
+                          color: Colors.grey.withOpacity(0.5),
                           offset: const Offset(1, -1),
                           blurRadius: 2,
                         ),
                         Shadow(
-                          color: Colors.black.withOpacity(0.5),
+                          color: Colors.grey.withOpacity(0.5),
                           offset: const Offset(1, 1),
                           blurRadius: 2,
                         ),
                         Shadow(
-                          color: Colors.black.withOpacity(0.5),
+                          color: Colors.grey.withOpacity(0.5),
                           offset: const Offset(-1, 1),
                           blurRadius: 2,
                         ),
                         Shadow(
-                          color: Colors.black.withOpacity(0.3),
+                          color: Colors.grey.withOpacity(0.3),
                           offset: const Offset(0, 0),
                           blurRadius: 4,
                         ),
@@ -1090,31 +1048,31 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                       _currentLocation,
                       style: GoogleFonts.inter(
                         fontSize: 14.sp,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w500,
+                      color: Colors.grey[200]!.withOpacity(0.85),
+                        fontWeight: FontWeight.w400,
                         shadows: [
                           Shadow(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.grey.withOpacity(0.5),
                             offset: const Offset(-1, -1),
                             blurRadius: 2,
                           ),
                           Shadow(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.grey.withOpacity(0.5),
                             offset: const Offset(1, -1),
                             blurRadius: 2,
                           ),
                           Shadow(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.grey.withOpacity(0.5),
                             offset: const Offset(1, 1),
                             blurRadius: 2,
                           ),
                           Shadow(
-                            color: Colors.black.withOpacity(0.5),
+                            color: Colors.grey.withOpacity(0.5),
                             offset: const Offset(-1, 1),
                             blurRadius: 2,
                           ),
                           Shadow(
-                            color: Colors.black.withOpacity(0.3),
+                            color: Colors.grey.withOpacity(0.3),
                             offset: const Offset(0, 0),
                             blurRadius: 4,
                           ),
@@ -1217,7 +1175,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                               : null,
                         ),
                       ),
-                      SizedBox(height: 15.h),
+                      SizedBox(height: 6.h),
 
                       /// ——— SCAN / PHOTO / QR BUTTONS ———
                       Row(
@@ -1746,8 +1704,8 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
               color: Colors.black.withOpacity(0.30),
               borderRadius: BorderRadius.circular(25.r),
               border: Border.all(
-                color: Colors.white.withOpacity(0.20),
-                width: 1.2,
+                color: Colors.white.withOpacity(0.04),
+                width: 1.0,
               ),
             ),
             child: Text(
@@ -1772,8 +1730,8 @@ class CameraShadowOverlayPainter extends CustomPainter {
     // Calculate exact overlay areas that match the photo composition
     final padding = size.width * 0.04;
 
-    // Top overlay: Logo area (logo is 28% of width with proportional height)
-    final logoWidth = size.width * 0.28;
+    // Top overlay: Logo area (logo is 14% of width with proportional height)
+    final logoWidth = size.width * 0.14;
     final logoHeight = logoWidth * 0.4; // Approximate logo aspect ratio
     final topOverlayHeight = padding * 2 + logoHeight + padding * 2;
 

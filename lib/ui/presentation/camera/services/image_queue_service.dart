@@ -202,7 +202,7 @@ ImageProcessingResult _processImageInIsolate(ImageProcessingParams params) {
       img.Image? logo = img.decodeImage(params.logoBytes!);
       if (logo != null) {
         // Resize logo with high quality interpolation
-        final int logoWidth = (baseImage.width * 0.28).toInt();
+        final int logoWidth = (baseImage.width * 0.22).toInt();
         final int logoHeight = (logoWidth * logo.height / logo.width).toInt();
         logo = img.copyResize(
           logo,
@@ -223,8 +223,8 @@ ImageProcessingResult _processImageInIsolate(ImageProcessingParams params) {
 
     // Draw time, date and location text with shadow (all right-aligned, stacked vertically)
     // Use same font for all texts for consistent alignment
-    final font = img.arial24;
-    const shadowOffset = 1;
+    final font = img.arial48;
+    const shadowOffset = 2;
 
     // Measure actual text widths using font metrics
     int _textWidth(img.BitmapFont f, String text) {
@@ -252,70 +252,28 @@ ImageProcessingResult _processImageInIsolate(ImageProcessingParams params) {
     final int rightEdge = baseImage.width - padding;
 
     // Calculate vertical positions
-    final int lineHeight = font.lineHeight + 6;
+    final int lineHeight = font.lineHeight + 10;
     final int totalLines = params.currentLocation.isNotEmpty ? 3 : 2;
     int currentY = baseImage.height - padding - (lineHeight * totalLines);
 
-    // Draw time (right-aligned)
+    // Draw time (right-aligned) — matching live preview colors
     final int timeX = rightEdge - timeTextWidth;
-    img.drawString(
-      baseImage,
-      params.currentTime,
-      font: font,
-      x: timeX + shadowOffset,
-      y: currentY + shadowOffset,
-      color: img.ColorRgb8(50, 50, 50),
-    );
-    img.drawString(
-      baseImage,
-      params.currentTime,
-      font: font,
-      x: timeX,
-      y: currentY,
-      color: img.ColorRgb8(255, 255, 255),
-    );
+    img.drawString(baseImage, params.currentTime, font: font, x: timeX + shadowOffset, y: currentY + shadowOffset, color: img.ColorRgb8(130, 130, 130));
+    img.drawString(baseImage, params.currentTime, font: font, x: timeX, y: currentY, color: img.ColorRgb8(205, 205, 205));
 
     currentY += lineHeight;
 
     // Draw date (right-aligned)
     final int dateX = rightEdge - dateTextWidth;
-    img.drawString(
-      baseImage,
-      params.currentDate,
-      font: font,
-      x: dateX + shadowOffset,
-      y: currentY + shadowOffset,
-      color: img.ColorRgb8(50, 50, 50),
-    );
-    img.drawString(
-      baseImage,
-      params.currentDate,
-      font: font,
-      x: dateX,
-      y: currentY,
-      color: img.ColorRgb8(255, 255, 255),
-    );
+    img.drawString(baseImage, params.currentDate, font: font, x: dateX + shadowOffset, y: currentY + shadowOffset, color: img.ColorRgb8(130, 130, 130));
+    img.drawString(baseImage, params.currentDate, font: font, x: dateX, y: currentY, color: img.ColorRgb8(205, 205, 205));
 
     // Draw location (right-aligned)
     if (params.currentLocation.isNotEmpty) {
       currentY += lineHeight;
       final int locationX = rightEdge - locationTextWidth;
-      img.drawString(
-        baseImage,
-        params.currentLocation,
-        font: font,
-        x: locationX + shadowOffset,
-        y: currentY + shadowOffset,
-        color: img.ColorRgb8(50, 50, 50),
-      );
-      img.drawString(
-        baseImage,
-        params.currentLocation,
-        font: font,
-        x: locationX,
-        y: currentY,
-        color: img.ColorRgb8(255, 255, 255),
-      );
+      img.drawString(baseImage, params.currentLocation, font: font, x: locationX + shadowOffset, y: currentY + shadowOffset, color: img.ColorRgb8(130, 130, 130));
+      img.drawString(baseImage, params.currentLocation, font: font, x: locationX, y: currentY, color: img.ColorRgb8(205, 205, 205));
     }
 
     // Save composed image
