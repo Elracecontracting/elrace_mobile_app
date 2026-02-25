@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:el_race/ui/widgets/global_search_screen.dart';
+import 'package:el_race/providers/global_search_provider.dart';
+import 'package:provider/provider.dart';
 
 /// Example implementations showing how to integrate Global Search
 /// into different parts of your app
@@ -50,9 +52,10 @@ class AppDrawerWithSearch extends StatelessWidget {
         children: [
           const DrawerHeader(
             decoration: BoxDecoration(color: Colors.blue),
-            child: Text('Menu', style: TextStyle(color: Colors.white, fontSize: 24)),
+            child: Text('Menu',
+                style: TextStyle(color: Colors.white, fontSize: 24)),
           ),
-          
+
           // Search menu item
           ListTile(
             leading: const Icon(Icons.search),
@@ -67,13 +70,13 @@ class AppDrawerWithSearch extends StatelessWidget {
               );
             },
           ),
-          
+
           ListTile(
             leading: const Icon(Icons.home),
             title: const Text('Home'),
             onTap: () {},
           ),
-          
+
           ListTile(
             leading: const Icon(Icons.work),
             title: const Text('Projects'),
@@ -119,7 +122,8 @@ class MainScreenWithBottomNav extends StatefulWidget {
   const MainScreenWithBottomNav({super.key});
 
   @override
-  State<MainScreenWithBottomNav> createState() => _MainScreenWithBottomNavState();
+  State<MainScreenWithBottomNav> createState() =>
+      _MainScreenWithBottomNavState();
 }
 
 class _MainScreenWithBottomNavState extends State<MainScreenWithBottomNav> {
@@ -180,8 +184,6 @@ class _MainScreenWithBottomNavState extends State<MainScreenWithBottomNav> {
 /// ============================================
 /// Use this when you want to trigger search from code
 /// without showing the full search UI
-import 'package:el_race/providers/global_search_provider.dart';
-import 'package:provider/provider.dart';
 
 class ProgrammaticSearchExample extends StatelessWidget {
   const ProgrammaticSearchExample({super.key});
@@ -278,9 +280,9 @@ class ProgrammaticSearchExample extends StatelessWidget {
 /// Example 6: Add to Existing Landing Screen
 /// ============================================
 /// Modify your existing landing screen to add search
-/// 
+///
 /// In lib/ui/presentation/landing_screen/screens/landing_screen.dart
-/// 
+///
 /// Add this to your AppBar:
 /// ```dart
 /// actions: [

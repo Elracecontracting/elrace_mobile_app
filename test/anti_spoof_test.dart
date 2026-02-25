@@ -16,8 +16,7 @@
 /// ```
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:mocktail/mocktail.dart';
+
 import 'dart:ui';
 
 // ============================================================
@@ -81,7 +80,8 @@ double calculateAntiSpoofScore(MockFace face) {
   // Check 2: Head pose analysis
   if (face.headEulerAngleY != null && face.headEulerAngleZ != null) {
     // Perfectly centered face (< 0.3 degrees) is suspicious
-    if (face.headEulerAngleY!.abs() < 0.3 && face.headEulerAngleZ!.abs() < 0.3) {
+    if (face.headEulerAngleY!.abs() < 0.3 &&
+        face.headEulerAngleZ!.abs() < 0.3) {
       score *= 0.85;
       print('🔍 Anti-Spoof: Perfectly centered pose (-15%)');
     }
@@ -219,8 +219,7 @@ void main() {
 
         final score = calculateAntiSpoofScore(photoFace);
 
-        print(
-            '🧪 Photo with centered pose - Score: ${(score * 100).toInt()}%');
+        print('🧪 Photo with centered pose - Score: ${(score * 100).toInt()}%');
 
         expect(score, lessThan(0.9),
             reason: 'Perfectly centered pose should reduce score');
@@ -327,8 +326,7 @@ void main() {
 
         expect(variation, lessThan(0.15),
             reason: 'Photo should have minimal eye variation');
-        expect(blinkDetected, isFalse,
-            reason: 'Photo should never blink');
+        expect(blinkDetected, isFalse, reason: 'Photo should never blink');
       });
 
       test('Real face: Eye values fluctuate naturally', () {
@@ -394,8 +392,10 @@ void main() {
 
         double totalMovement = 0;
         for (int i = 1; i < headAngles.length; i++) {
-          totalMovement += (headAngles[i]['yaw']! - headAngles[i - 1]['yaw']!).abs();
-          totalMovement += (headAngles[i]['pitch']! - headAngles[i - 1]['pitch']!).abs();
+          totalMovement +=
+              (headAngles[i]['yaw']! - headAngles[i - 1]['yaw']!).abs();
+          totalMovement +=
+              (headAngles[i]['pitch']! - headAngles[i - 1]['pitch']!).abs();
         }
 
         print('🧪 Photo head movement: $totalMovement°');
@@ -416,8 +416,10 @@ void main() {
 
         double totalMovement = 0;
         for (int i = 1; i < headAngles.length; i++) {
-          totalMovement += (headAngles[i]['yaw']! - headAngles[i - 1]['yaw']!).abs();
-          totalMovement += (headAngles[i]['pitch']! - headAngles[i - 1]['pitch']!).abs();
+          totalMovement +=
+              (headAngles[i]['yaw']! - headAngles[i - 1]['yaw']!).abs();
+          totalMovement +=
+              (headAngles[i]['pitch']! - headAngles[i - 1]['pitch']!).abs();
         }
 
         print('🧪 Real face head movement: $totalMovement°');

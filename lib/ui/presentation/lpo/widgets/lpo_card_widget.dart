@@ -135,7 +135,7 @@ class LpoCardWidget extends StatelessWidget {
   final String? state;
   final VoidCallback? onTap;
 
-  static final _amountFormat = NumberFormat('#,##0', 'en');
+  static final _amountFormat = NumberFormat('#,##0.##', 'en');
 
   String? _formatAmount(String? raw) {
     if (raw == null || raw.isEmpty) return null;
@@ -148,7 +148,13 @@ class LpoCardWidget extends StatelessWidget {
   String? _formatDate(String? raw) {
     if (raw == null || raw.isEmpty) return null;
     try {
-      return DateFormat('dd/MM/yyyy').format(DateTime.parse(raw));
+      // Backend sometimes returns "yyyy-MM-dd HH:mm:ss".
+      final normalized = raw.contains(' ') && !raw.contains('T')
+          ? raw.replaceFirst(' ', 'T')
+          : raw;
+      final parsed = DateTime.tryParse(normalized);
+      if (parsed == null) return raw;
+      return DateFormat('dd/MM/yyyy').format(parsed);
     } catch (_) {
       return raw;
     }
@@ -157,174 +163,170 @@ class LpoCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final formattedAmount = _formatAmount(amount);
+    final formattedDate = _formatDate(date);
 
-    // Align header text (RQ/LPO number) with the start of the vendor/project text
-    // column (to the right of: logo + gap + divider + gap).
-    final headerStartPadding = 54.w + 14.w + 1.w + 14.w;
+    // Reference design shows RCC/LPO/<id> on top.
+    final codeText = poId != null
+        ? 'RCC/LPO/$poId'
+        : ((name ?? '').trim().isNotEmpty ? name!.trim() : 'RCC/LPO');
 
-    final codeText = (name ?? '').trim().isNotEmpty
-        ? name!.trim()
-        : (poId != null)
-            ? 'RCC/LPO/$poId'
-            : 'RCC/LPO';
-
-    final primaryTextRaw = (vendorName ?? '').trim().isNotEmpty
-        ? vendorName!.trim()
-        : (projectName ?? '').trim().isNotEmpty
+    final titleText = ((projectName ?? '').trim().isNotEmpty
             ? projectName!.trim()
-            : '';
-
-    final secondaryTextRaw = (vendorName ?? '').trim().isNotEmpty &&
-            (projectName ?? '').trim().isNotEmpty
-        ? projectName!.trim()
-        : null;
-
-    final primaryText = primaryTextRaw.toUpperCase();
-    final secondaryText = secondaryTextRaw?.toUpperCase();
+            : (vendorName ?? '').trim())
+        .toUpperCase();
+    final subtitleText =
+        ((vendorName ?? '').trim().isNotEmpty ? vendorName!.trim() : null)
+            ?.toUpperCase();
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+        margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18.r),
-          border: Border.all(color: const Color(0xFFB6B9C0), width: 1),
-          gradient: const LinearGradient(
-            colors: [Color(0xFFD8DADF), Color(0xFFC6C8CE)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          border: Border.all(color: const Color(0xFF8F929A), width: 1),
+          color: const Color(0xFFD0D2D6),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.10),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Stack(
+          clipBehavior: Clip.hardEdge,
           children: [
             Padding(
-              padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 48.h),
+              padding: EdgeInsets.fromLTRB(14.w, 16.h, 14.w, 8.h),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Padding(
-                      padding: EdgeInsetsDirectional.only(start: headerStartPadding),
-                      child: Text(
-                        codeText,
-                        textAlign: TextAlign.left,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          fontSize: 17.sp,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0E3A76),
-                          letterSpacing: 0.2,
-                        ),
+                  Center(
+                    child: Text(
+                      codeText,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 17.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF0E3A76),
+                        letterSpacing: 0.2,
                       ),
+                    ),
+                  ),
+                  SizedBox(height: 25.h),
+                  Padding(
+                    padding: EdgeInsetsDirectional.only(start: 2.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          titleText.isNotEmpty ? titleText : '-',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: 13.5.sp,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black,
+                            height: 1.15,
+                          ),
+                        ),
+                        if (subtitleText != null && subtitleText.isNotEmpty)
+                          Padding(
+                            padding: EdgeInsets.only(top: 6.h),
+                            child: Text(
+                              subtitleText,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 11.5.sp,
+                                fontWeight: FontWeight.w700,
+                                color: greyText,
+                                height: 1.1,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   SizedBox(height: 10.h),
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Container(
-                        width: 54.w,
-                        height: 54.w,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white,
-                          border:
-                              Border.all(color: const Color(0xFFE6E7EA), width: 2),
-                        ),
-                        alignment: Alignment.center,
-                        child: clientPhoto != null && clientPhoto!.isNotEmpty
-                            ? ClipOval(
-                                child: Image.network(
-                                  clientPhoto!,
-                                  fit: BoxFit.contain,
-                                  width: 54.w,
-                                  height: 54.w,
-                                  headers: {
-                                    'Accept': 'image/*',
-                                    'Authorization':
-                                        'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
-                                  },
-                                  errorBuilder: (_, __, ___) =>
-                                      _buildInitialsAvatar(),
-                                ),
-                              )
-                            : _buildInitialsAvatar(),
-                      ),
-                      SizedBox(width: 14.w),
-                      Container(
-                        width: 1,
-                        height: 54.h,
-                        color: Colors.white.withOpacity(0.85),
-                      ),
-                      SizedBox(width: 14.w),
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              primaryText.isNotEmpty ? primaryText : '- ',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.inter(
-                                fontSize: 16.sp,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.black,
-                                height: 1.1,
-                              ),
+                        child: Padding(
+                          padding: EdgeInsetsDirectional.only(start: 2.w),
+                          child: Text(
+                            (formattedDate ?? '').isNotEmpty
+                                ? formattedDate!
+                                : '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 10.5.sp,
+                              fontWeight: FontWeight.w600,
+                              color: greyText,
                             ),
-                            if (secondaryText != null)
-                              Padding(
-                                padding: EdgeInsets.only(top: 4.h),
-                                child: Text(
-                                  secondaryText,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.inter(
-                                    fontSize: 11.5.sp,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF6E6E6E),
-                                    height: 1.1,
-                                  ),
-                                ),
-                              ),
-                          ],
+                          ),
                         ),
                       ),
+                      if (formattedAmount != null && formattedAmount.isNotEmpty)
+                        Text(
+                          formattedAmount,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: 24.sp,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF0E3A76),
+                            letterSpacing: 0.3,
+                          ),
+                        ),
                     ],
                   ),
                 ],
               ),
             ),
-            if (formattedAmount != null && formattedAmount.isNotEmpty)
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 12.h,
-                child: Center(
-                  child: Text(
-                    formattedAmount,
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: 24.sp,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF0E3A76),
-                      letterSpacing: 0.3,
+            PositionedDirectional(
+              start: 10.w,
+              top: 10.h,
+              child: Container(
+                width: 42.w,
+                height: 42.w,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: Colors.white,
+                  border: Border.all(color: const Color(0xFFE6E7EA), width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.14),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
                     ),
-                  ),
+                  ],
                 ),
+                alignment: Alignment.center,
+                child: clientPhoto != null && clientPhoto!.isNotEmpty
+                    ? ClipOval(
+                        child: Image.network(
+                          clientPhoto!,
+                          fit: BoxFit.contain,
+                          width: 42.w,
+                          height: 42.w,
+                          headers: {
+                            'Accept': 'image/*',
+                            'Authorization':
+                                'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
+                          },
+                          errorBuilder: (_, __, ___) => _buildInitialsAvatar(),
+                        ),
+                      )
+                    : _buildInitialsAvatar(),
               ),
+            ),
           ],
         ),
       ),
@@ -342,49 +344,6 @@ class LpoCardWidget extends StatelessWidget {
         fontSize: 22.sp,
         fontWeight: FontWeight.w700,
         color: appFontColor,
-      ),
-    );
-  }
-
-  Widget _braceChip(String text) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10.r),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(10.r),
-            color: Colors.white.withOpacity(0.25), // شفافية الزجاج
-            border: Border.all(
-              color: Colors.white.withOpacity(0.5), // إطار زجاجي
-              width: 1.2,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.white.withOpacity(0.4),
-                blurRadius: 6,
-                spreadRadius: -2,
-                offset: const Offset(-2, -2),
-              ),
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 6,
-                spreadRadius: -2,
-                offset: const Offset(2, 2),
-              ),
-            ],
-          ),
-          child: MarqueeText(
-            text: text,
-            style: GoogleFonts.koulen(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w400,
-              color: Colors.black87,
-              letterSpacing: 1,
-            ),
-          ),
-        ),
       ),
     );
   }

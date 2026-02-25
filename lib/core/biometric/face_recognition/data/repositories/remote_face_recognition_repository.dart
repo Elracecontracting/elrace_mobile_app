@@ -1,5 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:dartz/dartz.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import '../../domain/entities/face_embedding.dart';
 import '../../domain/entities/face_verification_result.dart';
 import '../../domain/repositories/face_recognition_repository.dart';
@@ -19,8 +20,7 @@ class RemoteFaceRecognitionRepository implements FaceRecognitionRepository {
     required CameraImage image,
     required String userId,
     String? label,
-    CameraLensDirection? lensDirection,
-    int? sensorOrientation,
+    List<CameraImage>? additionalImages,
   }) async {
     return const Left(VerificationFailure(
       'Remote biometric enrollment not implemented. Wire this to the bank-grade SDK.',
@@ -63,5 +63,10 @@ class RemoteFaceRecognitionRepository implements FaceRecognitionRepository {
     int? sensorOrientation,
   }) async {
     return const Left(LivenessCheckFailure());
+  }
+
+  @override
+  Future<List<Face>> detectFaces(CameraImage image) async {
+    return const [];
   }
 }

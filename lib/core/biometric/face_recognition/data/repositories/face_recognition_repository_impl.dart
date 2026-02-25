@@ -306,27 +306,6 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
         );
       }
       
-      // Step 3.5: Enhanced Anti-Spoof Score Check - RELAXED THRESHOLD
-      print('🛡️ Step 3.5: Running anti-spoof analysis (relaxed mode)...');
-      final antiSpoofScore = _faceDetectorService.getAntiSpoofScore(face);
-      
-      // Minimum anti-spoof score - RELAXED from 0.5 to 0.4
-      const double minAntiSpoofScore = 0.4;
-      
-      if (antiSpoofScore < minAntiSpoofScore) {
-        print('❌ SECURITY: Anti-spoof score too low: ${(antiSpoofScore * 100).toInt()}% < ${(minAntiSpoofScore * 100).toInt()}%');
-        return const Right(
-          FaceVerificationResult(
-            isVerified: false,
-            confidence: 0.0,
-            message:
-                '🚫 Please use your live face, not a photo.',
-            hasLiveness: false,
-          ),
-        );
-      }
-      
-      print('✅ Anti-spoof score: ${(antiSpoofScore * 100).toInt()}% - PASSED');
       print('✅ Liveness check PASSED - proceeding with verification');
 
       // Step 4: Crop face

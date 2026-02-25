@@ -6,6 +6,7 @@ class ContentModel {
   final String projectName;
   final bool is360View;
   final String previewUrl;
+  final DateTime? dateCreated;
 
   const ContentModel({
     required this.id,
@@ -13,6 +14,7 @@ class ContentModel {
     required this.projectName,
     required this.is360View,
     required this.previewUrl,
+    this.dateCreated,
   });
 
   factory ContentModel.fromJson(Map<String, dynamic> json) {
@@ -22,7 +24,32 @@ class ContentModel {
       projectName: json['project_name'] ?? '',
       is360View: json['is_360_view'] ?? false,
       previewUrl: json['preview_url'] ?? '',
+      dateCreated: _parseDateTime(json['date_created']) ??
+          _parseDateTime(json['created_at']) ??
+          _parseDateTime(json['create_date']) ??
+          _parseDateTime(json['date']),
     );
+  }
+
+  static DateTime? _parseDateTime(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is int) {
+      // Heuristic: treat large values as milliseconds, else seconds.
+      if (value > 1000000000000) {
+        return DateTime.fromMillisecondsSinceEpoch(value);
+      }
+      if (value > 1000000000) {
+        return DateTime.fromMillisecondsSinceEpoch(value * 1000);
+      }
+      return null;
+    }
+    if (value is String) {
+      final s = value.trim();
+      if (s.isEmpty) return null;
+      return DateTime.tryParse(s);
+    }
+    return null;
   }
 
   Map<String, dynamic> toJson() {
@@ -32,6 +59,7 @@ class ContentModel {
       'project_name': projectName,
       'is_360_view': is360View,
       'preview_url': previewUrl,
+      'date_created': dateCreated?.toIso8601String(),
     };
   }
 
@@ -41,6 +69,7 @@ class ContentModel {
     String? projectName,
     bool? is360View,
     String? previewUrl,
+    DateTime? dateCreated,
   }) {
     return ContentModel(
       id: id ?? this.id,
@@ -48,6 +77,7 @@ class ContentModel {
       projectName: projectName ?? this.projectName,
       is360View: is360View ?? this.is360View,
       previewUrl: previewUrl ?? this.previewUrl,
+      dateCreated: dateCreated ?? this.dateCreated,
     );
   }
 
@@ -79,7 +109,7 @@ class ContentsResponse {
   factory ContentsResponse.fromJson(Map<String, dynamic> json) {
     try {
       final data = json['result']?['data'] ?? json['data'] ?? json;
-      
+
       List<ContentModel> photosList = [];
       List<ContentModel> view360List = [];
 
@@ -95,7 +125,8 @@ class ContentsResponse {
             .toList();
       }
 
-      print('✅ ContentsResponse parsed: ${photosList.length} photos, ${view360List.length} 360 views');
+      print(
+          '✅ ContentsResponse parsed: ${photosList.length} photos, ${view360List.length} 360 views');
 
       return ContentsResponse(
         photos: photosList,

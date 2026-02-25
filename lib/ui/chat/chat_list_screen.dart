@@ -233,11 +233,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   },
                   child: CustomScrollView(
                     slivers: [
-                      const SliverToBoxAdapter(child: SizedBox(height: 72)),
+                      const SliverToBoxAdapter(child: SizedBox(height: 74)),
                       // Search bar
                       SliverToBoxAdapter(
                         child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                          padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                           child: _ChatSearchBar(
                             controller: _localSearchController,
                             onOpenGlobalSearch: _openSearch,
@@ -389,7 +389,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   ),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
                     decoration: BoxDecoration(
                       color: _isScrolled
                           ? Colors.white.withOpacity(0.10)
@@ -599,9 +599,7 @@ class _ChatListTile extends StatelessWidget {
                                       shape: BoxShape.circle,
                                     ),
                                     child: Text(
-                                      unreadCount > 99
-                                          ? '99+'
-                                          : '$unreadCount',
+                                      unreadCount > 99 ? '99+' : '$unreadCount',
                                       style: const TextStyle(
                                         color: Colors.white,
                                         fontSize: 11,
@@ -654,9 +652,16 @@ class _ChatListTile extends StatelessWidget {
 
     return _avatarShell(
       isOnline: true,
-      child: const CircleAvatar(
+      child: CircleAvatar(
         radius: 24,
-        backgroundImage: AssetImage('assets/logo/rcc2.png'),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Image.asset(
+            'assets/logo/rcc2.png',
+            fit: BoxFit.contain,
+          ),
+        ),
       ),
     );
   }
@@ -853,8 +858,8 @@ class _ChatSearchBar extends StatelessWidget {
           color: Color(0xFF9A9A9A),
           fontWeight: FontWeight.w500,
         ),
-        prefixIcon: const SizedBox.shrink(),
-        prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+        prefixIcon: const SizedBox(width: 14),
+        prefixIconConstraints: const BoxConstraints(minWidth: 14, minHeight: 0),
         suffixIcon: IconButton(
           tooltip: 'Search users',
           onPressed: onOpenGlobalSearch,
@@ -874,8 +879,7 @@ class _ChatSearchBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(30),
           borderSide: BorderSide.none,
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 11),
+        contentPadding: const EdgeInsets.fromLTRB(0, 13, 12, 13),
       ),
       style: const TextStyle(
         color: Color(0xFF1F1F1F),
@@ -896,32 +900,50 @@ class _SecondaryChatBar extends StatelessWidget {
     final theme = Theme.of(context);
 
     return SizedBox(
-      height: 54,
-      child: Row(
+      height: 80,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.chat_bubble_outline, color: Colors.white, size: 26),
-          const SizedBox(width: 8),
-          Text(
-            'Chats',
-            style: theme.textTheme.titleLarge?.copyWith(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/newapp/newicon/chat-round-line_svgrepo.com.png',
+                width: 23,
+                height: 23,
+                color: Colors.white,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Chats',
+                style: theme.textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 17),
+              ),
+            ],
           ),
-          const Spacer(),
-          OutlinedButton.icon(
-            onPressed: onMessagesTap,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: const Color(0xFFF4C542),
-              side: const BorderSide(color: Color(0xFFF4C542), width: 1),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(22)),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
-            icon: const Icon(Icons.star, size: 16),
-            label: const Text(
-              'Massages',
-              style: TextStyle(fontWeight: FontWeight.w700),
+          const SizedBox(height: 4),
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton.icon(
+              onPressed: onMessagesTap,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFFFFFFFF),
+                side: const BorderSide(color: Color(0xFFF4C542), width: 1),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(22)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+                minimumSize: const Size(0, 24),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
+              icon: const Icon(Icons.star, size: 16, color: Color(0xFFF4C542)),
+              label: const Text(
+                'Massages',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
           ),
         ],
@@ -953,9 +975,16 @@ class _GroupQuickItem extends StatelessWidget {
                   border:
                       Border.all(color: const Color(0xFFE9B23A), width: 1.2),
                 ),
-                child: const CircleAvatar(
+                child: CircleAvatar(
                   radius: 24,
-                  backgroundImage: AssetImage('assets/logo/rcc2.png'),
+                  backgroundColor: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Image.asset(
+                      'assets/logo/rcc2.png',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 5),

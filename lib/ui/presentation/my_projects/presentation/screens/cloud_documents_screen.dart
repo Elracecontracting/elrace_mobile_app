@@ -12,7 +12,8 @@ class CloudDocumentsScreen extends StatefulWidget {
   final int projectId;
   final String? folderId;
   final String? folderName;
-  final String? folderType; // "wo" for Work Order, "estimation" for Estimations, null for Cloud
+  final String?
+      folderType; // "wo" for Work Order, "estimation" for Estimations, null for Cloud
 
   const CloudDocumentsScreen({
     super.key,
@@ -28,7 +29,7 @@ class CloudDocumentsScreen extends StatefulWidget {
 
 class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
   final ProjectRemoteDataSource _dataSource = ProjectRemoteDataSource();
-  
+
   bool _isLoading = true;
   String? _error;
   List<ProjectDocumentItem> _items = [];
@@ -259,7 +260,8 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
             if (_folders.isNotEmpty) ...[
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                   child: Text(
                     'FOLDERS',
                     style: GoogleFonts.koulen(
@@ -285,20 +287,20 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
             ],
 
             // Files Section (Attachments)
-            if (_files.isNotEmpty) ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-                  child: Text(
-                    'ATTACHMENTS',
-                    style: GoogleFonts.koulen(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w500,
-                      color: const Color(0xFF151544),
-                    ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+                child: Text(
+                  'ATTACHMENTS',
+                  style: GoogleFonts.koulen(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF151544),
                   ),
                 ),
               ),
+            ),
+            if (_files.isNotEmpty)
               SliverPadding(
                 padding: EdgeInsets.symmetric(horizontal: 16.w),
                 sliver: SliverList(
@@ -310,8 +312,21 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
                     childCount: _files.length,
                   ),
                 ),
+              )
+            else
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Text(
+                    'ما في مرفقات',
+                    style: GoogleFonts.inter(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
               ),
-            ],
 
             // Bottom padding
             SliverToBoxAdapter(

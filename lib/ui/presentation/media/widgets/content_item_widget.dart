@@ -2,6 +2,7 @@ import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../data/content_model.dart';
@@ -18,7 +19,7 @@ class ContentItemWidget extends StatelessWidget {
     this.onLongPress,
   });
 
-  Widget _buildThumbnail() {
+  Widget _buildThumbnail({bool withBorder = true}) {
     final String imageUrl = content.previewUrl;
     final borderRadius = BorderRadius.circular(18.r);
     const borderColor = Color(0xB8484848);
@@ -37,10 +38,10 @@ class ContentItemWidget extends StatelessWidget {
 
     Widget buildNetworkImage() {
       // Check if URL is a web link (like vercel) vs image
-      final isWebUrl = imageUrl.contains('vercel.app') || 
-                       imageUrl.contains('.html') ||
-                       !_isImageUrl(imageUrl);
-      
+      final isWebUrl = imageUrl.contains('vercel.app') ||
+          imageUrl.contains('.html') ||
+          !_isImageUrl(imageUrl);
+
       if (isWebUrl) {
         return placeholder();
       }
@@ -74,7 +75,7 @@ class ContentItemWidget extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: borderRadius,
-        border: Border.all(color: borderColor, width: 1),
+        border: withBorder ? Border.all(color: borderColor, width: 1) : null,
       ),
       clipBehavior: Clip.antiAlias,
       child: ClipRRect(
@@ -99,6 +100,142 @@ class ContentItemWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final borderRadius = BorderRadius.circular(22.r);
     const borderColor = Color(0xB8484848);
+
+    final uploadedText = content.dateCreated == null
+        ? null
+        : 'Uploaded at ${DateFormat('dd/MM/yyyy').format(content.dateCreated!)}';
+
+    if (content.is360View) {
+      const start = Color(0xFF444D56);
+      const end = Color(0xFF434D56);
+
+      return Material(
+        color: Colors.transparent,
+        child: GestureDetector(
+          onLongPress: onLongPress,
+          child: Container(
+            height: 180.h,
+            decoration: BoxDecoration(
+              borderRadius: borderRadius,
+              gradient: const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [start, end],
+              ),
+            ),
+            child: Stack(
+              children: [
+                Padding(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: 110.w,
+                        height: 150.h,
+                        child: _buildThumbnail(withBorder: false),
+                      ),
+                      SizedBox(width: 14.w),
+                      Expanded(
+                        child: Padding(
+                          padding: EdgeInsets.only(right: 64.w),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '360 TOUR',
+                                  textAlign: TextAlign.left,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white.withOpacity(0.75),
+                                    letterSpacing: 1.0,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                SizedBox(height: 4.h),
+                                Text(
+                                  content.displayName,
+                                  textAlign: TextAlign.left,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 18.sp,
+                                    fontWeight: FontWeight.w800,
+                                    color: Colors.white,
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                if (content.projectName.isNotEmpty) ...[
+                                  SizedBox(height: 2.h),
+                                  Text(
+                                    content.projectName,
+                                    textAlign: TextAlign.left,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white.withOpacity(0.75),
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  bottom: 14.h,
+                  right: 16.w,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16.r),
+                    onTap: onTap,
+                    child: Container(
+                      height: 34.h,
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.18),
+                        borderRadius: BorderRadius.circular(16.r),
+                      ),
+                      child: Text(
+                        'Go',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 12.h,
+                  right: 12.w,
+                  child: Opacity(
+                    opacity: 0.9,
+                    child: Image.asset(
+                      'assets/newapp/newicon/360 degrees.png',
+                      width: 28.w,
+                      height: 28.w,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
 
     return Material(
       color: Colors.transparent,
@@ -127,8 +264,8 @@ class ContentItemWidget extends StatelessWidget {
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    content.is360View ? '360° VIEW' : 'PHOTO',
-                    style: GoogleFonts.koulen(
+                    uploadedText ?? (content.is360View ? '360° VIEW' : 'PHOTO'),
+                    style: GoogleFonts.poppins(
                       fontSize: 11.sp,
                       color: const Color(0xFF6E6E6E),
                       letterSpacing: 0.8,
@@ -143,28 +280,7 @@ class ContentItemWidget extends StatelessWidget {
                 child: SizedBox(
                   width: double.infinity,
                   height: 170.h,
-                  child: Stack(
-                    children: [
-                      Positioned.fill(child: _buildThumbnail()),
-                      if (content.is360View)
-                        Positioned.fill(
-                          child: Center(
-                            child: Container(
-                              padding: EdgeInsets.all(12.w),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.5),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                Icons.threesixty,
-                                size: 40.sp,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                  child: _buildThumbnail(),
                 ),
               ),
               Padding(
@@ -182,11 +298,10 @@ class ContentItemWidget extends StatelessWidget {
                         children: [
                           Text(
                             content.displayName,
-                            style: GoogleFonts.koulen(
+                            style: GoogleFonts.poppins(
                               fontSize: 16.sp,
-                              fontWeight: FontWeight.w400,
-                              color: appFontColor,
-                              letterSpacing: 1.0,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black87,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -195,11 +310,10 @@ class ContentItemWidget extends StatelessWidget {
                             SizedBox(height: 2.h),
                             Text(
                               content.projectName,
-                              style: GoogleFonts.koulen(
+                              style: GoogleFonts.poppins(
                                 fontSize: 12.sp,
-                                fontWeight: FontWeight.w400,
-                                color: appFontColor.withOpacity(0.75),
-                                letterSpacing: 0.8,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF6E6E6E),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -208,12 +322,42 @@ class ContentItemWidget extends StatelessWidget {
                         ],
                       ),
                     ),
-                    IconButton(
-                      onPressed: () => _shareContent(context),
-                      icon: Icon(
-                        Icons.share_outlined,
-                        size: 22.sp,
-                        color: appFontColor.withOpacity(0.7),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(12.r),
+                      onTap: onTap,
+                      child: Container(
+                        height: 26.h,
+                        padding: EdgeInsets.symmetric(horizontal: 12.w),
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6E6E6E),
+                          borderRadius: BorderRadius.circular(12.r),
+                        ),
+                        child: Text(
+                          'View',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: () => _shareContent(context),
+                      child: SizedBox(
+                        width: 42.w,
+                        height: 42.w,
+                        child: Center(
+                          child: Image.asset(
+                            'assets/newapp/newicon/media_share_icon.png',
+                            width: 40.w,
+                            height: 24.h,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -231,7 +375,7 @@ class ContentItemWidget extends StatelessWidget {
       final shareText = content.is360View
           ? '${content.fileName}\n360° View: ${content.previewUrl}'
           : '${content.fileName}\n${content.previewUrl}';
-      
+
       await SharePlus.instance.share(
         ShareParams(text: shareText),
       );

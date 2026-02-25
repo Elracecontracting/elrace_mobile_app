@@ -76,9 +76,10 @@ class _LpoListScreenState extends State<LpoListScreen> {
 
       final id = item['id'];
       final name = _asNonEmptyString(item['name']);
-      final clientPhoto = _normalizeImageUrl(_asNonEmptyString(item['client_photo']));
-      final requesterPhoto =
-          _normalizeImageUrl(_asNonEmptyString(item['requested_by_user_photo']));
+      final clientPhoto =
+          _normalizeImageUrl(_asNonEmptyString(item['client_photo']));
+      final requesterPhoto = _normalizeImageUrl(
+          _asNonEmptyString(item['requested_by_user_photo']));
 
       debugPrint(
         '[$tag][$i] id=$id name=${name ?? '-'} '
@@ -454,7 +455,9 @@ class _LpoListScreenState extends State<LpoListScreen> {
                         )
                       : SliverPadding(
                           padding: EdgeInsets.only(
-                            bottom: kBottomNavigationBarHeight + context.systemBottomInset + 16,
+                            bottom: kBottomNavigationBarHeight +
+                                context.systemBottomInset +
+                                16,
                           ),
                           sliver: SliverList(
                             delegate: SliverChildBuilderDelegate(
@@ -476,7 +479,8 @@ class _LpoListScreenState extends State<LpoListScreen> {
                                 final requestedBy =
                                     (item['requested_by'] ?? '').toString();
                                 final requesterManager =
-                                    (item['requester_manager'] ?? '').toString();
+                                    (item['requester_manager'] ?? '')
+                                        .toString();
                                 final state = (item['state'] ?? '').toString();
                                 final attachments =
                                     (item['attachments'] ?? []) as List;
@@ -495,7 +499,8 @@ class _LpoListScreenState extends State<LpoListScreen> {
                                   state: state,
                                   attachments: attachments,
                                   onTap: poId != null
-                                      ? () => Util.openLpoPdfReport(context, poId)
+                                      ? () =>
+                                          Util.openLpoPdfReport(context, poId)
                                       : null,
                                 );
                               },

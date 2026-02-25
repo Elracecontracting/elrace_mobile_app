@@ -1,5 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:dartz/dartz.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import '../../domain/entities/face_embedding.dart';
 import '../../domain/entities/face_verification_result.dart';
 import '../../domain/repositories/face_recognition_repository.dart';
@@ -21,8 +22,7 @@ class DisabledFaceRecognitionRepository implements FaceRecognitionRepository {
     required CameraImage image,
     required String userId,
     String? label,
-    CameraLensDirection? lensDirection,
-    int? sensorOrientation,
+    List<CameraImage>? additionalImages,
   }) async {
     return const Left(VerificationFailure(
       'Local biometrics are disabled by feature flag.',
@@ -67,5 +67,10 @@ class DisabledFaceRecognitionRepository implements FaceRecognitionRepository {
     return const Left(VerificationFailure(
       'Local biometrics are disabled by feature flag.',
     ));
+  }
+
+  @override
+  Future<List<Face>> detectFaces(CameraImage image) async {
+    return const [];
   }
 }

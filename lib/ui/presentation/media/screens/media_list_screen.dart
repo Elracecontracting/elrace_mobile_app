@@ -41,14 +41,14 @@ class _MediaListScreenState extends State<MediaListScreen> {
   void _setActiveTab(_MediaFilterTab tab) {
     if (_activeTab == tab) return;
     setState(() => _activeTab = tab);
-    
+
     // Fetch appropriate data based on tab
     if (tab == _MediaFilterTab.videos) {
       context.read<MediaBloc>().add(const FetchMediaList());
     } else {
       context.read<MediaBloc>().add(const FetchContents());
     }
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final BuildContext? ctx;
       switch (tab) {
@@ -102,18 +102,32 @@ class _MediaListScreenState extends State<MediaListScreen> {
         listener: (context, state) {
           if (state is MediaError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
+              SnackBar(
+                content: Text(
+                  state.message,
+                  style: GoogleFonts.poppins(),
+                ),
+              ),
             );
           }
           if (state is MediaActionError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message)),
+              SnackBar(
+                content: Text(
+                  state.message,
+                  style: GoogleFonts.poppins(),
+                ),
+              ),
             );
           }
           if (state is MediaActionSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                  content: Text('Media action completed successfully')),
+              SnackBar(
+                content: Text(
+                  'Media action completed successfully',
+                  style: GoogleFonts.poppins(),
+                ),
+              ),
             );
           }
         },
@@ -139,11 +153,12 @@ class _MediaListScreenState extends State<MediaListScreen> {
                   sliver: SliverToBoxAdapter(
                     child: Column(
                       children: [
-                        if (state is MediaLoaded && _activeTab == _MediaFilterTab.videos)
+                        if (state is MediaLoaded &&
+                            _activeTab == _MediaFilterTab.videos)
                           (() {
                             final q =
                                 _searchController.text.trim().toLowerCase();
-                            
+
                             final list = state.mediaList.where((m) {
                               if (!m.isVideo) return false;
                               if (q.isEmpty) return true;
@@ -293,11 +308,11 @@ class _MediaListScreenState extends State<MediaListScreen> {
     Text label(String text) {
       return Text(
         text,
-        style: GoogleFonts.koulen(
+        style: GoogleFonts.poppins(
           fontSize: 16.sp,
-          fontWeight: FontWeight.w400,
+          fontWeight: FontWeight.w800,
           color: Colors.white,
-          letterSpacing: 1.2,
+          letterSpacing: 1.0,
         ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
@@ -324,8 +339,8 @@ class _MediaListScreenState extends State<MediaListScreen> {
               tabKey: _view360TabKey,
               child: Image.asset(
                 'assets/newapp/newicon/360 degrees.png',
-                width: 22.w,
-                height: 22.w,
+                width: 50.w,
+                height: 50.w,
                 fit: BoxFit.contain,
               )),
         ],
@@ -356,7 +371,10 @@ class _MediaListScreenState extends State<MediaListScreen> {
         controller: _searchController,
         decoration: InputDecoration(
           hintText: 'Find media',
-          hintStyle: TextStyle(fontSize: 12.sp, color: appFontColor),
+          hintStyle: GoogleFonts.poppins(
+            fontSize: 12.sp,
+            color: appFontColor,
+          ),
           prefixIcon: const Padding(
             padding: EdgeInsets.all(8.0),
             child: Icon(Icons.menu, size: 18, color: appFontColor),
@@ -395,7 +413,10 @@ class _MediaListScreenState extends State<MediaListScreen> {
         autofocus: true,
         decoration: InputDecoration(
           hintText: 'Find media',
-          hintStyle: TextStyle(fontSize: 12.sp, color: appFontColor),
+          hintStyle: GoogleFonts.poppins(
+            fontSize: 12.sp,
+            color: appFontColor,
+          ),
           prefixIcon: const Padding(
             padding: EdgeInsets.all(8.0),
             child: Icon(Icons.search, size: 18, color: appFontColor),
@@ -443,7 +464,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
       ),
       child: Text(
         label,
-        style: GoogleFonts.koulen(
+        style: GoogleFonts.poppins(
           fontSize: 14.sp,
           fontWeight: FontWeight.w400,
           letterSpacing: 1.0,
@@ -454,7 +475,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
 
   Widget _buildContentsList(ContentsResponse contents) {
     final q = _searchController.text.trim().toLowerCase();
-    
+
     List<ContentModel> list;
     if (_activeTab == _MediaFilterTab.photos) {
       list = contents.photos;
@@ -572,7 +593,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                   children: [
                     Text(
                       content.displayName,
-                      style: GoogleFonts.koulen(
+                      style: GoogleFonts.poppins(
                         fontSize: 16.sp,
                         color: Colors.white,
                         letterSpacing: 1.0,
@@ -582,7 +603,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                       SizedBox(height: 4.h),
                       Text(
                         content.projectName,
-                        style: GoogleFonts.koulen(
+                        style: GoogleFonts.poppins(
                           fontSize: 12.sp,
                           color: Colors.white70,
                           letterSpacing: 0.8,
@@ -614,7 +635,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
             SizedBox(height: 16.h),
             Text(
               'No media files yet',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 18.sp,
                 color: Colors.grey,
                 fontWeight: FontWeight.w500,
@@ -624,7 +645,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
             SizedBox(height: 8.h),
             Text(
               'Your media collection will appear here',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 14.sp,
                 color: Colors.grey,
                 letterSpacing: 1.0,
@@ -651,7 +672,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
             SizedBox(height: 16.h),
             Text(
               'Error loading media',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 18.sp,
                 color: Colors.grey[700],
                 fontWeight: FontWeight.w500,
@@ -661,7 +682,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
             SizedBox(height: 8.h),
             Text(
               message,
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 14.sp,
                 color: Colors.grey,
                 letterSpacing: 1.0,
@@ -684,7 +705,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
               ),
               child: Text(
                 'Retry',
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   letterSpacing: 1.0,
                 ),
               ),
@@ -701,7 +722,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
       builder: (dialogContext) => AlertDialog(
         title: Text(
           media.name,
-          style: GoogleFonts.koulen(
+          style: GoogleFonts.poppins(
             letterSpacing: 1.0,
           ),
         ),
@@ -711,7 +732,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
           children: [
             Text(
               'Type: ${media.isImage ? 'Image' : 'Video'}',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 14.sp,
                 color: Colors.grey[600],
                 letterSpacing: 1.0,
@@ -720,7 +741,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
             SizedBox(height: 8.h),
             Text(
               'Created: ${media.dateCreated.day}/${media.dateCreated.month}/${media.dateCreated.year}',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 14.sp,
                 color: Colors.grey[600],
                 letterSpacing: 1.0,
@@ -730,7 +751,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
               SizedBox(height: 8.h),
               Text(
                 'Size: ${media.size!.toStringAsFixed(1)} MB',
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 14.sp,
                   color: Colors.grey[600],
                   letterSpacing: 1.0,
@@ -741,7 +762,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
               SizedBox(height: 8.h),
               Text(
                 'Duration: ${media.duration} seconds',
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 14.sp,
                   color: Colors.grey[600],
                   letterSpacing: 1.0,
@@ -755,7 +776,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text(
               'Close',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 letterSpacing: 1.0,
               ),
             ),
@@ -771,13 +792,13 @@ class _MediaListScreenState extends State<MediaListScreen> {
       builder: (dialogContext) => AlertDialog(
         title: Text(
           'Delete Media',
-          style: GoogleFonts.koulen(
+          style: GoogleFonts.poppins(
             letterSpacing: 1.0,
           ),
         ),
         content: Text(
           'Are you sure you want to delete this media file?',
-          style: GoogleFonts.koulen(
+          style: GoogleFonts.poppins(
             letterSpacing: 1.0,
           ),
         ),
@@ -786,7 +807,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: Text(
               'Cancel',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 letterSpacing: 1.0,
               ),
             ),
@@ -801,7 +822,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
             ),
             child: Text(
               'Delete',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 color: Colors.white,
                 letterSpacing: 1.0,
               ),
