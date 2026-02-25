@@ -194,7 +194,7 @@ class TodoProvider extends ChangeNotifier {
         isMyDay: isMyDay,
         dueDate: dueDate,
         assignedTo: assignedTo,
-        listId: listId ?? _currentListId,
+        listId: (listId ?? _currentListId)?.toString(),
         sortOrder: _todos.length,
         createdAt: now,
         updatedAt: now,

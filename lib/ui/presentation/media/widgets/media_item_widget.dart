@@ -128,11 +128,11 @@ class MediaItemWidget extends StatelessWidget {
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: Text(
-                    'Uploaded on ${DateFormat('dd/MM/yyyy').format(media.dateCreated)}',
-                    style: GoogleFonts.koulen(
-                      fontSize: 11.sp,
+                    'Uploaded at ${DateFormat('dd/MM/yyyy').format(media.dateCreated)}',
+                    style: GoogleFonts.poppins(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w400,
                       color: const Color(0xFF6E6E6E),
-                      letterSpacing: 0.8,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -176,11 +176,10 @@ class MediaItemWidget extends StatelessWidget {
                         children: [
                           Text(
                             media.displayName,
-                            style: GoogleFonts.koulen(
+                            style: GoogleFonts.poppins(
                               fontSize: 16.sp,
-                              fontWeight: FontWeight.w400,
-                              color: appFontColor,
-                              letterSpacing: 1.0,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black87,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -190,11 +189,10 @@ class MediaItemWidget extends StatelessWidget {
                             SizedBox(height: 2.h),
                             Text(
                               media.client!,
-                              style: GoogleFonts.koulen(
+                              style: GoogleFonts.poppins(
                                 fontSize: 12.sp,
-                                fontWeight: FontWeight.w400,
-                                color: appFontColor.withOpacity(0.75),
-                                letterSpacing: 0.8,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF6E6E6E),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -239,9 +237,12 @@ class MediaItemWidget extends StatelessWidget {
       // Show loading indicator
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Preparing share...'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(
+              'Preparing share...',
+              style: GoogleFonts.poppins(),
+            ),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -342,7 +343,12 @@ class MediaItemWidget extends StatelessWidget {
       print('Stack trace: $stackTrace');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to share: ${e.toString()}')),
+          SnackBar(
+            content: Text(
+              'Failed to share: ${e.toString()}',
+              style: GoogleFonts.poppins(),
+            ),
+          ),
         );
       }
     }

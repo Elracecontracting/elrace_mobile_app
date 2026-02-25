@@ -41,7 +41,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   final ImagePicker _imagePicker = ImagePicker();
-  
+
   String? _currentUid;
   bool _isRecording = false;
   bool _isMuted = false;
@@ -53,7 +53,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   /// Reply state (WhatsApp-style)
   Message? _replyingTo;
-  
+
   @override
   void initState() {
     super.initState();
@@ -62,14 +62,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _markAsRead();
     _loadMuteStatus();
     _messageController.addListener(_onTextChanged);
-    
+
     // Set this chat as active to suppress notifications
     ChatNotificationService.instance.setActiveChatId(widget.chatId);
     // Cancel any pending notifications for this chat
     ChatNotificationService.instance.cancelNotificationsForChat(widget.chatId);
 
     // Subscribe to starred message IDs
-    _starredSub = ChatRepository.instance.subscribeToStarredMessageIds().listen((ids) {
+    _starredSub =
+        ChatRepository.instance.subscribeToStarredMessageIds().listen((ids) {
       if (mounted) setState(() => _starredIds = ids);
     });
   }
@@ -90,7 +91,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _typingTimer?.cancel();
     _starredSub?.cancel();
     PresenceService.instance.setTyping(widget.chatId, false);
-    
+
     // Clear active chat when leaving
     ChatNotificationService.instance.setActiveChatId(null);
     super.dispose();
@@ -110,7 +111,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   void _onTextChanged() {
     if (_messageController.text.isNotEmpty) {
       PresenceService.instance.setTyping(widget.chatId, true);
-      
+
       _typingTimer?.cancel();
       _typingTimer = Timer(const Duration(seconds: 2), () {
         PresenceService.instance.setTyping(widget.chatId, false);
@@ -147,6 +148,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               isRecording: _isRecording,
               onSendText: _sendTextMessage,
               onPickImage: _pickImage,
+              onPickGallery: _pickImagesFromGallery,
               onPickFile: _pickFile,
               onStartRecording: _startRecording,
               onStopRecording: _stopRecording,
@@ -171,9 +173,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: (widget.chatType == ChatType.dm && widget.peerUid != null)
-                      ? _openPeerProfile
-                      : null,
+                  onTap:
+                      (widget.chatType == ChatType.dm && widget.peerUid != null)
+                          ? _openPeerProfile
+                          : null,
                   behavior: HitTestBehavior.opaque,
                   child: Row(
                     children: [
@@ -193,7 +196,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                            if (widget.chatType == ChatType.dm && widget.peerUid != null)
+                            if (widget.chatType == ChatType.dm &&
+                                widget.peerUid != null)
                               _buildPresenceStatus(),
                           ],
                         ),
@@ -240,7 +244,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 padding: const EdgeInsets.all(1.3),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFE9B23A), width: 1.2),
+                  border:
+                      Border.all(color: const Color(0xFFE9B23A), width: 1.2),
                 ),
                 child: CircleAvatar(
                   radius: 22,
@@ -323,7 +328,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.chat_bubble_outline, size: 60, color: Colors.grey[400]),
+                Icon(Icons.chat_bubble_outline,
+                    size: 60, color: Colors.grey[400]),
                 const SizedBox(height: 16),
                 Text(
                   'No messages yet',
@@ -347,14 +353,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           itemBuilder: (context, index) {
             final message = messages[index];
             final isMe = message.senderId == _currentUid;
-            
+
             // Check if we should show date header
             final showDateHeader = _shouldShowDateHeader(messages, index);
 
             return Column(
               children: [
-                if (showDateHeader)
-                  _buildDateHeader(message.createdAt),
+                if (showDateHeader) _buildDateHeader(message.createdAt),
                 MessageBubble(
                   message: message,
                   isMe: isMe,
@@ -422,24 +427,26 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   bool _shouldShowDateHeader(List<Message> messages, int index) {
     if (index == messages.length - 1) return true;
-    
+
     final current = messages[index].createdAt;
     final previous = messages[index + 1].createdAt;
-    
+
     return current.day != previous.day ||
-           current.month != previous.month ||
-           current.year != previous.year;
+        current.month != previous.month ||
+        current.year != previous.year;
   }
 
   Widget _buildDateHeader(DateTime date) {
     final now = DateTime.now();
     String text;
 
-    if (date.year == now.year && date.month == now.month && date.day == now.day) {
+    if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day) {
       text = 'Today';
-    } else if (date.year == now.year && 
-               date.month == now.month && 
-               date.day == now.day - 1) {
+    } else if (date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day - 1) {
       text = 'Yesterday';
     } else {
       text = '${date.day}/${date.month}/${date.year}';
@@ -463,15 +470,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   Widget _buildTypingIndicator() {
     return StreamBuilder<TypingInfo>(
-      stream: PresenceService.instance.subscribeToTypingWithNames(widget.chatId),
+      stream:
+          PresenceService.instance.subscribeToTypingWithNames(widget.chatId),
       builder: (context, snapshot) {
         // Silently handle errors - typing is not critical
         if (snapshot.hasError) {
           return const SizedBox.shrink();
         }
-        
+
         final typingInfo = snapshot.data;
-        
+
         if (typingInfo == null || !typingInfo.isTyping) {
           return const SizedBox.shrink();
         }
@@ -586,12 +594,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _messageController.clear();
     setState(() => _replyingTo = null);
     PresenceService.instance.setTyping(widget.chatId, false);
-    
+
     // Optimistic UI - scroll immediately, no loading
     _scrollToBottom();
 
     try {
-      await ChatRepository.instance.sendText(widget.chatId, text, replyTo: replyTo);
+      await ChatRepository.instance
+          .sendText(widget.chatId, text, replyTo: replyTo);
     } catch (e) {
       _showError('Failed to send message');
     }
@@ -600,7 +609,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   Future<void> _pickImage() async {
     try {
       final XFile? image = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
+        source: ImageSource.camera,
         imageQuality: 70,
       );
 
@@ -618,13 +627,34 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _pickImagesFromGallery() async {
+    try {
+      final List<XFile> images = await _imagePicker.pickMultiImage(
+        imageQuality: 70,
+      );
+
+      if (images.isEmpty) return;
+
+      _scrollToBottom();
+
+      for (final image in images) {
+        await ChatRepository.instance.sendImage(
+          widget.chatId,
+          File(image.path),
+        );
+      }
+    } catch (e) {
+      _showError('Failed to send image');
+    }
+  }
+
   Future<void> _pickFile() async {
     try {
       final result = await FilePicker.platform.pickFiles();
       if (result == null || result.files.isEmpty) return;
 
       final file = File(result.files.single.path!);
-      
+
       // Optimistic UI - scroll immediately
       _scrollToBottom();
 
@@ -640,10 +670,10 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   Future<void> _startRecording() async {
     print('🎙️ ChatScreen: _startRecording called');
-    
+
     final permission = await Permission.microphone.request();
     print('🎙️ ChatScreen: Microphone permission: ${permission.isGranted}');
-    
+
     if (!permission.isGranted) {
       _showError('Please allow microphone permission');
       return;
@@ -651,7 +681,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
     final started = await VoiceRecorderService.instance.startRecording();
     print('🎙️ ChatScreen: Recording started: $started');
-    
+
     if (started) {
       setState(() => _isRecording = true);
     } else {
@@ -661,9 +691,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   Future<void> _stopRecording() async {
     setState(() => _isRecording = false);
-    
+
     final result = await VoiceRecorderService.instance.stopRecording();
-    
+
     if (result == null) {
       _showError('Failed to save recording');
       return;
@@ -677,7 +707,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (result.file != null) {
       // Optimistic UI - scroll immediately
       _scrollToBottom();
-      
+
       try {
         await ChatRepository.instance.sendVoice(
           widget.chatId,
@@ -777,7 +807,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 ),
                 const SizedBox(height: 12),
                 StreamBuilder<List<UserChat>>(
-                  stream: ChatRepository.instance.subscribeToUserChats(_currentUid!),
+                  stream: ChatRepository.instance
+                      .subscribeToUserChats(_currentUid!),
                   builder: (ctx, snap) {
                     final chats = snap.data ?? [];
                     if (chats.isEmpty) {
@@ -805,7 +836,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                             ),
                             title: Text(
                               chat.title ?? 'Chat',
-                              style: const TextStyle(fontWeight: FontWeight.w600),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.w600),
                             ),
                             onTap: () async {
                               Navigator.pop(sheetCtx);
@@ -824,7 +856,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                   );
                                 }
                               } catch (e) {
-                                if (mounted) _showError('Failed to forward message');
+                                if (mounted)
+                                  _showError('Failed to forward message');
                               }
                             },
                           );

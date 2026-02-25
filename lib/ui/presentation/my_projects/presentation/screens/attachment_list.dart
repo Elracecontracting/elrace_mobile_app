@@ -102,7 +102,33 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
                     child: Center(child: CircularProgressIndicator()),
                   );
                 } else if (state is ProjectAttachmentsLoaded) {
-                  var list = widget.bloc.projectAttacmentList;
+                  final list = widget.bloc.projectAttacmentList;
+                  if (list.isEmpty) {
+                    return SliverFillRemaining(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.attach_file,
+                              size: 48.w,
+                              color: Colors.grey,
+                            ),
+                            SizedBox(height: 12.h),
+                            Text(
+                              'No attachments',
+                              style: GoogleFonts.inter(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+
                   return SliverPadding(
                     padding:
                         EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
@@ -176,42 +202,83 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
       onTap: () => _downloadFile(url, name),
       child: Container(
         height: 82.h,
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
         decoration: BoxDecoration(
-          color: const Color(0xFFD9D9D9),
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFD6D6D6),
+              Color(0xFFD6D6D6),
+              Color(0xFFADB2BD),
+            ],
+            stops: [0.0, 0.4, 1.0],
+          ),
           borderRadius: BorderRadius.circular(18.r),
         ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 62.w,
-              height: 62.w,
-              child: Center(
-                child: Image.asset(
-                  iconPath,
-                  width: 56.w,
-                  height: 56.w,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
-            SizedBox(width: 16.w),
-            Expanded(
-              child: Center(
-                child: Text(
-                  name.isEmpty ? 'File Name' : name,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF2E3445),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18.r),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: IgnorePointer(
+                    child: Opacity(
+                      opacity: 0.18,
+                      child: ColorFiltered(
+                        colorFilter: const ColorFilter.mode(
+                            Colors.grey, BlendMode.srcIn),
+                        child: SizedBox(
+                          width: 150.w,
+                          height: double.infinity,
+                          child: Image.asset(
+                            'assets/newapp/for_attachments.png',
+                            fit: BoxFit.contain,
+                            alignment: Alignment.centerRight,
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 62.w,
+                      height: 62.w,
+                      child: Center(
+                        child: Image.asset(
+                          iconPath,
+                          width: 150.w,
+                          height: 150.w,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 16.w),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          name.isEmpty ? 'File Name' : name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF2E3445),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

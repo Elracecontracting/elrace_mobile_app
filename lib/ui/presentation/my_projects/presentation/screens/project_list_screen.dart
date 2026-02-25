@@ -1,10 +1,8 @@
-import 'dart:ui';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_bloc.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_event.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_state.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/entities/project_entity.dart';
-import 'package:el_race/ui/presentation/my_projects/presentation/screens/attachment_list.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/widgets/project_documents_dialog.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -124,6 +122,58 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
   void dispose() {
     _scrollController.dispose();
     super.dispose();
+  }
+
+  Widget _digitsInKoulen(
+    String text, {
+    required TextStyle baseStyle,
+    TextAlign? textAlign,
+    int? maxLines,
+    TextOverflow? overflow,
+  }) {
+    final matches = RegExp(r'[0-9]+').allMatches(text);
+    if (matches.isEmpty) {
+      return Text(
+        text,
+        textAlign: textAlign,
+        style: baseStyle,
+        maxLines: maxLines,
+        overflow: overflow,
+      );
+    }
+
+    final numberStyle = GoogleFonts.koulen(
+      fontSize: baseStyle.fontSize,
+      fontWeight: baseStyle.fontWeight,
+      color: baseStyle.color,
+      letterSpacing: baseStyle.letterSpacing,
+      height: baseStyle.height,
+    );
+
+    final spans = <TextSpan>[];
+    var cursor = 0;
+    for (final m in matches) {
+      if (m.start > cursor) {
+        spans.add(TextSpan(text: text.substring(cursor, m.start)));
+      }
+      spans.add(
+        TextSpan(
+          text: text.substring(m.start, m.end),
+          style: numberStyle,
+        ),
+      );
+      cursor = m.end;
+    }
+    if (cursor < text.length) {
+      spans.add(TextSpan(text: text.substring(cursor)));
+    }
+
+    return Text.rich(
+      TextSpan(style: baseStyle, children: spans),
+      textAlign: textAlign,
+      maxLines: maxLines,
+      overflow: overflow,
+    );
   }
 
   @override
@@ -364,264 +414,186 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
     );
   }
 
-  Widget _buildProjectCard(dynamic project) {
-    final name = project.name ?? 'PROJECT NAME';
-    final amount = project.woAmount ?? 0.0;
-    final date = project.date ?? '';
-    final agreementId = project.agreementId ?? '';
-    final projectManagerPhoto = project.projectManagerPhoto;
-    final differenceDays = project.differenceDays ?? 0;
-    final projectId = project.projectId?.toString() ?? '0';
+  Widget _buildProjectCard(ProjectEntity project) {
+    final woNo = project.woRefNo.trim();
+    final woName = project.name.trim();
+    final formattedAmount = _formatAmount(project.woAmount);
+    final formattedDate = _formatDate(project.date);
 
-    final formattedAmount = _formatAmount(amount);
-    final formattedDate = _formatDate(date);
+    final differenceDays = project.differenceDays ?? 0;
     final statusCount = _formatDifferenceDays(differenceDays);
 
     return GestureDetector(
       onTap: () {
-        // Show project documents dialog
         ProjectDocumentsDialog.show(
           context,
-          projectId: int.tryParse(projectId) ?? 0,
+          projectId: project.projectId,
           bloc: bloc,
         );
       },
       child: Container(
-        margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
-        padding: const EdgeInsets.all(1),
+        margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(22.r),
+          borderRadius: BorderRadius.circular(18.r),
+          border: Border.all(
+            color: const Color(0xFF1B1F26),
+            width: 1.3,
+          ),
           gradient: const LinearGradient(
-            colors: [Color(0xFF151544), Color(0xFF3535AA)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
-        child: Container(
-          padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 14.h),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(21.r),
-            gradient: const LinearGradient(
-              colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              right: 0,
+              child: _digitsInKoulen(
+                statusCount,
+                baseStyle: GoogleFonts.inter(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w800,
+                  color: _getStatusColor(statusCount),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
-          ),
-          child: IntrinsicHeight(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                // Top: Title with gradient + status badge
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Center(
-                        child: ShaderMask(
-                          shaderCallback: (bounds) => const LinearGradient(
-                            colors: [Color(0xFF151544), Color(0xFF3535AA)],
-                            begin: Alignment.centerLeft,
-                            end: Alignment.centerRight,
-                            stops: [0.7, 1.0],
-                          ).createShader(bounds),
-                          child: Text(
-                            name.toUpperCase(),
-                            style: GoogleFonts.koulen(
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              letterSpacing: 1.2,
+                SizedBox(height: 2.h),
+                _digitsInKoulen(
+                  woNo,
+                  textAlign: TextAlign.center,
+                  baseStyle: GoogleFonts.inter(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF6B6B6B),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 4.h),
+                _digitsInKoulen(
+                  woName,
+                  textAlign: TextAlign.center,
+                  baseStyle: GoogleFonts.inter(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w800,
+                    color: const Color(0xFF1B1F26),
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 12.h),
+                Container(
+                  height: 38.h,
+                  padding: EdgeInsets.symmetric(horizontal: 14.w),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14.r),
+                    color: const Color(0xFFE6E6E6),
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: _digitsInKoulen(
+                                formattedAmount,
+                                baseStyle: GoogleFonts.inter(
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF1B1F26),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                          ),
+                            SizedBox(width: 8.w),
+                            Image.asset(
+                              'assets/png/icons/UAE_Dirham_Symbol 1.png',
+                              width: 18.w,
+                              height: 18.w,
+                              fit: BoxFit.contain,
+                              errorBuilder: (_, __, ___) => const SizedBox(),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    SizedBox(width: 8.w),
-                    // Status badge - raised slightly above the title
-                    Transform.translate(
-                      offset: Offset(0, -4.h),
-                      child: Container(
-                        width: 24.w,
-                        height: 24.w,
+                      Container(
+                        width: 28.w,
+                        height: 28.w,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.transparent,
                           border: Border.all(
-                              color: const Color(0xFF151544), width: 1.5),
+                              color: const Color(0xFF1B1F26), width: 1),
+                          color: Colors.white,
                         ),
                         alignment: Alignment.center,
-                        child: Text(
-                          statusCount,
-                          style: GoogleFonts.koulen(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w700,
-                            color: _getStatusColor(statusCount),
+                        child: project.projectManagerPhoto != null &&
+                                project.projectManagerPhoto!.isNotEmpty
+                            ? ClipOval(
+                                child: Image.network(
+                                  project.projectManagerPhoto!,
+                                  width: 28.w,
+                                  height: 28.w,
+                                  fit: BoxFit.cover,
+                                  headers: {
+                                    'Accept': 'image/*',
+                                    'Authorization':
+                                        'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
+                                  },
+                                  errorBuilder: (_, __, ___) => Text(
+                                    _getInitials(project.agreementId),
+                                    style: GoogleFonts.koulen(
+                                      fontSize: 11.sp,
+                                      fontWeight: FontWeight.w800,
+                                      color: const Color(0xFF1B1F26),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                _getInitials(project.agreementId),
+                                style: GoogleFonts.koulen(
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w800,
+                                  color: const Color(0xFF1B1F26),
+                                ),
+                              ),
+                      ),
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: _digitsInKoulen(
+                            formattedDate,
+                            baseStyle: GoogleFonts.inter(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w800,
+                              color: const Color(0xFF1B1F26),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 10.h),
-                // Bottom: Amount + Avatar + Date (with glassmorphism effect)
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(13.r),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                    child: Container(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8.r),
-                        color: Colors.white.withOpacity(0.25),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.5),
-                          width: 1.2,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.white.withOpacity(0.4),
-                            blurRadius: 6,
-                            spreadRadius: -2,
-                            offset: const Offset(-2, -2),
-                          ),
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 6,
-                            spreadRadius: -2,
-                            offset: const Offset(2, 2),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // LEFT: Amount
-                          Flexible(
-                            flex: 4,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Image.asset(
-                                  'assets/png/icons/Coin.png',
-                                  width: 22.w,
-                                  height: 22.w,
-                                  color: const Color(0xFF151544),
-                                  errorBuilder: (_, __, ___) => Icon(
-                                    Icons.attach_money,
-                                    size: 20.w,
-                                    color: const Color(0xFF151544),
-                                  ),
-                                ),
-                                SizedBox(width: 3.w),
-                                Flexible(
-                                  child: Text(
-                                    formattedAmount,
-                                    style: GoogleFonts.koulen(
-                                      fontSize: 12.sp,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87,
-                                      letterSpacing: 0.3,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          SizedBox(width: 6.w),
-                          // CENTER: Avatar (Project Manager Photo)
-                          Container(
-                            width: 34.w,
-                            height: 34.w,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border:
-                                  Border.all(color: Colors.white, width: 1.5),
-                              color: Colors.white,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            alignment: Alignment.center,
-                            child: projectManagerPhoto != null
-                                ? ClipOval(
-                                    child: Image.network(
-                                      projectManagerPhoto,
-                                      width: 34.w,
-                                      height: 34.w,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) => Text(
-                                        _getInitials(agreementId),
-                                        style: GoogleFonts.koulen(
-                                          fontSize: 12.sp,
-                                          fontWeight: FontWeight.w700,
-                                          color: appFontColor,
-                                        ),
-                                      ),
-                                    ),
-                                  )
-                                : Text(
-                                    _getInitials(agreementId),
-                                    style: GoogleFonts.koulen(
-                                      fontSize: 12.sp,
-                                      fontWeight: FontWeight.w700,
-                                      color: appFontColor,
-                                    ),
-                                  ),
-                          ),
-                          SizedBox(width: 6.w),
-                          // RIGHT: Date
-                          Flexible(
-                            flex: 3,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Image.asset(
-                                  'assets/png/calender.png',
-                                  width: 25.w,
-                                  height: 25.w,
-                                  color: const Color(0xFF151544),
-                                  errorBuilder: (_, __, ___) => Icon(
-                                    Icons.calendar_month,
-                                    size: 20.w,
-                                    color: const Color(0xFF151544),
-                                  ),
-                                ),
-                                SizedBox(width: 6.w),
-                                Flexible(
-                                  child: Text(
-                                    formattedDate,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12.sp,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.black87,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
-                                    maxLines: 1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -629,13 +601,18 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
 
   String _formatAmount(double amount) {
     final formatter = NumberFormat('#,##0', 'en');
-    return '${formatter.format(amount)} AED';
+    return formatter.format(amount);
   }
 
   String _formatDate(String? raw) {
     if (raw == null || raw.isEmpty) return '';
     try {
-      return DateFormat('dd/MM/yyyy').format(DateTime.parse(raw));
+      final normalized = raw.contains(' ') && !raw.contains('T')
+          ? raw.replaceFirst(' ', 'T')
+          : raw;
+      final parsed = DateTime.tryParse(normalized);
+      if (parsed == null) return raw;
+      return DateFormat('dd/MM/yyyy').format(parsed);
     } catch (_) {
       return raw;
     }

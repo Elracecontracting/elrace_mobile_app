@@ -1,13 +1,15 @@
+import 'dart:io';
 import 'dart:ui';
+
 import 'package:camera/camera.dart';
+import 'package:el_race/utils/safe_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:image/image.dart' as img;
-import 'dart:io';
+import 'package:intl/intl.dart';
 
 class CameraScreen extends StatefulWidget {
   final CameraDescription camera;
@@ -56,7 +58,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
   Future<void> _updateLocation() async {
     try {
-      LocationPermission permission = await Geolocator.checkPermission();
+      var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
@@ -69,11 +71,11 @@ class _CameraScreenState extends State<CameraScreen> {
         return;
       }
 
-      Position position = await Geolocator.getCurrentPosition(
+      final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
 
-      List<Placemark> placemarks = await placemarkFromCoordinates(
+      final placemarks = await placemarkFromCoordinates(
         position.latitude,
         position.longitude,
       );
@@ -81,10 +83,12 @@ class _CameraScreenState extends State<CameraScreen> {
       if (placemarks.isNotEmpty) {
         final place = placemarks.first;
         setState(() {
-          _currentLocation = place.locality ?? place.subAdministrativeArea ?? '';
+          _currentLocation =
+              place.locality ?? place.subAdministrativeArea ?? '';
         });
       }
     } catch (e) {
+      // ignore: avoid_print
       print('Error getting location: $e');
       setState(() {
         _currentLocation = '';
@@ -105,31 +109,37 @@ class _CameraScreenState extends State<CameraScreen> {
 
       if (!mounted) return;
 
-      // Add overlay to image
       final composedPath = await _composeWithOverlay(file.path);
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Saved: ${composedPath ?? file.path}")),
+        SnackBar(content: Text('Saved: ${composedPath ?? file.path}')),
       );
     } catch (e) {
-      print("Camera error: $e");
+      // ignore: avoid_print
+      print('Camera error: $e');
     }
   }
 
   Future<String?> _composeWithOverlay(String imagePath) async {
     try {
+      // ignore: avoid_print
       print('🎨 Starting to compose overlay on image...');
+      // ignore: avoid_print
       print('⏰ Time: $_currentTime');
+      // ignore: avoid_print
       print('📅 Date: $_currentDate');
+      // ignore: avoid_print
       print('📍 Location: $_currentLocation');
-      
+
       final bytes = await File(imagePath).readAsBytes();
-      img.Image? baseImage = img.decodeImage(bytes);
+      final baseImage = img.decodeImage(bytes);
       if (baseImage == null) {
+        // ignore: avoid_print
         print('❌ Failed to decode image');
         return imagePath;
       }
 
+      // ignore: avoid_print
       print('✅ Image decoded: ${baseImage.width}x${baseImage.height}');
 
       final int padding = (baseImage.width * 0.04).toInt();
@@ -137,20 +147,19 @@ class _CameraScreenState extends State<CameraScreen> {
       final shadowOffset = 2;
       final lineHeight = (fontSize * 1.4).toInt();
 
-      // حساب عرض النصوص بدقة أكبر
       final timeTextWidth = _currentTime.length * (fontSize * 0.55).toInt();
       final dateTextWidth = _currentDate.length * (fontSize * 0.55).toInt();
-      final locationTextWidth = _currentLocation.length * (fontSize * 0.55).toInt();
+      final locationTextWidth =
+          _currentLocation.length * (fontSize * 0.55).toInt();
 
-      // Find the longest text to use as reference for alignment
       int maxTextWidth = timeTextWidth;
       if (dateTextWidth > maxTextWidth) maxTextWidth = dateTextWidth;
       if (locationTextWidth > maxTextWidth) maxTextWidth = locationTextWidth;
 
-      // Start from bottom right
-      int currentY = baseImage.height - padding - (lineHeight * (_currentLocation.isNotEmpty ? 3 : 2));
+      int currentY = baseImage.height -
+          padding -
+          (lineHeight * (_currentLocation.isNotEmpty ? 3 : 2));
 
-      // Draw time (right-aligned to maxTextWidth)
       final timeX = baseImage.width - padding - maxTextWidth;
       img.drawString(
         baseImage,
@@ -169,7 +178,6 @@ class _CameraScreenState extends State<CameraScreen> {
         color: img.ColorRgb8(255, 255, 255),
       );
 
-      // Draw date (right-aligned to maxTextWidth)
       currentY += lineHeight;
       final dateX = baseImage.width - padding - maxTextWidth;
       img.drawString(
@@ -189,7 +197,6 @@ class _CameraScreenState extends State<CameraScreen> {
         color: img.ColorRgb8(255, 255, 255),
       );
 
-      // Draw location if available (right-aligned to maxTextWidth)
       if (_currentLocation.isNotEmpty) {
         currentY += lineHeight;
         final locationX = baseImage.width - padding - maxTextWidth;
@@ -211,13 +218,14 @@ class _CameraScreenState extends State<CameraScreen> {
         );
       }
 
-      // Save composed image
       final composedFile = File(imagePath);
       composedFile.writeAsBytesSync(img.encodeJpg(baseImage, quality: 95));
 
+      // ignore: avoid_print
       print('✅ Image saved with overlay: $imagePath');
       return composedFile.path;
     } catch (e) {
+      // ignore: avoid_print
       print('❌ Error composing image: $e');
       return imagePath;
     }
@@ -225,7 +233,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final H = MediaQuery.of(context).size.height;
+    final screenHeight = MediaQuery.of(context).size.height;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -234,164 +242,159 @@ class _CameraScreenState extends State<CameraScreen> {
         builder: (context, snap) {
           if (snap.connectionState != ConnectionState.done) {
             return const Center(
-                child: CircularProgressIndicator(color: Colors.white));
+              child: CircularProgressIndicator(color: Colors.white),
+            );
           }
 
-          return Stack(children: [
-            /// ================================
-            /// REAL CAMERA PREVIEW (FULL FIT)
-            /// ================================
-            Positioned.fill(
-              child: FittedBox(
-                fit: BoxFit.cover,
-                child: SizedBox(
-                  width: _controller.value.previewSize!.height,
-                  height: _controller.value.previewSize!.width,
-                  child: CameraPreview(_controller),
-                ),
-              ),
-            ),
-
-            /// ================================
-            /// TOP GLASS BAR (PERFECT MATCH)
-            /// ================================
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                height: 175.h,
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.35), // ← سواد نصف شفاف
-                ),
-                child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      /// BACK ARROW
-                      ///
-                      IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-
-                      /// RCC LOGO
-                      Image.asset(
-                        'assets/logo/rcc2.png',
-                        height: 42.h,
-                      ),
-
-                      const Spacer(),
-                    ],
+          return Stack(
+            children: [
+              /// ================================
+              /// REAL CAMERA PREVIEW (FULL FIT)
+              /// ================================
+              Positioned.fill(
+                child: FittedBox(
+                  fit: BoxFit.cover,
+                  child: SizedBox(
+                    width: _controller.value.previewSize!.height,
+                    height: _controller.value.previewSize!.width,
+                    child: CameraPreview(_controller),
                   ),
                 ),
               ),
-            ),
 
-            /// ================================
-            /// BOTTOM GLASS CONTAINER (FULL FOOTER)
-            /// ================================
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: BottomDock(
-                extra: 0,
-                liftWithKeyboard: false,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(0),
-                  child: Container(
-                  width: double.infinity,
-                  height: H * 0.28, // ربع الشاشة مثل الهيدر بالضبط
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 30.w, vertical: 20.h),
+              /// ================================
+              /// TOP GLASS BAR (PERFECT MATCH)
+              /// ================================
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 175.h,
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5), // نفس الهيدر
+                    color: Colors.black.withOpacity(0.35),
                   ),
-
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      /// ——— TIME + DATE + LOCATION ———
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Text(
-                              _currentTime,
-                              style: GoogleFonts.inter(
-                                fontSize: 15.sp,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            SizedBox(height: 2.h),
-                            Text(
-                              _currentDate,
-                              style: GoogleFonts.inter(
-                                fontSize: 15.sp,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            if (_currentLocation.isNotEmpty) ..[
-                              SizedBox(height: 2.h),
-                              Text(
-                                _currentLocation,
-                                style: GoogleFonts.inter(
-                                  fontSize: 15.sp,
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-
-                      /// ——— SHOOT BUTTON ———
-                      GestureDetector(
-                        onTap: _takePicture,
-                        child: Container(
-                          width: 55.w,
-                          height: 55.w,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
+                  child: Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 20.h),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.arrow_back,
                             color: Colors.white,
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.3),
-                              width: 60.w,
+                            size: 28,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                        Image.asset(
+                          'assets/logo/rcc2.png',
+                          height: 42.h,
+                        ),
+                        const Spacer(),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              /// ================================
+              /// BOTTOM GLASS CONTAINER (FULL FOOTER)
+              /// ================================
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: BottomDock(
+                  extra: 0,
+                  liftWithKeyboard: false,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(0),
+                    child: Container(
+                      width: double.infinity,
+                      height: screenHeight * 0.28,
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 30.w,
+                        vertical: 20.h,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  _currentTime,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15.sp,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                SizedBox(height: 2.h),
+                                Text(
+                                  _currentDate,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 15.sp,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                                if (_currentLocation.isNotEmpty) ...[
+                                  SizedBox(height: 2.h),
+                                  Text(
+                                    _currentLocation,
+                                    style: GoogleFonts.inter(
+                                      fontSize: 15.sp,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
-                        ),
-                      ),
-                      SizedBox(height: 20.h),
-
-                      /// ——— SCAN / PHOTO BUTTONS ———
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          _glassButton("SCAN"),
-                          _glassButton("PHOTO"),
+                          GestureDetector(
+                            onTap: _takePicture,
+                            child: Container(
+                              width: 55.w,
+                              height: 55.w,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.3),
+                                  width: 60.w,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 20.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              _glassButton('SCAN'),
+                              _glassButton('PHOTO'),
+                            ],
+                          ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
-        ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -404,10 +407,10 @@ class _CameraScreenState extends State<CameraScreen> {
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 36.w, vertical: 12.h),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.30), // ← سواد زجاجي
+            color: Colors.black.withOpacity(0.30),
             borderRadius: BorderRadius.circular(30.r),
             border: Border.all(
-              color: Colors.white.withOpacity(0.20), // ← حواف ناعمة
+              color: Colors.white.withOpacity(0.20),
               width: 1.2,
             ),
           ),

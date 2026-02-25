@@ -16,6 +16,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 class MarqueeText extends StatefulWidget {
   final String text;
@@ -259,14 +260,11 @@ class _MyProjectState extends State<MyProject> {
                                   );
                                 },
                                 child: buildProjectCard(
+                                  id: '$id',
                                   name: name,
                                   photoUrl: photoUrl ?? '',
-                                  wo: '$totalProjects',
-                                  amount: totalAmount > 0
-                                      ? '${(totalAmount / 1000000).toStringAsFixed(2)}M'
-                                      : '0',
-                                  leftLabel: 'PROJECTS',
-                                  rightLabel: 'AMOUNT (AED)',
+                                  projectsCount: totalProjects,
+                                  amountAed: totalAmount,
                                 ),
                               );
                             },
@@ -286,170 +284,241 @@ class _MyProjectState extends State<MyProject> {
 //
 
 Widget buildProjectCard({
+  required String id,
   required String name,
   required String photoUrl,
-  required String wo,
-  required String amount,
-  String leftLabel = 'W.O',
-  String rightLabel = 'AMOUNT',
+  required int projectsCount,
+  required double amountAed,
 }) {
+  String? normalizedPhotoUrl = photoUrl.trim();
+  if (normalizedPhotoUrl.isEmpty) normalizedPhotoUrl = null;
+  if (normalizedPhotoUrl != null &&
+      normalizedPhotoUrl.contains('erp.elrace.compublic')) {
+    normalizedPhotoUrl = normalizedPhotoUrl.replaceAll(
+        'erp.elrace.compublic', 'erp.elrace.com/public');
+  }
+
+  final formattedAmount = NumberFormat('#,##0.##', 'en').format(amountAed);
+
   return Container(
-    margin: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
-    padding: const EdgeInsets.all(1),
+    margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(22.r),
+      border: Border.all(color: const Color(0xFF2C2F36), width: 1),
       gradient: const LinearGradient(
-        colors: [Color(0xFF151544), Color(0xFF3535AA)],
+        colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
       ),
-    ),
-    child: Container(
-      height: 120.h,
-      padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(21.r),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFD6D6D6), Color(0xFFADB2BD)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.10),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
         ),
-      ),
-      child: Row(
+      ],
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(22.r),
+      child: Stack(
         children: [
-          // avatar
-          Container(
-            width: 75.w,
-            height: 75.w,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 3),
+          Positioned.fill(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Opacity(
+                opacity: 0.10,
+                child: Image.asset(
+                  'assets/png/grey_bg.png',
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox(),
+                ),
+              ),
             ),
-            child: ClipOval(
-              child: photoUrl.isNotEmpty
-                  ? Image.network(
-                      photoUrl,
-                      fit: BoxFit.cover,
-                      headers: {
-                        'Accept': 'image/*',
-                        'Authorization':
-                            'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
-                      },
-                      loadingBuilder: (context, child, loadingProgress) {
-                        if (loadingProgress == null) return child;
-                        return Center(
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: appFontColor,
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                          ),
-                        );
-                      },
-                      errorBuilder: (_, __, ___) => Center(
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(18.w, 14.h, 18.w, 12.h),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                SizedBox(
+                  height: 18.h,
+                  child: Stack(
+                    children: [
+                      Center(
                         child: Text(
-                          name.isNotEmpty ? name[0] : 'C',
-                          style: GoogleFonts.koulen(
-                            fontSize: 28.sp,
-                            color: appFontColor,
+                          'Partner',
+                          style: GoogleFonts.inter(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w600,
+                            color: greyText,
+                            letterSpacing: 0.6,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    )
-                  : Center(
-                      child: Text(
-                        name.isNotEmpty ? name[0] : 'C',
-                        style: GoogleFonts.koulen(
-                          fontSize: 28.sp,
-                          color: appFontColor,
+                      Align(
+                        alignment: Alignment.topRight,
+                        child: Text(
+                          '',
+                          style: GoogleFonts.inter(
+                            fontSize: 10.sp,
+                            fontWeight: FontWeight.w600,
+                            color: greyText,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 10.h),
+                Text(
+                  id.isNotEmpty ? id : '-',
+                  style: GoogleFonts.inter(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 10.h),
+                Text(
+                  name.trim().isNotEmpty ? name.trim() : '-',
+                  style: GoogleFonts.inter(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                SizedBox(height: 14.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: RichText(
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        text: TextSpan(
+                          style: GoogleFonts.inter(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                          ),
+                          children: [
+                            const TextSpan(text: 'Projects# '),
+                            TextSpan(
+                              text: '$projectsCount',
+                              style: GoogleFonts.inter(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w600,
+                                color: greyText,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-            ),
-          ),
-
-          SizedBox(width: 16.w),
-
-          // divider
-          Container(width: 2.5.w, height: 60.h, color: Colors.white),
-
-          SizedBox(width: 16.w),
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                MarqueeText(
-                  text: name.toUpperCase(),
-                  style: GoogleFonts.koulen(
-                    fontSize: 22.sp,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                    letterSpacing: 1.5,
-                  ),
-                  textAlign: TextAlign.center,
-                  shaderCallback: (bounds) => const LinearGradient(
-                    colors: [Color(0xFF151544), Color(0xFF3535AA)],
-                    begin: Alignment.centerLeft,
-                    end: Alignment.centerRight,
-                    stops: [0.7, 1.0],
-                  ).createShader(bounds),
+                    SizedBox(width: 10.w),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.centerRight,
+                        child: RichText(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          text: TextSpan(
+                            style: GoogleFonts.inter(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                            ),
+                            children: [
+                              const TextSpan(text: 'Amount# '),
+                              TextSpan(
+                                text: formattedAmount,
+                                style: GoogleFonts.inter(
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: greyText,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 12.h),
+                SizedBox(height: 10.h),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    _pillData(leftLabel, wo),
-                    SizedBox(width: 12.w),
-                    _pillData(rightLabel, amount),
+                    Icon(Icons.location_on, size: 16.w, color: red),
+                    SizedBox(width: 4.w),
+                    Text(
+                      'Abu Dhabi',
+                      style: GoogleFonts.inter(
+                        fontSize: 11.5.sp,
+                        fontWeight: FontWeight.w700,
+                        color: greyText,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
               ],
             ),
-          )
+          ),
+          PositionedDirectional(
+            start: 10.w,
+            top: 10.h,
+            child: Container(
+              width: 34.w,
+              height: 34.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+                border: Border.all(color: Colors.white, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.10),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: normalizedPhotoUrl != null
+                  ? ClipOval(
+                      child: Image.network(
+                        normalizedPhotoUrl,
+                        fit: BoxFit.contain,
+                        headers: {
+                          'Accept': 'image/*',
+                          'Authorization':
+                              'Bearer ${SharedPref.getLoginData().result?.token ?? ''}',
+                        },
+                        errorBuilder: (_, __, ___) => Icon(
+                          Icons.business,
+                          size: 18.w,
+                          color: appFontColor,
+                        ),
+                      ),
+                    )
+                  : Icon(
+                      Icons.business,
+                      size: 18.w,
+                      color: appFontColor,
+                    ),
+            ),
+          ),
         ],
       ),
-    ),
-  );
-}
-
-Widget _pillData(String label, String value) {
-  return Expanded(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.koulen(
-            fontSize: 12.sp,
-            color: Colors.black87,
-            letterSpacing: 0.8,
-          ),
-        ),
-        SizedBox(height: 3.h),
-        Container(
-          padding: EdgeInsets.symmetric(vertical: 6.h),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8.r),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            value,
-            style: GoogleFonts.koulen(
-              fontSize: 10.sp,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-              letterSpacing: 0.8,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        )
-      ],
     ),
   );
 }

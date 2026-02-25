@@ -12,6 +12,7 @@ class ChatInputBar extends StatefulWidget {
   final bool isRecording;
   final VoidCallback onSendText;
   final VoidCallback onPickImage;
+  final VoidCallback onPickGallery;
   final VoidCallback onPickFile;
   final VoidCallback onStartRecording;
   final VoidCallback onStopRecording;
@@ -24,6 +25,7 @@ class ChatInputBar extends StatefulWidget {
     required this.isRecording,
     required this.onSendText,
     required this.onPickImage,
+    required this.onPickGallery,
     required this.onPickFile,
     required this.onStartRecording,
     required this.onStopRecording,
@@ -69,7 +71,7 @@ class _ChatInputBarState extends State<ChatInputBar>
   @override
   void didUpdateWidget(ChatInputBar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // Handle recording state changes
     if (widget.isRecording && !oldWidget.isRecording) {
       _startRecordingTimer();
@@ -124,13 +126,11 @@ class _ChatInputBarState extends State<ChatInputBar>
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         _AttachmentButton(
-          onPickImage: widget.onPickImage,
+          onPickGallery: widget.onPickGallery,
           onPickFile: widget.onPickFile,
           isLoading: widget.isLoading,
         ),
-
         const SizedBox(width: 10),
-
         Expanded(
           child: Container(
             constraints: const BoxConstraints(minHeight: 54, maxHeight: 120),
@@ -160,13 +160,14 @@ class _ChatInputBarState extends State<ChatInputBar>
             ),
           ),
         ),
-
         const SizedBox(width: 12),
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 180),
           child: _hasText
-              ? _buildSideIcon(icon: Icons.send_rounded, onTap: widget.onSendText)
-              : _buildSideIcon(icon: Icons.camera_alt_outlined, onTap: widget.onPickImage),
+              ? _buildSideIcon(
+                  icon: Icons.send_rounded, onTap: widget.onSendText)
+              : _buildSideIcon(
+                  icon: Icons.camera_alt_outlined, onTap: widget.onPickImage),
         ),
         const SizedBox(width: 8),
         AnimatedSwitcher(
@@ -177,7 +178,8 @@ class _ChatInputBarState extends State<ChatInputBar>
                   height: 28,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : _buildSideIcon(icon: Icons.mic_none_rounded, onTap: widget.onStartRecording),
+              : _buildSideIcon(
+                  icon: Icons.mic_none_rounded, onTap: widget.onStartRecording),
         ),
       ],
     );
@@ -208,9 +210,9 @@ class _ChatInputBarState extends State<ChatInputBar>
           icon: const Icon(Icons.delete, color: Colors.red),
           label: const Text('Cancel', style: TextStyle(color: Colors.red)),
         ),
-        
+
         const Spacer(),
-        
+
         // Recording indicator
         AnimatedBuilder(
           animation: _recordingAnimController,
@@ -222,7 +224,8 @@ class _ChatInputBarState extends State<ChatInputBar>
                   height: 12,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.red.withValues(alpha: 0.5 + _recordingAnimController.value * 0.5),
+                    color: Colors.red.withValues(
+                        alpha: 0.5 + _recordingAnimController.value * 0.5),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -237,9 +240,9 @@ class _ChatInputBarState extends State<ChatInputBar>
             );
           },
         ),
-        
+
         const Spacer(),
-        
+
         // Stop and send button
         Material(
           color: AppColors.white,
@@ -271,12 +274,12 @@ class _ChatInputBarState extends State<ChatInputBar>
 }
 
 class _AttachmentButton extends StatelessWidget {
-  final VoidCallback onPickImage;
+  final VoidCallback onPickGallery;
   final VoidCallback onPickFile;
   final bool isLoading;
 
   const _AttachmentButton({
-    required this.onPickImage,
+    required this.onPickGallery,
     required this.onPickFile,
     required this.isLoading,
   });
@@ -288,7 +291,7 @@ class _AttachmentButton extends StatelessWidget {
       onSelected: (value) {
         switch (value) {
           case 'image':
-            onPickImage();
+            onPickGallery();
             break;
           case 'file':
             onPickFile();
