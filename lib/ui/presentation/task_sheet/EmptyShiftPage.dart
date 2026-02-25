@@ -9,6 +9,7 @@ import '../../widgets/header_widget.dart'; // Import HeaderWidget
 import 'package:http/http.dart' as http;
 
 import 'EmployeeShiftRequestPage.dart';
+import 'add_task_sheet.dart';
 
 class EmptyShiftPage extends StatefulWidget {
   final LoginResponseModel loginResponseModel;
@@ -352,12 +353,7 @@ class _EmptyShiftPageState extends State<EmptyShiftPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => EmployeeShiftRequestPage(
-                          loginResponseModel: widget.loginResponseModel,
-                          taskId: widget.taskId,
-                          project_id: widget.project_id,
-                          selectedDate: widget.selectedDate,
-                        ),
+                        builder: (context) => const AddTaskSheet(),
                       ),
                     );
                   },

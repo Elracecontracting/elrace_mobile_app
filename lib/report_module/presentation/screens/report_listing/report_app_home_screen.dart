@@ -383,6 +383,7 @@ Skeletonizer showFolderOrReportLoader() {
         name: "name",
         createdAt: DateTime.now(),
         companyId: 1,
+        reportCount: 0,
         description: '',
         updatedAt: DateTime.now(),
         id: "1",

@@ -12,6 +12,7 @@ import 'package:el_race/resources/app_colors.dart';
 import '../../widgets/header_widget.dart';
 import 'EmployeeShiftRequestPage.dart';
 import 'EmptyShiftPage.dart';
+import 'add_task_sheet.dart';
 
 class TaskDetailsPage extends StatefulWidget {
   final LoginResponseModel loginResponseModel;
@@ -528,12 +529,7 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => EmployeeShiftRequestPage(
-                          loginResponseModel: widget.loginResponseModel,
-                          taskId: widget.taskId,
-                          project_id: widget.project_id,
-                          selectedDate: selectedEndDate,
-                        ),
+                        builder: (context) => const AddTaskSheet(),
                       ),
                     );
                   },

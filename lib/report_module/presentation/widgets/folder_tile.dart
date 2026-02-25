@@ -104,7 +104,7 @@ class FolderTile extends StatelessWidget {
                               right: 8.w,
                               bottom: 2.h,
                               child: Text(
-                                '200',
+                                folder.reportCount.toString(),
                                 style: GoogleFonts.inter(
                                   fontSize: 12.sp,
                                   fontWeight: FontWeight.w700,

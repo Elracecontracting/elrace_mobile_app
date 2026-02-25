@@ -45,17 +45,20 @@ class ReportProvider extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>> _handleResponse(http.StreamedResponse response,
-      {bool alwaysShowMessage = false}) async {
+      {bool alwaysShowMessage = false, bool neverShowMessage = false}) async {
     final res = await response.stream.bytesToString();
     final jsonData = json.decode(res);
 
     if (jsonData is Map && jsonData['status'] == "upcoming") {
-      showFlushBar(navKey.currentContext!, message: jsonData['message']);
+      if (!neverShowMessage) {
+        showFlushBar(navKey.currentContext!, message: jsonData['message']);
+      }
       return {};
     }
 
-    if (alwaysShowMessage ||
-        (jsonData is Map && jsonData['status'] != "success")) {
+    if (!neverShowMessage &&
+        (alwaysShowMessage ||
+            (jsonData is Map && jsonData['status'] != "success"))) {
       showFlushBar(navKey.currentContext!, message: jsonData['message']);
     }
     if (jsonData is List) {
@@ -414,13 +417,15 @@ class ReportProvider extends ChangeNotifier {
             .add(await http.MultipartFile.fromPath('image', imageFile.path));
       }
 
-      final jsonData = await _handleResponse(await request.send());
+      debugPrint('📤 updateReportItem: url=${request.url} fields=${request.fields}');
+      final jsonData = await _handleResponse(await request.send(), neverShowMessage: true);
+      debugPrint('📤 updateReportItem response: $jsonData');
       if (jsonData.containsKey('data') && jsonData['data'] != null) {
         return ReportItemModel.fromJson(jsonData['data'], reportId);
       }
       return null;
     } catch (e) {
-      debugPrint('Error updating report item: $e');
+      debugPrint('📤 Error updating report item: $e');
       return null;
     }
   }

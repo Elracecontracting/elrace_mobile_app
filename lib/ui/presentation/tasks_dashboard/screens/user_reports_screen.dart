@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:el_race/report_module/data/models/folder_model.dart';
 import 'package:el_race/report_module/data/provider/reports_provider.dart';
 import 'package:el_race/report_module/data/repositories/company_repository.dart';
+import 'package:el_race/ui/presentation/task_sheet/add_task_sheet.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -19,6 +20,7 @@ class UserReportsScreen extends StatefulWidget {
 
 class _UserReportsScreenState extends State<UserReportsScreen> {
   bool _isLoading = true;
+  bool _isCreatingProject = false;
   String _searchQuery = '';
   List<FolderModel> _folders = [];
 
@@ -47,6 +49,183 @@ class _UserReportsScreenState extends State<UserReportsScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<void> _showCreateProjectDialog() async {
+    final TextEditingController projectNameController = TextEditingController();
+    final companyName =
+        (CompanyRepository.company?.companyName ?? 'RCC').trim();
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: !_isCreatingProject,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              insetPadding: EdgeInsets.symmetric(horizontal: 24.w),
+              backgroundColor: Colors.transparent,
+              child: Container(
+                padding: EdgeInsets.fromLTRB(18.w, 20.h, 18.w, 18.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8F8F8),
+                  borderRadius: BorderRadius.circular(24.r),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _DialogInputCard(
+                      topLabel: 'Project',
+                      title: 'Name',
+                      controller: projectNameController,
+                      hint: 'Write here',
+                    ),
+                    SizedBox(height: 14.h),
+                    _DialogReadOnlyCard(
+                      topLabel: 'Company',
+                      title: 'Name',
+                      value: companyName.isEmpty ? 'RCC' : companyName,
+                    ),
+                    SizedBox(height: 20.h),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: 42.h,
+                            child: ElevatedButton(
+                              onPressed: _isCreatingProject
+                                  ? null
+                                  : () => Navigator.pop(dialogContext),
+                              style: ElevatedButton.styleFrom(
+                                elevation: 0,
+                                backgroundColor: const Color(0xFFC91118),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(22.r),
+                                ),
+                              ),
+                              child: Text(
+                                'CANCEL',
+                                style: GoogleFonts.inter(
+                                  fontSize: 11.sp,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: SizedBox(
+                            height: 42.h,
+                            child: ElevatedButton(
+                              onPressed: _isCreatingProject
+                                  ? null
+                                  : () async {
+                                      final projectName =
+                                          projectNameController.text.trim();
+
+                                      if (projectName.isEmpty) {
+                                        ScaffoldMessenger.of(context)
+                                            .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              'Please enter project name',
+                                              style: GoogleFonts.inter(
+                                                fontSize: 13.sp,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                            backgroundColor:
+                                                const Color(0xFFC91118),
+                                            behavior:
+                                                SnackBarBehavior.floating,
+                                            margin: EdgeInsets.all(16.w),
+                                          ),
+                                        );
+                                        return;
+                                      }
+
+                                      setState(() => _isCreatingProject = true);
+                                      setDialogState(() {});
+
+                                      try {
+                                        await reportProvider.createFolder(
+                                          title: projectName,
+                                          description: companyName,
+                                        );
+                                        await _loadData();
+
+                                        if (mounted) {
+                                          Navigator.pop(dialogContext);
+                                        }
+                                      } catch (_) {
+                                        if (mounted) {
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            SnackBar(
+                                              content: Text(
+                                                'Could not create project',
+                                                style: GoogleFonts.inter(
+                                                  fontSize: 13.sp,
+                                                  color: Colors.white,
+                                                ),
+                                              ),
+                                              backgroundColor:
+                                                  const Color(0xFFC91118),
+                                              behavior:
+                                                  SnackBarBehavior.floating,
+                                              margin: EdgeInsets.all(16.w),
+                                            ),
+                                          );
+                                        }
+                                      } finally {
+                                        if (mounted) {
+                                          setState(() =>
+                                              _isCreatingProject = false);
+                                          setDialogState(() {});
+                                        }
+                                      }
+                                    },
+                              style: ElevatedButton.styleFrom(
+                                elevation: 0,
+                                backgroundColor: const Color(0xFF2A8C3A),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(22.r),
+                                ),
+                              ),
+                              child: _isCreatingProject
+                                  ? SizedBox(
+                                      width: 16.w,
+                                      height: 16.w,
+                                      child: const CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: Colors.white,
+                                      ),
+                                    )
+                                  : Text(
+                                      'SUBMIT',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 11.sp,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -90,6 +269,55 @@ class _UserReportsScreenState extends State<UserReportsScreen> {
                   ),
                 ),
               ],
+            ),
+            SizedBox(height: 12.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 18.w),
+              child: SizedBox(
+                width: double.infinity,
+                height: 46.h,
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12.r),
+                          border: Border.all(
+                            color: const Color(0xFFB9BBC3),
+                            width: 1,
+                          ),
+                        ),
+                      ),
+                    ),
+                    Positioned.fill(
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12.r),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const AddTaskSheet(),
+                              ),
+                            );
+                          },
+                          child: Center(
+                            child: Text(
+                              'Add a new request',
+                              style: GoogleFonts.inter(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
             SizedBox(height: 16.h),
             Padding(
@@ -151,21 +379,26 @@ class _UserReportsScreenState extends State<UserReportsScreen> {
                       ),
                     ),
                   ),
-                  Container(
-                    width: 44.w,
-                    height: 44.w,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF27304E),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(14.r),
-                        bottomLeft: Radius.circular(14.r),
+                  GestureDetector(
+                    onTap: _isCreatingProject ? null : _showCreateProjectDialog,
+                    child: Container(
+                      width: 44.w,
+                      height: 44.w,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF27304E),
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(14.r),
+                          bottomLeft: Radius.circular(14.r),
+                        ),
                       ),
-                    ),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.add,
-                      size: 26.w,
-                      color: Colors.white,
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.add,
+                        size: 26.w,
+                        color: _isCreatingProject
+                            ? Colors.white70
+                            : Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -205,6 +438,154 @@ class _UserReportsScreenState extends State<UserReportsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _DialogInputCard extends StatelessWidget {
+  final String topLabel;
+  final String title;
+  final String hint;
+  final TextEditingController controller;
+
+  const _DialogInputCard({
+    required this.topLabel,
+    required this.title,
+    required this.hint,
+    required this.controller,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 14.h),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFFBFC2CC), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            topLabel,
+            style: GoogleFonts.inter(
+              fontSize: 11.sp,
+              color: const Color(0xFF71748A),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 15.sp,
+              color: const Color(0xFF22263A),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Container(
+            height: 38.h,
+            padding: EdgeInsets.symmetric(horizontal: 12.w),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(19.r),
+              border: Border.all(color: const Color(0xFFCDD0D8), width: 1),
+            ),
+            child: Center(
+              child: TextField(
+                controller: controller,
+                style: GoogleFonts.inter(
+                  fontSize: 13.sp,
+                  color: const Color(0xFF22263A),
+                ),
+                decoration: InputDecoration(
+                  hintText: hint,
+                  border: InputBorder.none,
+                  isCollapsed: true,
+                  hintStyle: GoogleFonts.inter(
+                    fontSize: 13.sp,
+                    color: const Color(0xFFA6A9B3),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DialogReadOnlyCard extends StatelessWidget {
+  final String topLabel;
+  final String title;
+  final String value;
+
+  const _DialogReadOnlyCard({
+    required this.topLabel,
+    required this.title,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(14.w, 12.h, 14.w, 14.h),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFFBFC2CC), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            topLabel,
+            style: GoogleFonts.inter(
+              fontSize: 11.sp,
+              color: const Color(0xFF71748A),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 15.sp,
+              color: const Color(0xFF22263A),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Container(
+            height: 38.h,
+            padding: EdgeInsets.symmetric(horizontal: 12.w),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(19.r),
+              border: Border.all(color: const Color(0xFFCDD0D8), width: 1),
+            ),
+            alignment: Alignment.center,
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 12.sp,
+                      color: const Color(0xFF6D7180),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_drop_down,
+                  size: 20.w,
+                  color: const Color(0xFF2B2E3C),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

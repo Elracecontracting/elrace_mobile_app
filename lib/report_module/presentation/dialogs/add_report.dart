@@ -1,10 +1,6 @@
 import 'package:el_race/main.dart';
-import 'package:el_race/report_module/core/constants/colors.dart';
-import 'package:el_race/report_module/core/constants/text_styles.dart';
-import 'package:el_race/report_module/data/models/folder_model.dart';
 import 'package:el_race/report_module/data/provider/reports_provider.dart';
 import 'package:el_race/report_module/data/repositories/company_repository.dart';
-import 'package:el_race/report_module/presentation/widgets/custom_textfield.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -15,12 +11,6 @@ Future<bool> showAddNewReport(BuildContext context,
   TextEditingController nameController = TextEditingController();
   TextEditingController descriptionController = TextEditingController();
 
-  // ── Available projects (folders already loaded) ──
-  final folders =
-      Provider.of<ReportProvider>(context, listen: false).folders;
-  final projectNames =
-      folders.map((f) => f.name).where((n) => n.isNotEmpty).toList();
-
   // ── Available companies ──
   final companies = <String>[
     'RCC',
@@ -30,7 +20,6 @@ Future<bool> showAddNewReport(BuildContext context,
   final currentCompany =
       CompanyRepository.company?.companyName ?? companies.first;
 
-  String? selectedProject;
   String selectedCompany = companies.contains(currentCompany) ? currentCompany : companies.first;
 
   bool cancel = true;
@@ -54,17 +43,11 @@ Future<bool> showAddNewReport(BuildContext context,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // ── Project Name dropdown ──
-                  _DropdownSection(
+                  _InputSection(
                     label: 'Project',
                     subLabel: 'Name',
-                    hint: 'Select project',
-                    value: selectedProject,
-                    items: projectNames,
-                    onChanged: (v) {
-                      setDialogState(() => selectedProject = v);
-                      nameController.text = v ?? '';
-                    },
+                    hint: 'Write here',
+                    controller: nameController,
                   ),
 
                   SizedBox(height: 16.h),
@@ -117,9 +100,7 @@ Future<bool> showAddNewReport(BuildContext context,
                           height: 48.h,
                           child: ElevatedButton(
                             onPressed: () {
-                              if (selectedProject != null &&
-                                  selectedProject!.isNotEmpty) {
-                                nameController.text = selectedProject!;
+                              if (nameController.text.trim().isNotEmpty) {
                                 descriptionController.text = selectedCompany;
                                 cancel = false;
                                 Navigator.pop(ctx);
@@ -167,6 +148,80 @@ Future<bool> showAddNewReport(BuildContext context,
     await provider.createReport(
         title: nameController.text, folderID: folderID!);
     return true;
+  }
+}
+
+class _InputSection extends StatelessWidget {
+  final String label;
+  final String subLabel;
+  final String hint;
+  final TextEditingController controller;
+
+  const _InputSection({
+    required this.label,
+    required this.subLabel,
+    required this.hint,
+    required this.controller,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 14.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFFD1D3DA)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w400,
+              color: const Color(0xFF6B7280),
+            ),
+          ),
+          Text(
+            subLabel,
+            style: GoogleFonts.inter(
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1F2937),
+            ),
+          ),
+          SizedBox(height: 10.h),
+          Container(
+            height: 44.h,
+            padding: EdgeInsets.symmetric(horizontal: 14.w),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4F4F4),
+              borderRadius: BorderRadius.circular(22.r),
+              border: Border.all(color: const Color(0xFFD1D3DA)),
+            ),
+            alignment: Alignment.center,
+            child: TextField(
+              controller: controller,
+              style: GoogleFonts.inter(
+                fontSize: 12.sp,
+                color: const Color(0xFF374151),
+              ),
+              decoration: InputDecoration(
+                hintText: hint,
+                border: InputBorder.none,
+                isCollapsed: true,
+                hintStyle: GoogleFonts.inter(
+                  fontSize: 12.sp,
+                  color: const Color(0xFFA3A6B1),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

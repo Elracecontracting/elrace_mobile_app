@@ -21,6 +21,7 @@ import 'package:el_race/report_module/presentation/screens/report_detail/image_e
 import 'package:el_race/report_module/data/services/pdf_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:el_race/report_module/presentation/screens/report_photos/report_photos_screen.dart';
 
 class ProjectReportsScreen extends StatefulWidget {
   final FolderModel folder;
@@ -128,24 +129,41 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                             );
                             return;
                           }
-                          
-                          // Close first dialog
-                          Navigator.pop(dialogContext);
-                          
-                          // Open second dialog (photo dialog)
-                          await showDialog(
-                            context: context,
-                            barrierDismissible: true,
-                            builder: (photoContext) => _ReportPhotosDialog(
-                              reportName: reportNameController.text.trim(),
+
+                          try {
+                            final provider =
+                                Provider.of<ReportProvider>(context,
+                                    listen: false);
+                            await provider.createReport(
+                              title: reportNameController.text.trim(),
+                              folderID: widget.folder.id,
                               reportType: selectedReportType,
-                              isEditing: true,
-                              folderId: widget.folder.id,
-                              onReportCreated: () async {
-                                await _loadReports();
-                              },
-                            ),
-                          );
+                            );
+                            await _loadReports();
+                            if (mounted) {
+                              Navigator.pop(dialogContext);
+                            }
+                          } catch (_) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Failed to create report. Please try again',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13.sp,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  backgroundColor: const Color(0xFFE81E25),
+                                  behavior: SnackBarBehavior.floating,
+                                  margin: EdgeInsets.all(16.w),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10.r),
+                                  ),
+                                ),
+                              );
+                            }
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           elevation: 0,
@@ -161,7 +179,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                           color: Colors.white,
                         ),
                         label: Text(
-                          'Take Pictures',
+                          'Create Report',
                           style: GoogleFonts.inter(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w700,
@@ -183,19 +201,22 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadReports();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadReports());
   }
 
   Future<void> _loadReports() async {
+    if (!mounted) return;
     setState(() => _isLoading = true);
     try {
       final provider = Provider.of<ReportProvider>(context, listen: false);
       await provider.fetchAllReports(folderID: widget.folder.id);
+      if (!mounted) return;
       setState(() {
         _reports = provider.reports;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
     }
   }
@@ -307,7 +328,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                                             padding: EdgeInsetsDirectional.only(
                                                 start: 4.w),
                                             child: Text(
-                                              'Take Pictures',
+                                              'Create Report',
                                               maxLines: 1,
                                               overflow: TextOverflow.clip,
                                               style: GoogleFonts.inter(
@@ -716,18 +737,20 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        showDialog(
-          context: context,
-          barrierDismissible: true,
-          builder: (dialogContext) => _ReportPhotosDialog(
-            reportName: widget.report.name.isEmpty ? 'Report Name' : widget.report.name,
-            reportType: widget.report.reportType ?? 'Report Type',
-            isEditing: false,
-            folderId: widget.folderId,
-            report: widget.report,
-            onReportCreated: widget.onReportUpdated,
-          ),
-        );
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ReportPhotosScreen(
+                report: widget.report,
+                folderName: widget.folderName,
+                folderId: widget.folderId,
+                onReportUpdated: widget.onReportUpdated,
+              ),
+            ),
+          );
+        });
       },
       child: Stack(
         clipBehavior: Clip.none,
@@ -1122,6 +1145,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                 photoItem.itemId = item.id;
                 photoItem.imagePath = item.image.isNotEmpty ? item.image : null;
                 photoItem.location = item.location.isNotEmpty ? item.location : null;
+                photoItem.locationController.text = item.location;
                 photoItem.description = item.description;
                 photoItem.descriptionController.text = item.description;
                 _photoItems.add(photoItem);
@@ -1774,14 +1798,6 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
     );
   }
 
-  static const List<String> _locationOptions = [
-    'Site A',
-    'Site B',
-    'Site C',
-    'Building 1',
-    'Building 2',
-  ];
-
   Widget _buildLocationCard(_PhotoItem item) {
     return Container(
       padding: EdgeInsets.all(14.w),
@@ -1796,104 +1812,31 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
           Text(
             'Location',
             style: GoogleFonts.inter(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF9CA3AF),
+              fontSize: 14.sp,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF272A36),
             ),
           ),
-          SizedBox(height: 4.h),
-          DropdownButtonHideUnderline(
-            child: DropdownButton2<String>(
-              isExpanded: true,
-              value: _locationOptions.contains(item.location) ? item.location : null,
-              hint: Text(
-                'Select location',
-                style: GoogleFonts.inter(
-                  fontSize: 14.sp,
-                  color: const Color(0xFFB0B0B0),
-                ),
-              ),
-              iconStyleData: IconStyleData(
-                icon: Icon(
-                  Icons.arrow_drop_down,
-                  size: 22.w,
-                  color: const Color(0xFF27304E),
-                ),
-              ),
-              buttonStyleData: const ButtonStyleData(
-                padding: EdgeInsets.zero,
-                overlayColor: WidgetStatePropertyAll(Colors.transparent),
-              ),
-              dropdownStyleData: DropdownStyleData(
-                maxHeight: 200.h,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(color: const Color(0xFFD2D3D8)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-              ),
-              dropdownSearchData: DropdownSearchData(
-                searchController: TextEditingController(),
-                searchInnerWidgetHeight: 50.h,
-                searchInnerWidget: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                  child: TextFormField(
-                    style: GoogleFonts.inter(fontSize: 13.sp),
-                    decoration: InputDecoration(
-                      isDense: true,
-                      contentPadding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-                      hintText: 'Search location...',
-                      hintStyle: GoogleFonts.inter(fontSize: 12.sp, color: const Color(0xFFB0B0B0)),
-                      prefixIcon: Icon(Icons.search, size: 18.w, color: const Color(0xFF9CA3AF)),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.r),
-                        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.r),
-                        borderSide: const BorderSide(color: Color(0xFFE0E0E0)),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10.r),
-                        borderSide: const BorderSide(color: Color(0xFF27304E)),
-                      ),
-                    ),
-                  ),
-                ),
-                searchMatchFn: (item, searchValue) {
-                  return item.value.toString().toLowerCase().contains(searchValue.toLowerCase());
-                },
-              ),
-              menuItemStyleData: MenuItemStyleData(
-                height: 40.h,
-                padding: EdgeInsets.symmetric(horizontal: 14.w),
-              ),
+          SizedBox(height: 10.h),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+            ),
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
+            child: TextField(
+              controller: item.locationController,
+              onChanged: (v) => item.location = v,
               style: GoogleFonts.inter(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
-                color: const Color(0xFF272A36),
+                  fontSize: 13.sp, color: const Color(0xFF272A36)),
+              decoration: InputDecoration(
+                hintText: 'Enter location...',
+                hintStyle: GoogleFonts.inter(
+                    fontSize: 13.sp, color: const Color(0xFFB0B0B0)),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
               ),
-              items: _locationOptions
-                  .map((loc) => DropdownMenuItem<String>(
-                        value: loc,
-                        child: Text(
-                          loc,
-                          style: GoogleFonts.inter(fontSize: 14.sp),
-                        ),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                setState(() {
-                  item.location = value;
-                });
-              },
             ),
           ),
         ],
@@ -2093,5 +2036,6 @@ class _PhotoItem {
   String? imagePath;
   String? location;
   String description = '';
+  final TextEditingController locationController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
 }

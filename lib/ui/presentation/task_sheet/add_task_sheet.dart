@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/task_sheet/task_sheet_screen.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
@@ -18,16 +19,18 @@ class AddTaskSheet extends StatefulWidget {
 }
 
 class _AddTaskSheetState extends State<AddTaskSheet> {
-  String? selectedEmployee;
   final TextEditingController noteController = TextEditingController();
   List<Map<String, dynamic>> employees = [];
-  String? selectedEmployeeId;
   bool isLoading = true;
-// State variables
-// In your State:
-  final TextEditingController _employeeSearchController =
-      TextEditingController();
-  Map<String, dynamic>? _selectedEmployee;
+
+  // Multi-select employees
+  List<Map<String, dynamic>> _selectedEmployees = [];
+  final ValueNotifier<List<String>> _selectedEmployeeIdsNotifier =
+      ValueNotifier<List<String>>([]);
+  bool _isDropdownOpen = false;
+  String _dropdownSearchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
+
   bool isLeaveSelected = false;
 
   DateTime? startDateTime;
@@ -99,11 +102,23 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     ); // current time
   }
 
+  @override
+  void dispose() {
+    noteController.dispose();
+    _selectedEmployeeIdsNotifier.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<bool> _submitTimesheetWithFeedback() async {
-    if (_selectedEmployee == null) {
-      _showDialogMessage("Please select an employee.");
+    if (_selectedEmployees.isEmpty) {
+      _showDialogMessage("Please select at least one employee.");
       return false;
     }
+
+    final employeeIds = _selectedEmployees.map((e) => e['id']).toList();
+    final employeeNames =
+        _selectedEmployees.map((e) => e['name'].toString()).join(', ');
 
     final body = {
       "jsonrpc": "2.0",
@@ -112,13 +127,13 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
         // "project_id": widget.project_id,
         "task_id": "widget.taskId",
         //"task_id": widget.taskId,
-        "name": _selectedEmployee!['name'],
+        "name": employeeNames,
         "break_time":
             breakDuration.inHours, // Sending break in hours (example: 1)
         "leave_type_id": selectedLeaveType != null
             ? _getLeaveTypeId(selectedLeaveType!)
             : false,
-        "employee_ids": [_selectedEmployee!['id']],
+        "employee_ids": employeeIds,
         "date": DateFormat('yyyy-MM-dd').format(startDateTime!), // Picked date
         "date_time": DateFormat('yyyy-MM-dd HH:mm:ss')
             .format(startDateTime!), // Start datetime
@@ -179,8 +194,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     });
 
     try {
-      const token = "token";
-      //  final token = widget.loginResponseModel.result?.token;
+      final loginData = SharedPref.getLoginData();
+      final token = loginData.result?.token;
 
       final headers = {
         "Content-Type": "application/json",
@@ -255,60 +270,324 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                 ),
                 const SizedBox(height: 10),
 
-                // ✅ Employee picker (dropdown-like)
+                // ✅ Employee picker — inline multi-select dropdown
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        "Employee",
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
+                      // Label + selected chips
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Employee",
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 4,
+                              children: _selectedEmployees
+                                  .map(
+                                    (emp) => Chip(
+                                      label: Text(
+                                        '${emp['id']} ${emp['name']}',
+                                        style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600),
+                                      ),
+                                      deleteIcon: const Icon(
+                                          Icons.close, size: 14),
+                                      onDeleted: () {
+                                        setState(() {
+                                          _selectedEmployees.removeWhere(
+                                              (e) => e['id'] == emp['id']);
+                                          _selectedEmployeeIdsNotifier.value =
+                                              _selectedEmployees
+                                                  .map((e) =>
+                                                      e['id'].toString())
+                                                  .toList();
+                                        });
+                                      },
+                                      backgroundColor:
+                                          const Color(0xFFE8F5E9),
+                                      side: const BorderSide(
+                                          color: Color(0xFFB2DFDB)),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(20),
+                                      ),
+                                      materialTapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6, vertical: 0),
+                                    ),
+                                  )
+                                  .toList(),
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 10),
-                      DropdownButtonFormField<String>(
-                        value: selectedEmployeeId,
-                        isExpanded: true,
-                        icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
-                        decoration: InputDecoration(
-                          hintText: 'Select an Employee',
-                          hintStyle: TextStyle(
-                            color: Colors.grey.shade500,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(25),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(25),
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                        ),
-                        items: employees.map((emp) {
-                          return DropdownMenuItem<String>(
-                            value: emp['id'].toString(),
-                            child: Text(
-                              emp['name'].toString(),
-                              style: const TextStyle(fontSize: 13),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            selectedEmployeeId = value;
-                            _selectedEmployee = employees.firstWhere(
-                              (emp) => emp['id'].toString() == value,
+                      // Dropdown toggle button
+                      GestureDetector(
+                        onTap: () async {
+                          if (isLoading) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      'Loading employees, please wait...')),
                             );
+                            return;
+                          }
+                          if (employees.isEmpty) {
+                            await _fetchEmployees();
+                            if (employees.isEmpty && mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text(
+                                        'No employees found. Please try again.')),
+                              );
+                              return;
+                            }
+                          }
+                          setState(() {
+                            _isDropdownOpen = !_isDropdownOpen;
+                            if (!_isDropdownOpen) {
+                              _dropdownSearchQuery = '';
+                              _searchController.clear();
+                            }
                           });
                         },
+                        child: Container(
+                          height: 50,
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(25),
+                            border:
+                                Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  isLoading
+                                      ? 'Loading employees...'
+                                      : 'Select an Employee',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Icon(
+                                _isDropdownOpen
+                                    ? Icons.keyboard_arrow_up
+                                    : Icons.keyboard_arrow_down,
+                                color: Colors.grey,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Inline dropdown list
+                      AnimatedCrossFade(
+                        firstChild: const SizedBox.shrink(),
+                        secondChild: Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                                color: const Color(0xFFEEEEEE)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.06),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Search field
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(
+                                    12, 10, 12, 6),
+                                child: TextField(
+                                  controller: _searchController,
+                                  onChanged: (v) => setState(
+                                      () => _dropdownSearchQuery = v),
+                                  decoration: InputDecoration(
+                                    hintText: 'Search employee...',
+                                    hintStyle: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey.shade400),
+                                    prefixIcon: Icon(Icons.search,
+                                        size: 18,
+                                        color: Colors.grey.shade400),
+                                    isDense: true,
+                                    contentPadding:
+                                        const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 8),
+                                    border: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(12),
+                                      borderSide: BorderSide(
+                                          color: Colors.grey.shade300),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(12),
+                                      borderSide: BorderSide(
+                                          color: Colors.grey.shade300),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(12),
+                                      borderSide: const BorderSide(
+                                          color: Color(0xFF27AE60)),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Employee list
+                              ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxHeight: 220),
+                                child: Builder(
+                                  builder: (context) {
+                                    final filtered =
+                                        employees.where((emp) {
+                                      final name = (emp['name'] ?? '')
+                                          .toString()
+                                          .toLowerCase();
+                                      final id = (emp['id'] ?? '')
+                                          .toString()
+                                          .toLowerCase();
+                                      final q = _dropdownSearchQuery
+                                          .toLowerCase();
+                                      return name.contains(q) ||
+                                          id.contains(q);
+                                    }).toList();
+
+                                    if (filtered.isEmpty) {
+                                      return Padding(
+                                        padding:
+                                            const EdgeInsets.all(16),
+                                        child: Text(
+                                          'No employees found',
+                                          style: TextStyle(
+                                              fontSize: 12,
+                                              color:
+                                                  Colors.grey.shade500),
+                                        ),
+                                      );
+                                    }
+
+                                    return ListView.separated(
+                                      shrinkWrap: true,
+                                      padding: EdgeInsets.zero,
+                                      itemCount: filtered.length,
+                                      separatorBuilder: (_, __) =>
+                                          Divider(
+                                              height: 1,
+                                              color:
+                                                  Colors.grey.shade200),
+                                      itemBuilder: (context, index) {
+                                        final employee =
+                                            filtered[index];
+                                        final isSelected =
+                                            _selectedEmployees.any(
+                                                (e) =>
+                                                    e['id'] ==
+                                                    employee['id']);
+                                        return InkWell(
+                                          onTap: () {
+                                            setState(() {
+                                              if (isSelected) {
+                                                _selectedEmployees
+                                                    .removeWhere((e) =>
+                                                        e['id'] ==
+                                                        employee[
+                                                            'id']);
+                                              } else {
+                                                _selectedEmployees
+                                                    .add(employee);
+                                              }
+                                              _selectedEmployeeIdsNotifier
+                                                      .value =
+                                                  _selectedEmployees
+                                                      .map((e) => e[
+                                                              'id']
+                                                          .toString())
+                                                      .toList();
+                                            });
+                                          },
+                                          child: Padding(
+                                            padding:
+                                                const EdgeInsets
+                                                    .symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 6),
+                                            child: Row(
+                                              children: [
+                                                SizedBox(
+                                                  width: 24,
+                                                  height: 24,
+                                                  child: Checkbox(
+                                                    value: isSelected,
+                                                    onChanged: null,
+                                                    activeColor:
+                                                        const Color(
+                                                            0xFF27AE60),
+                                                    materialTapTargetSize:
+                                                        MaterialTapTargetSize
+                                                            .shrinkWrap,
+                                                  ),
+                                                ),
+                                                const SizedBox(
+                                                    width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    '${employee['id']} ${employee['name']}',
+                                                    style:
+                                                        const TextStyle(
+                                                            fontSize:
+                                                                13),
+                                                    overflow:
+                                                        TextOverflow
+                                                            .ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        crossFadeState: _isDropdownOpen
+                            ? CrossFadeState.showSecond
+                            : CrossFadeState.showFirst,
+                        duration: const Duration(milliseconds: 200),
                       ),
                     ],
                   ),
@@ -1033,7 +1312,24 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
   }
 
   Future<void> _openEmployeePicker() async {
-    if (employees.isEmpty) return;
+    if (isLoading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Loading employees, please wait...')),
+      );
+      return;
+    }
+    if (employees.isEmpty) {
+      // Retry fetching
+      await _fetchEmployees();
+      if (employees.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('No employees found. Please try again.')),
+          );
+        }
+        return;
+      }
+    }
 
     await showModalBottomSheet<void>(
       context: context,
@@ -1097,27 +1393,58 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                         separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
                         itemBuilder: (context, index) {
                           final employee = filtered[index];
-                          final isSelected = _selectedEmployee != null && employee['id'] == _selectedEmployee!['id'];
+                          final isSelected = _selectedEmployees.any((e) => e['id'] == employee['id']);
                           return ListTile(
                             dense: true,
+                            leading: Checkbox(
+                              value: isSelected,
+                              onChanged: null,
+                              activeColor: const Color(0xFF27AE60),
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            ),
                             title: Text(
-                              (employee['name'] ?? '').toString(),
+                              '${employee['id']} ${(employee['name'] ?? '').toString()}',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                               ),
                             ),
-                            trailing: isSelected ? const Icon(Icons.check, color: Colors.black) : null,
+                            trailing: null,
                             onTap: () {
                               setState(() {
-                                _selectedEmployee = employee;
-                                selectedEmployeeId = employee['id'].toString();
-                                _employeeSearchController.text = employee['name'].toString();
+                                if (isSelected) {
+                                  _selectedEmployees.removeWhere((e) => e['id'] == employee['id']);
+                                } else {
+                                  _selectedEmployees.add(employee);
+                                }
+                                _selectedEmployeeIdsNotifier.value =
+                                    _selectedEmployees.map((e) => e['id'].toString()).toList();
                               });
-                              Navigator.pop(context);
+                              setModalState(() {});
                             },
                           );
                         },
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF27AE60),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(
+                          'Done (${_selectedEmployees.length} selected)',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600),
+                        ),
                       ),
                     ),
                   ],
