@@ -99,8 +99,8 @@ Future<void> _showAdhanNotificationInBackground(
 
     await notificationsPlugin.show(
       0,
-      '🕌 حان وقت الصلاة',
-      '🔔 حان الآن وقت صلاة $prayerName',
+      '🕌 Prayer Time',
+      '🔔 It\'s time for $prayerName prayer',
       _defaultNotificationDetails,
     );
 

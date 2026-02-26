@@ -96,8 +96,8 @@ class CheckInReminderNotificationService {
     const AndroidNotificationChannel checkInChannel = AndroidNotificationChannel(
       'check_in_reminder_channel',
       'Check In Reminders',
-      description: 'تذكيرات تسجيل الدخول',
-      importance: Importance.high,
+      description: 'Check-in reminders',
+      importance: Importance.max,
       playSound: true,
       enableVibration: true,
       showBadge: true,
@@ -107,8 +107,8 @@ class CheckInReminderNotificationService {
     const AndroidNotificationChannel checkOutChannel = AndroidNotificationChannel(
       'check_out_reminder_channel',
       'Check Out Reminders',
-      description: 'تذكيرات تسجيل الخروج',
-      importance: Importance.high,
+      description: 'Check-out reminders',
+      importance: Importance.max,
       playSound: true,
       enableVibration: true,
       showBadge: true,
@@ -162,19 +162,21 @@ class CheckInReminderNotificationService {
       try {
         await _notificationsPlugin.zonedSchedule(
           idCounter,
-          '⏰ تذكير بتسجيل الخروج',
-          'لا تنسَ تسجيل الخروج (Check Out)',
+          '⏰ Check Out Reminder',
+          'Don\'t forget to Check Out',
           targetTime,
           const NotificationDetails(
             android: AndroidNotificationDetails(
               'check_out_reminder_channel',
               'Check Out Reminders',
-              channelDescription: 'تذكيرات تسجيل الخروج',
-              importance: Importance.high,
-              priority: Priority.high,
+              channelDescription: 'Check-out reminders',
+              importance: Importance.max,
+              priority: Priority.max,
+              category: AndroidNotificationCategory.alarm,
               icon: '@mipmap/ic_launcher',
               playSound: true,
               enableVibration: true,
+              fullScreenIntent: false,
             ),
             iOS: DarwinNotificationDetails(
               presentAlert: true,
@@ -233,19 +235,21 @@ class CheckInReminderNotificationService {
       try {
         await _notificationsPlugin.zonedSchedule(
           idCounter,
-          '⏰ تذكير بتسجيل الدخول',
-          'لا تنسَ تسجيل الدخول (Check In)',
+          '⏰ Check In Reminder',
+          'Don\'t forget to Check In',
           targetTime,
           const NotificationDetails(
             android: AndroidNotificationDetails(
               'check_in_reminder_channel',
               'Check In Reminders',
-              channelDescription: 'تذكيرات تسجيل الدخول',
-              importance: Importance.high,
-              priority: Priority.high,
+              channelDescription: 'Check-in reminders',
+              importance: Importance.max,
+              priority: Priority.max,
+              category: AndroidNotificationCategory.alarm,
               icon: '@mipmap/ic_launcher',
               playSound: true,
               enableVibration: true,
+              fullScreenIntent: false,
             ),
             iOS: DarwinNotificationDetails(
               presentAlert: true,
@@ -322,11 +326,11 @@ class CheckInReminderNotificationService {
       await _notificationsPlugin.show(
         99999, // رقم مؤقت للاختبار
         isCheckIn
-            ? '🧪 اختبار: تذكير بتسجيل الدخول'
-            : '🧪 اختبار: تذكير بتسجيل الخروج',
+            ? '🧪 Test: Check In Reminder'
+            : '🧪 Test: Check Out Reminder',
         isCheckIn
-            ? 'هذا إشعار تجريبي - لا تنسَ تسجيل الدخول (Check In)'
-            : 'هذا إشعار تجريبي - لا تنسَ تسجيل الخروج (Check Out)',
+            ? 'This is a test notification - Don\'t forget to Check In'
+            : 'This is a test notification - Don\'t forget to Check Out',
         NotificationDetails(
           android: AndroidNotificationDetails(
             isCheckIn
@@ -334,13 +338,15 @@ class CheckInReminderNotificationService {
                 : 'check_out_reminder_channel',
             isCheckIn ? 'Check In Reminders' : 'Check Out Reminders',
             channelDescription: isCheckIn
-                ? 'تذكيرات تسجيل الدخول'
-                : 'تذكيرات تسجيل الخروج',
-            importance: Importance.high,
-            priority: Priority.high,
+                ? 'Check-in reminders'
+                : 'Check-out reminders',
+            importance: Importance.max,
+            priority: Priority.max,
+            category: AndroidNotificationCategory.alarm,
             icon: '@mipmap/ic_launcher',
             playSound: true,
             enableVibration: true,
+            fullScreenIntent: false,
           ),
           iOS: const DarwinNotificationDetails(
             presentAlert: true,

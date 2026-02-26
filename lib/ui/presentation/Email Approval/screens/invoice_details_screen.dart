@@ -10,6 +10,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class InvoiceDetailsScreen extends StatefulWidget {
   final String requestId;
@@ -138,9 +140,26 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       return;
     }
 
-    final attachmentId = (_attachmentIds.first is Map)
-        ? (_attachmentIds.first['attachment_id'] ?? _attachmentIds.first)
-        : _attachmentIds.first;
+    dynamic attachmentId;
+    final firstAttachment = _attachmentIds.first;
+    if (firstAttachment is Map) {
+      attachmentId =
+          firstAttachment['attachment_id'] ?? firstAttachment['id'] ?? firstAttachment['res_id'];
+    } else {
+      attachmentId = firstAttachment;
+    }
+
+    final parsedAttachmentId = int.tryParse(_safe(attachmentId));
+    if (parsedAttachmentId == null || parsedAttachmentId <= 0) {
+      Fluttertoast.showToast(
+        msg: 'Invalid attachment id.',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
+      );
+      return;
+    }
 
     final token = SharedPref.getLoginData().result?.token;
     final headers = {
@@ -152,7 +171,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     final data = {
       'jsonrpc': '2.0',
       'params': {
-        'attachment_id': attachmentId,
+        'attachment_id': parsedAttachmentId,
       },
     };
 
@@ -180,12 +199,40 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       final resData = response.data as Map;
       final result = resData['result'] as Map?;
       final dataMap = result?['data'] as Map?;
-      final binaryBase64 = dataMap?['attachment_binary_data']?.toString() ?? '';
+      final binaryBase64 = _pick([
+        dataMap?['attachment_binary_data'],
+        dataMap?['attachment_binary'],
+        dataMap?['datas'],
+        dataMap?['file_data'],
+      ]);
       final fileName = dataMap?['attachment_name']?.toString() ?? '';
+      final publicUrl = _pick([
+        dataMap?['public_url'],
+        dataMap?['url'],
+        dataMap?['attachment_url'],
+      ]);
 
       if (binaryBase64.isEmpty) {
+        print('══════════ [INVOICE] ATTACHMENT EMPTY BINARY ══════════');
+        print('[INVOICE] attachment_id: $parsedAttachmentId');
+        print('[INVOICE] response result keys: ${result?.keys.toList()}');
+        print('[INVOICE] response data keys: ${dataMap?.keys.toList()}');
+        print('═════════════════════════════════════════════════════════');
+
+        if (publicUrl.isNotEmpty) {
+          final resolvedUrl = publicUrl.startsWith('http://') ||
+                  publicUrl.startsWith('https://')
+              ? publicUrl
+              : 'https://erp.elrace.com$publicUrl';
+          final uri = Uri.tryParse(resolvedUrl);
+          if (uri != null && await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+            return;
+          }
+        }
+
         Fluttertoast.showToast(
-          msg: 'No binary data found.',
+          msg: 'Attachment exists but binary data is empty from API.',
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.CENTER,
           backgroundColor: Colors.black,
@@ -221,13 +268,26 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
   Widget _card({required Widget child, EdgeInsets? padding}) {
     return Container(
       width: double.infinity,
-      padding: padding ?? EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.w),
+      padding: padding ?? EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.w),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: const Color(0xFFBDBDBD), width: 1),
+        color: const Color(0xFFF1F1F1),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: const Color(0xFF9F9F9F), width: 1),
       ),
       child: child,
+    );
+  }
+
+  Widget _sectionTitle(String text, {TextAlign? align}) {
+    return Text(
+      text,
+      textAlign: align,
+      style: GoogleFonts.inter(
+        fontSize: 13.sp,
+        fontWeight: FontWeight.w800,
+        color: const Color(0xFFADADAD),
+        letterSpacing: 0.2,
+      ),
     );
   }
 
@@ -236,10 +296,9 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       text,
       textAlign: align,
       style: GoogleFonts.inter(
-        fontSize: 11.sp,
+        fontSize: 12.sp,
         fontWeight: FontWeight.w700,
-        color: const Color(0xFFB0B0B0),
-        letterSpacing: 0.2,
+        color: const Color(0xFFA9A9A9),
       ),
     );
   }
@@ -258,6 +317,83 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
     );
+  }
+
+  Widget _tagChip(String text, Color bg, Color fg) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 3.w),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(8.r),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.inter(
+          fontSize: 9.sp,
+          fontWeight: FontWeight.w700,
+          color: fg,
+        ),
+      ),
+    );
+  }
+
+  Widget _bulletLine({required String label, String? value, bool dim = false}) {
+    final hasValue = value != null && value.trim().isNotEmpty;
+    return Padding(
+      padding: EdgeInsets.only(bottom: 8.w),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(top: 4.w),
+            child: Text(
+              '•',
+              style: GoogleFonts.inter(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w700,
+                color: dim ? const Color(0xFFBDBDBD) : const Color(0xFF0E0E0E),
+              ),
+            ),
+          ),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: label,
+                    style: GoogleFonts.inter(
+                      fontSize: 13.sp,
+                      fontWeight: FontWeight.w800,
+                      color: dim ? const Color(0xFFBDBDBD) : const Color(0xFF131313),
+                    ),
+                  ),
+                  if (hasValue)
+                    TextSpan(
+                      text: ' $value',
+                      style: GoogleFonts.inter(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w800,
+                        color: dim ? const Color(0xFFBDBDBD) : const Color(0xFF131313),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatAmount(String raw) {
+    final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
+    final value = double.tryParse(cleaned);
+    if (value == null) return raw;
+    if (value % 1 == 0) {
+      return NumberFormat('#,##0', 'en_US').format(value);
+    }
+    return NumberFormat('#,##0.##', 'en_US').format(value);
   }
 
   @override
@@ -284,7 +420,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       _formData['partner_name'],
       _formData['client_name'],
       _formData['supplier'],
-    ], fallback: 'Vendor Name');
+    ]);
 
     final projectName = _pick([
       _formData['project_name'],
@@ -293,7 +429,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       _formData['project_name_id'],
       _formData['project_id'],
       _formData['name'],
-    ], fallback: 'Project Name');
+    ]);
 
     final lpoContract = _pick([
       _formData['lpo_no'],
@@ -303,16 +439,26 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       _formData['contract_no'],
     ], fallback: '');
 
-    final remainingBalance = _pick([
-      _formData['remaining_balance'],
-      _formData['balance'],
-      _formData['balance_amount'],
-    ], fallback: '');
+    final workOrderNo = _pick([
+      _formData['work_order_no'],
+      _formData['work_order_number'],
+      _formData['wo_no'],
+      _formData['wono'],
+    ]);
 
-    final tag = _pick([
-      _formData['tag'],
-      _formData['invoice_tag'],
-    ], fallback: '');
+    final lpoDate = _pick([
+      _formData['lpo_date'],
+      _formData['contract_date'],
+      _formData['date_lpo'],
+      _formData['due_date'],
+    ]);
+
+    final lpoType = _pick([
+      _formData['lpo_type'],
+      _formData['material_type'],
+      _formData['type_name'],
+      _formData['category'],
+    ]);
 
     final totalAmount = _pick([
       _formData['total_amount'],
@@ -320,24 +466,44 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       _formData['amount'],
       _formData['total'],
     ], fallback: '');
+    final formattedAmount = _formatAmount(totalAmount);
 
-    final previous = _pick([
-      _formData['previous_amount'],
-      _formData['previous'],
-    ], fallback: '');
+    final completion = _pick([
+      _formData['completion'],
+      _formData['completion_percentage'],
+      _formData['progress'],
+      _formData['completion_percent'],
+    ]);
 
-    final retention = _pick([
-      _formData['retention'],
-      _formData['retention_percent'],
-    ], fallback: '');
+    final invoiceDate = _pick([
+      _formData['invoice_date'],
+      _formData['date_of_invoice'],
+      _formData['date'],
+      _formData['req_date'],
+    ], fallback: reqDate);
+
+    final vendorTagsRaw = _pick([
+      _formData['vendor_tags'],
+      _formData['tags'],
+      _formData['tag_names'],
+    ]);
+
+    final vendorTags = vendorTagsRaw
+        .split(RegExp(r'[,|]'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    final chips = vendorTags.take(4).toList();
 
     final userId =
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
 
-    final pillWidth = ((MediaQuery.of(context).size.width - 40.w) - 16.w) / 2;
+    final pillWidth =
+      ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF2F2F2),
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
@@ -362,8 +528,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                     children: [
                       Expanded(
                         child: SingleChildScrollView(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 20.w, vertical: 10.w),
+                          padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.w),
                           child: Column(
                             children: [
                               SizedBox(height: 8.w),
@@ -373,92 +538,44 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w900,
                                   color: const Color(0xFF0E0E0E),
-                                  letterSpacing: 0.6,
+                                  letterSpacing: 0.1,
                                 ),
                               ),
                               SizedBox(height: 14.w),
-
-                              _card(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 18.w, vertical: 14.w),
-                                child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _label('Req No'),
-                                    SizedBox(height: 6.w),
-                                    _value(requestNo,
-                                        size: 12.sp,
-                                        weight: FontWeight.w900),
-                                  ],
-                                ),
-                              ),
-                              Container(
-                                width: 1,
-                                height: 44.w,
-                                color: const Color(0xFFBDBDBD),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    _label('Req Date'),
-                                    SizedBox(height: 6.w),
-                                    _value(reqDate,
-                                        size: 12.sp,
-                                        weight: FontWeight.w900,
-                                        align: TextAlign.end),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                              ),
-                              SizedBox(height: 12.w),
-
-                              _card(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _label('Vendor Name'),
-                              SizedBox(height: 8.w),
-                              _value(vendorName,
-                                  size: 16.sp, weight: FontWeight.w900),
-                            ],
-                          ),
-                              ),
-                              SizedBox(height: 12.w),
-
-                              _card(
-                                child: Row(
-                            children: [
-                              Container(
-                                width: 44.w,
-                                height: 44.w,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: const Color(0xFFB10D0D),
-                                    width: 2,
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _card(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          _sectionTitle('Req No'),
+                                          SizedBox(height: 10.w),
+                                          _value(requestNo,
+                                              size: 12.sp,
+                                              weight: FontWeight.w900),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                child: ClipOval(
-                                  child: Image.asset(
-                                    'assets/png/invoice-icon.png',
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => const SizedBox(),
+                                  SizedBox(width: 12.w),
+                                  Expanded(
+                                    child: _card(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          _sectionTitle('Req Date'),
+                                          SizedBox(height: 10.w),
+                                          _value(reqDate,
+                                              size: 12.sp,
+                                              weight: FontWeight.w900),
+                                        ],
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                              SizedBox(width: 14.w),
-                              Expanded(
-                                child: _value(projectName,
-                                    size: 15.sp, weight: FontWeight.w900),
-                              ),
-                            ],
-                          ),
+                                ],
                               ),
                               SizedBox(height: 12.w),
 
@@ -466,170 +583,188 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _label('LPO / Contract'),
+                                    _sectionTitle('Vendor Details'),
                                     SizedBox(height: 8.w),
-                                    Row(
+                                    _value(vendorName,
+                                        size: 11.sp, weight: FontWeight.w900),
+                                    if (chips.isNotEmpty) ...[
+                                      SizedBox(height: 6.w),
+                                      _label('Vendor Tags'),
+                                      SizedBox(height: 8.w),
+                                      Wrap(
+                                        spacing: 8.w,
+                                        runSpacing: 8.w,
+                                        children: [
+                                          for (int i = 0; i < chips.length; i++)
+                                            _tagChip(
+                                              chips[i],
+                                              [
+                                                const Color(0xFFE1E4FF),
+                                                const Color(0xFFFCE6E6),
+                                                const Color(0xFFFFF1D8),
+                                                const Color(0xFFE1F5EC),
+                                              ][i % 4],
+                                              [
+                                                const Color(0xFF3F51E8),
+                                                const Color(0xFFD32F2F),
+                                                const Color(0xFFE08A00),
+                                                const Color(0xFF00A05A),
+                                              ][i % 4],
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 12.w),
+
+                              _card(
+                                child: Stack(
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              _value(lpoContract,
-                                                  size: 14.sp,
-                                                  weight: FontWeight.w900),
-                                              SizedBox(height: 16.w),
-                                              Text(
-                                                'Tag',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 14.sp,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: const Color(0xFF0E0E0E),
-                                                ),
-                                              ),
-                                            ],
+                                        _sectionTitle('Project Details'),
+                                        SizedBox(height: 8.w),
+                                        _bulletLine(
+                                          label: 'Project Name',
+                                          value: projectName,
+                                        ),
+                                        if (workOrderNo.isNotEmpty)
+                                          _bulletLine(
+                                            label: 'Work order no',
+                                            value: workOrderNo,
+                                          ),
+                                      ],
+                                    ),
+                                    PositionedDirectional(
+                                      top: 0,
+                                      end: 0,
+                                      child: Container(
+                                        width: 26.w,
+                                        height: 26.w,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: const Color(0xFFC92626),
                                           ),
                                         ),
-                                        Container(
-                                          width: 1,
-                                          height: 56.w,
-                                          color: const Color(0xFFBDBDBD),
+                                        child: ClipOval(
+                                          child: Image.asset(
+                                            'assets/png/invoice-icon.png',
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) =>
+                                                const SizedBox(),
+                                          ),
                                         ),
-                                        SizedBox(width: 14.w),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              _value(totalAmount,
-                                                  size: 18.sp,
-                                                  weight: FontWeight.w900,
-                                                  color: const Color(0xFFBA1719),
-                                                  align: TextAlign.start),
-                                              SizedBox(height: 4.w),
-                                              _label('Remaining Balance',
-                                                  align: TextAlign.start),
-                                              SizedBox(height: 8.w),
-                                              _value(tag,
-                                                  size: 16.sp,
-                                                  weight: FontWeight.w900,
-                                                  color: const Color(0xFFFF8C00),
-                                                  align: TextAlign.start),
-                                            ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 12.w),
+
+                              _card(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _sectionTitle('LPO / Contract'),
+                                    SizedBox(height: 8.w),
+                                    if (lpoContract.isNotEmpty)
+                                      _bulletLine(label: lpoContract),
+                                    if (lpoDate.isNotEmpty)
+                                      _bulletLine(label: lpoDate),
+                                    if (lpoType.isNotEmpty)
+                                      _bulletLine(label: lpoType),
+                                    SizedBox(height: 2.w),
+                                    if (formattedAmount.isNotEmpty)
+                                      Align(
+                                        alignment: AlignmentDirectional.centerEnd,
+                                        child: _value(
+                                          formattedAmount,
+                                          size: 14.sp,
+                                          weight: FontWeight.w900,
+                                          color: const Color(0xFFE58B00),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 12.w),
+
+                              _card(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        _sectionTitle('Invoice Details'),
+                                        Container(
+                                          padding: EdgeInsets.symmetric(
+                                              horizontal: 10.w, vertical: 4.w),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFECECEC),
+                                            borderRadius: BorderRadius.circular(8.r),
+                                            border: Border.all(
+                                                color: const Color(0xFF9F9F9F)),
+                                          ),
+                                          child: Text(
+                                            invoiceDate,
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12.sp,
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFF7C7C7C),
+                                            ),
                                           ),
                                         ),
                                       ],
                                     ),
+                                    SizedBox(height: 10.w),
+                                    _bulletLine(
+                                      label: 'Amount',
+                                      value: formattedAmount,
+                                    ),
+                                    if (completion.isNotEmpty)
+                                      _bulletLine(
+                                        label: 'completion',
+                                        value: completion,
+                                      ),
+                                    Align(
+                                      alignment: AlignmentDirectional.centerEnd,
+                                      child: SizedBox(
+                                        height: 28.w,
+                                        child: ElevatedButton(
+                                          onPressed: _attachmentIds.isEmpty
+                                              ? null
+                                              : _viewAttachment,
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(0xFF64666D),
+                                            disabledBackgroundColor:
+                                                const Color(0xFF64666D)
+                                                    .withValues(alpha: 0.45),
+                                            padding: EdgeInsets.symmetric(
+                                                horizontal: 14.w),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(10.r),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            'View',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12.sp,
+                                              fontWeight: FontWeight.w800,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
-                              ),
-                              SizedBox(height: 12.w),
-
-                              _card(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        _label('Invoice Details'),
-                                  Text(
-                                    reqDate,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 10.sp,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFFB0B0B0),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 10.w),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 10.w, vertical: 8.w),
-                                      decoration: BoxDecoration(
-                                        borderRadius:
-                                            BorderRadius.circular(10.r),
-                                        border: Border.all(
-                                            color: const Color(0xFFBDBDBD)),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _value('Total',
-                                              size: 11.sp,
-                                              weight: FontWeight.w900),
-                                          SizedBox(height: 4.w),
-                                          _value(totalAmount,
-                                              size: 11.sp,
-                                              weight: FontWeight.w900,
-                                              color: const Color(0xFFBA1719)),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 10.w),
-                                  Expanded(
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 10.w, vertical: 8.w),
-                                      decoration: BoxDecoration(
-                                        borderRadius:
-                                            BorderRadius.circular(10.r),
-                                        border: Border.all(
-                                            color: const Color(0xFFBDBDBD)),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _value('Previous',
-                                              size: 11.sp,
-                                              weight: FontWeight.w900),
-                                          SizedBox(height: 4.w),
-                                          _value(previous,
-                                              size: 11.sp,
-                                              weight: FontWeight.w900,
-                                              color: const Color(0xFF6B717B)),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 10.w),
-                                  Expanded(
-                                    child: Container(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 10.w, vertical: 8.w),
-                                      decoration: BoxDecoration(
-                                        borderRadius:
-                                            BorderRadius.circular(10.r),
-                                        border: Border.all(
-                                            color: const Color(0xFFBDBDBD)),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _value('Retention',
-                                              size: 11.sp,
-                                              weight: FontWeight.w900),
-                                          SizedBox(height: 4.w),
-                                          _value(retention,
-                                              size: 11.sp,
-                                              weight: FontWeight.w900,
-                                              color: const Color(0xFF6B717B)),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
                               ),
                               SizedBox(height: 14.w),
 
@@ -637,33 +772,42 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                 width: double.infinity,
                                 height: 52.w,
                                 child: ElevatedButton.icon(
-                            onPressed:
-                                _attachmentIds.isEmpty ? null : _viewAttachment,
-                            icon: const Icon(Icons.attach_file,
-                                color: Colors.white),
-                            label: Text(
-                              'View Attachments',
-                              style: GoogleFonts.inter(
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.white,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF6B6B6B),
-                              disabledBackgroundColor:
-                                  const Color(0xFF6B6B6B).withValues(alpha: 0.4),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10.r),
-                              ),
-                            ),
-                          ),
+                                  onPressed: _attachmentIds.isEmpty
+                                      ? null
+                                      : _viewAttachment,
+                                  icon: const Icon(Icons.attach_file,
+                                      color: Colors.white),
+                                  label: Text(
+                                    'View Attachments',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF64666D),
+                                    disabledBackgroundColor:
+                                        const Color(0xFF64666D)
+                                            .withValues(alpha: 0.45),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12.r),
+                                    ),
+                                  ),
+                                ),
                               ),
                               SizedBox(height: 20.w),
                             ],
                           ),
                         ),
                       ),
+
+                      const Divider(
+                        height: 1,
+                        thickness: 1,
+                        color: Color(0xFFB7B7B7),
+                      ),
+
                       SafeArea(
                         top: false,
                         child: Padding(
@@ -675,6 +819,15 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                               userIds: [userId],
                               variant: ApprovalActionButtonsVariant.pill,
                               pillWidth: pillWidth,
+                              pillHeight: 36.w,
+                              pillSpacing: 24.w,
+                              pillBorderRadius: BorderRadius.circular(20.r),
+                              pillTextStyle: GoogleFonts.inter(
+                                fontSize: 17.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                                height: 1,
+                              ),
                             ),
                           ),
                         ),

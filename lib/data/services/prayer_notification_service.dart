@@ -69,8 +69,8 @@ class PrayerNotificationService {
 
     await _notificationsPlugin.show(
       0, // notification ID - استخدام 0 لاستبدال الإشعار السابق
-      '🕌 حان وقت الصلاة',
-      '🔔 حان الآن وقت صلاة $prayerName',
+      '🕌 Prayer Time',
+      '🔔 It\'s time for $prayerName prayer',
       details,
     );
 
@@ -88,8 +88,8 @@ class PrayerNotificationService {
 
     await _notificationsPlugin.zonedSchedule(
       _buildId(prayerName, scheduledTime),
-      '🕌 حان وقت الصلاة',
-      '🔔 حان الآن وقت صلاة $prayerName',
+      '🕌 Prayer Time',
+      '🔔 It\'s time for $prayerName prayer',
       tzTime,
       const NotificationDetails(
         android: AndroidNotificationDetails(

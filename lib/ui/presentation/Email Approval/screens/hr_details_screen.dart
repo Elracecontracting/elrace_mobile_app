@@ -305,7 +305,8 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
     final userId =
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
 
-    final pillWidth = ((MediaQuery.of(context).size.width - 40.w) - 16.w) / 2;
+    final pillWidth =
+      ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -502,6 +503,15 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                               userIds: [userId],
                               variant: ApprovalActionButtonsVariant.pill,
                               pillWidth: pillWidth,
+                              pillHeight: 36.w,
+                              pillSpacing: 24.w,
+                              pillBorderRadius: BorderRadius.circular(20.r),
+                              pillTextStyle: GoogleFonts.inter(
+                                fontSize: 17.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                                height: 1,
+                              ),
                             ),
                           ),
                         ),

@@ -10,6 +10,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 class PettyCashDetailsScreen extends StatefulWidget {
   final String requestId;
@@ -30,6 +31,7 @@ class PettyCashDetailsScreen extends StatefulWidget {
 class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
   bool _isLoading = true;
   String _error = '';
+  bool _showAllLines = false;
 
   Map<String, dynamic> _formData = const {};
   List<dynamic> _attachmentIds = const [];
@@ -50,6 +52,26 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       if (s.isNotEmpty) return s;
     }
     return fallback;
+  }
+
+  String _formatAmount(dynamic value) {
+    final raw = _safe(value, fallback: '0');
+    final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
+    final parsed = double.tryParse(cleaned);
+    if (parsed == null) return raw;
+    if (parsed % 1 == 0) {
+      return NumberFormat('#,##0', 'en_US').format(parsed);
+    }
+    return NumberFormat('#,##0.##', 'en_US').format(parsed);
+  }
+
+  String _formatDate(dynamic value) {
+    final raw = _safe(value);
+    if (raw.isEmpty) return '';
+    final normalized = raw.contains(' ') ? raw.replaceFirst(' ', 'T') : raw;
+    final parsed = DateTime.tryParse(normalized) ?? DateTime.tryParse(raw);
+    if (parsed == null) return raw;
+    return DateFormat('dd/MM/yyyy').format(parsed);
   }
 
   @override
@@ -263,6 +285,49 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     );
   }
 
+  Widget _lineItemTile({
+    required String description,
+    required String lineDate,
+    required String amount,
+    required bool showDivider,
+  }) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _value(description, size: 14.sp, weight: FontWeight.w900),
+                  SizedBox(height: 6.w),
+                  _label(_formatDate(lineDate)),
+                ],
+              ),
+            ),
+            SizedBox(width: 12.w),
+            _value(
+              _formatAmount(amount),
+              size: 14.sp,
+              weight: FontWeight.w900,
+              color: const Color(0xFF15A98A),
+            ),
+          ],
+        ),
+        if (showDivider) ...[
+          SizedBox(height: 10.w),
+          const Divider(
+            color: Color(0xFFD2D2D2),
+            height: 1,
+          ),
+          SizedBox(height: 10.w),
+        ],
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final requestNo = _pick([
@@ -310,11 +375,15 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     ], fallback: '0');
 
     final lines = _formData['lines'] as List? ?? [];
+    final hasMoreLines = lines.length > 4;
+    final visibleLines = (_showAllLines || !hasMoreLines)
+      ? lines
+      : lines.take(4).toList();
 
     final userId =
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
 
-    final pillWidth = ((MediaQuery.of(context).size.width - 40.w) - 16.w) / 2;
+    final pillWidth = ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F2),
@@ -450,8 +519,8 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    if (lines.isNotEmpty)
-                                      ...lines.asMap().entries.map((entry) {
+                                    if (visibleLines.isNotEmpty)
+                                      ...visibleLines.asMap().entries.map((entry) {
                                         final i = entry.key;
                                         final line = entry.value;
                                         final lineMap = line as Map? ?? {};
@@ -471,43 +540,11 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                           lineMap['subtotal'],
                                         ], fallback: '0');
 
-                                        return Column(
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment.spaceBetween,
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.end,
-                                              children: [
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment:
-                                                        CrossAxisAlignment.start,
-                                                    children: [
-                                                      _value(description,
-                                                          size: 14.sp,
-                                                          weight: FontWeight.w900),
-                                                      SizedBox(height: 6.w),
-                                                      _label(lineDate),
-                                                    ],
-                                                  ),
-                                                ),
-                                                SizedBox(width: 12.w),
-                                                _value(amount,
-                                                    size: 14.sp,
-                                                    weight: FontWeight.w900,
-                                                    color: const Color(0xFF15A98A)),
-                                              ],
-                                            ),
-                                            if (i < lines.length - 1) ...[
-                                              SizedBox(height: 10.w),
-                                              const Divider(
-                                                color: Color(0xFFD2D2D2),
-                                                height: 1,
-                                              ),
-                                              SizedBox(height: 10.w),
-                                            ],
-                                          ],
+                                        return _lineItemTile(
+                                          description: description,
+                                          lineDate: lineDate,
+                                          amount: amount,
+                                          showDivider: i < visibleLines.length - 1,
                                         );
                                       })
                                     else
@@ -526,28 +563,51 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                                     size: 14.sp,
                                                     weight: FontWeight.w900),
                                                 SizedBox(height: 6.w),
-                                                _label(date),
+                                                _label(_formatDate(date)),
                                               ],
                                             ),
                                           ),
                                           SizedBox(width: 12.w),
-                                          _value(pettycashLimit,
+                                          _value(_formatAmount(pettycashLimit),
                                               size: 14.sp,
                                               weight: FontWeight.w900,
                                               color: const Color(0xFF15A98A)),
                                         ],
                                       ),
-                                    SizedBox(height: 8.w),
-                                    Center(
-                                      child: Icon(
-                                        Icons.keyboard_double_arrow_down_rounded,
-                                        color: const Color(0xFFBFBFBF),
-                                        size: 38.w,
-                                      ),
-                                    ),
                                   ],
                                 ),
                               ),
+                              if (hasMoreLines && !_showAllLines) ...[
+                                SizedBox(height: 6.w),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => PettyCashSeeMoreScreen(
+                                            requestId: widget.requestId,
+                                            type: widget.type,
+                                            userId: userId,
+                                            lines: lines,
+                                            projectName: projectName,
+                                            date: date,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Text(
+                                      'SEE MORE',
+                                      style: GoogleFonts.inter(
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFFBBBBBB),
+                                        letterSpacing: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
                               SizedBox(height: 10.w),
                               // Total card
                               _card(
@@ -561,7 +621,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                         size: 15.sp,
                                         weight: FontWeight.w900,
                                         color: const Color(0xFFD31721)),
-                                    _value(total,
+                                    _value(_formatAmount(total),
                                         size: 18.sp,
                                         weight: FontWeight.w900,
                                         color: const Color(0xFFD31721)),
@@ -593,8 +653,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                         const Color(0xFF64676B)
                                             .withValues(alpha: 0.4),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius:
-                                          BorderRadius.circular(12.r),
+                                      borderRadius: BorderRadius.circular(12.r),
                                     ),
                                   ),
                                 ),
@@ -604,24 +663,287 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                           ),
                         ),
                       ),
-                      SafeArea(
-                        top: false,
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 20.w, vertical: 14.w),
-                          child: Center(
+                      Container(
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF5F5F5),
+                          border: Border(
+                            top: BorderSide(color: Color(0xFFD4D4D4), width: 1),
+                          ),
+                        ),
+                        child: SafeArea(
+                          top: false,
+                          child: Padding(
+                            padding:
+                                EdgeInsets.symmetric(horizontal: 38.w, vertical: 10.w),
                             child: ApprovalActionButtons(
                               requestId: widget.requestId,
                               type: widget.type,
                               userIds: [userId],
                               variant: ApprovalActionButtonsVariant.pill,
                               pillWidth: pillWidth,
+                              pillHeight: 36.w,
+                              pillSpacing: 24.w,
+                              pillBorderRadius: BorderRadius.circular(20.r),
+                              pillTextStyle: GoogleFonts.inter(
+                                fontSize: 17.sp,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.white,
+                                height: 1,
+                              ),
                             ),
                           ),
                         ),
                       ),
                     ],
                   ),
+      ),
+    );
+  }
+}
+
+class PettyCashSeeMoreScreen extends StatelessWidget {
+  final String requestId;
+  final String type;
+  final String userId;
+  final List<dynamic> lines;
+  final String projectName;
+  final String date;
+
+  const PettyCashSeeMoreScreen({
+    super.key,
+    required this.requestId,
+    required this.type,
+    required this.userId,
+    required this.lines,
+    required this.projectName,
+    required this.date,
+  });
+
+  String _safe(dynamic v, {String fallback = ''}) {
+    if (v == null) return fallback;
+    if (v == false || v == true) return fallback;
+    final s = v.toString();
+    if (s.isEmpty) return fallback;
+    final lower = s.toLowerCase();
+    if (lower == 'false' || lower == 'true' || lower == 'null') return fallback;
+    return s;
+  }
+
+  String _pick(List<dynamic> values, {String fallback = ''}) {
+    for (final v in values) {
+      final s = _safe(v);
+      if (s.isNotEmpty) return s;
+    }
+    return fallback;
+  }
+
+  String _formatAmount(dynamic value) {
+    final raw = _safe(value, fallback: '0');
+    final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
+    final parsed = double.tryParse(cleaned);
+    if (parsed == null) return raw;
+    if (parsed % 1 == 0) {
+      return NumberFormat('#,##0', 'en_US').format(parsed);
+    }
+    return NumberFormat('#,##0.##', 'en_US').format(parsed);
+  }
+
+  String _formatDate(dynamic value) {
+    final raw = _safe(value);
+    if (raw.isEmpty) return '';
+    final normalized = raw.contains(' ') ? raw.replaceFirst(' ', 'T') : raw;
+    final parsed = DateTime.tryParse(normalized) ?? DateTime.tryParse(raw);
+    if (parsed == null) return raw;
+    return DateFormat('dd/MM/yyyy').format(parsed);
+  }
+
+  Widget _value(String text,
+      {double? size, FontWeight? weight, Color? color, TextAlign? align}) {
+    return Text(
+      text,
+      textAlign: align,
+      style: GoogleFonts.inter(
+        fontSize: size ?? 14.sp,
+        fontWeight: weight ?? FontWeight.w800,
+        color: color ?? const Color(0xFF0E0E0E),
+        letterSpacing: 0.1,
+      ),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+
+  Widget _label(String text) {
+    return Text(
+      text,
+      style: GoogleFonts.inter(
+        fontSize: 11.sp,
+        fontWeight: FontWeight.w800,
+        color: const Color(0xFFB4B4B4),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pillWidth = ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2F2F2),
+      appBar: const HeaderWidget(),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.w),
+                child: Column(
+                  children: [
+                    SizedBox(height: 4.w),
+                    Text(
+                      'PETTYCASH DETAILS',
+                      style: GoogleFonts.inter(
+                        fontSize: 15.sp,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF0E0E0E),
+                        letterSpacing: 0.6,
+                      ),
+                    ),
+                    SizedBox(height: 10.w),
+                    Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.w),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF4F4F4),
+                        borderRadius: BorderRadius.circular(14.r),
+                        border: Border.all(color: const Color(0xFF9F9F9F), width: 1),
+                      ),
+                      child: Column(
+                        children: [
+                          if (lines.isNotEmpty)
+                            ...lines.asMap().entries.map((entry) {
+                              final i = entry.key;
+                              final lineMap = (entry.value as Map?) ?? {};
+                              final description = _pick([
+                                lineMap['description'],
+                                lineMap['name'],
+                                projectName,
+                              ], fallback: 'Item');
+                              final lineDate = _pick([
+                                lineMap['date'],
+                                lineMap['line_date'],
+                                date,
+                              ]);
+                              final amount = _pick([
+                                lineMap['amount'],
+                                lineMap['price'],
+                                lineMap['subtotal'],
+                              ], fallback: '0');
+
+                              return Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            _value(description,
+                                                size: 14.sp,
+                                                weight: FontWeight.w900),
+                                            SizedBox(height: 6.w),
+                                            _label(_formatDate(lineDate)),
+                                          ],
+                                        ),
+                                      ),
+                                      SizedBox(width: 12.w),
+                                      _value(
+                                        _formatAmount(amount),
+                                        size: 14.sp,
+                                        weight: FontWeight.w900,
+                                        color: const Color(0xFF15A98A),
+                                      ),
+                                    ],
+                                  ),
+                                  if (i < lines.length - 1) ...[
+                                    SizedBox(height: 10.w),
+                                    const Divider(
+                                      color: Color(0xFFD2D2D2),
+                                      height: 1,
+                                    ),
+                                    SizedBox(height: 10.w),
+                                  ],
+                                ],
+                              );
+                            })
+                          else
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _value(projectName,
+                                          size: 14.sp,
+                                          weight: FontWeight.w900),
+                                      SizedBox(height: 6.w),
+                                      _label(_formatDate(date)),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(width: 12.w),
+                                _value(
+                                  _formatAmount('0'),
+                                  size: 14.sp,
+                                  weight: FontWeight.w900,
+                                  color: const Color(0xFF15A98A),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFFF5F5F5),
+                border: Border(
+                  top: BorderSide(color: Color(0xFFD4D4D4), width: 1),
+                ),
+              ),
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 38.w, vertical: 10.w),
+                  child: ApprovalActionButtons(
+                    requestId: requestId,
+                    type: type,
+                    userIds: [userId],
+                    variant: ApprovalActionButtonsVariant.pill,
+                    pillWidth: pillWidth,
+                    pillHeight: 36.w,
+                    pillSpacing: 24.w,
+                    pillBorderRadius: BorderRadius.circular(20.r),
+                    pillTextStyle: GoogleFonts.inter(
+                      fontSize: 17.sp,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

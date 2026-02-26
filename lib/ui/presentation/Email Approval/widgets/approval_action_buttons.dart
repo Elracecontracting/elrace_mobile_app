@@ -16,6 +16,10 @@ class ApprovalActionButtons extends StatelessWidget {
   final List<String> userIds;
   final ApprovalActionButtonsVariant variant;
   final double? pillWidth;
+  final double? pillHeight;
+  final BorderRadius? pillBorderRadius;
+  final TextStyle? pillTextStyle;
+  final double? pillSpacing;
 
   const ApprovalActionButtons({
     super.key,
@@ -27,6 +31,10 @@ class ApprovalActionButtons extends StatelessWidget {
     required this.userIds,
     this.variant = ApprovalActionButtonsVariant.holdCircle,
     this.pillWidth,
+    this.pillHeight,
+    this.pillBorderRadius,
+    this.pillTextStyle,
+    this.pillSpacing,
   });
 
   @override
@@ -69,7 +77,7 @@ class ApprovalActionButtons extends StatelessWidget {
             commentController: commentController,
             isSelected: selectedAction == 'reject',
           ),
-          SizedBox(width: 16.w),
+          SizedBox(width: pillSpacing ?? 16.w),
           _buildPillActionButton(
             context,
             label: 'APPROVE',
@@ -313,7 +321,7 @@ class ApprovalActionButtons extends StatelessWidget {
 
         return SizedBox(
           width: pillWidth ?? 150.w,
-          height: 52.w,
+          height: pillHeight ?? 52.w,
           child: ElevatedButton(
             onPressed: isButtonDisabled
                 ? null
@@ -388,18 +396,19 @@ class ApprovalActionButtons extends StatelessWidget {
               backgroundColor: color,
               disabledBackgroundColor: color.withValues(alpha: 0.4),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: pillBorderRadius ?? BorderRadius.circular(30),
               ),
               elevation: isSelected ? 6 : 2,
             ),
             child: Text(
-              label,
-              style: GoogleFonts.koulen(
-                fontSize: 18.sp,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.0,
-                color: Colors.white,
-              ),
+              '${label.substring(0, 1)}${label.substring(1).toLowerCase()}',
+              style: pillTextStyle ??
+                  GoogleFonts.koulen(
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.0,
+                    color: Colors.white,
+                  ),
             ),
           ),
         );
