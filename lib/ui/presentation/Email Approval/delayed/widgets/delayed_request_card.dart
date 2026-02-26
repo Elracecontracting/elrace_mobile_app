@@ -10,6 +10,7 @@ class DelayedRequestCard extends StatelessWidget {
   final String requestType;
   final String employeeName;
   final String empCode;
+  final String requestDate;
   final String employeeImageUrl;
   final int daysDelayed;
   final VoidCallback? onTap;
@@ -20,6 +21,7 @@ class DelayedRequestCard extends StatelessWidget {
     required this.requestType,
     required this.employeeName,
     required this.empCode,
+    required this.requestDate,
     required this.employeeImageUrl,
     required this.daysDelayed,
     this.onTap,
@@ -27,52 +29,57 @@ class DelayedRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Fixed width per spec (logical pixels).
-    const double stripWidth = 30;
+    const double stripWidth = 42;
 
     return Container(
-      height: 140.w,
-      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.w),
+      height: 134.w,
+      margin: EdgeInsets.symmetric(horizontal: 14.w, vertical: 4.w),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18.r),
           child: Stack(
             children: [
-              // Base card (gradient + border)
               Positioned.fill(
                 child: Ink(
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFE1E4E8),
-                        Color(0xFFB9C0CB),
-                      ],
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFF5F666F), width: 1),
+                    color: const Color(0xFFD8DCE1),
+                    borderRadius: BorderRadius.circular(18.r),
+                    border: Border.all(color: const Color(0xFF80858C), width: 1),
                   ),
                 ),
               ),
 
-              // Main content (leave space for the red strip)
               Positioned.fill(
                 child: Padding(
                   padding: EdgeInsets.only(
-                    left: 14.w,
-                    right: (14.w + stripWidth),
-                    top: 8.w,
+                    left: 8.w,
+                    right: 8.w + stripWidth,
+                    top: 9.w,
                     bottom: 8.w,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          SizedBox(width: 50.w + 12.w + 2.w + 14.w),
+                          Container(
+                            width: 36.w,
+                            height: 36.w,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFE7EBEF),
+                                width: 1.3,
+                              ),
+                            ),
+                            child: ClipOval(
+                              child: _buildEmployeeImage(36.w),
+                            ),
+                          ),
+                          SizedBox(width: 12.w),
                           Expanded(
                             child: Align(
                               alignment: Alignment.centerLeft,
@@ -80,13 +87,12 @@ class DelayedRequestCard extends StatelessWidget {
                                 fit: BoxFit.scaleDown,
                                 alignment: Alignment.centerLeft,
                                 child: Text(
-                                  reqNo.toUpperCase(),
+                                  reqNo,
                                   style: GoogleFonts.nunito(
                                     fontSize: 16.sp,
-                                    fontWeight: FontWeight.w700,
+                                    fontWeight: FontWeight.w900,
                                     color: const Color(0xFF0B2D5E),
-                                    letterSpacing: 0.5,
-                                    height: 1.0,
+                                    letterSpacing: 0.2,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
@@ -97,134 +103,112 @@ class DelayedRequestCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      SizedBox(height: 6.w),
-                      Expanded(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: 50.w,
-                              height: 50.w,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.9),
-                                  width: 2,
-                                ),
-                              ),
-                              child: ClipOval(
-                                child: _buildEmployeeImage(50.w),
-                              ),
-                            ),
-                            SizedBox(width: 12.w),
-                            Container(
-                              width: 2.w,
-                              height: 54.w,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(2.r),
-                              ),
-                            ),
-                            SizedBox(width: 14.w),
-                            Expanded(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    requestType.toUpperCase(),
-                                    style: GoogleFonts.nunito(
-                                      fontSize: 15.sp,
-                                      fontWeight: FontWeight.w900,
-                                      color: const Color(0xFF0E0E10),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  SizedBox(height: 1.5.w),
-                                  Text(
-                                    employeeName.toUpperCase(),
-                                    style: GoogleFonts.nunito(
-                                      fontSize: 14.sp,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF0B2D5E),
-                                      letterSpacing: 0.3,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  SizedBox(height: 1.5.w),
-                                  Text(
-                                    empCode,
-                                    style: GoogleFonts.nunito(
-                                      fontSize: 13.sp,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFF6B717B),
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                      SizedBox(height: 8.w),
+                      Padding(
+                        padding: EdgeInsets.only(left: 2.w),
+                        child: Text(
+                          requestType,
+                          style: GoogleFonts.nunito(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF121212),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      SizedBox(height: 2.w),
+                      Padding(
+                        padding: EdgeInsets.only(left: 2.w),
+                        child: Text(
+                          employeeName,
+                          style: GoogleFonts.nunito(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF6C7075),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      SizedBox(height: 1.5.w),
+                      Padding(
+                        padding: EdgeInsets.only(left: 2.w),
+                        child: Text(
+                          empCode,
+                          style: GoogleFonts.nunito(
+                            fontSize: 11.sp,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF565B61),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Spacer(),
+                      Padding(
+                        padding: EdgeInsets.only(left: 2.w),
+                        child: Text(
+                          requestDate,
+                          style: GoogleFonts.nunito(
+                            fontSize: 9.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF70757C),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
-
               Positioned(
                 top: 0,
-                right: 20,
+                right: 20.w,
                 bottom: 0,
                 child: SizedBox(
                   width: stripWidth,
                   height: double.infinity,
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topRight:  Radius.zero,
-                      bottomRight: Radius.zero,
-                      topLeft: Radius.zero,
-                      bottomLeft: Radius.zero,
-                    ),
-                    child: ColoredBox(
+                  child: ColoredBox(
                       color: const Color(0xFFC62828),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            '$daysDelayed',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 25.sp,
-                              height: 1.0,
-                            ),
-                          ),
-                          SizedBox(height: 9.w),
-                          RotatedBox(
-                            quarterTurns: 3,
-                            child: Text(
-                              'Days Delayed',
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12.sp,
-                                height: 1.0,
+                      child: Center(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '$daysDelayed',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 30.sp,
+                                  height: 1.0,
+                                ),
                               ),
-                            ),
+                              SizedBox(height: 6.w),
+                              RotatedBox(
+                                quarterTurns: 3,
+                                child: Text(
+                                  'Days Delayed',
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 9.sp,
+                                    height: 1.0,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
                 ),
               ),
             ],

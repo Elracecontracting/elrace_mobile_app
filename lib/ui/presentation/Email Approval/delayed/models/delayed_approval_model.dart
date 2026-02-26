@@ -1,3 +1,12 @@
+String _readRequestDate(Map<String, dynamic> json) {
+  final dynamic value = json['request_date'] ??
+      json['date'] ??
+      json['create_date'] ??
+      json['created_at'] ??
+      json['approval_date'];
+  return value?.toString() ?? '';
+}
+
 /// Model for a single delayed HR approval item
 class DelayedHrItem {
   final int id;
@@ -6,6 +15,7 @@ class DelayedHrItem {
   final String validatorName;
   final String validatorEmpId;
   final String validatorImage;
+  final String requestDate;
   final int daysDelayed;
 
   DelayedHrItem({
@@ -15,6 +25,7 @@ class DelayedHrItem {
     required this.validatorName,
     required this.validatorEmpId,
     required this.validatorImage,
+    required this.requestDate,
     this.daysDelayed = 0,
   });
 
@@ -26,6 +37,7 @@ class DelayedHrItem {
       validatorName: json['validator_name'] ?? '',
       validatorEmpId: json['validator_emp_id']?.toString() ?? '',
       validatorImage: json['validator_image'] ?? '',
+      requestDate: _readRequestDate(json),
       daysDelayed: json['delay_days'] ?? json['days_delayed'] ?? 0,
     );
   }
@@ -38,6 +50,7 @@ class DelayedHrItem {
       'validator_name': validatorName,
       'validator_emp_id': validatorEmpId,
       'validator_image': validatorImage,
+      'request_date': requestDate,
       'days_delayed': daysDelayed,
     };
   }
@@ -51,6 +64,7 @@ class DelayedRfqItem {
   final String reviewerName;
   final String reviewerEmpId;
   final String reviewerImage;
+  final String requestDate;
   final int daysDelayed;
 
   DelayedRfqItem({
@@ -60,6 +74,7 @@ class DelayedRfqItem {
     required this.reviewerName,
     required this.reviewerEmpId,
     required this.reviewerImage,
+    required this.requestDate,
     this.daysDelayed = 0,
   });
 
@@ -71,6 +86,7 @@ class DelayedRfqItem {
       reviewerName: json['reviewer_name'] ?? '',
       reviewerEmpId: json['reviewer_emp_id']?.toString() ?? '',
       reviewerImage: json['reviewer_image'] ?? '',
+      requestDate: _readRequestDate(json),
       daysDelayed: json['delay_days'] ?? json['days_delayed'] ?? 0,
     );
   }
@@ -83,6 +99,7 @@ class DelayedRfqItem {
       'reviewer_name': reviewerName,
       'reviewer_emp_id': reviewerEmpId,
       'reviewer_image': reviewerImage,
+      'request_date': requestDate,
       'days_delayed': daysDelayed,
     };
   }
@@ -96,6 +113,7 @@ class DelayedInvoiceItem {
   final String reviewerName;
   final String reviewerEmpId;
   final String reviewerImage;
+  final String requestDate;
   final int daysDelayed;
 
   DelayedInvoiceItem({
@@ -105,6 +123,7 @@ class DelayedInvoiceItem {
     required this.reviewerName,
     required this.reviewerEmpId,
     required this.reviewerImage,
+    required this.requestDate,
     this.daysDelayed = 0,
   });
 
@@ -116,6 +135,7 @@ class DelayedInvoiceItem {
       reviewerName: json['reviewer_name'] ?? '',
       reviewerEmpId: json['reviewer_emp_id']?.toString() ?? '',
       reviewerImage: json['reviewer_image'] ?? '',
+      requestDate: _readRequestDate(json),
       daysDelayed: json['delay_days'] ?? json['days_delayed'] ?? 0,
     );
   }
@@ -128,6 +148,7 @@ class DelayedInvoiceItem {
       'reviewer_name': reviewerName,
       'reviewer_emp_id': reviewerEmpId,
       'reviewer_image': reviewerImage,
+      'request_date': requestDate,
       'days_delayed': daysDelayed,
     };
   }
@@ -141,6 +162,7 @@ class DelayedPettyCashItem {
   final String reviewerName;
   final String reviewerEmpId;
   final String reviewerImage;
+  final String requestDate;
   final int daysDelayed;
 
   DelayedPettyCashItem({
@@ -150,6 +172,7 @@ class DelayedPettyCashItem {
     required this.reviewerName,
     required this.reviewerEmpId,
     required this.reviewerImage,
+    required this.requestDate,
     this.daysDelayed = 0,
   });
 
@@ -161,6 +184,7 @@ class DelayedPettyCashItem {
       reviewerName: json['reviewer_name'] ?? '',
       reviewerEmpId: json['reviewer_emp_id']?.toString() ?? '',
       reviewerImage: json['reviewer_image'] ?? '',
+      requestDate: _readRequestDate(json),
       daysDelayed: json['delay_days'] ?? json['days_delayed'] ?? 0,
     );
   }
@@ -173,6 +197,7 @@ class DelayedPettyCashItem {
       'reviewer_name': reviewerName,
       'reviewer_emp_id': reviewerEmpId,
       'reviewer_image': reviewerImage,
+      'request_date': requestDate,
       'days_delayed': daysDelayed,
     };
   }
@@ -233,6 +258,66 @@ class DelayedApprovalsResponse {
       rfqItems.isEmpty &&
       invoiceItems.isEmpty &&
       pettyCashItems.isEmpty;
+
+  /// Returns all delayed items as normalized card maps ready for display.
+  List<Map<String, dynamic>> toCardItems() {
+    final List<Map<String, dynamic>> items = [];
+
+    for (final item in hrItems) {
+      items.add({
+        'type': 'HR',
+        'id': item.id,
+        'reqNo': item.name,
+        'requestType': item.requestType,
+        'employeeName': item.validatorName,
+        'empCode': item.validatorEmpId,
+        'requestDate': item.requestDate,
+        'employeeImageUrl': item.validatorImage,
+        'daysDelayed': item.daysDelayed,
+      });
+    }
+    for (final item in rfqItems) {
+      items.add({
+        'type': 'RFQ',
+        'id': item.id,
+        'reqNo': item.name,
+        'requestType': item.project,
+        'employeeName': item.reviewerName,
+        'empCode': item.reviewerEmpId,
+        'requestDate': item.requestDate,
+        'employeeImageUrl': item.reviewerImage,
+        'daysDelayed': item.daysDelayed,
+      });
+    }
+    for (final item in invoiceItems) {
+      items.add({
+        'type': 'INVOICE',
+        'id': item.id,
+        'reqNo': item.name,
+        'requestType': item.project,
+        'employeeName': item.reviewerName,
+        'empCode': item.reviewerEmpId,
+        'requestDate': item.requestDate,
+        'employeeImageUrl': item.reviewerImage,
+        'daysDelayed': item.daysDelayed,
+      });
+    }
+    for (final item in pettyCashItems) {
+      items.add({
+        'type': 'PETTY CASH',
+        'id': item.id,
+        'reqNo': item.name,
+        'requestType': item.project,
+        'employeeName': item.reviewerName,
+        'empCode': item.reviewerEmpId,
+        'requestDate': item.requestDate,
+        'employeeImageUrl': item.reviewerImage,
+        'daysDelayed': item.daysDelayed,
+      });
+    }
+
+    return items;
+  }
 }
 
 /// Counters-only response from /api/my_delayed_approvals/counters
@@ -341,6 +426,7 @@ class DelayedDetailsResponse {
         'requestType': item.requestType,
         'employeeName': item.validatorName,
         'empCode': item.validatorEmpId,
+        'requestDate': item.requestDate,
         'employeeImageUrl': item.validatorImage,
         'daysDelayed': item.daysDelayed,
       });
@@ -353,6 +439,7 @@ class DelayedDetailsResponse {
         'requestType': item.project,
         'employeeName': item.reviewerName,
         'empCode': item.reviewerEmpId,
+        'requestDate': item.requestDate,
         'employeeImageUrl': item.reviewerImage,
         'daysDelayed': item.daysDelayed,
       });
@@ -365,6 +452,7 @@ class DelayedDetailsResponse {
         'requestType': item.project,
         'employeeName': item.reviewerName,
         'empCode': item.reviewerEmpId,
+        'requestDate': item.requestDate,
         'employeeImageUrl': item.reviewerImage,
         'daysDelayed': item.daysDelayed,
       });
@@ -377,6 +465,7 @@ class DelayedDetailsResponse {
         'requestType': item.project,
         'employeeName': item.reviewerName,
         'empCode': item.reviewerEmpId,
+        'requestDate': item.requestDate,
         'employeeImageUrl': item.reviewerImage,
         'daysDelayed': item.daysDelayed,
       });
