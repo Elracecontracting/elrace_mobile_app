@@ -100,7 +100,7 @@ Future<void> _showAdhanNotificationInBackground(
     await notificationsPlugin.show(
       0,
       '🕌 Prayer Time',
-      '🔔 It\'s time for $prayerName prayer',
+      '🔔 It\'s now time for ${_englishPrayerName(prayerName)} prayer',
       _defaultNotificationDetails,
     );
 
@@ -132,13 +132,14 @@ Future<FlutterLocalNotificationsPlugin>
 
 const NotificationDetails _defaultNotificationDetails = NotificationDetails(
   android: AndroidNotificationDetails(
-    'prayer_adhan_channel',
+    PrayerNotificationService.prayerAdhanChannelId,
     'Prayer Adhan',
     channelDescription: 'Notifications for prayer adhan times',
     importance: Importance.high,
     priority: Priority.high,
     icon: '@mipmap/ic_launcher',
-    playSound: false,
+    playSound: true,
+    sound: RawResourceAndroidNotificationSound('athan'),
     enableVibration: true,
     visibility: NotificationVisibility.public,
     autoCancel: false,
@@ -147,7 +148,7 @@ const NotificationDetails _defaultNotificationDetails = NotificationDetails(
   iOS: DarwinNotificationDetails(
     presentAlert: true,
     presentBadge: true,
-    presentSound: false,
+    presentSound: true,
     interruptionLevel: InterruptionLevel.timeSensitive,
   ),
 );
@@ -163,7 +164,7 @@ Future<void> _playAdhanInBackground(String prayerName, int ms) async {
 
     // start with low volume and fade in for clarity
     await player.setVolume(0.1);
-    await player.play(AssetSource('mp3/azan.mp3'));
+    await player.play(AssetSource('mp3/athan.mp3'));
 
     // debugPrint('Background adhan started playing (fade-in)');
 
@@ -181,6 +182,30 @@ Future<void> _playAdhanInBackground(String prayerName, int ms) async {
     await player.dispose();
   } catch (e) {
     // debugPrint('Error playing adhan in background: $e');
+  }
+}
+
+String _englishPrayerName(String prayerName) {
+  switch (prayerName.toLowerCase()) {
+    case 'fajr':
+      return 'Fajr';
+    case 'dhuhr':
+    case 'duhr':
+    case 'zuhr':
+    case 'zhuhr':
+      return 'Dhuhr';
+    case 'asr':
+      return 'Asr';
+    case 'maghrib':
+    case 'magrib':
+      return 'Maghrib';
+    case 'isha':
+    case 'isha\'':
+    case 'ishaa':
+    case 'esha':
+      return 'Isha';
+    default:
+      return prayerName;
   }
 }
 

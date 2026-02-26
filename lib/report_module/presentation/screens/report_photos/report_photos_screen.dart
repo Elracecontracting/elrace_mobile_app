@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -221,6 +222,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
           reportId: widget.report.id,
           folderId: widget.folderId,
           folderName: widget.folderName,
+          reportItemsCount: _photoItems.length,
         ),
       ),
     );
@@ -483,11 +485,13 @@ class _PdfGenerationPage extends StatefulWidget {
   final String reportId;
   final String folderId;
   final String folderName;
+  final int reportItemsCount;
 
   const _PdfGenerationPage({
     required this.reportId,
     required this.folderId,
     required this.folderName,
+    required this.reportItemsCount,
   });
 
   @override
@@ -595,7 +599,61 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
         top: false,
         child: Column(
           children: [
-            SizedBox(height: 20.h),
+            Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 10.h, 16.w, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Icon(
+                    Icons.image_outlined,
+                    color: const Color(0xFFAEAEAE),
+                    size: 22.w,
+                  ),
+                  SizedBox(width: 4.w),
+                  Text(
+                    widget.reportItemsCount.toString(),
+                    style: GoogleFonts.inter(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFFAEAEAE),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 8.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Type of Report',
+                    style: GoogleFonts.inter(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF6A6D78),
+                    ),
+                  ),
+                  SizedBox(height: 10.h),
+                  _buildReportTypeButton('Site report'),
+                  SizedBox(height: 8.h),
+                  _buildReportTypeButton('Transfer report'),
+                  SizedBox(height: 8.h),
+                  _buildReportTypeButton('Incident report'),
+                ],
+              ),
+            ),
+            SizedBox(height: 12.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              child: Divider(
+                color: const Color(0xFFA7A7A7),
+                thickness: 0.8,
+                height: 1,
+              ),
+            ),
+            SizedBox(height: 14.h),
             // ── File Name field ──
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.w),
@@ -605,7 +663,7 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
                   Text(
                     'File Name',
                     style: GoogleFonts.inter(
-                      fontSize: 14.sp,
+                      fontSize: 13.sp,
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF6A6D78),
                     ),
@@ -618,9 +676,9 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
                           height: 44.h,
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(22.r),
+                            borderRadius: BorderRadius.circular(18.r),
                             border: Border.all(
-                                color: const Color(0xFFD0D0D0)),
+                                color: const Color(0xFFD0D0D0), width: .9),
                           ),
                           padding:
                               EdgeInsets.symmetric(horizontal: 16.w),
@@ -632,7 +690,8 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
                             ),
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              hintText: 'Enter file name...',
+                              isDense: true,
+                              hintText: '',
                               hintStyle: GoogleFonts.inter(
                                 fontSize: 14.sp,
                                 color: const Color(0xFFB0B0B0),
@@ -645,23 +704,19 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
                       GestureDetector(
                         onTap: _isGenerating ? null : _generate,
                         child: Container(
-                          width: 44.w,
-                          height: 44.h,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF27304E),
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
+                          width: 34.w,
+                          height: 34.h,
                           child: _isGenerating
                               ? Padding(
-                                  padding: EdgeInsets.all(12.w),
+                                  padding: EdgeInsets.all(8.w),
                                   child:
                                       const CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    color: Colors.white,
+                                    color: Color(0xFF27304E),
                                   ),
                                 )
-                              : Icon(Icons.download,
-                                  color: Colors.white, size: 24.w),
+                              : Icon(Icons.arrow_downward_rounded,
+                                  color: const Color(0xFF27304E), size: 34.w),
                         ),
                       ),
                     ],
@@ -690,7 +745,7 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
                       child: Text(
                         'Recent Files',
                         style: GoogleFonts.inter(
-                          fontSize: 16.sp,
+                          fontSize: 32.sp,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                         ),
@@ -739,32 +794,28 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 10.h),
-        padding:
-            EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(color: Colors.white24),
+          color: Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(22.r),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.86)),
         ),
         child: Row(
           children: [
-            Container(
-              width: 44.w,
-              height: 44.w,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10.r),
-              ),
-              child: Center(
-                child: Image.asset(
-                  'assets/png/text.png',
-                  width: 24.w,
-                  height: 24.w,
-                  errorBuilder: (_, __, ___) => Icon(
-                    Icons.picture_as_pdf,
-                    color: Colors.red,
-                    size: 24.w,
-                  ),
+            SizedBox(
+              width: 58.w,
+              height: 58.w,
+              child: Image.asset(
+                _isPdfFile(pdf)
+                    ? 'assets/png/pdf-icon.png'
+                    : 'assets/png/text.png',
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Icon(
+                  _isPdfFile(pdf)
+                      ? Icons.picture_as_pdf
+                      : Icons.insert_drive_file,
+                  color: _isPdfFile(pdf) ? Colors.red : Colors.white,
+                  size: 32.w,
                 ),
               ),
             ),
@@ -778,17 +829,17 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
                       color: Colors.white,
                     ),
                   ),
                   SizedBox(height: 2.h),
                   Text(
-                    pdf.createdAt,
+                    _formatPdfDate(pdf.createdAt),
                     style: GoogleFonts.inter(
-                      fontSize: 11.sp,
-                      color: Colors.white60,
+                      fontSize: 13.sp,
+                      color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -803,6 +854,49 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildReportTypeButton(String title) {
+    return SizedBox(
+      width: 205.w,
+      height: 36.h,
+      child: OutlinedButton(
+        onPressed: () {},
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: Color(0xFF27304E), width: 1.6),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24.r),
+          ),
+          backgroundColor: Colors.white,
+        ),
+        child: Text(
+          title,
+          style: GoogleFonts.inter(
+            fontSize: 15.sp,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF27304E),
+          ),
+        ),
+      ),
+    );
+  }
+
+  bool _isPdfFile(ReportPdfModel pdf) {
+    final fileName = pdf.fileName.toLowerCase();
+    final link = pdf.reportLink.toLowerCase();
+    return fileName.endsWith('.pdf') || link.contains('.pdf');
+  }
+
+  String _formatPdfDate(String raw) {
+    try {
+      final normalized = raw.replaceAll('/', '-').replaceFirst(' ', 'T');
+      final parsed = DateTime.tryParse(normalized);
+      if (parsed == null) return raw;
+      final formatted = DateFormat('dd/MM/yyyy  \"At\" hh:mm a').format(parsed);
+      return formatted.replaceAll('AM', 'Am').replaceAll('PM', 'Pm');
+    } catch (_) {
+      return raw;
+    }
   }
 }
 

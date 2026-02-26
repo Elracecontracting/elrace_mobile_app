@@ -3,6 +3,7 @@ package com.el_race.app
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Intent
+import android.media.AudioAttributes
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -67,14 +68,19 @@ class MainActivity : FlutterFragmentActivity() {
             
             // Prayer Adhan channel with maximum importance
             val adhanChannel = NotificationChannel(
-                "prayer_adhan_channel",
+                "prayer_adhan_channel_v2",
                 "Prayer Adhan",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Notifications for prayer adhan times"
                 enableLights(true)
                 enableVibration(true)
-                setSound(null, null) // Sound handled by AudioPlayer
+                val soundUri = Uri.parse("android.resource://$packageName/raw/athan")
+                val audioAttributes = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+                setSound(soundUri, audioAttributes)
                 setShowBadge(true)
             }
             notificationManager.createNotificationChannel(adhanChannel)

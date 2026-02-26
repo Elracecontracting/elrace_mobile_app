@@ -3,6 +3,8 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 class PrayerNotificationService {
+  static const String prayerAdhanChannelId = 'prayer_adhan_channel_v2';
+
   static final PrayerNotificationService _instance =
       PrayerNotificationService._internal();
   factory PrayerNotificationService() => _instance;
@@ -41,13 +43,14 @@ class PrayerNotificationService {
   Future<void> showAdhanNotification(String prayerName) async {
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
-      'prayer_adhan_channel',
+      prayerAdhanChannelId,
       'Prayer Adhan',
       channelDescription: 'Notifications for prayer adhan times',
       importance: Importance.high,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
-      playSound: false, // الصوت بيشتغل من AudioPlayer
+      playSound: true,
+      sound: RawResourceAndroidNotificationSound('athan'),
       enableVibration: true,
       visibility: NotificationVisibility.public,
       autoCancel: true, // تختفي تلقائياً عند الضغط عليها
@@ -58,7 +61,7 @@ class PrayerNotificationService {
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
-      presentSound: false, // الصوت بيشتغل من AudioPlayer
+      presentSound: true,
       interruptionLevel: InterruptionLevel.timeSensitive,
     );
 
@@ -70,7 +73,7 @@ class PrayerNotificationService {
     await _notificationsPlugin.show(
       0, // notification ID - استخدام 0 لاستبدال الإشعار السابق
       '🕌 Prayer Time',
-      '🔔 It\'s time for $prayerName prayer',
+      '🔔 It\'s now time for ${_englishPrayerName(prayerName)} prayer',
       details,
     );
 
@@ -89,17 +92,18 @@ class PrayerNotificationService {
     await _notificationsPlugin.zonedSchedule(
       _buildId(prayerName, scheduledTime),
       '🕌 Prayer Time',
-      '🔔 It\'s time for $prayerName prayer',
+      '🔔 It\'s now time for ${_englishPrayerName(prayerName)} prayer',
       tzTime,
       const NotificationDetails(
         android: AndroidNotificationDetails(
-          'prayer_adhan_channel',
+          prayerAdhanChannelId,
           'Prayer Adhan',
           channelDescription: 'Notifications for prayer adhan times',
           importance: Importance.high,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',
-          playSound: false,
+          playSound: true,
+          sound: RawResourceAndroidNotificationSound('athan'),
           enableVibration: true,
           visibility: NotificationVisibility.public,
           autoCancel: true,
@@ -108,7 +112,7 @@ class PrayerNotificationService {
         iOS: DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
-          presentSound: false,
+          presentSound: true,
           interruptionLevel: InterruptionLevel.timeSensitive,
         ),
       ),
@@ -128,5 +132,29 @@ class PrayerNotificationService {
     final base = prayerName.hashCode & 0x7fffffff;
     final t = time.millisecondsSinceEpoch ~/ 1000;
     return (base ^ t) & 0x7fffffff;
+  }
+
+  String _englishPrayerName(String prayerName) {
+    switch (prayerName.toLowerCase()) {
+      case 'fajr':
+        return 'Fajr';
+      case 'dhuhr':
+      case 'duhr':
+      case 'zuhr':
+      case 'zhuhr':
+        return 'Dhuhr';
+      case 'asr':
+        return 'Asr';
+      case 'maghrib':
+      case 'magrib':
+        return 'Maghrib';
+      case 'isha':
+      case 'isha\'':
+      case 'ishaa':
+      case 'esha':
+        return 'Isha';
+      default:
+        return prayerName;
+    }
   }
 }
