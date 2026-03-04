@@ -1,7 +1,14 @@
+import 'dart:convert';
+
 import 'package:el_race/core/services/notification_storage_service.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/screens/hr_details_screen.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/screens/invoice_details_screen.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/screens/pettycash_details_screen.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/screens/rfq_details_screen.dart';
 import 'package:el_race/ui/presentation/circular_announcement/data/circular_announcement_api_service.dart';
 import 'package:el_race/ui/presentation/circular_announcement/data/circular_announcement_model.dart';
 import 'package:el_race/ui/presentation/circular_announcement/widgets/circular_announcement_file_viewer.dart';
+import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -41,8 +48,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
     super.initState();
     _loadNotifications();
     _loadCircularAnnouncements(); // Load from API
-    // Mark all as read when screen opens
-    _markAllAsRead();
   }
 
   Future<void> _loadNotifications() async {
@@ -89,10 +94,296 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  Future<void> _markAllAsRead() async {
-    // Wait a bit before marking as read
-    await Future.delayed(const Duration(seconds: 2));
-    await NotificationStorageService.markAllAsRead();
+  bool _isRead(Map<String, dynamic> item) {
+    final value = item['isRead'] ?? item['is_read'] ?? false;
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    return value.toString().toLowerCase() == 'true';
+  }
+
+  Future<void> _markNotificationAsRead(String notificationId) async {
+    if (notificationId.trim().isEmpty) return;
+
+    await NotificationStorageService.markAsRead(notificationId);
+    if (!mounted) return;
+
+    setState(() {
+      notifications = notifications.map((notification) {
+        if (notification['id']?.toString() == notificationId) {
+          final updated = Map<String, dynamic>.from(notification);
+          updated['isRead'] = true;
+          updated['is_read'] = true;
+          return updated;
+        }
+        return notification;
+      }).toList();
+    });
+  }
+
+  Map<String, dynamic> _extractNotificationData(Map<String, dynamic> item) {
+    final rawData = item['data'];
+    if (rawData is Map<String, dynamic>) {
+      return rawData;
+    }
+    if (rawData is Map) {
+      return Map<String, dynamic>.from(rawData);
+    }
+    if (rawData is String && rawData.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(rawData);
+        if (decoded is Map<String, dynamic>) {
+          return decoded;
+        }
+        if (decoded is Map) {
+          return Map<String, dynamic>.from(decoded);
+        }
+      } catch (_) {
+        // Ignore malformed JSON payload and fallback to empty map.
+      }
+    }
+    return {};
+  }
+
+  int? _toInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    return int.tryParse(value.toString());
+  }
+
+  int? _extractRecordId(Map<String, dynamic> item, Map<String, dynamic> data) {
+    final candidates = <dynamic>[
+      data['record_id'],
+      data['recordId'],
+      data['res_id'],
+      data['resId'],
+      data['request_id'],
+      data['hr_request_id'],
+      data['rfq_id'],
+      data['invoice_id'],
+      data['petty_cash_id'],
+      data['expense_id'],
+      data['po_id'],
+      data['lpo_id'],
+      data['id'],
+      item['record_id'],
+      item['recordId'],
+      item['res_id'],
+      item['resId'],
+      item['request_id'],
+      item['hr_request_id'],
+      item['rfq_id'],
+      item['invoice_id'],
+      item['petty_cash_id'],
+      item['expense_id'],
+      item['po_id'],
+      item['lpo_id'],
+    ];
+
+    for (final candidate in candidates) {
+      final id = _toInt(candidate);
+      if (id != null) return id;
+    }
+
+    return null;
+  }
+
+  String _normalizeType(dynamic value) {
+    return (value ?? '')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  String _resolveRecordType(
+      Map<String, dynamic> item, Map<String, dynamic> data) {
+    final candidates = <dynamic>[
+      data['record_type'],
+      data['target_type'],
+      data['model_name'],
+      data['model'],
+      data['module'],
+      data['entity'],
+      data['resource_type'],
+      data['type'],
+      data['screen'],
+      item['record_type'],
+      item['target_type'],
+      item['model_name'],
+      item['model'],
+      item['module'],
+      item['entity'],
+      item['resource_type'],
+      item['type'],
+      item['category'],
+    ];
+
+    bool hasLpoKey = false;
+    bool hasRfqKey = false;
+    bool hasInvoiceKey = false;
+    bool hasHrKey = false;
+    bool hasPettyKey = false;
+
+    final keyPool = <dynamic>[
+      ...data.keys,
+      ...item.keys,
+      data['po_id'],
+      data['lpo_id'],
+      data['rfq_id'],
+      data['invoice_id'],
+      data['request_id'],
+      data['hr_request_id'],
+      data['petty_cash_id'],
+      data['expense_id'],
+      item['po_id'],
+      item['lpo_id'],
+      item['rfq_id'],
+      item['invoice_id'],
+      item['request_id'],
+      item['hr_request_id'],
+      item['petty_cash_id'],
+      item['expense_id'],
+    ];
+
+    for (final key in keyPool) {
+      final normalized = _normalizeType(key);
+      if (normalized.contains('lpo') || normalized.contains('poid')) {
+        hasLpoKey = true;
+      }
+      if (normalized.contains('rfq')) {
+        hasRfqKey = true;
+      }
+      if (normalized.contains('invoice')) {
+        hasInvoiceKey = true;
+      }
+      if (normalized.contains('hrrequest') ||
+          normalized == 'requestid' ||
+          normalized.contains('employee')) {
+        hasHrKey = true;
+      }
+      if (normalized.contains('pettycash') || normalized.contains('expense')) {
+        hasPettyKey = true;
+      }
+    }
+
+    for (final candidate in candidates) {
+      final normalized = _normalizeType(candidate);
+      if (normalized.isEmpty ||
+          normalized == 'notification' ||
+          normalized == 'announcement' ||
+          normalized == 'circular') {
+        continue;
+      }
+
+      if (normalized.contains('rfq') || normalized == 'purchasequotation') {
+        return 'rfq';
+      }
+      if (normalized.contains('invoice') ||
+          normalized.contains('accountmove')) {
+        return 'invoice';
+      }
+      if (normalized.contains('pettycash') ||
+          normalized.contains('hrexpensesheet') ||
+          normalized == 'expense' ||
+          normalized.contains('expense')) {
+        return 'pettycash';
+      }
+      if (normalized == 'hr' ||
+          normalized.contains('hrrequest') ||
+          normalized.contains('leaverequest') ||
+          normalized.contains('employeerequest')) {
+        return 'hr';
+      }
+      if (normalized.contains('lpo') ||
+          normalized == 'po' ||
+          normalized.contains('purchaseorder')) {
+        return hasRfqKey ? 'rfq' : 'lpo';
+      }
+    }
+
+    if (hasRfqKey) return 'rfq';
+    if (hasInvoiceKey) return 'invoice';
+    if (hasPettyKey) return 'pettycash';
+    if (hasLpoKey) return 'lpo';
+    if (hasHrKey) return 'hr';
+
+    final text =
+        '${item['title'] ?? ''} ${item['body'] ?? ''}'.toString().toLowerCase();
+    if (text.contains('rfq')) return 'rfq';
+    if (text.contains('invoice')) return 'invoice';
+    if (text.contains('petty cash') || text.contains('expense')) {
+      return 'pettycash';
+    }
+    if (text.contains('lpo') || text.contains('purchase order')) return 'lpo';
+    if (text.contains('hr request') ||
+        text.contains('leave request') ||
+        text.contains('hr')) {
+      return 'hr';
+    }
+
+    return '';
+  }
+
+  Future<bool> _openLinkedRecord(Map<String, dynamic> item) async {
+    final data = _extractNotificationData(item);
+    final recordId = _extractRecordId(item, data);
+    final recordType = _resolveRecordType(item, data);
+
+    print('🔔 Notification redirect - type: $recordType, recordId: $recordId');
+
+    if (!mounted || recordId == null) return false;
+
+    switch (recordType) {
+      case 'hr':
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => HrDetailsScreen(
+              requestId: '$recordId',
+              type: 'HR',
+            ),
+          ),
+        );
+        return true;
+      case 'rfq':
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => RfqDetailsScreen(
+              requestId: '$recordId',
+              type: 'RFQ',
+            ),
+          ),
+        );
+        return true;
+      case 'invoice':
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => InvoiceDetailsScreen(
+              requestId: '$recordId',
+              type: 'INVOICE',
+            ),
+          ),
+        );
+        return true;
+      case 'pettycash':
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PettyCashDetailsScreen(
+              requestId: '$recordId',
+              type: 'PETTYCASH',
+            ),
+          ),
+        );
+        return true;
+      case 'lpo':
+        return Util.openLpoPdfReport(context, recordId);
+      default:
+        return false;
+    }
   }
 
   String _formatTime(String isoString) {
@@ -399,7 +690,43 @@ class _NotificationScreenState extends State<NotificationScreen> {
       itemBuilder: (context, index) {
         final item = filteredNotifications[index];
         String currentNotificationIcon = notificationType[currentIndex]['icon'];
-        return _buildNotificationItem(item, currentNotificationIcon);
+        final notificationId = (item['id'] ?? '').toString();
+        final isRead = _isRead(item);
+
+        return Dismissible(
+          key: ValueKey('notification-$notificationId-$index'),
+          direction:
+              isRead ? DismissDirection.none : DismissDirection.endToStart,
+          confirmDismiss: (_) async {
+            await _markNotificationAsRead(notificationId);
+            return false;
+          },
+          background: Container(
+            margin: const EdgeInsets.only(bottom: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            alignment: Alignment.centerRight,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1C7A46),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const Icon(Icons.done_all, color: Colors.white),
+                const SizedBox(width: 8),
+                Text(
+                  'Mark as read',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12.sp,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          child: _buildNotificationItem(item, currentNotificationIcon),
+        );
       },
     );
   }
@@ -498,15 +825,28 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   /// Build notification item from local storage
   Widget _buildNotificationItem(Map<String, dynamic> item, String icon) {
+    final isRead = _isRead(item);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
-          onTap: () => _showAnnouncementDialog(
-            context,
-            item['title'] ?? 'Notification',
-            item['body'] ?? '',
-          ),
+          onTap: () async {
+            final notificationId = (item['id'] ?? '').toString();
+            if (!isRead && notificationId.isNotEmpty) {
+              await _markNotificationAsRead(notificationId);
+              if (!mounted) return;
+            }
+
+            final openedRecord = await _openLinkedRecord(item);
+            if (!mounted || openedRecord) return;
+
+            _showAnnouncementDialog(
+              context,
+              item['title'] ?? 'Notification',
+              item['body'] ?? '',
+            );
+          },
           child: Container(
             margin: const EdgeInsets.only(bottom: 6),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
@@ -539,8 +879,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             item['title'],
                             style: TextStyle(
                               fontSize: 16.sp,
-                              fontWeight: FontWeight.bold,
-                              color: appFontColor,
+                              fontWeight:
+                                  isRead ? FontWeight.w600 : FontWeight.bold,
+                              color: isRead
+                                  ? const Color(0xFF5A5A5A)
+                                  : appFontColor,
                             ),
                           ),
                         const SizedBox(height: 2),
@@ -548,8 +891,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           item['body'] ?? '',
                           style: TextStyle(
                             fontSize: 14.sp,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.black87,
+                            fontWeight:
+                                isRead ? FontWeight.w400 : FontWeight.w500,
+                            color: isRead ? Colors.black54 : Colors.black87,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
@@ -557,6 +901,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       ],
                     ),
                   ),
+                  if (!isRead)
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
                 ],
               ),
             ),
