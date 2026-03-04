@@ -24,6 +24,8 @@ class HrDetailsScreen extends StatefulWidget {
 }
 
 class _HrDetailsScreenState extends State<HrDetailsScreen> {
+  static const String _localFakeHrRequestId = 'LOCAL_FAKE_HR_001';
+
   bool _isLoading = true;
   String _error = '';
 
@@ -47,9 +49,30 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
     return fallback;
   }
 
+  bool get _isLocalFakeRequest => widget.requestId == _localFakeHrRequestId;
+
+  Map<String, dynamic> _buildLocalFakeFormData() {
+    return {
+      'request_no': 'REQ/FAKE/001',
+      'request_type': 'Annual Leave',
+      'employee_name': 'Local Test Employee',
+      'employee_id': 'EMP-FAKE-001',
+      'request_date': '2026-03-04',
+      'start_date': '2026-03-10',
+      'duration': '3',
+      'end_date': '2026-03-12',
+      'balance_leave': '8',
+    };
+  }
+
   @override
   void initState() {
     super.initState();
+    if (_isLocalFakeRequest) {
+      _formData = _buildLocalFakeFormData();
+      _isLoading = false;
+      return;
+    }
     _fetchHrDetails();
   }
 
@@ -80,10 +103,10 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
-      
+
       print('🔵 Response Status: ${response.statusCode}');
       print('🔵 Response Body: ${response.body}');
-      
+
       final data = jsonDecode(response.body);
 
       if (data['result'] != null) {
@@ -117,7 +140,8 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
   Widget _card({required Widget child, EdgeInsets? padding}) {
     return Container(
       width: double.infinity,
-      padding: padding ?? EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.w),
+      padding:
+          padding ?? EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12.r),
@@ -158,15 +182,16 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
 
   Widget _buildEmployeeImage(String imageData) {
     // Check if it's a base64 encoded image
-    if (imageData.startsWith('data:image') || 
-        (!imageData.startsWith('http://') && !imageData.startsWith('https://'))) {
+    if (imageData.startsWith('data:image') ||
+        (!imageData.startsWith('http://') &&
+            !imageData.startsWith('https://'))) {
       try {
         // Remove the data:image/png;base64, prefix if it exists
         String base64String = imageData;
         if (imageData.contains('base64,')) {
           base64String = imageData.split('base64,')[1];
         }
-        
+
         final bytes = base64Decode(base64String);
         return Image.memory(
           bytes,
@@ -186,7 +211,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
         );
       }
     }
-    
+
     // It's a URL, use Image.network
     return Image.network(
       imageData,
@@ -384,7 +409,8 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                                     SizedBox(width: 12.w),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             employeeName,
@@ -400,7 +426,8 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                                               style: GoogleFonts.inter(
                                                 fontSize: 14.sp,
                                                 fontWeight: FontWeight.w600,
-                                                color: Colors.white.withOpacity(0.9),
+                                                color: Colors.white
+                                                    .withOpacity(0.9),
                                               ),
                                             ),
                                         ],
@@ -502,6 +529,8 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                               userIds: [userId],
                               variant: ApprovalActionButtonsVariant.pill,
                               pillWidth: pillWidth,
+                              showHrApproveConfirmation: true,
+                              enableFakeApproveDemo: _isLocalFakeRequest,
                             ),
                           ),
                         ),

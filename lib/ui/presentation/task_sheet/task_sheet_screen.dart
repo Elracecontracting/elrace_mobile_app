@@ -34,7 +34,7 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
 
   Future<void> fetchTasks() async {
     final loginData = SharedPref.getLoginData();
-    
+
     // Debug: Print ALL available user ID fields
     print('\n🔍 ===== TIME SHEET DEBUG =====');
     print('LoginData exists: ${loginData != null}');
@@ -47,23 +47,26 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
     print('  odoo_user_id: ${loginData.result?.data?.odoo_user_id}');
     print('  employee_id: ${loginData.result?.data?.employee_id}');
     print('  partnerId: ${loginData.result?.data?.partnerId}');
-    print('\n🔑 Token: ${loginData.result?.token != null ? 'exists (${loginData.result?.token?.length} chars)' : 'null'}');
+    print(
+        '\n🔑 Token: ${loginData.result?.token != null ? 'exists (${loginData.result?.token?.length} chars)' : 'null'}');
     print('================================\n');
-    
+
     // Try multiple user ID fields in order of preference
-    final userId = loginData.result?.data?.uid ?? 
-                   loginData.result?.data?.odoo_user_id ?? 
-                   loginData.result?.data?.employee_id;
+    final userId = loginData.result?.data?.odoo_user_id ??
+        loginData.result?.data?.uid ??
+        loginData.result?.data?.employee_id ??
+        loginData.result?.data?.emp_id ??
+        loginData.result?.data?.uid;
     final token = loginData.result?.token;
 
     if (userId == null || token == null) {
       setState(() {
         isLoading = false;
         errorMessage = "User ID or token is missing.\n"
-                      "UID: ${loginData.result?.data?.uid}\n"
-                      "odoo_user_id: ${loginData.result?.data?.odoo_user_id}\n"
-                      "employee_id: ${loginData.result?.data?.employee_id}\n"
-                      "Token: ${token != null ? 'exists' : 'null'}";
+            "UID: ${loginData.result?.data?.uid}\n"
+            "odoo_user_id: ${loginData.result?.data?.odoo_user_id}\n"
+            "employee_id: ${loginData.result?.data?.employee_id}\n"
+            "Token: ${token != null ? 'exists' : 'null'}";
       });
       return;
     }
@@ -73,6 +76,8 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
       "Content-Type": "application/json",
       "Authorization": "Bearer $token",
     };
+
+    print('🎯 Task list user_id used: $userId');
 
     final body = jsonEncode({
       "jsonrpc": "2.0",
@@ -86,8 +91,10 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
       final decoded = jsonDecode(response.body);
 
       if (response.statusCode == 200 && decoded["result"] != null) {
+        final rawTasks = (decoded["result"]["tasks"] as List?) ?? [];
+        final sortedTasks = _sortTasksNewestFirst(rawTasks);
         setState(() {
-          tasks = decoded["result"]["tasks"];
+          tasks = sortedTasks;
           isLoading = false;
         });
       } else {
@@ -102,6 +109,40 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
         errorMessage = "Error: $e";
       });
     }
+  }
+
+  List<dynamic> _sortTasksNewestFirst(List<dynamic> items) {
+    DateTime? parseDate(dynamic value) {
+      if (value == null) return null;
+      final text = value.toString().trim();
+      if (text.isEmpty) return null;
+      return DateTime.tryParse(text.replaceFirst(' ', 'T'));
+    }
+
+    final sorted = List<dynamic>.from(items);
+    sorted.sort((a, b) {
+      if (a is! Map || b is! Map) return 0;
+
+      final aDate = parseDate(a['date_time']) ??
+          parseDate(a['create_date']) ??
+          parseDate(a['write_date']) ??
+          parseDate(a['created_at']) ??
+          parseDate(a['date']);
+      final bDate = parseDate(b['date_time']) ??
+          parseDate(b['create_date']) ??
+          parseDate(b['write_date']) ??
+          parseDate(b['created_at']) ??
+          parseDate(b['date']);
+
+      if (aDate != null && bDate != null) {
+        return bDate.compareTo(aDate);
+      }
+
+      final aId = int.tryParse((a['id'] ?? '').toString()) ?? 0;
+      final bId = int.tryParse((b['id'] ?? '').toString()) ?? 0;
+      return bId.compareTo(aId);
+    });
+    return sorted;
   }
 
   @override
@@ -188,13 +229,43 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                                 child: Material(
                                   color: Colors.transparent,
                                   child: InkWell(
-                                    onTap: () {
-                                      Navigator.push(
+                                    onTap: () async {
+                                      final createdResult =
+                                          await Navigator.push<dynamic>(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => const AddTaskSheet(),
+                                          builder: (context) =>
+                                              const AddTaskSheet(),
                                         ),
                                       );
+
+                                      final created = createdResult == true ||
+                                          (createdResult is Map &&
+                                              createdResult['created'] == true);
+
+                                      if (createdResult is Map &&
+                                          createdResult['task'] is Map &&
+                                          mounted) {
+                                        final optimisticTask =
+                                            Map<String, dynamic>.from(
+                                                createdResult['task'] as Map);
+                                        setState(() {
+                                          tasks = _sortTasksNewestFirst([
+                                            optimisticTask,
+                                            ...tasks,
+                                          ]);
+                                        });
+                                      }
+
+                                      if (created && mounted) {
+                                        await fetchTasks();
+                                        Future.delayed(
+                                            const Duration(seconds: 2),
+                                            () async {
+                                          if (!mounted) return;
+                                          await fetchTasks();
+                                        });
+                                      }
                                     },
                                     child: Center(
                                       child: Text(
@@ -246,7 +317,8 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
               SliverList(
                 delegate: SliverChildBuilderDelegate(
                   (context, index) {
-                    final filteredTasks = _filterTasks(tasks, _selectedEmployee);
+                    final filteredTasks =
+                        _filterTasks(tasks, _selectedEmployee);
                     final task = filteredTasks[index];
                     return Padding(
                       padding: EdgeInsets.symmetric(
@@ -255,13 +327,16 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                       ),
                       child: GestureDetector(
                         onTap: () {
+                          final taskId = task['id'];
+                          final isOptimistic = task['is_optimistic'] == true;
+                          if (taskId == null || isOptimistic) return;
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => TaskDetailsPage(
                                 loginResponseModel: SharedPref.getLoginData(),
-                                taskId: tasks[index]['id'],
-                                project_id: tasks[index]['project_id'],
+                                taskId: task['id'],
+                                project_id: task['project_id'],
                               ),
                             ),
                           );
@@ -283,7 +358,8 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
     if (employee == null || employee.trim().isEmpty) return allTasks;
     return allTasks.where((t) {
       final name = (t is Map ? (t['name'] ?? '') : '').toString();
-      final employeeName = (t is Map ? (t['employee_name'] ?? '') : '').toString();
+      final employeeName =
+          (t is Map ? (t['employee_name'] ?? '') : '').toString();
       final label = employeeName.isNotEmpty ? employeeName : name;
       return label.trim() == employee.trim();
     }).toList();
@@ -319,7 +395,8 @@ class _EmployeeDropdown extends StatelessWidget {
     final options = _employeeOptions();
     return Container(
       width: double.infinity,
-       height: 40.h,      padding: EdgeInsets.symmetric(horizontal: 18.w),
+      height: 40.h,
+      padding: EdgeInsets.symmetric(horizontal: 18.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(28.r),
@@ -398,10 +475,16 @@ class _GreenTimesheetCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final employeeName = (task['employee_name'] ?? task['name'] ?? '').toString();
+    final employeeName =
+        (task['employee_name'] ?? task['name'] ?? '').toString();
     final projectName = (task['project_name'] ?? '').toString();
     final clientName = (task['customer_name'] ?? '').toString();
-    final imageUrl = (task['employee_image'] ?? task['image'] ?? '').toString();
+    final imageUrl = (task['emp_image_url'] ??
+            task['employee_image'] ??
+            task['employee_image_url'] ??
+            task['image'] ??
+            '')
+        .toString();
 
     return Container(
       height: 120.h,
@@ -534,9 +617,22 @@ class _Avatar extends StatelessWidget {
 
   const _Avatar({required this.imageUrl});
 
+  String? _resolvedUrl(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return null;
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return value;
+    }
+    if (value.startsWith('/')) {
+      return 'https://erp.elrace.com$value';
+    }
+    return 'https://erp.elrace.com/$value';
+  }
+
   @override
   Widget build(BuildContext context) {
-    final hasNetwork = imageUrl.trim().startsWith('http');
+    final resolvedUrl = _resolvedUrl(imageUrl);
+    final hasNetwork = resolvedUrl != null;
     return Container(
       width: 56.w,
       height: 56.w,
@@ -551,13 +647,17 @@ class _Avatar extends StatelessWidget {
       child: ClipOval(
         child: hasNetwork
             ? Image.network(
-                imageUrl,
+                resolvedUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Icon(
-                  Icons.person,
-                  size: 28.w,
-                  color: const Color(0xFF9E9E9E),
-                ),
+                errorBuilder: (_, error, __) {
+                  print(
+                      '❌ TaskSheet avatar load failed: $resolvedUrl | error: $error');
+                  return Icon(
+                    Icons.person,
+                    size: 28.w,
+                    color: const Color(0xFF9E9E9E),
+                  );
+                },
               )
             : Icon(
                 Icons.person,

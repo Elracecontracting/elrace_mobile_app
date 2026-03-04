@@ -174,7 +174,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                 maxLines: 3,
                 textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
-                  hintText: translate('todo.description_hint'),
+                  hintText: 'Write your description...',
                   hintStyle: GoogleFonts.inter(
                     color: Colors.grey.shade400,
                   ),
@@ -783,8 +783,7 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                     itemCount: _filteredMembers.length,
                     itemBuilder: (context, index) {
                       final member = _filteredMembers[index];
-                      final isSelected =
-                          widget.selectedMember?.id == member.id;
+                      final isSelected = widget.selectedMember?.id == member.id;
 
                       return ListTile(
                         onTap: () => widget.onMemberSelected(member),

@@ -13,10 +13,26 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 class HrAndPettycashCard extends StatelessWidget {
+  static const String _localFakeHrRequestId = 'LOCAL_FAKE_HR_001';
+
   final List<dynamic> approvalItems;
   final VoidCallback? onRefresh;
   const HrAndPettycashCard(
       {super.key, required this.approvalItems, this.onRefresh});
+
+  Map<String, dynamic> _buildLocalFakeHrItem() {
+    return {
+      'id': _localFakeHrRequestId,
+      'category': 'HR',
+      'type': 'HR',
+      'name': 'REQ/FAKE/001',
+      'request_type': 'Annual Leave',
+      'employee_name': 'Local Test Employee',
+      'emp_code': 'EMP-FAKE-001',
+      'request_date': '2026-03-04',
+      'is_local_fake': true,
+    };
+  }
 
   String _formatAmountForCard(String raw) {
     final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
@@ -98,12 +114,11 @@ class HrAndPettycashCard extends StatelessWidget {
                     ),
                     child: ClipOval(
                       child: _buildEmployeeImage(
-                        item["requester_image"] ?? 
-                        item["employee_image"] ?? 
-                        item["emp_image"] ?? 
-                        item["image_emp"], 
-                        50.w
-                      ),
+                          item["requester_image"] ??
+                              item["employee_image"] ??
+                              item["emp_image"] ??
+                              item["image_emp"],
+                          50.w),
                     ),
                   ),
                   SizedBox(width: 12.w),
@@ -247,12 +262,11 @@ class HrAndPettycashCard extends StatelessWidget {
                     ),
                     child: ClipOval(
                       child: _buildEmployeeImage(
-                        item["requester_image"] ?? 
-                        item["employee_image"] ?? 
-                        item["emp_image"] ?? 
-                        item["image_emp"], 
-                        54.w
-                      ),
+                          item["requester_image"] ??
+                              item["employee_image"] ??
+                              item["emp_image"] ??
+                              item["image_emp"],
+                          54.w),
                     ),
                   ),
                   SizedBox(width: 12.w),
@@ -404,7 +418,19 @@ class HrAndPettycashCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (approvalItems.isEmpty) {
+    final displayItems = List<dynamic>.from(approvalItems);
+    if (kDebugMode) {
+      final alreadyExists = displayItems.any(
+        (element) =>
+            element is Map &&
+            element['id']?.toString() == _localFakeHrRequestId,
+      );
+      if (!alreadyExists) {
+        displayItems.insert(0, _buildLocalFakeHrItem());
+      }
+    }
+
+    if (displayItems.isEmpty) {
       return const Expanded(
         child: Center(
           child: Text('No items found'),
@@ -421,13 +447,14 @@ class HrAndPettycashCard extends StatelessWidget {
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 5) +
             EdgeInsets.only(bottom: totalBottomPadding, top: 120.w),
-        itemCount: approvalItems.length,
+        itemCount: displayItems.length,
         separatorBuilder: (context, index) => const SizedBox(height: 1),
         itemBuilder: (context, index) {
-          final item = approvalItems[index];
+          final item = displayItems[index];
           String category = item["category"] ?? item["type"] ?? "";
           String type = item["type"] ?? "";
           String id = item["id"]?.toString() ?? "";
+          final isLocalFakeItem = item["is_local_fake"] == true;
           final isHr = category.toString().toUpperCase() == 'HR';
 
           // Debug: Print all available fields for HR items
@@ -480,21 +507,23 @@ class HrAndPettycashCard extends StatelessWidget {
                   item["title"],
               "HR Request");
 
-            String date = _getSafeString(
+          String date = _getSafeString(
               item["date"] ??
-                item["request_date"] ??
-                item["created_date"] ??
-                item["submission_date"],
+                  item["request_date"] ??
+                  item["created_date"] ??
+                  item["submission_date"],
               "");
 
           return GestureDetector(
             onTap: () async {
               // Mark item as viewed
-              print('🔵 Marking as viewed - Category: $category, ID: $id');
-              await ApprovalViewedService.markAsViewed(
-                category,
-                id,
-              );
+              if (!isLocalFakeItem) {
+                print('🔵 Marking as viewed - Category: $category, ID: $id');
+                await ApprovalViewedService.markAsViewed(
+                  category,
+                  id,
+                );
+              }
 
               if (context.mounted) {
                 final upperCategory = category.toString().toUpperCase();

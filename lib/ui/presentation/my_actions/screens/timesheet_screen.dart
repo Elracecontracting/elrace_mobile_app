@@ -96,10 +96,12 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                       padding:
                           EdgeInsets.symmetric(horizontal: 12.w, vertical: 7.h),
                       child: _TimesheetCard(
-                        clientName:
-                            item.project?.trim().isNotEmpty == true ? item.project! : 'Client Name',
-                        projectName:
-                            item.name.trim().isEmpty ? 'PROJECT NAME' : item.name,
+                        clientName: item.project?.trim().isNotEmpty == true
+                            ? item.project!
+                            : 'Client Name',
+                        projectName: item.name.trim().isEmpty
+                            ? 'PROJECT NAME'
+                            : item.name,
                         formanName: item.employeeName.trim().isEmpty
                             ? 'Forman Name'
                             : item.employeeName,

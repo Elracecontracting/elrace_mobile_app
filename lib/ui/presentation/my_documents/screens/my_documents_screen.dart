@@ -370,15 +370,11 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
             _debugPrintLong('📄 Document $i: ${jsonEncode(list[i])}');
           }
         }
-        final mapped = list.map<Map<String, dynamic>>((raw) {
-          final map = raw as Map<String, dynamic>;
-          final type = (map['type'] ?? 'DOCUMENT').toString();
-          final name = (map['name'] ?? '').toString();
-
-          String icon = 'assets/png/other-documetns-icon.png';
+        String resolveIcon(String type, String name) {
+          var icon = 'assets/png/other-documetns-icon.png';
           final t = type.toLowerCase();
           final n = name.toLowerCase();
-          
+
           if (t.contains('pdf')) {
             icon = 'assets/png/pdf-icon.png';
           } else if (t.contains('certificate') || t.contains('cert')) {
@@ -387,9 +383,15 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
             icon = 'assets/png/contract-icon.png';
           } else if (t.contains('passport')) {
             icon = 'assets/png/passport.png';
-          } else if (t.contains('emirates') || t.contains('id') || n.contains('emirates') || n.contains('eid')) {
+          } else if (t.contains('emirates') ||
+              t.contains('id') ||
+              n.contains('emirates') ||
+              n.contains('eid')) {
             icon = 'assets/png/emitates_id.png';
-          } else if (t.contains('driving') || t.contains('license') || n.contains('driving') || n.contains('license')) {
+          } else if (t.contains('driving') ||
+              t.contains('license') ||
+              n.contains('driving') ||
+              n.contains('license')) {
             icon = 'assets/png/driving_license.png';
           } else if (t.contains('insurance') || n.contains('insurance')) {
             icon = 'assets/png/personal-icon.png';
@@ -399,18 +401,60 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
             icon = 'assets/png/personal-icon.png';
           }
 
-          return {
-            'id': map['id'],
-            'icon': icon,
-            'title': type.toUpperCase(),
-            'name': name,
-            'issue_date': map['issue_date'],
-            'expiry_date': map['expiry_date'],
-            'description': map['description'],
-            'attachment_ids': map['attachment_ids'] ?? [],
-            '_isFamily': familyOnly,
-          };
-        }).toList();
+          return icon;
+        }
+
+        final mapped = <Map<String, dynamic>>[];
+
+        for (final raw in list) {
+          if (raw is! Map) continue;
+
+          final group = Map<String, dynamic>.from(raw as Map);
+          final groupType =
+              (group['document_type'] ?? group['type'] ?? 'DOCUMENT')
+                  .toString();
+          final groupDocs = group['documents'];
+
+          if (groupDocs is List && groupDocs.isNotEmpty) {
+            for (final docRaw in groupDocs) {
+              if (docRaw is! Map) continue;
+              final map = Map<String, dynamic>.from(docRaw as Map);
+
+              final type =
+                  (map['document_type'] ?? map['type'] ?? groupType).toString();
+              final name = (map['name'] ?? '').toString();
+
+              mapped.add({
+                'id': map['id'],
+                'icon': resolveIcon(type, name),
+                'title': type.toUpperCase(),
+                'name': name,
+                'issue_date': map['issue_date'],
+                'expiry_date': map['expiry_date'],
+                'description': map['description'],
+                'attachment_ids': map['attachment_ids'] ?? [],
+                '_isFamily': familyOnly,
+              });
+            }
+          } else {
+            final map = group;
+            final type =
+                (map['document_type'] ?? map['type'] ?? groupType).toString();
+            final name = (map['name'] ?? '').toString();
+
+            mapped.add({
+              'id': map['id'],
+              'icon': resolveIcon(type, name),
+              'title': type.toUpperCase(),
+              'name': name,
+              'issue_date': map['issue_date'],
+              'expiry_date': map['expiry_date'],
+              'description': map['description'],
+              'attachment_ids': map['attachment_ids'] ?? [],
+              '_isFamily': familyOnly,
+            });
+          }
+        }
 
         // Apply search filter if keyword is provided
         final filteredMapped = keyword != null && keyword.trim().isNotEmpty
@@ -1665,7 +1709,8 @@ class _DocumentDialogState extends State<DocumentDialog> {
                     buttonStyleData: ButtonStyleData(
                       height: 30.h,
                       padding: EdgeInsets.symmetric(horizontal: 4.w),
-                      decoration: const BoxDecoration(color: Colors.transparent),
+                      decoration:
+                          const BoxDecoration(color: Colors.transparent),
                     ),
                     iconStyleData: const IconStyleData(
                       icon: Icon(Icons.keyboard_arrow_down_rounded),
@@ -1714,8 +1759,8 @@ class _DocumentDialogState extends State<DocumentDialog> {
                       ),
                       border: InputBorder.none,
                       isDense: true,
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                     ),
                   ),
                 ),

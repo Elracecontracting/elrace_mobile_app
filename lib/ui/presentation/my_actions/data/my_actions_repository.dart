@@ -75,12 +75,18 @@ class MyActionsRepository {
     }
 
     final data = result['data'];
-    if (data is! Map) {
-      return const <MyActionItem>[];
+
+    List<dynamic>? list;
+    if (data is List) {
+      list = data;
+    } else if (data is Map) {
+      final byType = data[type.responseKey];
+      if (byType is List) {
+        list = byType;
+      }
     }
 
-    final list = data[type.responseKey];
-    if (list is! List) {
+    if (list == null) {
       return const <MyActionItem>[];
     }
 

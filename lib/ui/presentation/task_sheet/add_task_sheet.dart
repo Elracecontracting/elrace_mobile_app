@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/task_sheet/task_sheet_screen.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
@@ -33,6 +34,29 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
   DateTime? startDateTime;
   DateTime? endDateTime;
   Duration breakDuration = const Duration(hours: 1);
+
+  Map<String, dynamic> _buildOptimisticTaskPayload() {
+    final now = DateTime.now();
+    final employeeName = (_selectedEmployee?['name'] ?? '').toString();
+    final employeeImage = (_selectedEmployee?['image'] ??
+            _selectedEmployee?['employee_image'] ??
+            _selectedEmployee?['image_url'] ??
+            '')
+        .toString();
+
+    return {
+      'id': -now.millisecondsSinceEpoch,
+      'project_id': null,
+      'name': employeeName,
+      'employee_name': employeeName,
+      'employee_image': employeeImage,
+      'image': employeeImage,
+      'project_name': '',
+      'customer_name': '',
+      'date_time': DateFormat('yyyy-MM-dd HH:mm:ss').format(now),
+      'is_optimistic': true,
+    };
+  }
 
   String getWorkingHours() {
     if (startDateTime == null || endDateTime == null) return '00:00';
@@ -105,6 +129,13 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       return false;
     }
 
+    final loginData = SharedPref.getLoginData();
+    final token = loginData.result?.token;
+    if (token == null || token.isEmpty) {
+      _showDialogMessage("Authentication token is missing.");
+      return false;
+    }
+
     final body = {
       "jsonrpc": "2.0",
       "params": {
@@ -133,16 +164,34 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
+          "Authorization": "Bearer $token",
         },
         body: jsonEncode(body),
       );
 
       final result = jsonDecode(response.body);
 
-      if (response.statusCode == 200 && result['result']['success'] == true) {
+      final resultMap =
+          result is Map<String, dynamic> ? result['result'] : null;
+      final statusText = resultMap is Map<String, dynamic>
+          ? (resultMap['status']?.toString().toLowerCase() ?? '')
+          : '';
+      final successFlag = resultMap is Map<String, dynamic>
+          ? resultMap['success'] == true
+          : false;
+      final isSuccessResponse = response.statusCode >= 200 &&
+          response.statusCode < 300 &&
+          (successFlag || statusText == 'success');
+
+      if (isSuccessResponse) {
+        print('✅ Timesheet submit success: ${response.body}');
         return true;
       } else {
-        _showDialogMessage(result['result']['message'] ?? "Submission failed.");
+        final message = resultMap is Map<String, dynamic>
+            ? (resultMap['message']?.toString() ?? 'Submission failed.')
+            : 'Submission failed.';
+        print('❌ Timesheet submit failed: ${response.body}');
+        _showDialogMessage(message);
         return false;
       }
     } catch (e) {
@@ -179,8 +228,11 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     });
 
     try {
-      const token = "token";
-      //  final token = widget.loginResponseModel.result?.token;
+      final loginData = SharedPref.getLoginData();
+      final token = loginData.result?.token;
+      if (token == null || token.isEmpty) {
+        throw Exception('Authentication token missing');
+      }
 
       final headers = {
         "Content-Type": "application/json",
@@ -273,7 +325,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                       DropdownButtonFormField<String>(
                         value: selectedEmployeeId,
                         isExpanded: true,
-                        icon: const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                        icon: const Icon(Icons.arrow_drop_down,
+                            color: Colors.grey),
                         decoration: InputDecoration(
                           hintText: 'Select an Employee',
                           hintStyle: TextStyle(
@@ -423,7 +476,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                         Navigator.pop(context);
                       }),
                       _buildBottomButton(
-                          "Send for approval", AppColors.green, Colors.white, () {
+                          "Send for approval", AppColors.green, Colors.white,
+                          () {
                         _showApprovalPopup(context);
                       }),
                     ],
@@ -510,14 +564,18 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final firstDay = DateTime(visibleMonth.year, visibleMonth.month, 1);
-            final daysInMonth = DateUtils.getDaysInMonth(visibleMonth.year, visibleMonth.month);
+            final daysInMonth =
+                DateUtils.getDaysInMonth(visibleMonth.year, visibleMonth.month);
             final leading = firstDay.weekday % 7;
-            final prevMonth = DateTime(visibleMonth.year, visibleMonth.month - 1, 1);
-            final daysInPrevMonth = DateUtils.getDaysInMonth(prevMonth.year, prevMonth.month);
+            final prevMonth =
+                DateTime(visibleMonth.year, visibleMonth.month - 1, 1);
+            final daysInPrevMonth =
+                DateUtils.getDaysInMonth(prevMonth.year, prevMonth.month);
 
             return Dialog(
               insetPadding: const EdgeInsets.symmetric(horizontal: 22),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
               child: Container(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
                 decoration: BoxDecoration(
@@ -530,10 +588,12 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                     Row(
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.chevron_left, color: Colors.black, size: 22),
+                          icon: const Icon(Icons.chevron_left,
+                              color: Colors.black, size: 22),
                           onPressed: () {
                             setModalState(() {
-                              visibleMonth = DateTime(visibleMonth.year, visibleMonth.month - 1, 1);
+                              visibleMonth = DateTime(
+                                  visibleMonth.year, visibleMonth.month - 1, 1);
                             });
                           },
                         ),
@@ -543,10 +603,12 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                               Expanded(
                                 child: Container(
                                   height: 36,
-                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(11),
-                                    border: Border.all(color: const Color(0xFFD7D7D7)),
+                                    border: Border.all(
+                                        color: const Color(0xFFD7D7D7)),
                                   ),
                                   child: DropdownButtonHideUnderline(
                                     child: DropdownButton<int>(
@@ -556,13 +618,16 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                                         final m = index + 1;
                                         return DropdownMenuItem<int>(
                                           value: m,
-                                          child: Text(months[index], style: const TextStyle(fontSize: 16)),
+                                          child: Text(months[index],
+                                              style: const TextStyle(
+                                                  fontSize: 16)),
                                         );
                                       }),
                                       onChanged: (value) {
                                         if (value == null) return;
                                         setModalState(() {
-                                          visibleMonth = DateTime(visibleMonth.year, value, 1);
+                                          visibleMonth = DateTime(
+                                              visibleMonth.year, value, 1);
                                         });
                                       },
                                     ),
@@ -573,26 +638,32 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                               Expanded(
                                 child: Container(
                                   height: 36,
-                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 10),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(11),
-                                    border: Border.all(color: const Color(0xFFD7D7D7)),
+                                    border: Border.all(
+                                        color: const Color(0xFFD7D7D7)),
                                   ),
                                   child: DropdownButtonHideUnderline(
                                     child: DropdownButton<int>(
                                       value: visibleMonth.year,
                                       isExpanded: true,
                                       items: List.generate(31, (index) {
-                                        final y = DateTime.now().year - 10 + index;
+                                        final y =
+                                            DateTime.now().year - 10 + index;
                                         return DropdownMenuItem<int>(
                                           value: y,
-                                          child: Text('$y', style: const TextStyle(fontSize: 16)),
+                                          child: Text('$y',
+                                              style: const TextStyle(
+                                                  fontSize: 16)),
                                         );
                                       }),
                                       onChanged: (value) {
                                         if (value == null) return;
                                         setModalState(() {
-                                          visibleMonth = DateTime(value, visibleMonth.month, 1);
+                                          visibleMonth = DateTime(
+                                              value, visibleMonth.month, 1);
                                         });
                                       },
                                     ),
@@ -603,10 +674,12 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.chevron_right, color: Colors.black, size: 22),
+                          icon: const Icon(Icons.chevron_right,
+                              color: Colors.black, size: 22),
                           onPressed: () {
                             setModalState(() {
-                              visibleMonth = DateTime(visibleMonth.year, visibleMonth.month + 1, 1);
+                              visibleMonth = DateTime(
+                                  visibleMonth.year, visibleMonth.month + 1, 1);
                             });
                           },
                         ),
@@ -637,18 +710,21 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                       child: GridView.builder(
                         physics: const NeverScrollableScrollPhysics(),
                         itemCount: 42,
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 7,
                           mainAxisSpacing: 8,
                           crossAxisSpacing: 8,
                         ),
                         itemBuilder: (context, index) {
                           final dayNumber = index - leading + 1;
-                          final isCurrentMonth = dayNumber > 0 && dayNumber <= daysInMonth;
+                          final isCurrentMonth =
+                              dayNumber > 0 && dayNumber <= daysInMonth;
 
                           DateTime cellDate;
                           if (isCurrentMonth) {
-                            cellDate = DateTime(visibleMonth.year, visibleMonth.month, dayNumber);
+                            cellDate = DateTime(visibleMonth.year,
+                                visibleMonth.month, dayNumber);
                           } else if (dayNumber <= 0) {
                             cellDate = DateTime(
                               prevMonth.year,
@@ -663,7 +739,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                             );
                           }
 
-                          final selected = DateUtils.isSameDay(cellDate, selectedDate);
+                          final selected =
+                              DateUtils.isSameDay(cellDate, selectedDate);
 
                           return InkWell(
                             borderRadius: BorderRadius.circular(10),
@@ -679,7 +756,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                                   ? BoxDecoration(
                                       color: const Color(0xFFBFEBD6),
                                       borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: const Color(0xFF8DB6A6)),
+                                      border: Border.all(
+                                          color: const Color(0xFF8DB6A6)),
                                     )
                                   : null,
                               alignment: Alignment.center,
@@ -687,7 +765,9 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                                 '${cellDate.day}',
                                 style: TextStyle(
                                   fontSize: 16,
-                                  color: isCurrentMonth ? Colors.black : const Color(0xFFBEBEBE),
+                                  color: isCurrentMonth
+                                      ? Colors.black
+                                      : const Color(0xFFBEBEBE),
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
@@ -714,7 +794,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                             onPressed: () => Navigator.pop(dialogContext),
                             child: const Text(
                               'Cancel',
-                              style: TextStyle(color: Colors.white, fontSize: 24 / 2),
+                              style: TextStyle(
+                                  color: Colors.white, fontSize: 24 / 2),
                             ),
                           ),
                         ),
@@ -730,10 +811,12 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                                 borderRadius: BorderRadius.circular(22),
                               ),
                             ),
-                            onPressed: () => Navigator.pop(dialogContext, selectedDate),
+                            onPressed: () =>
+                                Navigator.pop(dialogContext, selectedDate),
                             child: const Text(
                               'Done',
-                              style: TextStyle(color: Colors.white, fontSize: 24 / 2),
+                              style: TextStyle(
+                                  color: Colors.white, fontSize: 24 / 2),
                             ),
                           ),
                         ),
@@ -751,7 +834,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
 
   Widget _buildDateTimeValue(DateTime? dateTime) {
     final dateText = dateTime == null ? '--' : _formatDateOnly(dateTime);
-    final timeText = dateTime == null ? '--:--' : DateFormat('HH:mm').format(dateTime);
+    final timeText =
+        dateTime == null ? '--:--' : DateFormat('HH:mm').format(dateTime);
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -927,11 +1011,14 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                 ),
               ),
               const Spacer(),
-              _buildMiniImageButton('assets/png/paragraphIcon.png', tooltip: 'Paragraph', onPressed: _insertParagraph),
+              _buildMiniImageButton('assets/png/paragraphIcon.png',
+                  tooltip: 'Paragraph', onPressed: _insertParagraph),
               const SizedBox(width: 6),
-              _buildMiniIconButton(Icons.format_list_numbered, tooltip: 'Numbered list', onPressed: _insertNumberedList),
+              _buildMiniIconButton(Icons.format_list_numbered,
+                  tooltip: 'Numbered list', onPressed: _insertNumberedList),
               const SizedBox(width: 6),
-              _buildMiniIconButton(Icons.format_list_bulleted, tooltip: 'Bulleted list', onPressed: _insertBulletList),
+              _buildMiniIconButton(Icons.format_list_bulleted,
+                  tooltip: 'Bulleted list', onPressed: _insertBulletList),
             ],
           ),
           const SizedBox(height: 8),
@@ -946,7 +1033,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
               minLines: 3,
               maxLines: 6,
               keyboardType: TextInputType.multiline,
-              style: const TextStyle(fontSize: 12, color: Colors.black87, height: 1.3),
+              style: const TextStyle(
+                  fontSize: 12, color: Colors.black87, height: 1.3),
               decoration: const InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
@@ -991,7 +1079,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     _insertAtCursor('• ');
   }
 
-  Widget _buildMiniImageButton(String assetPath, {String? tooltip, VoidCallback? onPressed}) {
+  Widget _buildMiniImageButton(String assetPath,
+      {String? tooltip, VoidCallback? onPressed}) {
     return SizedBox(
       width: 34,
       height: 28,
@@ -1013,7 +1102,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     );
   }
 
-  Widget _buildMiniIconButton(IconData icon, {String? tooltip, VoidCallback? onPressed}) {
+  Widget _buildMiniIconButton(IconData icon,
+      {String? tooltip, VoidCallback? onPressed}) {
     return SizedBox(
       width: 34,
       height: 28,
@@ -1085,7 +1175,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(color: Colors.grey.shade300),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -1094,25 +1185,32 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                       child: ListView.separated(
                         shrinkWrap: true,
                         itemCount: filtered.length,
-                        separatorBuilder: (_, __) => Divider(height: 1, color: Colors.grey.shade200),
+                        separatorBuilder: (_, __) =>
+                            Divider(height: 1, color: Colors.grey.shade200),
                         itemBuilder: (context, index) {
                           final employee = filtered[index];
-                          final isSelected = _selectedEmployee != null && employee['id'] == _selectedEmployee!['id'];
+                          final isSelected = _selectedEmployee != null &&
+                              employee['id'] == _selectedEmployee!['id'];
                           return ListTile(
                             dense: true,
                             title: Text(
                               (employee['name'] ?? '').toString(),
                               style: TextStyle(
                                 fontSize: 13,
-                                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                fontWeight: isSelected
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
                               ),
                             ),
-                            trailing: isSelected ? const Icon(Icons.check, color: Colors.black) : null,
+                            trailing: isSelected
+                                ? const Icon(Icons.check, color: Colors.black)
+                                : null,
                             onTap: () {
                               setState(() {
                                 _selectedEmployee = employee;
                                 selectedEmployeeId = employee['id'].toString();
-                                _employeeSearchController.text = employee['name'].toString();
+                                _employeeSearchController.text =
+                                    employee['name'].toString();
                               });
                               Navigator.pop(context);
                             },
@@ -1210,15 +1308,11 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                           Navigator.pop(context);
                           final success = await _submitTimesheetWithFeedback();
                           if (success) {
-                            await Future.delayed(const Duration(seconds: 1));
                             if (!mounted) return;
-                            Navigator.pushAndRemoveUntil(
-                              this.context,
-                              MaterialPageRoute(
-                                builder: (context) => const TaskSheetPage(),
-                              ),
-                              (route) => route.isFirst,
-                            );
+                            Navigator.pop(this.context, {
+                              'created': true,
+                              'task': _buildOptimisticTaskPayload(),
+                            });
                           }
                         },
                       ),

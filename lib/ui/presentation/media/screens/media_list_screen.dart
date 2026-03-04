@@ -7,6 +7,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../bloc/media_bloc.dart';
@@ -476,16 +478,45 @@ class _MediaListScreenState extends State<MediaListScreen> {
   Widget _buildContentsList(ContentsResponse contents) {
     final q = _searchController.text.trim().toLowerCase();
 
-    List<ContentModel> list;
     if (_activeTab == _MediaFilterTab.photos) {
-      list = contents.photos;
-    } else if (_activeTab == _MediaFilterTab.view360) {
+      var groups = contents.photoGroups.isNotEmpty
+          ? contents.photoGroups
+          : _chunkPhotoList(contents.photos, 3);
+
+      if (q.isNotEmpty) {
+        groups = groups.where((group) {
+          for (final item in group) {
+            final name = item.fileName.toLowerCase();
+            final project = item.projectName.toLowerCase();
+            if (name.contains(q) || project.contains(q)) return true;
+          }
+          return false;
+        }).toList();
+      }
+
+      if (groups.isEmpty) {
+        return _buildEmptyState();
+      }
+
+      return ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: groups.length,
+        itemBuilder: (context, index) {
+          return _buildPhotoGroupCard(groups[index]);
+        },
+        separatorBuilder: (BuildContext context, int index) =>
+            SizedBox(height: 12.h),
+      );
+    }
+
+    List<ContentModel> list;
+    if (_activeTab == _MediaFilterTab.view360) {
       list = contents.view360;
     } else {
       list = [];
     }
 
-    // Apply search filter
     if (q.isNotEmpty) {
       list = list.where((c) {
         final name = c.fileName.toLowerCase();
@@ -511,6 +542,194 @@ class _MediaListScreenState extends State<MediaListScreen> {
       },
       separatorBuilder: (BuildContext context, int index) =>
           SizedBox(height: 6.w),
+    );
+  }
+
+  List<List<ContentModel>> _chunkPhotoList(List<ContentModel> items, int size) {
+    if (items.isEmpty || size <= 0) return [];
+    final chunks = <List<ContentModel>>[];
+    for (var i = 0; i < items.length; i += size) {
+      final end = (i + size < items.length) ? i + size : items.length;
+      chunks.add(items.sublist(i, end));
+    }
+    return chunks;
+  }
+
+  Widget _buildPhotoGroupCard(List<ContentModel> group) {
+    if (group.isEmpty) return const SizedBox.shrink();
+
+    final primary = group.first;
+    final uploadedDate = primary.dateCreated == null
+        ? null
+        : DateFormat('dd/MM/yyyy').format(primary.dateCreated!);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFE0E0E0),
+        borderRadius: BorderRadius.circular(28.r),
+        border: Border.all(color: const Color(0xB8484848), width: 1),
+      ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                uploadedDate == null
+                    ? 'Uploaded at --/--/----'
+                    : 'Uploaded at $uploadedDate',
+                style: GoogleFonts.poppins(
+                  fontSize: 10.sp,
+                  color: const Color(0xFF292929),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Row(
+              children: List.generate(3, (index) {
+                final item = index < group.length ? group[index] : null;
+                return Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.only(right: index == 2 ? 0 : 6.w),
+                    child: AspectRatio(
+                      aspectRatio: 1,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20.r),
+                        child: item == null
+                            ? Container(color: Colors.white.withOpacity(0.45))
+                            : Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => _showPhotoPreview(context, item),
+                                  child: Image.network(
+                                    item.previewUrl,
+                                    fit: BoxFit.cover,
+                                    errorBuilder:
+                                        (context, error, stackTrace) =>
+                                            Container(
+                                      color: Colors.white.withOpacity(0.45),
+                                      alignment: Alignment.center,
+                                      child: Icon(
+                                        Icons.image_outlined,
+                                        color: appFontColor.withOpacity(0.6),
+                                        size: 26.sp,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ),
+            SizedBox(height: 10.h),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        primary.displayName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.black,
+                        ),
+                      ),
+                      SizedBox(height: 2.h),
+                      Text(
+                        primary.projectName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(width: 6.w),
+                Padding(
+                  padding: EdgeInsets.only(top: 2.h),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      InkWell(
+                        borderRadius: BorderRadius.circular(12.r),
+                        onTap: () => _showPhotoPreview(context, primary),
+                        child: Container(
+                          height: 15.h,
+                          padding: EdgeInsets.symmetric(horizontal: 11.w),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF6E6E6E),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Text(
+                            'View',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.5.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 5.w),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(12.r),
+                        onTap: () => _sharePhotoGroup(group),
+                        child: Container(
+                          width: 28.w,
+                          height: 24.h,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD5D5D5),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Center(
+                            child: Image.asset(
+                              'assets/newapp/newicon/media_share_icon.png',
+                              width: 30.w,
+                              height: 30.h,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _sharePhotoGroup(List<ContentModel> group) async {
+    if (group.isEmpty) return;
+
+    final primary = group.first;
+    final buffer = StringBuffer();
+    buffer.writeln(primary.fileName);
+    for (final item in group) {
+      buffer.writeln(item.previewUrl);
+    }
+
+    await SharePlus.instance.share(
+      ShareParams(text: buffer.toString().trim()),
     );
   }
 

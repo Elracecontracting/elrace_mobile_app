@@ -144,7 +144,7 @@ class TasksScreen extends StatelessWidget {
                       controller: descController,
                       maxLines: 4,
                       decoration: InputDecoration(
-                        hintText: 'Add a description (optional)',
+                        hintText: 'Write your description...',
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),

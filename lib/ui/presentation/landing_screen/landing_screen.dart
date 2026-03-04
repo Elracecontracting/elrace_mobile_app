@@ -76,15 +76,15 @@ class _LandingScreenState extends State<LandingScreen> {
             bottom: false,
             child: _selectedIndex == 0
                 ? const Center(
-              child: Text(
-                'This page is in progress',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            )
+                    child: Text(
+                      'This page is in progress',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  )
                 : _pages[_selectedIndex],
           ),
         ],

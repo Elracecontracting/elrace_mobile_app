@@ -38,12 +38,18 @@ class AttendanceRepo {
         }
       });
 
+      log('Attendance API request -> POST $url');
+      log('Attendance API request body -> $body');
+
       final request = http.Request('POST', url)
         ..headers.addAll(headers)
         ..body = body;
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
+
+      log('Attendance API response status -> ${response.statusCode}');
+      log('Attendance API response body -> ${response.body}');
 
       return response;
     } catch (e) {

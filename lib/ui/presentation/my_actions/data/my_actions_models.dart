@@ -42,6 +42,15 @@ class MyActionItem {
   });
 
   factory MyActionItem.fromJson(Map<String, dynamic> json) {
+    String parseStatus(dynamic rawStatus) {
+      if (rawStatus is String) return rawStatus;
+      if (rawStatus is Map && rawStatus.isNotEmpty) {
+        final first = rawStatus.values.first;
+        return first?.toString() ?? '';
+      }
+      return rawStatus?.toString() ?? '';
+    }
+
     final dynamic amountRaw =
         json['amount_total'] ?? json['amount'] ?? json['total'];
     return MyActionItem(
@@ -49,9 +58,12 @@ class MyActionItem {
       name: (json['name'] ?? json['project'] ?? json['request_type'])
               ?.toString() ??
           '',
-      reference: (json['reference'] ?? json['ref'] ?? json['number'])
-          ?.toString(),
-      date: (json['date'] ?? json['updated_at'] ?? json['create_date'])
+      reference:
+          (json['reference'] ?? json['ref'] ?? json['number'])?.toString(),
+      date: (json['date'] ??
+              json['last_updated_on'] ??
+              json['updated_at'] ??
+              json['create_date'])
           ?.toString(),
       project: json['project']?.toString(),
       vendor: json['vendor']?.toString(),
@@ -59,7 +71,7 @@ class MyActionItem {
           ? amountRaw.toDouble()
           : double.tryParse(amountRaw?.toString() ?? ''),
       requestType: json['request_type']?.toString(),
-      status: json['status']?.toString() ?? '',
+      status: parseStatus(json['status']),
       employeeName: json['employee_name']?.toString() ?? '',
       employeeImage: json['employee_image']?.toString() ?? '',
     );

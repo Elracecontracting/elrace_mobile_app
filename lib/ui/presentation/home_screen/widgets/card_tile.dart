@@ -154,6 +154,7 @@ class GrayCardComponent extends StatelessWidget {
     this.onClick,
     required this.cardTitle,
     this.backgroundImagePath,
+    this.backgroundFit = BoxFit.cover,
     this.gradient,
     required this.childWidget,
     this.upperCaseTitle = true,
@@ -167,6 +168,7 @@ class GrayCardComponent extends StatelessWidget {
   final bool topPadding;
   final String? mainIcon;
   final String? backgroundImagePath;
+  final BoxFit backgroundFit;
   final Gradient? gradient;
   final VoidCallback? onClick;
   final String cardTitle;
@@ -190,24 +192,24 @@ class GrayCardComponent extends StatelessWidget {
           child: InkWell(
             onTap: onClick,
             child: gradient != null
-              ? Ink(
-                  decoration: BoxDecoration(
-                    gradient: gradient,
-                  ),
-                  child: _buildContent(),
-                )
-              : backgroundImagePath != null 
-                ? Ink.image(
-                    image: AssetImage(backgroundImagePath!),
-                    fit: BoxFit.cover,
-                    child: _buildContent(),
-                  )
-                : Ink(
+                ? Ink(
                     decoration: BoxDecoration(
-                      color: Colors.grey[200],
+                      gradient: gradient,
                     ),
                     child: _buildContent(),
-                  ),
+                  )
+                : backgroundImagePath != null
+                    ? Ink.image(
+                        image: AssetImage(backgroundImagePath!),
+                        fit: backgroundFit,
+                        child: _buildContent(),
+                      )
+                    : Ink(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                        ),
+                        child: _buildContent(),
+                      ),
           ),
         ),
       ),
@@ -236,10 +238,10 @@ class GrayCardComponent extends StatelessWidget {
                 // const SizedBox(width: 10),
                 Text(
                   upperCaseTitle ? cardTitle.toUpperCase() : cardTitle,
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     color: titleColor ?? const Color(0xFF151544),
-                    fontSize: 24.w,
-                    fontWeight: FontWeight.w400,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
                     letterSpacing: 1.9,
                   ),
                 ),

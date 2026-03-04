@@ -16,6 +16,8 @@ class ApprovalActionButtons extends StatelessWidget {
   final List<String> userIds;
   final ApprovalActionButtonsVariant variant;
   final double? pillWidth;
+  final bool showHrApproveConfirmation;
+  final bool enableFakeApproveDemo;
 
   const ApprovalActionButtons({
     super.key,
@@ -27,6 +29,8 @@ class ApprovalActionButtons extends StatelessWidget {
     required this.userIds,
     this.variant = ApprovalActionButtonsVariant.holdCircle,
     this.pillWidth,
+    this.showHrApproveConfirmation = false,
+    this.enableFakeApproveDemo = false,
   });
 
   @override
@@ -43,6 +47,7 @@ class ApprovalActionButtons extends StatelessWidget {
               color: const Color(0xFFBA1719),
               commentController: commentController,
               isSelected: selectedAction == 'reject',
+              listenToBloc: true,
             ),
           ),
           SizedBox(width: 12.w),
@@ -53,6 +58,7 @@ class ApprovalActionButtons extends StatelessWidget {
               color: const Color(0xFF009859),
               commentController: commentController,
               isSelected: selectedAction == 'approve',
+              listenToBloc: false,
             ),
           ),
         ],
@@ -68,6 +74,7 @@ class ApprovalActionButtons extends StatelessWidget {
             color: const Color(0xFFBA1719),
             commentController: commentController,
             isSelected: selectedAction == 'reject',
+            listenToBloc: true,
           ),
           SizedBox(width: 16.w),
           _buildPillActionButton(
@@ -76,6 +83,7 @@ class ApprovalActionButtons extends StatelessWidget {
             color: const Color(0xFF009859),
             commentController: commentController,
             isSelected: selectedAction == 'approve',
+            listenToBloc: false,
           ),
         ],
       );
@@ -86,11 +94,11 @@ class ApprovalActionButtons extends StatelessWidget {
       children: [
         _buildCircleActionButton(context, "REJECT", const Color(0xFFBA1719),
             Icons.close, commentController,
-            isSelected: selectedAction == 'reject'),
+            isSelected: selectedAction == 'reject', listenToBloc: true),
         SizedBox(width: 40.w),
         _buildCircleActionButton(context, "APPROVE", const Color(0xFF009859),
             Icons.check, commentController,
-            isSelected: selectedAction == 'approve'),
+            isSelected: selectedAction == 'approve', listenToBloc: false),
       ],
     );
   }
@@ -101,9 +109,11 @@ class ApprovalActionButtons extends StatelessWidget {
     required Color color,
     required TextEditingController commentController,
     bool isSelected = false,
+    bool listenToBloc = true,
   }) {
     return BlocConsumer<ApprovalBloc, ApprovalState>(
       listenWhen: (previous, current) {
+        if (!listenToBloc) return false;
         if (current is ApprovalSuccess && previous is! ApprovalSuccess) {
           return true;
         }
@@ -162,8 +172,7 @@ class ApprovalActionButtons extends StatelessWidget {
             onPressed: isButtonDisabled
                 ? null
                 : () async {
-                    final token =
-                        SharedPref.getLoginData().result?.token ?? '';
+                    final token = SharedPref.getLoginData().result?.token ?? '';
                     final String? comment =
                         await _showCommentDialog(context, label);
 
@@ -257,9 +266,11 @@ class ApprovalActionButtons extends StatelessWidget {
     required Color color,
     required TextEditingController commentController,
     bool isSelected = false,
+    bool listenToBloc = true,
   }) {
     return BlocConsumer<ApprovalBloc, ApprovalState>(
       listenWhen: (previous, current) {
+        if (!listenToBloc) return false;
         if (current is ApprovalSuccess && previous is! ApprovalSuccess) {
           return true;
         }
@@ -318,13 +329,36 @@ class ApprovalActionButtons extends StatelessWidget {
             onPressed: isButtonDisabled
                 ? null
                 : () async {
-                    final token =
-                        SharedPref.getLoginData().result?.token ?? '';
-                    final String? comment =
-                        await _showCommentDialog(context, label);
+                    final token = SharedPref.getLoginData().result?.token ?? '';
+                    String finalComment = '..';
 
-                    if (!context.mounted) return;
-                    final finalComment = comment ?? '..';
+                    if (showHrApproveConfirmation) {
+                      final decision =
+                          await _showHrActionSliderDialog(context, label);
+                      if (!context.mounted ||
+                          decision == null ||
+                          !decision.isConfirmed) {
+                        return;
+                      }
+
+                      finalComment = decision.comment.trim().isEmpty
+                          ? '..'
+                          : decision.comment.trim();
+
+                      if (enableFakeApproveDemo) {
+                        await _simulateFakeActionSuccess(
+                          context,
+                          actionLabel: label,
+                        );
+                        return;
+                      }
+                    } else {
+                      final String? comment =
+                          await _showCommentDialog(context, label);
+
+                      if (!context.mounted) return;
+                      finalComment = comment ?? '..';
+                    }
 
                     if (context.mounted) {
                       showDialog(
@@ -407,12 +441,311 @@ class ApprovalActionButtons extends StatelessWidget {
     );
   }
 
+  Future<void> _simulateFakeActionSuccess(
+    BuildContext context, {
+    required String actionLabel,
+  }) async {
+    if (!context.mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.black54,
+      builder: (BuildContext dialogContext) {
+        return PopScope(
+          canPop: false,
+          child: Center(
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text(
+                    'Processing...',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+
+    await Future.delayed(const Duration(milliseconds: 900));
+
+    if (!context.mounted) return;
+    if (Navigator.canPop(context)) {
+      Navigator.pop(context);
+    }
+
+    final isApprove = actionLabel == 'APPROVE';
+    final fakeMessage = isApprove
+        ? 'Approved successfully (demo mode)'
+        : 'Rejected successfully (demo mode)';
+
+    if (!context.mounted) return;
+    if (onResult != null) {
+      onResult!(fakeMessage);
+    }
+
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    messenger?.showSnackBar(
+      SnackBar(
+        content: Text(fakeMessage),
+        duration: const Duration(seconds: 2),
+        backgroundColor: isApprove ? Colors.green : Colors.red,
+      ),
+    );
+
+    if (context.mounted && Navigator.canPop(context)) {
+      Navigator.pop(context, true);
+    }
+  }
+
+  Future<_ApprovalDialogDecision?> _showHrActionSliderDialog(
+    BuildContext context,
+    String actionLabel,
+  ) async {
+    final actionText = actionLabel.toLowerCase();
+    final demoComment = actionLabel == 'APPROVE'
+        ? 'Fake approval comment'
+        : 'Fake rejection comment';
+
+    final TextEditingController commentController = TextEditingController(
+      text: enableFakeApproveDemo ? demoComment : '',
+    );
+
+    return showDialog<_ApprovalDialogDecision>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        double sliderProgress = 0.5;
+
+        return StatefulBuilder(
+          builder: (ctx, setModalState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18.r),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 18.w),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Are you sure you want to $actionText ?',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1F1F1F),
+                      ),
+                    ),
+                    SizedBox(height: 16.h),
+                    Row(
+                      children: [
+                        Text(
+                          'Comments',
+                          style: GoogleFonts.inter(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF555555),
+                          ),
+                        ),
+                        const Spacer(),
+                        Text(
+                          '${commentController.text.length}/50',
+                          style: GoogleFonts.inter(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF9E9E9E),
+                          ),
+                        ),
+                      ],
+                    ),
+                    SizedBox(height: 8.h),
+                    TextField(
+                      controller: commentController,
+                      maxLength: 50,
+                      onChanged: (_) => setModalState(() {}),
+                      minLines: 2,
+                      maxLines: 3,
+                      decoration: InputDecoration(
+                        hintText: 'Write your comment...',
+                        counterText: '',
+                        contentPadding: EdgeInsets.symmetric(
+                            horizontal: 12.w, vertical: 10.h),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.r),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFD8D8D8)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.r),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFD8D8D8)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10.r),
+                          borderSide:
+                              const BorderSide(color: Color(0xFFBDBDBD)),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 14.h),
+                    SizedBox(
+                      height: 52.h,
+                      width: double.infinity,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final knobSize = 42.w;
+                          final maxLeft = constraints.maxWidth - knobSize;
+                          final knobLeft =
+                              (maxLeft * sliderProgress).clamp(0.0, maxLeft);
+
+                          return Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                height: 40.h,
+                                padding: EdgeInsets.symmetric(horizontal: 22.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(22.r),
+                                  border: Border.all(
+                                    color: const Color(0xFFD6D6D6),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () {
+                                        Navigator.of(dialogContext).pop(
+                                          _ApprovalDialogDecision(
+                                            isConfirmed: false,
+                                            comment: commentController.text,
+                                          ),
+                                        );
+                                      },
+                                      child: Text(
+                                        'No',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14.sp,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFFBA1719),
+                                        ),
+                                      ),
+                                    ),
+                                    const Spacer(),
+                                    GestureDetector(
+                                      onTap: () {
+                                        Navigator.of(dialogContext).pop(
+                                          _ApprovalDialogDecision(
+                                            isConfirmed: true,
+                                            comment: commentController.text,
+                                          ),
+                                        );
+                                      },
+                                      child: Text(
+                                        'Yes',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14.sp,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF009859),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Positioned(
+                                left: knobLeft,
+                                child: GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onHorizontalDragUpdate: (details) {
+                                    final delta = details.primaryDelta ?? 0;
+                                    final next = sliderProgress +
+                                        (delta /
+                                            constraints.maxWidth
+                                                .clamp(1.0, double.infinity));
+                                    setModalState(() {
+                                      sliderProgress = next.clamp(0.0, 1.0);
+                                    });
+                                  },
+                                  onHorizontalDragEnd: (_) {
+                                    if (sliderProgress >= 0.82) {
+                                      Navigator.of(dialogContext).pop(
+                                        _ApprovalDialogDecision(
+                                          isConfirmed: true,
+                                          comment: commentController.text,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    if (sliderProgress <= 0.18) {
+                                      Navigator.of(dialogContext).pop(
+                                        _ApprovalDialogDecision(
+                                          isConfirmed: false,
+                                          comment: commentController.text,
+                                        ),
+                                      );
+                                      return;
+                                    }
+
+                                    setModalState(() {
+                                      sliderProgress = 0.5;
+                                    });
+                                  },
+                                  child: Container(
+                                    width: knobSize,
+                                    height: knobSize,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: const Color(0xFFE0E0E0),
+                                      border: Border.all(
+                                        color: const Color(0xFFCACACA),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    ).whenComplete(() {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        commentController.dispose();
+      });
+    });
+  }
+
   Widget _buildCircleActionButton(BuildContext context, String label,
       Color color, IconData icon, TextEditingController commentController,
-      {bool isSelected = false}) {
+      {bool isSelected = false, bool listenToBloc = true}) {
     return BlocConsumer<ApprovalBloc, ApprovalState>(
       // Only listen when the state actually changes to prevent duplicate calls
       listenWhen: (previous, current) {
+        if (!listenToBloc) return false;
         // Only trigger listener when transitioning to a new success/failure state
         if (current is ApprovalSuccess && previous is! ApprovalSuccess) {
           return true;
@@ -599,6 +932,16 @@ class ApprovalActionButtons extends StatelessWidget {
       });
     });
   }
+}
+
+class _ApprovalDialogDecision {
+  final bool isConfirmed;
+  final String comment;
+
+  const _ApprovalDialogDecision({
+    required this.isConfirmed,
+    required this.comment,
+  });
 }
 
 enum ApprovalActionButtonsVariant {

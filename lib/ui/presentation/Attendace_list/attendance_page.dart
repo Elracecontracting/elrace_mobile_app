@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:developer';
+
 import 'package:el_race/ui/presentation/Attendace_list/attendance_widgets/colleasped_card.dart';
 import 'package:el_race/ui/presentation/Attendace_list/model/attendance_model.dart';
+import 'package:el_race/ui/presentation/Attendace_list/repository/attendance_repository.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,6 +12,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/utils/di.dart';
 import '../../widgets/header_widget.dart';
 import 'bloc/attendance_bloc.dart';
 
@@ -22,12 +27,19 @@ class AttendancePage extends StatefulWidget {
 
 class _AttendancePageState extends State<AttendancePage> {
   late AttendanceBloc _attendanceBloc;
+  final AttendanceRepo _attendanceRepo = sl.get<AttendanceRepo>();
   Set<String> expandedRecords = {};
+  final Set<String> _selectedActionCards = {};
+  final Map<String, List<AttendanceRecord>> _managerEmployeeRecords = {};
+  final Set<String> _managerEmployeeLoading = {};
+  final Map<String, String> _managerEmployeeErrors = {};
   int? selectedMonth;
 
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+  Timer? _searchDebounce;
+  int _requestSeq = 0;
+
   // Pagination state
   int _displayedItemsCount = 10;
   final int _itemsPerLoad = 10;
@@ -38,7 +50,15 @@ class _AttendancePageState extends State<AttendancePage> {
     super.initState();
 
     _searchController.addListener(() {
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      setState(() {});
+
+      _searchDebounce?.cancel();
+      _searchDebounce = Timer(const Duration(milliseconds: 400), () {
+        if (mounted) {
+          _onSearch();
+        }
+      });
     });
 
     _scrollController.addListener(_onScroll);
@@ -52,14 +72,11 @@ class _AttendancePageState extends State<AttendancePage> {
             true;
 
     // Initial load - both manager and non-manager load data
-    _attendanceBloc.add(GetAttendanceListET(
-      keyword: null,
-      month: selectedMonth,
-    ));
+    _fetchAttendance(keyword: null);
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= 
+    if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       _loadMoreItems();
     }
@@ -67,11 +84,11 @@ class _AttendancePageState extends State<AttendancePage> {
 
   void _loadMoreItems() {
     if (_isLoadingMore) return;
-    
+
     setState(() {
       _isLoadingMore = true;
     });
-    
+
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         setState(() {
@@ -84,6 +101,7 @@ class _AttendancePageState extends State<AttendancePage> {
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _searchController.dispose();
     _scrollController.dispose();
     _attendanceBloc.close();
@@ -92,13 +110,172 @@ class _AttendancePageState extends State<AttendancePage> {
 
   void _onSearch() {
     final keyword = _searchController.text.trim();
+    log('AttendancePage search keyword -> $keyword');
     setState(() {
       _displayedItemsCount = 10;
+      expandedRecords.clear();
+      _selectedActionCards.clear();
+      _managerEmployeeLoading.clear();
+      _managerEmployeeErrors.clear();
     });
+  }
+
+  void _fetchAttendance({String? keyword}) {
+    _requestSeq += 1;
+    final monthToUse = selectedMonth ?? DateTime.now().month;
+    log(
+      'AttendancePage fetch -> requestId=$_requestSeq, keyword=$keyword, month=$monthToUse',
+    );
     _attendanceBloc.add(GetAttendanceListET(
-      keyword: keyword.isEmpty ? null : keyword,
-      month: selectedMonth,
+      keyword: keyword,
+      month: monthToUse,
+      requestId: _requestSeq,
     ));
+
+    setState(() {
+      expandedRecords.clear();
+      _selectedActionCards.clear();
+      _managerEmployeeLoading.clear();
+      _managerEmployeeErrors.clear();
+    });
+  }
+
+  void _toggleActionCard(String cardKey) {
+    setState(() {
+      if (_selectedActionCards.contains(cardKey)) {
+        _selectedActionCards.remove(cardKey);
+      } else {
+        _selectedActionCards.add(cardKey);
+      }
+    });
+  }
+
+  String _actionTitleForRecord(AttendanceRecord record) {
+    final hasCheckOut = record.checkOut != null &&
+        record.checkOut != false &&
+        record.checkOut.toString().trim().isNotEmpty;
+    return hasCheckOut ? 'CHECK IN • CHECK OUT' : 'CHECK IN';
+  }
+
+  Widget _buildActionCard({required String title}) {
+    return Container(
+      key: ValueKey('action_$title'),
+      height: 54,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF04031A), Color(0xFF0B0A2E)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+        borderRadius: BorderRadius.circular(23),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        title,
+        style: GoogleFonts.koulen(
+          fontSize: 19,
+          color: const Color(0xFF6A2BFF),
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInteractiveAttendanceRecordCard({
+    required String cardKey,
+    required String status,
+    required Color textColor,
+    required DateTime checkInTime,
+    required DateTime? checkOutTime,
+    required String actionTitle,
+  }) {
+    final isSelected = _selectedActionCards.contains(cardKey);
+    return InkWell(
+      borderRadius: BorderRadius.circular(23),
+      onTap: () => _toggleActionCard(cardKey),
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        transitionBuilder: (child, animation) =>
+            FadeTransition(opacity: animation, child: child),
+        child: isSelected
+            ? _buildActionCard(title: actionTitle)
+            : ColleaspedCard(
+                key: ValueKey('normal_$cardKey'),
+                status: status,
+                textColor: textColor,
+                bgColorStart: const Color(0xFF0F0C29),
+                bgColorEnd: const Color(0xFF302B63),
+                isExpanded: false,
+                checkInTime: checkInTime,
+                checkOutTime: checkOutTime,
+              ),
+      ),
+    );
+  }
+
+  Future<void> _toggleManagerEmployee(FlatAttendanceData employee) async {
+    final empKey = employee.empId.trim();
+    if (empKey.isEmpty) return;
+
+    final wasExpanded = expandedRecords.contains(empKey);
+    setState(() {
+      if (wasExpanded) {
+        expandedRecords.remove(empKey);
+      } else {
+        expandedRecords.add(empKey);
+      }
+    });
+
+    if (wasExpanded) return;
+    if (_managerEmployeeRecords.containsKey(empKey) ||
+        _managerEmployeeLoading.contains(empKey)) {
+      return;
+    }
+
+    setState(() {
+      _managerEmployeeLoading.add(empKey);
+      _managerEmployeeErrors.remove(empKey);
+    });
+
+    try {
+      final response = await _attendanceRepo.getAttendanceList(
+        keyword: empKey,
+        month: selectedMonth ?? DateTime.now().month,
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load records (${response.statusCode})');
+      }
+
+      final parsed = attendanceModelFromJson(response.body);
+      final result = parsed.result;
+
+      if (result.status.toLowerCase() != 'success') {
+        throw Exception('Failed to load employee records');
+      }
+
+      final records = result.records ?? <AttendanceRecord>[];
+      final Map<String, AttendanceRecord> uniqueRecords = {};
+      for (final record in records) {
+        final key = '${record.date}_${record.checkIn}';
+        if (!uniqueRecords.containsKey(key)) {
+          uniqueRecords[key] = record;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _managerEmployeeRecords[empKey] = uniqueRecords.values.toList();
+        _managerEmployeeLoading.remove(empKey);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _managerEmployeeLoading.remove(empKey);
+        _managerEmployeeErrors[empKey] = e.toString();
+      });
+    }
   }
 
   Future<void> _selectMonth(BuildContext context) async {
@@ -119,19 +296,11 @@ class _AttendancePageState extends State<AttendancePage> {
       final isAttendanceManager =
           SharedPref.getLoginDataOrNull()?.result?.data?.isAttendanceManager ==
               true;
-      
+
       if (isAttendanceManager) {
-        _attendanceBloc.add(GetAttendanceListET(
-          keyword: _searchController.text.trim().isEmpty
-              ? null
-              : _searchController.text.trim(),
-          month: selectedMonth,
-        ));
+        _fetchAttendance(keyword: null);
       } else {
-        _attendanceBloc.add(GetAttendanceListET(
-          keyword: null,
-          month: selectedMonth,
-        ));
+        _fetchAttendance(keyword: null);
       }
     }
   }
@@ -159,18 +328,17 @@ class _AttendancePageState extends State<AttendancePage> {
   }
 
   Widget _buildManagerView(BuildContext context, AttendanceState state) {
-    if (state is AttendanceLoadingState && state.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (state is AttendanceErrorState) {
-      return Center(child: Text(state.message));
-    }
-
+    final isLoading = state is AttendanceLoadingState && state.isLoading;
+    final errorMessage = state is AttendanceErrorState ? state.message : null;
     Result? attendanceData;
     if (state is AttendanceDataLoaded) {
       attendanceData = state.attendanceData;
     }
+
+    final hasFlatData = attendanceData?.mode == "flat" &&
+        (attendanceData?.data?.isNotEmpty ?? false);
+    final hasGroupedData = attendanceData?.mode == "grouped" &&
+        (attendanceData?.records?.isNotEmpty ?? false);
 
     final monthName = selectedMonth != null
         ? DateFormat('MMMM').format(DateTime(2020, selectedMonth!))
@@ -220,8 +388,28 @@ class _AttendancePageState extends State<AttendancePage> {
           ),
         ),
         const SizedBox(height: 10),
-
-        if (attendanceData == null)
+        if (isLoading)
+          const Padding(
+            padding: EdgeInsets.only(top: 24),
+            child: Center(
+              child: CircularProgressIndicator(),
+            ),
+          )
+        else if (errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Center(
+              child: Text(
+                errorMessage,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF5A5A5A),
+                ),
+              ),
+            ),
+          )
+        else if (attendanceData == null)
           Padding(
             padding: const EdgeInsets.only(top: 24),
             child: Center(
@@ -235,7 +423,9 @@ class _AttendancePageState extends State<AttendancePage> {
               ),
             ),
           )
-        else if (attendanceData.status == "error")
+        else if (attendanceData.status == "error" &&
+            !hasFlatData &&
+            !hasGroupedData)
           Padding(
             padding: const EdgeInsets.only(top: 24),
             child: Center(
@@ -250,8 +440,9 @@ class _AttendancePageState extends State<AttendancePage> {
             ),
           )
         else if (attendanceData.mode == "flat" && attendanceData.data != null)
-          _buildFlatEmployeeList(attendanceData.data!)
-        else if (attendanceData.mode == "grouped" && attendanceData.records != null)
+          _buildFlatEmployeeList(_filterEmployeesLocally(attendanceData.data!))
+        else if (attendanceData.mode == "grouped" &&
+            attendanceData.records != null)
           _buildEmployeeAttendanceWithCount(attendanceData)
         else
           Padding(
@@ -267,7 +458,6 @@ class _AttendancePageState extends State<AttendancePage> {
               ),
             ),
           ),
-
         const SizedBox(height: 20),
       ],
     );
@@ -299,54 +489,148 @@ class _AttendancePageState extends State<AttendancePage> {
       children: [
         // Employee list
         ...displayedEmployees.map((employee) {
+          final empKey = employee.empId.trim();
+          final isExpanded = expandedRecords.contains(empKey);
+          final isLoadingRecords = _managerEmployeeLoading.contains(empKey);
+          final recordsError = _managerEmployeeErrors[empKey];
+          final records =
+              _managerEmployeeRecords[empKey] ?? const <AttendanceRecord>[];
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: Container(
-              height: 56,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE6E6E6),
-                borderRadius: BorderRadius.circular(28),
-              ),
-              child: Row(
-                children: [
-                  _EmployeeAvatar(
-                    size: 38,
-                    imageUrl: employee.employeeImageUrl,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(28),
+                  onTap: () => _toggleManagerEmployee(employee),
+                  child: Container(
+                    height: 56,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6E6E6),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: Row(
                       children: [
-                        Text(
-                          employee.employeeName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black,
+                        _EmployeeAvatar(
+                          size: 38,
+                          imageUrl: employee.employeeImageUrl,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                employee.employeeName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                        // Text(
-                        //   'ID: ${employee.empId}',
-                        //   style: GoogleFonts.inter(
-                        //     fontSize: 11,
-                        //     fontWeight: FontWeight.w500,
-                        //     color: const Color(0xFF757575),
-                        //   ),
-                        // ),
+                        Icon(
+                          isExpanded
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
+                          color: const Color(0xFF5A5A5A),
+                        ),
                       ],
                     ),
                   ),
+                ),
+                if (isExpanded) ...[
+                  const SizedBox(height: 8),
+                  if (isLoadingRecords)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (recordsError != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Text(
+                        recordsError,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF5A5A5A),
+                        ),
+                      ),
+                    )
+                  else if (records.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Text(
+                        'No attendance records found.',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF5A5A5A),
+                        ),
+                      ),
+                    )
+                  else
+                    ...records.map((record) {
+                      DateTime? checkInTime;
+                      try {
+                        checkInTime = DateTime.parse(record.checkIn);
+                      } catch (_) {}
+
+                      DateTime? checkOutTime;
+                      if (record.checkOut != null && record.checkOut != false) {
+                        try {
+                          checkOutTime =
+                              DateTime.parse(record.checkOut.toString());
+                        } catch (_) {}
+                      }
+
+                      if (checkInTime == null) {
+                        return const SizedBox.shrink();
+                      }
+
+                      String status = 'ONTIME';
+                      Color textColor = const Color(0xff535353);
+
+                      if (checkOutTime == null) {
+                        status = 'ABSENT';
+                      } else if (checkInTime.isAfter(DateTime(checkInTime.year,
+                          checkInTime.month, checkInTime.day, 8, 15))) {
+                        final lateMinutes = checkInTime
+                            .difference(DateTime(checkInTime.year,
+                                checkInTime.month, checkInTime.day, 8, 15))
+                            .inMinutes;
+                        status = '$lateMinutes MINS LATE';
+                        textColor = red;
+                      }
+
+                      final cardKey =
+                          'mgr_${empKey}_${record.date}_${record.checkIn}';
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _buildInteractiveAttendanceRecordCard(
+                          cardKey: cardKey,
+                          status: status,
+                          textColor: textColor,
+                          checkInTime: checkInTime,
+                          checkOutTime: checkOutTime,
+                          actionTitle: _actionTitleForRecord(record),
+                        ),
+                      );
+                    }),
                 ],
-              ),
+              ],
             ),
           );
         }),
-        
+
         // Loading indicator when loading more
         if (_isLoadingMore && hasMore)
           const Padding(
@@ -355,7 +639,7 @@ class _AttendancePageState extends State<AttendancePage> {
               child: CircularProgressIndicator(),
             ),
           ),
-        
+
         // Total count
         Padding(
           padding: const EdgeInsets.only(top: 12, bottom: 8),
@@ -373,15 +657,21 @@ class _AttendancePageState extends State<AttendancePage> {
     );
   }
 
+  List<FlatAttendanceData> _filterEmployeesLocally(
+      List<FlatAttendanceData> employees) {
+    final keyword = _searchController.text.trim().toLowerCase();
+    if (keyword.isEmpty) return employees;
+
+    return employees.where((employee) {
+      final name = employee.employeeName.toLowerCase();
+      final empId = employee.empId.toLowerCase();
+      return name.contains(keyword) || empId.contains(keyword);
+    }).toList();
+  }
+
   Widget _buildEmployeeView(BuildContext context, AttendanceState state) {
-    if (state is AttendanceLoadingState && state.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    if (state is AttendanceErrorState) {
-      return Center(child: Text(state.message));
-    }
-
+    final isLoading = state is AttendanceLoadingState && state.isLoading;
+    final errorMessage = state is AttendanceErrorState ? state.message : null;
     Result? attendanceData;
     if (state is AttendanceDataLoaded) {
       attendanceData = state.attendanceData;
@@ -428,15 +718,36 @@ class _AttendancePageState extends State<AttendancePage> {
           ),
         ),
         const SizedBox(height: 10),
-
-        if (attendanceData == null)
+        if (isLoading)
           const Padding(
             padding: EdgeInsets.only(top: 24),
             child: Center(
               child: CircularProgressIndicator(),
             ),
           )
-        else if (attendanceData.mode == "grouped" && attendanceData.records != null)
+        else if (errorMessage != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 24),
+            child: Center(
+              child: Text(
+                errorMessage,
+                style: GoogleFonts.inter(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF5A5A5A),
+                ),
+              ),
+            ),
+          )
+        else if (attendanceData == null)
+          const Padding(
+            padding: EdgeInsets.only(top: 24),
+            child: Center(
+              child: Text('No data available'),
+            ),
+          )
+        else if (attendanceData.mode == "grouped" &&
+            attendanceData.records != null)
           _buildEmployeeAttendanceWithCount(attendanceData)
         else
           const Padding(
@@ -445,7 +756,6 @@ class _AttendancePageState extends State<AttendancePage> {
               child: Text('No data available'),
             ),
           ),
-
         const SizedBox(height: 20),
       ],
     );
@@ -453,7 +763,7 @@ class _AttendancePageState extends State<AttendancePage> {
 
   Widget _buildEmployeeAttendanceWithCount(Result data) {
     final records = data.records ?? [];
-    
+
     // Remove duplicate records
     final Map<String, AttendanceRecord> uniqueRecords = {};
     for (var record in records) {
@@ -462,7 +772,7 @@ class _AttendancePageState extends State<AttendancePage> {
         uniqueRecords[key] = record;
       }
     }
-    
+
     final uniqueRecordsList = uniqueRecords.values.toList();
 
     return Column(
@@ -533,16 +843,17 @@ class _AttendancePageState extends State<AttendancePage> {
             textColor = const Color(0xff535353);
           }
 
+          final cardKey = 'emp_${record.date}_${record.checkIn}';
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: ColleaspedCard(
+            child: _buildInteractiveAttendanceRecordCard(
+              cardKey: cardKey,
               status: status,
               textColor: textColor,
-              bgColorStart: const Color(0xFF0F0C29),
-              bgColorEnd: const Color(0xFF302B63),
-              isExpanded: false,
               checkInTime: checkInTime,
               checkOutTime: checkOutTime,
+              actionTitle: _actionTitleForRecord(record),
             ),
           );
         }),
@@ -576,9 +887,18 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
   @override
   Widget build(BuildContext context) {
     final months = [
-      'Jan', 'Feb', 'Mar', 'Apr',
-      'May', 'Jun', 'Jul', 'Aug',
-      'Sept', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sept',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
 
     return Dialog(
@@ -622,9 +942,8 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
                   borderRadius: BorderRadius.circular(12),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: isSelected
-                          ? const Color(0xFF757575)
-                          : Colors.white,
+                      color:
+                          isSelected ? const Color(0xFF757575) : Colors.white,
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: const Color(0xFFE0E0E0),
@@ -737,10 +1056,6 @@ class _SearchBox extends StatelessWidget {
       onSubmitted: (_) => onSearch?.call(),
       decoration: InputDecoration(
         prefixIcon: const Icon(Icons.search, size: 20),
-        suffixIcon: IconButton(
-          icon: const Icon(Icons.send, size: 20),
-          onPressed: onSearch,
-        ),
         hintText: hintText,
         hintStyle: GoogleFonts.inter(
           fontSize: 13,
