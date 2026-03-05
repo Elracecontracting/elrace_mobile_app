@@ -50,6 +50,7 @@ class ReportProvider extends ChangeNotifier {
     final jsonData = json.decode(res);
 
     if (jsonData is Map && jsonData['status'] == "upcoming") {
+      debugPrint('⚠️ API returned "upcoming" — feature not enabled on backend yet. Message: ${jsonData['message']}');
       if (!neverShowMessage) {
         showFlushBar(navKey.currentContext!, message: jsonData['message']);
       }
@@ -340,6 +341,54 @@ class ReportProvider extends ChangeNotifier {
       }
     } catch (e) {
       print("Exception caught during PDF upload: $e");
+      return false;
+    }
+  }
+
+  Future<bool> deleteReportPdf({
+    required String fileId,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+          'POST', Uri.parse('$baseUrl/reports/delete'))
+        ..fields.addAll({
+          'emp_id': empID,
+          'report_id': fileId,
+        });
+      final response = await request.send();
+      final res = await response.stream.bytesToString();
+      print('deleteReportPdf response: $res');
+      if (response.statusCode == 200) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('deleteReportPdf error: $e');
+      return false;
+    }
+  }
+
+  Future<bool> renameReportPdf({
+    required String fileId,
+    required String newFileName,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+          'POST', Uri.parse('$baseUrl/reports/update'))
+        ..fields.addAll({
+          'emp_id': empID,
+          'report_id': fileId,
+          'name': newFileName,
+        });
+      final response = await request.send();
+      final res = await response.stream.bytesToString();
+      print('renameReportPdf response: $res');
+      if (response.statusCode == 200) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('renameReportPdf error: $e');
       return false;
     }
   }

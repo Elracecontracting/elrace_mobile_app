@@ -8,9 +8,11 @@ import 'package:el_race/report_module/data/models/report_item_model.dart';
 import 'package:el_race/report_module/data/provider/reports_provider.dart';
 import 'package:el_race/report_module/data/services/pdf_service.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/image_editing_screen.dart';
+import 'package:el_race/report_module/presentation/screens/report_photos/multi_capture_camera_screen.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -83,6 +85,29 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
 
   /// Save modified items to API. Uses the API response to update local state
   /// instead of re-fetching (which can return stale data).
+  // Saves order/index changes silently (no loading spinner) — used after reorder
+  Future<void> _saveOrderSilently() async {
+    if (!mounted) return;
+    final provider = Provider.of<ReportProvider>(context, listen: false);
+    for (int i = 0; i < _photoItems.length; i++) {
+      final item = _photoItems[i];
+      if (item.imagePath == null || item.imagePath!.isEmpty) continue;
+      if (item.itemId == null) continue;
+      try {
+        await provider.updateReportItem(
+          reportId: widget.report.id,
+          itemId: item.itemId!,
+          location: item.location ?? '',
+          description: item.description,
+          imageFile: null,
+          index: i,
+        );
+      } catch (e) {
+        debugPrint('📤 Silent reorder save error: $e');
+      }
+    }
+  }
+
   Future<void> _saveItemsAndReload() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
@@ -92,23 +117,43 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
       final item = _photoItems[i];
       if (item.imagePath == null || item.imagePath!.isEmpty) continue;
       final isNetwork = item.imagePath!.startsWith('http');
+      final hasEdited = item.editedBytes != null;
       debugPrint('📤 Saving item[$i] id=${item.itemId} '
           'loc=${item.location} desc="${item.description}" '
-          'isNetwork=$isNetwork');
+          'isNetwork=$isNetwork hasEdited=$hasEdited '
+          'path=${item.imagePath}');
       if (item.itemId != null) {
         try {
+          // Determine the image file to upload:
+          // - If editedBytes exists, always write fresh file & upload
+          // - If local path (not network), upload existing file
+          // - If network URL (unchanged), send null (no re-upload needed)
+          File? imageFile;
+          if (hasEdited) {
+            final dir = await getTemporaryDirectory();
+            final uploadPath = '${dir.path}/upload_${item.itemId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+            await File(uploadPath).writeAsBytes(item.editedBytes!);
+            imageFile = File(uploadPath);
+            debugPrint('📤 Item[$i] uploading edited bytes as $uploadPath');
+          } else if (!isNetwork) {
+            imageFile = File(item.imagePath!);
+            debugPrint('📤 Item[$i] uploading local file ${item.imagePath}');
+          }
+
           final result = await provider.updateReportItem(
             reportId: widget.report.id,
             itemId: item.itemId!,
             location: item.location ?? '',
             description: item.description,
-            imageFile: isNetwork ? null : File(item.imagePath!),
+            imageFile: imageFile,
             index: i,
           );
           debugPrint('📤 Item[$i] update result: $result');
           // Update image URL from server response (important for newly uploaded images)
           if (result != null && result.image.isNotEmpty) {
             item.imagePath = result.image;
+            item.editedBytes = null; // Clear local bytes, server URL is now canonical
+            debugPrint('📤 Item[$i] updated imagePath to ${result.image}');
           }
         } catch (e) {
           debugPrint('📤 Item[$i] update ERROR: $e');
@@ -128,89 +173,149 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
   Future<void> _showImageSourceDialog() async {
     await showDialog(
       context: context,
+      barrierColor: Colors.black45,
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
-        ),
-        child: Container(
-          padding: EdgeInsets.all(20.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: SizedBox(
+          width: 200.w,
+          child: Container(
+          padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 16.w),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1B1F26), Color(0xFF1A1A53)],
+              stops: [0.72, 1.0],
+            ),
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          child: Row(
             children: [
-              Text(
-                'Add Photo',
-                style: GoogleFonts.inter(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF27304E),
-                ),
-              ),
-              SizedBox(height: 20.h),
-              ListTile(
-                leading:
-                    const Icon(Icons.camera_alt, color: Color(0xFF27304E)),
-                title: Text(
-                  'Take Photo',
-                  style: GoogleFonts.inter(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickImage(ImageSource.camera);
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/svg/camera_svgrepo.svg',
+                        width: 36.sp,
+                        height: 36.sp,
+                        colorFilter: const ColorFilter.mode(
+                            Colors.white, BlendMode.srcIn),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'Camera',
+                        style: GoogleFonts.inter(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _pickImage(ImageSource.camera);
-                },
               ),
-              ListTile(
-                leading: const Icon(Icons.photo_library,
-                    color: Color(0xFF27304E)),
-                title: Text(
-                  'Choose from Gallery',
-                  style: GoogleFonts.inter(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickImage(ImageSource.gallery);
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/svg/gallery_svgrepo.svg',
+                        width: 36.sp,
+                        height: 36.sp,
+                        colorFilter: const ColorFilter.mode(
+                            Colors.white, BlendMode.srcIn),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'Gallery',
+                        style: GoogleFonts.inter(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _pickImage(ImageSource.gallery);
-                },
               ),
             ],
           ),
+        ),
         ),
       ),
     );
   }
 
   Future<void> _pickImage(ImageSource source) async {
-    final XFile? image = await _picker.pickImage(
-      source: source,
-      imageQuality: 60,
-    );
-    if (image == null) return;
-
-    final savedPath = await saveImageToAppStorage(
-      File(image.path),
-      widget.folderId + widget.folderId,
-    );
-    if (savedPath.isEmpty) return;
-
-    // Add item and upload
-    setState(() => _isLoading = true);
-    try {
-      final provider =
-          Provider.of<ReportProvider>(context, listen: false);
-      await provider.addReportItem(
-        reportId: widget.report.id,
-        imageFile: File(savedPath),
-        location: '',
-        description: '',
-        index: _photoItems.length,
+    if (source == ImageSource.camera) {
+      // Open custom multi-capture camera screen
+      final List<String>? paths = await Navigator.push<List<String>>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const MultiCaptureCameraScreen(),
+        ),
       );
-      await _loadPhotos();
-    } catch (_) {
-      if (mounted) setState(() => _isLoading = false);
+      if (paths == null || paths.isEmpty) return;
+
+      setState(() => _isLoading = true);
+      final provider = Provider.of<ReportProvider>(context, listen: false);
+      for (final path in paths) {
+        final savedPath = await saveImageToAppStorage(
+          File(path),
+          widget.folderId + widget.folderId,
+        );
+        if (savedPath.isEmpty) continue;
+        try {
+          await provider.addReportItem(
+            reportId: widget.report.id,
+            imageFile: File(savedPath),
+            location: '',
+            description: '',
+            index: _photoItems.length,
+          );
+        } catch (_) {}
+      }
+      if (mounted) await _loadPhotos();
+    } else {
+      // Gallery: single pick
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 60,
+      );
+      if (image == null) return;
+
+      final savedPath = await saveImageToAppStorage(
+        File(image.path),
+        widget.folderId + widget.folderId,
+      );
+      if (savedPath.isEmpty) return;
+
+      setState(() => _isLoading = true);
+      try {
+        final provider = Provider.of<ReportProvider>(context, listen: false);
+        await provider.addReportItem(
+          reportId: widget.report.id,
+          imageFile: File(savedPath),
+          location: '',
+          description: '',
+          index: _photoItems.length,
+        );
+        await _loadPhotos();
+      } catch (_) {
+        if (mounted) setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -218,7 +323,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => _PdfGenerationPage(
+        builder: (_) => PdfGenerationPage(
           reportId: widget.report.id,
           folderId: widget.folderId,
           folderName: widget.folderName,
@@ -253,7 +358,11 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        if (_isButtonExpanded) setState(() => _isButtonExpanded = false);
+        if (_isButtonExpanded) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _isButtonExpanded = false);
+          });
+        }
       },
       behavior: HitTestBehavior.translucent,
       child: Scaffold(
@@ -264,10 +373,11 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
           child: Column(
             children: [
               SizedBox(height: 14.h),
-              // Header row: "Photos" + "+" button
+              // Header row: "Photos" + button(s)
               Padding(
                 padding: EdgeInsets.only(left: 20.w),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text(
@@ -280,81 +390,77 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
                         ),
                       ),
                     ),
-                    InkWell(
-                      onTap: () {
-                        if (!_isButtonExpanded) {
-                          setState(() => _isButtonExpanded = true);
-                        } else {
-                          _showImageSourceDialog();
-                        }
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 260),
-                        curve: Curves.easeOutCubic,
-                        width: _isButtonExpanded ? 170.w : 44.w,
-                        height: 42.h,
-                        clipBehavior: Clip.hardEdge,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF27304E),
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(14.r),
-                            bottomLeft: Radius.circular(
-                                _isButtonExpanded ? 0 : 14.r),
-                          ),
-                        ),
-                        padding: EdgeInsets.symmetric(horizontal: 8.w),
-                        child: Row(
-                          children: [
-                            Icon(Icons.add,
-                                size: 22.w, color: Colors.white),
-                            Expanded(
-                              child: ClipRect(
-                                child: AnimatedAlign(
-                                  duration: const Duration(milliseconds: 260),
-                                  curve: Curves.easeOutCubic,
-                                  alignment: Alignment.centerRight,
-                                  widthFactor: _isButtonExpanded ? 1 : 0,
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.only(start: 4.w),
-                                    child: Text(
-                                      'Add Photos',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.clip,
-                                      style: GoogleFonts.inter(
-                                        fontSize: 13.sp,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (!_isButtonExpanded)
+                          // "+" button
+                          GestureDetector(
+                            onTap: () {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted) setState(() => _isButtonExpanded = true);
+                              });
+                            },
+                            child: Container(
+                              width: 44.w,
+                              height: 42.h,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF27304E),
+                                borderRadius: BorderRadius.only(
+                                  topLeft: Radius.circular(14.r),
+                                  bottomLeft: Radius.circular(14.r),
                                 ),
                               ),
+                              alignment: Alignment.center,
+                              child: Icon(Icons.add, size: 22.w, color: Colors.white),
                             ),
-                          ],
-                        ),
-                      ),
+                          )
+                        else
+                          // Two action buttons
+                          IntrinsicWidth(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF27304E),
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: Radius.circular(14.r),
+                                      bottomLeft: Radius.circular(14.r),
+                                    ),
+                                  ),
+                                  child: _menuButton('Add Photos', () {
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      if (mounted) setState(() => _isButtonExpanded = false);
+                                      _showImageSourceDialog();
+                                    });
+                                  }),
+                                ),
+                                SizedBox(height: 6.h),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF27304E),
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: Radius.circular(14.r),
+                                      bottomLeft: Radius.circular(14.r),
+                                    ),
+                                  ),
+                                  child: _menuButton('Generate Report', () {
+                                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                                      if (mounted) setState(() => _isButtonExpanded = false);
+                                      _openPdfGenerationPage();
+                                    });
+                                  }),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              // Expanded menu option (Generate PDF)
-              if (_isButtonExpanded)
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Container(
-                    width: 170.w,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF27304E),
-                      borderRadius: BorderRadius.only(
-                        bottomLeft: Radius.circular(14.r),
-                      ),
-                    ),
-                    child: _menuButton('Generate PDF', () {
-                      setState(() => _isButtonExpanded = false);
-                      _openPdfGenerationPage();
-                    }),
-                  ),
-                ),
               SizedBox(height: 12.h),
               // Content
               Expanded(
@@ -375,8 +481,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
   Widget _menuButton(String label, VoidCallback onTap) {
     return InkWell(
       onTap: onTap,
-      child: Container(
-        width: double.infinity,
+      child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
         child: Text(
           label,
@@ -419,17 +524,40 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
   }
 
   Widget _buildPhotoGrid() {
-    return ListView.builder(
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 4.h),
-      itemCount: _photoItems.length,
-      itemBuilder: (context, index) {
-        final item = _photoItems[index];
-        if (item.imagePath == null || item.imagePath!.isEmpty) {
-          return const SizedBox.shrink();
-        }
+    // Filter out items with no image for display, but keep original indices for reorder
+    final validIndices = <int>[];
+    for (int i = 0; i < _photoItems.length; i++) {
+      if (_photoItems[i].imagePath != null && _photoItems[i].imagePath!.isNotEmpty) {
+        validIndices.add(i);
+      }
+    }
 
+    return ReorderableListView.builder(
+      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 4.h),
+      cacheExtent: 2000, // keep off-screen items alive
+      proxyDecorator: (child, index, animation) => Material(
+        color: Colors.transparent,
+        elevation: 0,
+        child: child,
+      ),
+      itemCount: validIndices.length,
+      onReorder: (oldIndex, newIndex) {
+        if (newIndex > oldIndex) newIndex -= 1;
+        final orig = validIndices[oldIndex];
+        final dest = validIndices[newIndex];
+        setState(() {
+          final item = _photoItems.removeAt(orig);
+          _photoItems.insert(dest, item);
+        });
+        _saveOrderSilently();
+      },
+      itemBuilder: (context, listIndex) {
+        final index = validIndices[listIndex];
+        final item = _photoItems[index];
         final isNetwork = item.imagePath!.startsWith('http');
+
         return GestureDetector(
+          key: ValueKey(item),
           onTap: () => _openPhotoDetailDialog(index),
           child: Container(
             margin: EdgeInsets.only(bottom: 14.h),
@@ -437,34 +565,54 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(22.r),
-              border:
-                  Border.all(color: const Color(0xFF2C3454), width: 1.5),
+              border: Border.all(color: const Color(0xFF2C3454), width: 1.5),
             ),
             clipBehavior: Clip.antiAlias,
             child: Stack(
               fit: StackFit.expand,
               children: [
-                isNetwork
+                item.editedBytes != null
+                    ? Image.memory(
+                        item.editedBytes!,
+                        key: ValueKey(item.editedBytes.hashCode),
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Center(
+                            child: Icon(Icons.broken_image, size: 40)),
+                      )
+                    : isNetwork
                     ? Image.network(
                         item.imagePath!,
                         fit: BoxFit.cover,
+                        gaplessPlayback: true,
+                        cacheWidth: 600,
                         errorBuilder: (_, __, ___) => const Center(
                             child: Icon(Icons.broken_image, size: 40)),
                       )
                     : Image.file(
                         File(item.imagePath!),
+                        key: ValueKey(item.imagePath),
                         fit: BoxFit.cover,
                         errorBuilder: (_, __, ___) => const Center(
                             child: Icon(Icons.broken_image, size: 40)),
                       ),
-                // Hamburger icon top-right
+                // Drag handle — top-right corner
                 Positioned(
-                  top: 8.h,
-                  right: 8.w,
-                  child: Icon(
-                    Icons.menu,
-                    size: 22.w,
-                    color: const Color(0xFF27304E),
+                  top: 6.h,
+                  right: 6.w,
+                  child: ReorderableDragStartListener(
+                    index: listIndex,
+                    child: Container(
+                      padding: EdgeInsets.all(5.w),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.85),
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      child: Icon(
+                        Icons.menu,
+                        size: 20.w,
+                        color: const Color(0xFF27304E),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -481,13 +629,14 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
 // PDF Generation Page (File Name + Generate + Recent Files)
 // ═══════════════════════════════════════════════════════════
 
-class _PdfGenerationPage extends StatefulWidget {
+class PdfGenerationPage extends StatefulWidget {
   final String reportId;
   final String folderId;
   final String folderName;
   final int reportItemsCount;
 
-  const _PdfGenerationPage({
+  const PdfGenerationPage({
+    super.key,
     required this.reportId,
     required this.folderId,
     required this.folderName,
@@ -495,12 +644,13 @@ class _PdfGenerationPage extends StatefulWidget {
   });
 
   @override
-  State<_PdfGenerationPage> createState() => _PdfGenerationPageState();
+  State<PdfGenerationPage> createState() => _PdfGenerationPageState();
 }
 
-class _PdfGenerationPageState extends State<_PdfGenerationPage> {
+class _PdfGenerationPageState extends State<PdfGenerationPage> {
   late TextEditingController _nameController;
   bool _isGenerating = false;
+  bool _isLoadingPdfs = false;
   List<ReportPdfModel> _pdfs = [];
 
   @override
@@ -517,14 +667,15 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
   }
 
   Future<void> _loadPdfHistory() async {
+    if (mounted) setState(() => _isLoadingPdfs = true);
     try {
       _pdfs = await reportProvider.fetchReports(
         empId: ReportProvider.empID,
         reportId: widget.reportId,
         folderId: widget.folderId,
       );
-      if (mounted) setState(() {});
     } catch (_) {}
+    if (mounted) setState(() => _isLoadingPdfs = false);
   }
 
   Future<void> _generate() async {
@@ -532,6 +683,16 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
     FocusScope.of(context).unfocus();
     final fileName = _nameController.text.trim();
     if (fileName.isEmpty) return;
+
+    if (_pdfs.length >= 3) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Maximum 3 PDF files allowed. Please delete one first.')),
+        );
+      }
+      return;
+    }
 
     if (_pdfs.any((p) => p.fileName == '$fileName.pdf')) {
       if (mounted) {
@@ -575,18 +736,63 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
   }
 
   Future<void> _onPdfMoreTap(ReportPdfModel pdf) async {
-    final status =
-        await showEditOptions(context, options: ['View', 'Share']);
-    if (status == 0) {
-      if (!mounted) return;
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => PdfDisplayScreen(link: pdf.reportLink),
+    // Replaced by PopupMenuButton inline in _buildPdfTile
+  }
+
+  Future<void> _renamePdf(ReportPdfModel pdf) async {
+    final controller = TextEditingController(
+        text: pdf.fileName.replaceAll('.pdf', ''));
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16.r)),
+        title: Text('Rename File',
+            style: GoogleFonts.inter(
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF27304E))),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: InputDecoration(
+            hintText: 'File name',
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10.r)),
+          ),
         ),
-      );
-    } else if (status == 1) {
-      await Share.shareUri(Uri.parse(pdf.reportLink));
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () =>
+                  Navigator.pop(ctx, controller.text.trim()),
+              child: const Text('Rename')),
+        ],
+      ),
+    );
+    if (newName == null || newName.isEmpty) return;
+    final idx = _pdfs.indexOf(pdf);
+    if (idx < 0) return;
+    // Update on server first
+    final success = await reportProvider.renameReportPdf(
+      fileId: pdf.fileId,
+      newFileName: '$newName.pdf',
+    );
+    // Always apply locally so rename feels instant;
+    // if server fails it will revert on next load
+    if (mounted) {
+      setState(() {
+        _pdfs[idx] = ReportPdfModel(
+          fileId: pdf.fileId,
+          fileName: '$newName.pdf',
+          createdAt: pdf.createdAt,
+          reportLink: pdf.reportLink,
+        );
+      });
+    }
+    if (!success) {
+      debugPrint('renameReportPdf: server did not confirm, change is local only');
     }
   }
 
@@ -752,7 +958,14 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
                       ),
                     ),
                     Expanded(
-                      child: _pdfs.isEmpty
+                      child: _isLoadingPdfs
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2.5,
+                              ),
+                            )
+                          : _pdfs.isEmpty
                           ? Center(
                               child: Text(
                                 'No generated PDFs yet',
@@ -765,7 +978,7 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
                           : ListView.builder(
                               padding: EdgeInsets.symmetric(
                                   horizontal: 16.w),
-                              itemCount: _pdfs.length,
+                              itemCount: _pdfs.length > 3 ? 3 : _pdfs.length,
                               itemBuilder: (context, index) {
                                 final pdf = _pdfs[index];
                                 return _buildPdfTile(pdf);
@@ -845,10 +1058,70 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
                 ],
               ),
             ),
-            GestureDetector(
-              onTap: () => _onPdfMoreTap(pdf),
-              child:
-                  Icon(Icons.more_vert, color: Colors.white, size: 22.w),
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: Colors.white, size: 22.w),
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r)),
+              elevation: 4,
+              onSelected: (value) async {
+                if (value == 'share') {
+                  final name = pdf.fileName.replaceAll('.pdf', '');
+                  await Share.share(pdf.reportLink, subject: name);
+                } else if (value == 'rename') {
+                  await _renamePdf(pdf);
+                } else if (value == 'delete') {
+                  final success = await reportProvider.deleteReportPdf(
+                    fileId: pdf.fileId,
+                  );
+                  if (success && mounted) {
+                    setState(() => _pdfs.remove(pdf));
+                  }
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'share',
+                  child: Row(
+                    children: [
+                      Icon(Icons.share_outlined,
+                          size: 18.sp, color: const Color(0xFF27304E)),
+                      SizedBox(width: 10.w),
+                      Text('Share',
+                          style: GoogleFonts.inter(
+                              fontSize: 14.sp,
+                              color: const Color(0xFF27304E))),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'rename',
+                  child: Row(
+                    children: [
+                      Icon(Icons.drive_file_rename_outline,
+                          size: 18.sp, color: const Color(0xFF27304E)),
+                      SizedBox(width: 10.w),
+                      Text('Rename',
+                          style: GoogleFonts.inter(
+                              fontSize: 14.sp,
+                              color: const Color(0xFF27304E))),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      Icon(Icons.delete_outline,
+                          size: 18.sp, color: Colors.red),
+                      SizedBox(width: 10.w),
+                      Text('Delete',
+                          style: GoogleFonts.inter(
+                              fontSize: 14.sp, color: Colors.red)),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -892,7 +1165,8 @@ class _PdfGenerationPageState extends State<_PdfGenerationPage> {
       final normalized = raw.replaceAll('/', '-').replaceFirst(' ', 'T');
       final parsed = DateTime.tryParse(normalized);
       if (parsed == null) return raw;
-      final formatted = DateFormat('dd/MM/yyyy  \"At\" hh:mm a').format(parsed);
+      final local = parsed.toLocal();
+      final formatted = DateFormat('dd/MM/yyyy  \"At\" hh:mm a').format(local);
       return formatted.replaceAll('AM', 'Am').replaceAll('PM', 'Pm');
     } catch (_) {
       return raw;
@@ -936,46 +1210,86 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
   Future<void> _showImageSourceDialog() async {
     await showDialog(
       context: context,
+      barrierColor: Colors.black45,
       builder: (ctx) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
-        ),
-        child: Container(
-          padding: EdgeInsets.all(20.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: SizedBox(
+          width: 200.w,
+          child: Container(
+          padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 16.w),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1B1F26), Color(0xFF1A1A53)],
+              stops: [0.72, 1.0],
+            ),
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          child: Row(
             children: [
-              Text(
-                'Replace Photo',
-                style: GoogleFonts.inter(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF27304E),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _replaceImage(ImageSource.camera);
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/svg/camera_svgrepo.svg',
+                        width: 36.sp,
+                        height: 36.sp,
+                        colorFilter: const ColorFilter.mode(
+                            Colors.white, BlendMode.srcIn),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'Camera',
+                        style: GoogleFonts.inter(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              SizedBox(height: 20.h),
-              ListTile(
-                leading:
-                    const Icon(Icons.camera_alt, color: Color(0xFF27304E)),
-                title: Text('Take Photo',
-                    style: GoogleFonts.inter(fontSize: 14.sp)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _replaceImage(ImageSource.camera);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library,
-                    color: Color(0xFF27304E)),
-                title: Text('Choose from Gallery',
-                    style: GoogleFonts.inter(fontSize: 14.sp)),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _replaceImage(ImageSource.gallery);
-                },
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _replaceImage(ImageSource.gallery);
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/svg/gallery_svgrepo.svg',
+                        width: 36.sp,
+                        height: 36.sp,
+                        colorFilter: const ColorFilter.mode(
+                            Colors.white, BlendMode.srcIn),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'Gallery',
+                        style: GoogleFonts.inter(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -1034,9 +1348,12 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
       final newPath =
           '${dir.path}/edited_${DateTime.now().millisecondsSinceEpoch}.jpg';
       await File(newPath).writeAsBytes(result);
-      imageCache.clear();
-      imageCache.clearLiveImages();
-      setState(() => item.imagePath = newPath);
+      // evict old image from Flutter's file cache
+      await FileImage(File(item.imagePath ?? newPath)).evict();
+      setState(() {
+        item.editedBytes = result;  // show immediately via Image.memory
+        item.imagePath = newPath;   // used for upload
+      });
     }
   }
 
@@ -1111,8 +1428,9 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
                   children: [
                     // Image
                     Container(
+                      key: ValueKey(item.imagePath),
                       width: double.infinity,
-                      height: 200.h,
+                      height: 260.h,
                       decoration: BoxDecoration(
                         color: const Color(0xFFF0F0F0),
                         borderRadius: BorderRadius.circular(16.r),
@@ -1127,15 +1445,25 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
                             )
                           : ClipRRect(
                               borderRadius: BorderRadius.circular(16.r),
-                              child: item.imagePath!.startsWith('http')
-                                  ? Image.network(item.imagePath!,
-                                      fit: BoxFit.cover,
+                              child: item.editedBytes != null
+                                  ? Image.memory(
+                                      item.editedBytes!,
+                                      key: ValueKey(item.editedBytes.hashCode),
+                                      fit: BoxFit.contain,
                                       width: double.infinity,
-                                      height: double.infinity)
-                                  : Image.file(File(item.imagePath!),
-                                      fit: BoxFit.cover,
-                                      width: double.infinity,
-                                      height: double.infinity),
+                                      height: double.infinity,
+                                    )
+                                  : item.imagePath!.startsWith('http')
+                                      ? Image.network(item.imagePath!,
+                                          key: ValueKey(item.imagePath),
+                                          fit: BoxFit.contain,
+                                          width: double.infinity,
+                                          height: double.infinity)
+                                      : Image.file(File(item.imagePath!),
+                                          key: ValueKey(item.imagePath),
+                                          fit: BoxFit.contain,
+                                          width: double.infinity,
+                                          height: double.infinity),
                             ),
                     ),
 
@@ -1158,7 +1486,9 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
                         children: [
                           IconButton(
                             onPressed: _currentIndex > 0
-                                ? () => setState(() => _currentIndex--)
+                                ? () => WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    if (mounted) setState(() => _currentIndex--);
+                                  })
                                 : null,
                             icon: Icon(
                               Icons.keyboard_double_arrow_left,
@@ -1181,8 +1511,9 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
                           IconButton(
                             onPressed:
                                 _currentIndex < widget.photoItems.length - 1
-                                    ? () =>
-                                        setState(() => _currentIndex++)
+                                    ? () => WidgetsBinding.instance.addPostFrameCallback((_) {
+                                        if (mounted) setState(() => _currentIndex++);
+                                      })
                                     : null,
                             icon: Icon(
                               Icons.keyboard_double_arrow_right,
@@ -1398,6 +1729,7 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
 class _PhotoItem {
   String? itemId;
   String? imagePath;
+  Uint8List? editedBytes; // stored after drawing — bypasses file cache
   String? location;
   String description = '';
   final TextEditingController locationController = TextEditingController();

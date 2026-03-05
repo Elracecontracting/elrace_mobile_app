@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:el_race/report_module/core/constants/colors.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
 import 'package:el_race/report_module/core/utils/flush_bar.dart';
 import 'package:el_race/report_module/data/models/folder_model.dart';
@@ -146,23 +147,27 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 260),
                                 curve: Curves.easeOutCubic,
-                                width: _isCreateButtonExpanded ? 170.w : 44.w,
-                                height: 44.w,
+                                width: _isCreateButtonExpanded ? 145.w : 41.w,
+                                height: 35.w,
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF27304E),
                                   borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(14.r),
-                                    bottomLeft: Radius.circular(14.r),
+                                    topLeft: Radius.circular(20.r),
+                                    bottomLeft: Radius.circular(20.r),
                                   ),
                                 ),
                                 padding: EdgeInsets.symmetric(horizontal: 10.w),
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   children: [
-                                    Icon(
-                                      Icons.add,
-                                      size: 24.w,
-                                      color: Colors.white,
+                                    SvgPicture.asset(
+                                      'assets/svg/my-reports-add-icon.svg',
+                                      width: 20.w,
+                                      height: 20.w,
+                                      colorFilter: const ColorFilter.mode(
+                                        Colors.white,
+                                        BlendMode.srcIn,
+                                      ),
                                     ),
                                     Expanded(
                                       child: ClipRect(
@@ -170,7 +175,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                                           duration:
                                               const Duration(milliseconds: 260),
                                           curve: Curves.easeOutCubic,
-                                          alignment: Alignment.centerRight,
+                                          alignment: Alignment.centerLeft,
                                           widthFactor:
                                               _isCreateButtonExpanded ? 1 : 0,
                                           child: Padding(
@@ -309,7 +314,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                               Text(
                                 'My Reports',
                                 style: GoogleFonts.inter(
-                                  fontSize: 20.sp,
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF151A36),
                                   letterSpacing: 0.2,

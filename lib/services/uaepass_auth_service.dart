@@ -122,12 +122,25 @@ class UaepassAuthService {
       final session = uri.queryParameters['session'];
       final tx = uri.queryParameters['tx'] ?? uri.queryParameters['transaction'];
       final errorParam = uri.queryParameters['error'];
-      final errorCode = uri.queryParameters['error_code'];
+      final errorCode = uri.queryParameters['error_code'] ?? uri.queryParameters['code'];
 
       UaepassLogger.logKV('session param', session ?? '<not present>');
       UaepassLogger.logKV('tx param', tx ?? '<not present>');
       UaepassLogger.logKV('error param', errorParam ?? '<not present>');
       UaepassLogger.logKV('error_code param', errorCode ?? '<not present>');
+
+      // Handle error deep links first (e.g. elrace://uaepass/error?code=GENERIC)
+      // Check before session/tx so error responses are properly caught.
+      if (config.isErrorLink(uri)) {
+        final deepLinkErrorCode = errorCode ?? errorParam ?? 'GENERIC';
+        UaepassLogger.logWarning('Error deep link received: $deepLinkErrorCode');
+        final failureType = mapBackendErrorToFailureType(
+          errorCode: deepLinkErrorCode,
+        );
+        UaepassLogger.logError('UAEPASS LOGIN FAILED', 'Error deep link: $deepLinkErrorCode');
+        UaepassLogger.logKV('Mapped failure type', _failureTypeToString(failureType));
+        return UaepassAuthResult.failure(failureType, backendErrorCode: deepLinkErrorCode);
+      }
 
       if (session != null && session.isNotEmpty) {
         await secureStorage.write(key: _sessionKey, value: session);
@@ -271,9 +284,12 @@ class UaepassAuthService {
       final String fcmTokenValue = SharedPref().getPreferenceString(fcm_token);
 
       final Map<String, dynamic> requestBody = {
-        'session': session,
-        if (deviceId.isNotEmpty) 'device_id': deviceId,
-        if (fcmTokenValue.isNotEmpty) 'fcm_token': fcmTokenValue,
+        'jsonrpc': '2.0',
+        'params': {
+          'session': session,
+          if (deviceId.isNotEmpty) 'device_id': deviceId,
+          if (fcmTokenValue.isNotEmpty) 'fcm_token': fcmTokenValue,
+        },
       };
 
       UaepassLogger.logKV('Endpoint', config.sessionExchangePath);

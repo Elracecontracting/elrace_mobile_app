@@ -13,6 +13,7 @@ import 'package:el_race/report_module/presentation/screens/add_report_photos/add
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
@@ -22,6 +23,8 @@ import 'package:el_race/report_module/data/services/pdf_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:el_race/report_module/presentation/screens/report_photos/report_photos_screen.dart';
+import 'package:el_race/report_module/presentation/dialogs/rename_report_dialog.dart';
+import 'package:el_race/report_module/presentation/screens/report_detail/pdf_history_screen.dart';
 
 class ProjectReportsScreen extends StatefulWidget {
   final FolderModel folder;
@@ -85,14 +88,14 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                     SizedBox(height: 8.h),
                     _DialogTextFieldCard(
                       topLabel: 'Report',
-                      title: 'Name',
+                      title: 'Title',
                       controller: reportNameController,
                       hint: 'Enter report name',
                     ),
                     SizedBox(height: 12.h),
                     _DialogDropdownCard(
                       topLabel: 'Report',
-                      title: 'type',
+                      title: 'Type',
                       value: selectedReportType,
                       hint: 'Select report type',
                       items: reportTypes,
@@ -173,15 +176,19 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                             borderRadius: BorderRadius.circular(15.r),
                           ),
                         ),
-                        icon: Icon(
-                          Icons.camera_alt_outlined,
-                          size: 18.w,
-                          color: Colors.white,
+                        icon: SvgPicture.asset(
+                          'assets/svg/camera_svgrepo.svg',
+                          width: 30.w,
+                          height: 30.w,
+                          colorFilter: const ColorFilter.mode(
+                            Colors.white,
+                            BlendMode.srcIn,
+                          ),
                         ),
                         label: Text(
-                          'Create Report',
+                          'Start',
                           style: GoogleFonts.inter(
-                            fontSize: 12.sp,
+                            fontSize: 18.sp,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
@@ -241,8 +248,8 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
     return GestureDetector(
       onTap: () {
         if (_isCameraButtonExpanded) {
-          setState(() {
-            _isCameraButtonExpanded = false;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() { _isCameraButtonExpanded = false; });
           });
         }
       },
@@ -275,9 +282,9 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                'Reports',
+                                'Projects Reports',
                                 style: GoogleFonts.inter(
-                                  fontSize: 21.sp,
+                                  fontSize: 13.sp,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF787B87),
                                 ),
@@ -287,8 +294,8 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                               onTap: () {
                                 if (!_isCameraButtonExpanded) {
                                   // First tap: just expand the button
-                                  setState(() {
-                                    _isCameraButtonExpanded = true;
+                                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    if (mounted) setState(() { _isCameraButtonExpanded = true; });
                                   });
                                 } else {
                                   // Second tap (when already expanded): show first dialog
@@ -298,22 +305,27 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 260),
                                 curve: Curves.easeOutCubic,
-                                width: _isCameraButtonExpanded ? 170.w : 48.w,
-                                height: 42.h,
+                                width: _isCameraButtonExpanded ? 145.w : 41.w,
+                                height: 35.w,
                                 decoration: BoxDecoration(
                                   color: const Color(0xFF27304E),
                                   borderRadius: BorderRadius.only(
-                                    topLeft: Radius.circular(14.r),
-                                    bottomLeft: Radius.circular(14.r),
+                                    topLeft: Radius.circular(20.r),
+                                    bottomLeft: Radius.circular(20.r),
                                   ),
                                 ),
-                                padding: EdgeInsets.symmetric(horizontal: 10.w),
+                                padding: EdgeInsets.symmetric(horizontal: 13.w),
                                 child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.start,
                                   children: [
-                                    Icon(
-                                      Icons.camera_alt_outlined,
-                                      color: Colors.white,
-                                      size: 22.w,
+                                    SvgPicture.asset(
+                                      'assets/svg/report-details-add-icon.svg',
+                                      width: 20.w,
+                                      height: 20.w,
+                                      colorFilter: const ColorFilter.mode(
+                                        Colors.white,
+                                        BlendMode.srcIn,
+                                      ),
                                     ),
                                     Expanded(
                                       child: ClipRect(
@@ -321,7 +333,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                                           duration:
                                               const Duration(milliseconds: 260),
                                           curve: Curves.easeOutCubic,
-                                          alignment: Alignment.centerRight,
+                                          alignment: Alignment.centerLeft,
                                           widthFactor:
                                               _isCameraButtonExpanded ? 1 : 0,
                                           child: Padding(
@@ -432,10 +444,11 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                                 widget.folder.name.isEmpty
                                     ? 'Projects Name'
                                     : widget.folder.name,
-                                style: GoogleFonts.inter(
-                                  fontSize: 24.sp,
+                                 style: GoogleFonts.inter(
+                                  fontSize: 16,
                                   fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF1F2440),
+                                  color: const Color(0xFF151A36),
+                                  letterSpacing: 0.2,
                                 ),
                               ),
                             ],
@@ -573,7 +586,7 @@ class _DialogTextFieldCard extends StatelessWidget {
   }
 }
 
-class _DialogDropdownCard extends StatelessWidget {
+class _DialogDropdownCard extends StatefulWidget {
   final String topLabel;
   final String title;
   final String? value;
@@ -591,6 +604,13 @@ class _DialogDropdownCard extends StatelessWidget {
   });
 
   @override
+  State<_DialogDropdownCard> createState() => _DialogDropdownCardState();
+}
+
+class _DialogDropdownCardState extends State<_DialogDropdownCard> {
+  bool _isOpen = false;
+
+  @override
   Widget build(BuildContext context) {
     return Container(
       padding: EdgeInsets.fromLTRB(14.w, 10.h, 14.w, 12.h),
@@ -603,7 +623,7 @@ class _DialogDropdownCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            topLabel,
+            widget.topLabel,
             style: GoogleFonts.inter(
               fontSize: 11.sp,
               fontWeight: FontWeight.w500,
@@ -611,7 +631,7 @@ class _DialogDropdownCard extends StatelessWidget {
             ),
           ),
           Text(
-            title,
+            widget.title,
             style: GoogleFonts.inter(
               fontSize: 16.sp,
               fontWeight: FontWeight.w700,
@@ -619,66 +639,116 @@ class _DialogDropdownCard extends StatelessWidget {
             ),
           ),
           SizedBox(height: 8.h),
-          Container(
-            height: 40.h,
-            padding: EdgeInsets.symmetric(horizontal: 14.w),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFEFEF),
-              borderRadius: BorderRadius.circular(20.r),
-              border: Border.all(color: const Color(0xFFCFCFCF), width: 1),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton2<String>(
-                isExpanded: true,
-                value: items.contains(value) ? value : null,
-                hint: Text(
-                  hint,
-                  style: GoogleFonts.inter(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w500,
-                    color: const Color(0xFFA2A4AA),
-                  ),
+          // Trigger row
+          GestureDetector(
+            onTap: () => WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) setState(() => _isOpen = !_isOpen);
+            }),
+            child: Container(
+              height: 40.h,
+              padding: EdgeInsets.symmetric(horizontal: 14.w),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFEFEF),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(20.r),
+                  topRight: Radius.circular(20.r),
+                  bottomLeft: _isOpen ? Radius.zero : Radius.circular(20.r),
+                  bottomRight: _isOpen ? Radius.zero : Radius.circular(20.r),
                 ),
-                iconStyleData: IconStyleData(
-                  icon: Icon(
-                    Icons.arrow_drop_down,
-                    size: 20.w,
-                    color: const Color(0xFF272A36),
-                  ),
-                ),
-                buttonStyleData: const ButtonStyleData(
-                  padding: EdgeInsets.zero,
-                  overlayColor: WidgetStatePropertyAll(Colors.transparent),
-                ),
-                dropdownStyleData: DropdownStyleData(
-                  maxHeight: 180.h,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF6F6F6),
-                    borderRadius: BorderRadius.circular(12.r),
-                    border: Border.all(color: const Color(0xFFD2D3D8)),
-                  ),
-                ),
-                menuItemStyleData: MenuItemStyleData(
-                  height: 36.h,
-                  padding: EdgeInsets.symmetric(horizontal: 12.w),
-                ),
-                style: GoogleFonts.inter(
-                  fontSize: 11.sp,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF272A36),
-                ),
-                items: items
-                    .map(
-                      (item) => DropdownMenuItem<String>(
-                        value: item,
-                        child: Text(item, overflow: TextOverflow.ellipsis),
+                border: Border.all(color: const Color(0xFFCFCFCF), width: 1),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      widget.value != null && widget.items.contains(widget.value)
+                          ? widget.value!
+                          : widget.hint,
+                      style: GoogleFonts.inter(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w500,
+                        color: widget.value != null && widget.items.contains(widget.value)
+                            ? const Color(0xFF272A36)
+                            : const Color(0xFFA2A4AA),
                       ),
-                    )
-                    .toList(),
-                onChanged: onChanged,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  AnimatedRotation(
+                    turns: _isOpen ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.arrow_drop_down,
+                      size: 20.w,
+                      color: const Color(0xFF272A36),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
+          // Inline expanded list
+          if (_isOpen)
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFEFEF),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(12.r),
+                  bottomRight: Radius.circular(12.r),
+                ),
+                border: Border(
+                  left: BorderSide(color: const Color(0xFFCFCFCF), width: 1),
+                  right: BorderSide(color: const Color(0xFFCFCFCF), width: 1),
+                  bottom: BorderSide(color: const Color(0xFFCFCFCF), width: 1),
+                ),
+              ),
+              child: Column(
+                children: widget.items.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final item = entry.value;
+                  final isLast = index == widget.items.length - 1;
+                  return Column(
+                    children: [
+                      if (index == 0)
+                        Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: const Color(0xFFCFCFCF),
+                        ),
+                      InkWell(
+                        onTap: () {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted) setState(() => _isOpen = false);
+                          });
+                          widget.onChanged(item);
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 14.w, vertical: 11.h),
+                          child: Text(
+                            item,
+                            style: GoogleFonts.inter(
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF272A36),
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (!isLast)
+                        Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: const Color(0xFFCFCFCF),
+                          indent: 14.w,
+                          endIndent: 14.w,
+                        ),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
         ],
       ),
     );
@@ -717,7 +787,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
         .fetchReportDetailFromApi(widget.report.id);
   }
 
-  Future<void> _shareAsPdf() async {
+  Future<void> _openPdfScreen() async {
     if (_isSharing) return;
     setState(() => _isSharing = true);
     try {
@@ -727,18 +797,24 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
         if (mounted) setState(() => _isSharing = false);
         return;
       }
-      final pdfBytes = await PdfService().generateReportPdf(
-        report: reportDetail,
-        projectName: widget.folderName,
-      );
-      final dir = await getTemporaryDirectory();
-      final file = File('${dir.path}/${widget.report.name.replaceAll(' ', '_')}.pdf');
-      await file.writeAsBytes(pdfBytes);
-      await Share.shareXFiles([XFile(file.path)], text: widget.report.name);
+      if (mounted) {
+        setState(() => _isSharing = false);
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PdfGenerationPage(
+              reportId: widget.report.id,
+              folderId: widget.folderId,
+              folderName: widget.folderName,
+              reportItemsCount: reportDetail.reportItems.length,
+            ),
+          ),
+        );
+      }
     } catch (e) {
-      debugPrint('Error sharing PDF: $e');
+      debugPrint('Error opening PDF screen: \$e');
+      if (mounted) setState(() => _isSharing = false);
     }
-    if (mounted) setState(() => _isSharing = false);
   }
 
   @override
@@ -769,10 +845,13 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(24.r),
+            ),
+            foregroundDecoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24.r),
               border: Border.all(color: const Color(0xFF2C3454), width: 1),
             ),
             child: Padding(
-              padding: EdgeInsets.fromLTRB(18.w, 14.h, 0, 12.h),
+              padding: EdgeInsets.fromLTRB(18.w, 0, 0, 12.h),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -780,6 +859,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        SizedBox(height: 14.h),
                         Text(
                           widget.report.name.isEmpty ? 'Report Name' : widget.report.name,
                           style: GoogleFonts.inter(
@@ -950,8 +1030,8 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                     ),
                     // Icons without background
                     Positioned(
-                      top: -10.h,
-                      right: 4.w,
+                      top: 4.h,
+                      right: 10.w,
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -969,9 +1049,15 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                 size: 22.w,
                                 color: const Color(0xFF27304E),
                               ),
-                              onSelected: (value) {
-                                if (value == 'delete') {
-                                  showDialog(
+                              onSelected: (value) async {
+                                if (value == 'rename') {
+                                  await showRenameReport(
+                                    context,
+                                    report: widget.report,
+                                  );
+                                  widget.onReportUpdated?.call();
+                                } else if (value == 'delete') {
+                                  final confirmed = await showDialog<bool>(
                                     context: context,
                                     builder: (ctx) => AlertDialog(
                                       shape: RoundedRectangleBorder(
@@ -994,7 +1080,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                       ),
                                       actions: [
                                         TextButton(
-                                          onPressed: () => Navigator.pop(ctx),
+                                          onPressed: () => Navigator.pop(ctx, false),
                                           child: Text(
                                             'Cancel',
                                             style: GoogleFonts.inter(
@@ -1005,10 +1091,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                           ),
                                         ),
                                         TextButton(
-                                          onPressed: () {
-                                            Navigator.pop(ctx);
-                                            widget.onDeleteReport?.call();
-                                          },
+                                          onPressed: () => Navigator.pop(ctx, true),
                                           child: Text(
                                             'Delete',
                                             style: GoogleFonts.inter(
@@ -1021,9 +1104,31 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                       ],
                                     ),
                                   );
+                                  if (confirmed == true) {
+                                    final provider = Provider.of<ReportProvider>(context, listen: false);
+                                    await provider.deleteReport(reportId: widget.report.id);
+                                    widget.onReportUpdated?.call();
+                                  }
                                 }
                               },
                               itemBuilder: (context) => [
+                                PopupMenuItem<String>(
+                                  value: 'rename',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.edit_outlined, size: 20.w, color: const Color(0xFF27304E)),
+                                      SizedBox(width: 8.w),
+                                      Text(
+                                        'Rename',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFF27304E),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                                 PopupMenuItem<String>(
                                   value: 'delete',
                                   child: Row(
@@ -1066,10 +1171,10 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
       ),
           // Share button - bottom right
           Positioned(
-            bottom: 20.h,
-            right: 8.w,
+            bottom: 18.h,
+            right: 14.w,
             child: GestureDetector(
-              onTap: _shareAsPdf,
+              onTap: _openPdfScreen,
               child: Container(
                 width: 24.w,
                 height: 24.w,
@@ -1178,54 +1283,86 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
   Future<void> _showImageSourceDialog() async {
     await showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20.r),
-        ),
-        child: Container(
-          padding: EdgeInsets.all(20.w),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+      barrierColor: Colors.black45,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        child: SizedBox(
+          width: 200.w,
+          child: Container(
+          padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 16.w),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [Color(0xFF1B1F26), Color(0xFF1A1A53)],
+              stops: [0.72, 1.0],
+            ),
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          child: Row(
             children: [
-              Text(
-                'Add Photo',
-                style: GoogleFonts.inter(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF27304E),
-                ),
-              ),
-              SizedBox(height: 20.h),
-              ListTile(
-                leading: const Icon(Icons.camera_alt, color: Color(0xFF27304E)),
-                title: Text(
-                  'Take Photo',
-                  style: GoogleFonts.inter(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickImage(ImageSource.camera);
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/svg/camera_svgrepo.svg',
+                        width: 36.sp,
+                        height: 36.sp,
+                        colorFilter: const ColorFilter.mode(
+                            Colors.white, BlendMode.srcIn),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'Camera',
+                        style: GoogleFonts.inter(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImage(ImageSource.camera);
-                },
               ),
-              ListTile(
-                leading: const Icon(Icons.photo_library, color: Color(0xFF27304E)),
-                title: Text(
-                  'Choose from Gallery',
-                  style: GoogleFonts.inter(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
+              Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _pickImage(ImageSource.gallery);
+                  },
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SvgPicture.asset(
+                        'assets/svg/gallery_svgrepo.svg',
+                        width: 36.sp,
+                        height: 36.sp,
+                        colorFilter: const ColorFilter.mode(
+                            Colors.white, BlendMode.srcIn),
+                      ),
+                      SizedBox(height: 8.h),
+                      Text(
+                        'Gallery',
+                        style: GoogleFonts.inter(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _pickImage(ImageSource.gallery);
-                },
               ),
             ],
           ),
+        ),
         ),
       ),
     );
@@ -1548,7 +1685,9 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                         children: [
                           IconButton(
                             onPressed: _currentIndex > 0
-                                ? () => setState(() => _currentIndex--)
+                                ? () => WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    if (mounted) setState(() => _currentIndex--);
+                                  })
                                 : null,
                             icon: Icon(
                               Icons.arrow_back_ios,
@@ -1570,7 +1709,9 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                           SizedBox(width: 12.w),
                           IconButton(
                             onPressed: _currentIndex < _photoItems.length - 1
-                                ? () => setState(() => _currentIndex++)
+                                ? () => WidgetsBinding.instance.addPostFrameCallback((_) {
+                                    if (mounted) setState(() => _currentIndex++);
+                                  })
                                 : null,
                             icon: Icon(
                               Icons.arrow_forward_ios,

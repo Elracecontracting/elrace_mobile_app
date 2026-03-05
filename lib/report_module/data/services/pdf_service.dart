@@ -20,7 +20,8 @@ class PdfService {
     required String projectName,
   }) async {
     final pdf = pw.Document();
-    CompanyModel companyData = CompanyRepository.company!;
+    // Always refresh company from storage so the correct logo is used
+    final CompanyModel companyData = await CompanyRepository().getCompany();
 
     // Run all async operations in parallel
     final results = await Future.wait([
@@ -495,14 +496,14 @@ class PdfService {
     if (watermarkText.isEmpty) return pw.SizedBox();
 
     const double angle = -0.5236; // -30 degrees
-    const double fontSize = 40;
+    const double fontSize = 22;
     const int cols = 3;
     const int rows = 6;
 
     final textStyle = pw.TextStyle(
-      color: PdfColors.grey300,
+      color: PdfColors.grey200,
       fontSize: fontSize,
-      fontWeight: pw.FontWeight.bold,
+      fontWeight: pw.FontWeight.normal,
     );
 
     return pw.FullPage(

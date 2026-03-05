@@ -308,15 +308,41 @@ class AppSettingsWidget extends StatelessWidget {
 
                   // If user confirmed, proceed with logout
                   if (shouldLogout == true) {
-                    try {
+                    // Show loading dialog
+                    final loadingContext = navKey.currentContext ?? context;
+                    showDialog(
+                      context: loadingContext,
+                      barrierDismissible: false,
+                      builder: (ctx) => const PopScope(
+                        canPop: false,
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xffBA1719),
+                          ),
+                        ),
+                      ),
+                    );
 
+                    try {
                       // Cleanup chat module (Firebase signout, FCM unsubscribe, etc.)
                       print('🧹 Cleaning up chat module...');
-                      await ChatModuleHelper.instance.cleanup();
-                      print('✅ Chat module cleaned up');
+                      try {
+                        await ChatModuleHelper.instance.cleanup().timeout(
+                          const Duration(seconds: 5),
+                        );
+                        print('✅ Chat module cleaned up');
+                      } catch (e) {
+                        print('⚠️ Chat cleanup failed (continuing): $e');
+                      }
 
                       // Clear UAE PASS session
-                      await context.read<UaepassAuthCubit>().logout();
+                      try {
+                        await context.read<UaepassAuthCubit>().logout().timeout(
+                          const Duration(seconds: 5),
+                        );
+                      } catch (e) {
+                        print('⚠️ UAE Pass logout failed (continuing): $e');
+                      }
 
                       // Clear user preferences
                       print('🧹 Clearing preferences...');
@@ -324,28 +350,19 @@ class AppSettingsWidget extends StatelessWidget {
                       // Update login state in Hive for background service
                       await HiveService.setUserLoggedIn(false);
                       print('✅ Preferences cleared');
-
-                      // Use global navigation key for navigation
-                      print('🧭 Navigating to sign in...');
-                      if (navKey.currentContext != null) {
-                        Navigator.pushAndRemoveUntil(
-                          navKey.currentContext!,
-                          MaterialPageRoute(
-                              builder: (context) => const SignInScreen()),
-                          (route) => false,
-                        );
-                      } else {
-                        // Fallback to local context
-                        Navigator.pushAndRemoveUntil(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => const SignInScreen()),
-                          (route) => false,
-                        );
-                      }
-                      print('✅ Navigation completed');
                     } catch (e) {
                       print('❌ Logout error: $e');
+                    } finally {
+                      // Always navigate to sign in, even if some cleanup failed
+                      print('🧭 Navigating to sign in...');
+                      final navContext = navKey.currentContext ?? context;
+                      Navigator.pushAndRemoveUntil(
+                        navContext,
+                        MaterialPageRoute(
+                            builder: (context) => const SignInScreen()),
+                        (route) => false,
+                      );
+                      print('✅ Navigation completed');
                     }
                   }
                 },
