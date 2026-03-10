@@ -4,7 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 enum ChatType {
   dm,
   role,
-  group;
+  group,
+  support; // Helpdesk-style: user ↔ department group (anonymous replies)
 
   static ChatType fromString(String value) {
     switch (value) {
@@ -14,6 +15,8 @@ enum ChatType {
         return ChatType.role;
       case 'group':
         return ChatType.group;
+      case 'support':
+        return ChatType.support;
       default:
         return ChatType.dm;
     }
@@ -82,6 +85,9 @@ class Chat {
   final String? title;
   final String? photoUrl;
 
+  // Support chat-specific fields
+  final String? supportUserUid; // The external user who initiated the support chat
+
   Chat({
     required this.id,
     required this.type,
@@ -94,6 +100,7 @@ class Chat {
     this.companyId,
     this.title,
     this.photoUrl,
+    this.supportUserUid,
   });
 
   /// Generate DM chat ID from two user UIDs.
@@ -123,6 +130,16 @@ class Chat {
     return [uidA, uidB]..sort();
   }
 
+  /// Generate support chat ID.
+  /// Format: support_{roleId}_{userUid}
+  /// One unique chat per (department, external user) pair.
+  static String generateSupportChatId({
+    required int roleId,
+    required String userUid,
+  }) {
+    return 'support_${roleId}_$userUid';
+  }
+
   factory Chat.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
     return Chat(
@@ -141,6 +158,7 @@ class Chat {
       companyId: data['company_id'],
       title: data['title'],
       photoUrl: data['photo_url'],
+      supportUserUid: data['support_user_uid'],
     );
   }
 
@@ -170,6 +188,15 @@ class Chat {
       if (photoUrl != null) map['photo_url'] = photoUrl;
     }
 
+    if (type == ChatType.support) {
+      if (roleId != null) map['role_id'] = roleId;
+      if (branchId != null) map['branch_id'] = branchId;
+      if (companyId != null) map['company_id'] = companyId;
+      if (title != null) map['title'] = title;
+      if (photoUrl != null) map['photo_url'] = photoUrl;
+      if (supportUserUid != null) map['support_user_uid'] = supportUserUid;
+    }
+
     return map;
   }
 
@@ -185,6 +212,7 @@ class Chat {
     int? companyId,
     String? title,
     String? photoUrl,
+    String? supportUserUid,
   }) {
     return Chat(
       id: id ?? this.id,
@@ -198,6 +226,7 @@ class Chat {
       companyId: companyId ?? this.companyId,
       title: title ?? this.title,
       photoUrl: photoUrl ?? this.photoUrl,
+      supportUserUid: supportUserUid ?? this.supportUserUid,
     );
   }
 

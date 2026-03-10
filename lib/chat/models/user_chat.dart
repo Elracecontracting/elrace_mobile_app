@@ -17,6 +17,10 @@ class UserChat {
   final int? branchId;
   final int? companyId;
   
+  // Support chat-specific
+  final String? supportUserUid; // The external user who initiated the support chat
+  final String? supportGroupTitle; // The group title (e.g. "HR") for display
+  
   final DateTime updatedAt;
   final DateTime? lastReadAt;
   final bool pinned;
@@ -30,6 +34,8 @@ class UserChat {
     this.roleId,
     this.branchId,
     this.companyId,
+    this.supportUserUid,
+    this.supportGroupTitle,
     required this.updatedAt,
     this.lastReadAt,
     this.pinned = false,
@@ -46,6 +52,8 @@ class UserChat {
       roleId: data['role_id'],
       branchId: data['branch_id'],
       companyId: data['company_id'],
+      supportUserUid: data['support_user_uid'],
+      supportGroupTitle: data['support_group_title'],
       updatedAt: (data['updated_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
       lastReadAt: (data['last_read_at'] as Timestamp?)?.toDate(),
       pinned: data['pinned'] ?? false,
@@ -66,6 +74,8 @@ class UserChat {
     if (roleId != null) map['role_id'] = roleId;
     if (branchId != null) map['branch_id'] = branchId;
     if (companyId != null) map['company_id'] = companyId;
+    if (supportUserUid != null) map['support_user_uid'] = supportUserUid;
+    if (supportGroupTitle != null) map['support_group_title'] = supportGroupTitle;
 
     // Don't set lastReadAt on create; only on explicit read
     if (isUpdate && lastReadAt != null) {
@@ -90,6 +100,8 @@ class UserChat {
     int? roleId,
     int? branchId,
     int? companyId,
+    String? supportUserUid,
+    String? supportGroupTitle,
     DateTime? updatedAt,
     DateTime? lastReadAt,
     bool? pinned,
@@ -103,6 +115,8 @@ class UserChat {
       roleId: roleId ?? this.roleId,
       branchId: branchId ?? this.branchId,
       companyId: companyId ?? this.companyId,
+      supportUserUid: supportUserUid ?? this.supportUserUid,
+      supportGroupTitle: supportGroupTitle ?? this.supportGroupTitle,
       updatedAt: updatedAt ?? this.updatedAt,
       lastReadAt: lastReadAt ?? this.lastReadAt,
       pinned: pinned ?? this.pinned,

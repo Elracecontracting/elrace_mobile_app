@@ -20,6 +20,8 @@ class _NewChatScreenState extends State<NewChatScreen> {
   final FocusNode _searchFocusNode = FocusNode();
   
   List<ChatUser> _searchResults = [];
+  List<Chat> _availableGroups = []; // Role groups available for support chat
+  List<Chat> _filteredGroups = []; // Filtered by search query
   bool _isSearching = false;
   String _errorMessage = '';
   Timer? _debounce;
@@ -43,6 +45,22 @@ class _NewChatScreenState extends State<NewChatScreen> {
   Future<void> _loadCurrentUser() async {
     if (_currentUid != null) {
       _currentUser = await UserRepository.instance.getUser(_currentUid!);
+    }
+    // Load available groups for support chat
+    _loadAvailableGroups();
+  }
+
+  Future<void> _loadAvailableGroups() async {
+    try {
+      final groups = await ChatRepository.instance.getAvailableSupportGroups();
+      if (mounted) {
+        setState(() {
+          _availableGroups = groups;
+          _filteredGroups = groups;
+        });
+      }
+    } catch (e) {
+      print('⚠️ NewChatScreen: Error loading available groups: $e');
     }
   }
 
@@ -68,6 +86,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
     if (query.isEmpty) {
       setState(() {
         _searchResults = [];
+        _filteredGroups = _availableGroups;
         _errorMessage = '';
       });
       return;
@@ -76,6 +95,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
     if (query.length < 2) {
       setState(() {
         _searchResults = [];
+        _filteredGroups = _availableGroups.where((g) =>
+          (g.title ?? '').toLowerCase().contains(query)
+        ).toList();
         _errorMessage = 'أدخل حرفين على الأقل للبحث';
       });
       return;
@@ -92,10 +114,16 @@ class _NewChatScreenState extends State<NewChatScreen> {
       // Filter out current user
       final filteredResults = result.users.where((u) => u.uid != _currentUid).toList();
       
+      // Filter groups by search query
+      final matchingGroups = _availableGroups.where((g) =>
+        (g.title ?? '').toLowerCase().contains(query)
+      ).toList();
+
       setState(() {
         _searchResults = filteredResults;
+        _filteredGroups = matchingGroups;
         _isSearching = false;
-        if (filteredResults.isEmpty) {
+        if (filteredResults.isEmpty && matchingGroups.isEmpty) {
           _errorMessage = 'No results found';
         }
       });
@@ -159,10 +187,14 @@ class _NewChatScreenState extends State<NewChatScreen> {
     }
 
     if (_searchController.text.isEmpty) {
+      // Show available groups when not searching
+      if (_availableGroups.isNotEmpty) {
+        return _buildGroupsAndEmptyState();
+      }
       return _buildEmptyState();
     }
 
-    if (_errorMessage.isNotEmpty && _searchResults.isEmpty) {
+    if (_errorMessage.isNotEmpty && _searchResults.isEmpty && _filteredGroups.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -178,16 +210,89 @@ class _NewChatScreenState extends State<NewChatScreen> {
       );
     }
 
-    return ListView.builder(
+    return ListView(
       padding: const EdgeInsets.symmetric(vertical: 8),
-      itemCount: _searchResults.length,
-      itemBuilder: (context, index) {
-        final user = _searchResults[index];
-        return _UserListTile(
-          user: user,
-          onTap: () => _startChat(user),
-        );
-      },
+      children: [
+        // Groups section
+        if (_filteredGroups.isNotEmpty) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+            child: Text(
+              'Departments',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: Colors.grey[600],
+              ),
+            ),
+          ),
+          ..._filteredGroups.map((group) => _GroupSupportTile(
+            group: group,
+            onTap: () => _startSupportChat(group),
+          )),
+          if (_searchResults.isNotEmpty)
+            const Divider(height: 16, indent: 16, endIndent: 16),
+        ],
+        // Users section
+        if (_searchResults.isNotEmpty) ...[
+          if (_filteredGroups.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+              child: Text(
+                'Users',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ),
+          ..._searchResults.map((user) => _UserListTile(
+            user: user,
+            onTap: () => _startChat(user),
+          )),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildGroupsAndEmptyState() {
+    return ListView(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Text(
+            'Contact Department',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey[600],
+            ),
+          ),
+        ),
+        ..._availableGroups.map((group) => _GroupSupportTile(
+          group: group,
+          onTap: () => _startSupportChat(group),
+        )),
+        const SizedBox(height: 24),
+        Center(
+          child: Column(
+            children: [
+              Icon(Icons.person_search, size: 60, color: Colors.grey[400]),
+              const SizedBox(height: 16),
+              Text(
+                'Or search for a user',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -217,6 +322,67 @@ class _NewChatScreenState extends State<NewChatScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _startSupportChat(Chat group) async {
+    if (_currentUid == null || _currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please login first'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final chatId = await ChatRepository.instance.createOrGetSupportChat(
+        userUid: _currentUid!,
+        userName: _currentUser!.name,
+        targetRoleId: group.roleId!,
+        groupTitle: group.title ?? 'Group ${group.roleId}',
+        userRoleId: _currentUser!.roleId,
+        userBranchId: _currentUser!.branchId,
+        userCompanyId: _currentUser!.companyId,
+      );
+
+      // Pop loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      // Navigate to chat screen
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(
+              chatId: chatId,
+              title: group.title ?? 'Group ${group.roleId}',
+              chatType: ChatType.support,
+              supportUserUid: _currentUid,
+              supportGroupTitle: group.title ?? 'Group ${group.roleId}',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      // Pop loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to start support chat: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _startChat(ChatUser user) async {
@@ -381,5 +547,52 @@ class _UserListTile extends StatelessWidget {
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+}
+
+/// Tile for department groups available for support chat
+class _GroupSupportTile extends StatelessWidget {
+  final Chat group;
+  final VoidCallback onTap;
+
+  const _GroupSupportTile({
+    required this.group,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      onTap: onTap,
+      leading: Container(
+        padding: const EdgeInsets.all(1.3),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFE9B23A), width: 1.2),
+        ),
+        child: CircleAvatar(
+          radius: 24,
+          backgroundColor: AppColors.primaryColor.withOpacity(0.1),
+          child: const Icon(
+            Icons.support_agent_rounded,
+            color: AppColors.primaryColor,
+            size: 26,
+          ),
+        ),
+      ),
+      title: Text(
+        group.title ?? 'Group ${group.roleId}',
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      subtitle: Text(
+        'Contact department',
+        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+      ),
+      trailing: const Icon(
+        Icons.arrow_forward_ios_rounded,
+        color: AppColors.primaryColor,
+        size: 18,
+      ),
+    );
   }
 }

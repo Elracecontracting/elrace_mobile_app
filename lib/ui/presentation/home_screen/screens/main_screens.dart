@@ -94,9 +94,17 @@ class _MainScreenState extends State<MainScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         extendBody: true,
-        bottomNavigationBar: const CustomBottomNavBar(),
+        bottomNavigationBar: BlocBuilder<HomeBloc, HomeState>(
+          builder: (context, state) {
+            final currentIndex = HomeBloc.get(context).currentIndex;
+            return currentIndex == 0
+                ? const SizedBox.shrink()
+                : const CustomBottomNavBar();
+          },
+        ),
         body: BlocBuilder<HomeBloc, HomeState>(
-          builder: (context, state) => screens[bloc.currentIndex],
+          builder: (context, state) =>
+              screens[HomeBloc.get(context).currentIndex],
         ),
       ),
     );

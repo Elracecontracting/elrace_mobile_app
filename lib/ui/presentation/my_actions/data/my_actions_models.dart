@@ -48,6 +48,16 @@ class MyActionItem {
   });
 
   factory MyActionItem.fromJson(Map<String, dynamic> json) {
+    // Parse status: handles String, Map, and other types
+    String parseStatus(dynamic rawStatus) {
+      if (rawStatus is String) return rawStatus;
+      if (rawStatus is Map && rawStatus.isNotEmpty) {
+        final first = rawStatus.values.first;
+        return first?.toString() ?? '';
+      }
+      return rawStatus?.toString() ?? '';
+    }
+
     // amount: try amount_total (custom), total_amount (Odoo expense sheet), amount, total
     final dynamic amountRaw = json['amount_total'] ??
         json['total_amount'] ??
@@ -77,6 +87,7 @@ class MyActionItem {
       reference: _safeString(
           json['reference'] ?? json['ref'] ?? json['number']),
       date: _safeString(json['date'] ??
+          json['last_updated_on'] ??
           json['accounting_date'] ??
           json['updated_at'] ??
           json['create_date']),
@@ -86,7 +97,7 @@ class MyActionItem {
           ? amountRaw.toDouble()
           : double.tryParse(amountRaw?.toString() ?? ''),
       requestType: _safeString(json['request_type']),
-      status: _safeString(statusRaw),
+      status: parseStatus(statusRaw),
       employeeName: _safeString(empRaw),
       employeeImage: json['employee_image']?.toString() ?? '',
       reportLink: _safeString(json['report_link']),

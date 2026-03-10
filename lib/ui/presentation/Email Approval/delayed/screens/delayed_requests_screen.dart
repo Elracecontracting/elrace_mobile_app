@@ -1,5 +1,4 @@
 import 'package:el_race/ui/presentation/Email%20Approval/delayed/data/delayed_approvals_repository.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/delayed/models/delayed_approval_model.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/delayed/widgets/delayed_request_card.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
@@ -16,7 +15,10 @@ class DelayedRequestsScreen extends StatefulWidget {
 class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
   final DelayedApprovalsRepository _repository = DelayedApprovalsRepository();
 
+  // true only during the fast counters fetch; false once we know the categories
   bool _isLoading = true;
+  // number of category detail requests still in-flight
+  int _pendingCategories = 0;
   String _error = '';
   List<Map<String, dynamic>> _items = [];
 
@@ -24,23 +26,61 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
     setState(() {
       _isLoading = true;
       _error = '';
+      _items = [];
+      _pendingCategories = 0;
     });
 
     try {
-      final DelayedApprovalsResponse response = await _repository.fetchAll();
-      final items = response.toCardItems();
-      items.sort(
-        (a, b) => (b['daysDelayed'] as int).compareTo(a['daysDelayed'] as int),
-      );
+      // Step 1 – fast counters endpoint (~0.5 s) tells us which categories
+      // have data so we don't waste a round-trip on empty ones.
+      final counters = await _repository
+          .fetchCounters()
+          .timeout(const Duration(seconds: 15));
 
+      final types = <String>[];
+      if (counters.hrCount > 0) types.add('hr');
+      if (counters.rfqCount > 0) types.add('rfq');
+      if (counters.invoiceCount > 0) types.add('invoice');
+      if (counters.pettyCashCount > 0) types.add('petty_cash');
+
+      if (!mounted) return;
       setState(() {
-        _items = items;
-        _isLoading = false;
+        _isLoading = false; // hide full-screen spinner after counters
+        _pendingCategories = types.length;
       });
+
+      if (types.isEmpty) return;
+
+      // Step 2 – fire one fetchDetails() per non-empty category in parallel.
+      // HR (7 records) will appear almost immediately; Invoice (66) follows.
+      await Future.wait(types.map((type) async {
+        try {
+          final resp = await _repository
+              .fetchDetails(type)
+              .timeout(const Duration(seconds: 30));
+          final newItems = resp.toCardItems();
+          if (!mounted) return;
+          setState(() {
+            final combined = [..._items, ...newItems];
+            combined.sort((a, b) => (b['daysDelayed'] as int)
+                .compareTo(a['daysDelayed'] as int));
+            _items = combined;
+            _pendingCategories = (_pendingCategories - 1).clamp(0, 99);
+          });
+        } catch (e) {
+          debugPrint('⚠️ Failed to fetch $type delayed details: $e');
+          if (!mounted) return;
+          setState(() {
+            _pendingCategories = (_pendingCategories - 1).clamp(0, 99);
+          });
+        }
+      }));
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
         _isLoading = false;
+        _pendingCategories = 0;
       });
     }
   }
@@ -93,6 +133,7 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
   }
 
   Widget _buildSliverContent() {
+    // Full-screen spinner: only during initial counters fetch
     if (_isLoading) {
       return const SliverFillRemaining(
         child: Center(
@@ -101,8 +142,17 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
       );
     }
 
-    if (_error.isNotEmpty) {
+    if (_error.isNotEmpty && _items.isEmpty) {
       return _buildErrorSliver(_error, _fetchDelayedRequests);
+    }
+
+    // Still waiting for the first category to return data
+    if (_items.isEmpty && _pendingCategories > 0) {
+      return const SliverFillRemaining(
+        child: Center(
+          child: CircularProgressIndicator(color: Color(0xFF0B2D5E)),
+        ),
+      );
     }
 
     if (_items.isEmpty) {

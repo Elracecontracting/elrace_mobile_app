@@ -84,14 +84,16 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
       _showErrorDialog('Please enter a reason.');
       return;
     }
-    
+
     // Validate: Job Mission must be at least 1 day in advance (not same day)
     final today = DateTime.now();
     final todayDate = DateTime(today.year, today.month, today.day);
-    final selectedDateOnly = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
-    
+    final selectedDateOnly =
+        DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+
     if (selectedDateOnly.isBefore(todayDate.add(const Duration(days: 1)))) {
-      _showErrorDialog('Job Mission must be submitted at least 1 day in advance. Cannot select today.');
+      _showErrorDialog(
+          'Job Mission must be submitted at least 1 day in advance. Cannot select today.');
       return;
     }
 
@@ -127,8 +129,10 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
           "join_date": null,
           "late_days": null,
           "attachment": null,
-          "client_details": selectedMissionType == 'Client Visit' ? clientDetails : null,
-          "project_details": selectedMissionType == 'Client Visit' ? projectDetails : null,
+          "client_details":
+              selectedMissionType == 'Client Visit' ? clientDetails : null,
+          "project_details":
+              selectedMissionType == 'Client Visit' ? projectDetails : null,
           "duration_type": null,
           "hour_from": null,
           "hour_to": null,
@@ -253,7 +257,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                     });
                   },
                   child: Container(
-                    padding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 20.w),
+                    padding:
+                        EdgeInsets.symmetric(vertical: 14.h, horizontal: 20.w),
                     alignment: Alignment.centerLeft,
                     child: Text(
                       options[i],
@@ -292,7 +297,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                 icon: const Icon(Icons.chevron_left),
                 onPressed: () {
                   setState(() {
-                    displayedMonth = DateTime(displayedMonth.year, displayedMonth.month - 1);
+                    displayedMonth =
+                        DateTime(displayedMonth.year, displayedMonth.month - 1);
                   });
                 },
               ),
@@ -304,7 +310,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                     items: List.generate(12, (i) => i + 1)
                         .map((m) => DropdownMenuItem(
                               value: m,
-                              child: Text(DateFormat('MMM').format(DateTime(2000, m))),
+                              child: Text(
+                                  DateFormat('MMM').format(DateTime(2000, m))),
                             ))
                         .toList(),
                     onChanged: (val) {
@@ -320,7 +327,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                     value: displayedMonth.year,
                     underline: const SizedBox(),
                     items: List.generate(10, (i) => DateTime.now().year - 5 + i)
-                        .map((y) => DropdownMenuItem(value: y, child: Text('$y')))
+                        .map((y) =>
+                            DropdownMenuItem(value: y, child: Text('$y')))
                         .toList(),
                     onChanged: (val) {
                       if (val != null) {
@@ -336,7 +344,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                 icon: const Icon(Icons.chevron_right),
                 onPressed: () {
                   setState(() {
-                    displayedMonth = DateTime(displayedMonth.year, displayedMonth.month + 1);
+                    displayedMonth =
+                        DateTime(displayedMonth.year, displayedMonth.month + 1);
                   });
                 },
               ),
@@ -407,7 +416,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
       rows.add(
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: days.sublist(i, (i + 7 > days.length) ? days.length : i + 7),
+          children:
+              days.sublist(i, (i + 7 > days.length) ? days.length : i + 7),
         ),
       );
       rows.add(SizedBox(height: 4.h));
@@ -433,7 +443,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
             maxLines: 3,
             decoration: const InputDecoration(
               border: InputBorder.none,
-              hintText: 'This application is designed for super shops...',
+              hintText: 'Write your description...',
               hintStyle: TextStyle(fontSize: 12),
             ),
             style: TextStyle(
@@ -462,7 +472,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                   SizedBox(width: 10.w),
                   IconButton(
                     icon: Icon(Icons.format_italic,
-                        size: 18.w, color: isItalic ? _accentGrey : Colors.grey),
+                        size: 18.w,
+                        color: isItalic ? _accentGrey : Colors.grey),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () {
@@ -475,7 +486,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                   SizedBox(width: 10.w),
                   IconButton(
                     icon: Icon(Icons.format_list_bulleted,
-                        size: 18.w, color: isBulletList ? _accentGrey : Colors.grey),
+                        size: 18.w,
+                        color: isBulletList ? _accentGrey : Colors.grey),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () {
@@ -525,7 +537,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
 
     if (text.isEmpty || selection.start == 0) {
       _descController.text = '$prefix$text';
-      _descController.selection = TextSelection.collapsed(offset: prefix.length);
+      _descController.selection =
+          TextSelection.collapsed(offset: prefix.length);
     } else {
       final newText =
           '${text.substring(0, selection.start)}\n$prefix${text.substring(selection.start)}';
@@ -543,8 +556,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
 
     for (int i = 0; i < lines.length; i++) {
       if (lines[i].trim().isNotEmpty) {
-        newLines.add(
-            '${i + 1}. ${lines[i].replaceAll(RegExp(r'^\d+\.\s*'), '')}');
+        newLines
+            .add('${i + 1}. ${lines[i].replaceAll(RegExp(r'^\d+\.\s*'), '')}');
       } else {
         newLines.add(lines[i]);
       }
@@ -672,7 +685,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                     selectedDay = value;
                                     selectedDuration = 'Morning';
                                     _onSelectedDateChanged(
-                                      DateTime.now().add(const Duration(days: 1)),
+                                      DateTime.now()
+                                          .add(const Duration(days: 1)),
                                     );
                                   });
                                 },
@@ -715,7 +729,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                     ? null
                                     : (value) {
                                         if (value == null) return;
-                                        setState(() => selectedDuration = value);
+                                        setState(
+                                            () => selectedDuration = value);
                                       },
                               ),
                               Text(
@@ -752,11 +767,11 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                           ),
                         ],
                       ),
-
                       if (selectedMissionType == 'Client Visit') ...[
                         SizedBox(height: 14.h),
                         TextField(
-                          onChanged: (value) => setState(() => clientDetails = value),
+                          onChanged: (value) =>
+                              setState(() => clientDetails = value),
                           decoration: InputDecoration(
                             labelText: translate('request.client_details'),
                             labelStyle: GoogleFonts.inter(
@@ -767,14 +782,15 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12.r),
                             ),
-                            contentPadding:
-                                EdgeInsets.symmetric(vertical: 10.h, horizontal: 12.w),
+                            contentPadding: EdgeInsets.symmetric(
+                                vertical: 10.h, horizontal: 12.w),
                             isDense: true,
                           ),
                         ),
                         SizedBox(height: 12.h),
                         TextField(
-                          onChanged: (value) => setState(() => projectDetails = value),
+                          onChanged: (value) =>
+                              setState(() => projectDetails = value),
                           decoration: InputDecoration(
                             labelText: translate('request.project_details'),
                             labelStyle: GoogleFonts.inter(
@@ -785,13 +801,12 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12.r),
                             ),
-                            contentPadding:
-                                EdgeInsets.symmetric(vertical: 10.h, horizontal: 12.w),
+                            contentPadding: EdgeInsets.symmetric(
+                                vertical: 10.h, horizontal: 12.w),
                             isDense: true,
                           ),
                         ),
                       ],
-
                       SizedBox(height: 16.h),
                       _buildCalendar(),
                       SizedBox(height: 18.h),
@@ -812,7 +827,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                         width: double.infinity,
                         height: 48.h,
                         child: ElevatedButton(
-                          onPressed: isSubmitting ? null : _submitJobMissionRequest,
+                          onPressed:
+                              isSubmitting ? null : _submitJobMissionRequest,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _accentGrey,
                             shape: RoundedRectangleBorder(
@@ -826,7 +842,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                                    valueColor:
+                                        AlwaysStoppedAnimation(Colors.white),
                                   ),
                                 )
                               : Text(

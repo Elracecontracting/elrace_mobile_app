@@ -201,6 +201,220 @@ class ChatRepository {
 
   // ============== Chat List ==============
 
+  // ============== Support Chat (Helpdesk) ==============
+
+  /// Create or get a support chat between a user and a department group.
+  /// The user sees it as a DM with the group name.
+  /// Group members see it as individual conversations per user (ticket-style).
+  /// Group members can reply anonymously (user sees group name, not individual).
+  Future<String> createOrGetSupportChat({
+    required String userUid,
+    required String userName,
+    required int targetRoleId,
+    required String groupTitle, // e.g. "HR"
+    int? userRoleId,
+    int? userBranchId,
+    int? userCompanyId,
+  }) async {
+    final chatId = Chat.generateSupportChatId(
+      roleId: targetRoleId,
+      userUid: userUid,
+    );
+
+    try {
+      final batch = _firestore.batch();
+
+      // Create/update support chat document
+      final chatRef = _chatsCollection.doc(chatId);
+      batch.set(chatRef, {
+        'type': 'support',
+        'role_id': targetRoleId,
+        'support_user_uid': userUid,
+        'title': groupTitle,
+        'member_ids': FieldValue.arrayUnion([userUid]),
+        'created_at': FieldValue.serverTimestamp(),
+        'updated_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      // Add the external user as member
+      final userMemberRef = chatRef.collection('members').doc(userUid);
+      batch.set(userMemberRef, {
+        'joined_at': FieldValue.serverTimestamp(),
+        'role_id_snapshot': userRoleId,
+        'branch_id_snapshot': userBranchId,
+        'company_id_snapshot': userCompanyId,
+        'muted': false,
+        'is_support_user': true, // Mark as the external user
+      }, SetOptions(merge: true));
+
+      // Create userChats entry for the external user (sees group name)
+      final userChatRef = _userChatsCollection(userUid).doc(chatId);
+      batch.set(userChatRef, {
+        'type': 'support',
+        'role_id': targetRoleId,
+        'title': groupTitle, // User sees "HR Group"
+        'support_user_uid': userUid,
+        'support_group_title': groupTitle,
+        'updated_at': FieldValue.serverTimestamp(),
+        'pinned': false,
+        'muted': false,
+      }, SetOptions(merge: true));
+
+      await batch.commit();
+
+      // Now add all role group members to this support chat
+      await _addRoleMembersToSupportChat(
+        chatId: chatId,
+        targetRoleId: targetRoleId,
+        userName: userName,
+        userUid: userUid,
+        groupTitle: groupTitle,
+      );
+
+      print('✅ ChatRepository: Created/updated support chat $chatId');
+      return chatId;
+    } catch (e) {
+      print('❌ ChatRepository: Error creating support chat: $e');
+      rethrow;
+    }
+  }
+
+  /// Add all members of a role group to a support chat.
+  /// Each group member sees the chat titled with the user's name (ticket-style).
+  Future<void> _addRoleMembersToSupportChat({
+    required String chatId,
+    required int targetRoleId,
+    required String userName,
+    required String userUid,
+    required String groupTitle,
+  }) async {
+    try {
+      // Find the role chat to get its members
+      final roleChatId = Chat.generateRoleChatId(roleId: targetRoleId);
+      final membersSnapshot = await _chatsCollection
+          .doc(roleChatId)
+          .collection('members')
+          .get();
+
+      if (membersSnapshot.docs.isEmpty) {
+        print('⚠️ ChatRepository: No members found in role chat $roleChatId');
+        return;
+      }
+
+      final batch = _firestore.batch();
+      final memberUids = <String>[];
+
+      for (final memberDoc in membersSnapshot.docs) {
+        final memberUid = memberDoc.id;
+        if (memberUid == userUid) continue; // Skip the external user (already added)
+
+        memberUids.add(memberUid);
+        final memberData = memberDoc.data();
+
+        // Add as member of support chat
+        final memberRef = _chatsCollection
+            .doc(chatId)
+            .collection('members')
+            .doc(memberUid);
+        batch.set(memberRef, {
+          'joined_at': FieldValue.serverTimestamp(),
+          'role_id_snapshot': memberData['role_id_snapshot'],
+          'branch_id_snapshot': memberData['branch_id_snapshot'],
+          'company_id_snapshot': memberData['company_id_snapshot'],
+          'muted': false,
+          'is_support_user': false, // Mark as group member
+        }, SetOptions(merge: true));
+
+        // Create userChats entry for group member (sees user's name)
+        final memberChatRef = _userChatsCollection(memberUid).doc(chatId);
+        batch.set(memberChatRef, {
+          'type': 'support',
+          'role_id': targetRoleId,
+          'title': userName, // Group member sees "محمد أحمد"
+          'peer_uid': userUid, // To identify the external user
+          'support_user_uid': userUid,
+          'support_group_title': groupTitle,
+          'updated_at': FieldValue.serverTimestamp(),
+          'pinned': false,
+          'muted': false,
+        }, SetOptions(merge: true));
+      }
+
+      // Update chat member_ids array
+      if (memberUids.isNotEmpty) {
+        batch.update(_chatsCollection.doc(chatId), {
+          'member_ids': FieldValue.arrayUnion(memberUids),
+        });
+      }
+
+      await batch.commit();
+      print('✅ ChatRepository: Added ${memberUids.length} role members to support chat $chatId');
+    } catch (e) {
+      print('❌ ChatRepository: Error adding role members to support chat: $e');
+    }
+  }
+
+  /// Get all available role groups for support chat.
+  /// Returns role chats that the current user is NOT a member of.
+  Future<List<Chat>> getAvailableSupportGroups() async {
+    final currentUid = _currentUid;
+    if (currentUid == null) return [];
+
+    try {
+      // Get all role chats
+      final roleChatSnapshot = await _chatsCollection
+          .where('type', isEqualTo: 'role')
+          .get();
+
+      final availableGroups = <Chat>[];
+
+      for (final doc in roleChatSnapshot.docs) {
+        // Check if current user is NOT a member of this role chat
+        final memberDoc = await doc.reference
+            .collection('members')
+            .doc(currentUid)
+            .get();
+
+        if (!memberDoc.exists) {
+          availableGroups.add(Chat.fromFirestore(doc));
+        }
+      }
+
+      return availableGroups;
+    } catch (e) {
+      print('❌ ChatRepository: Error getting available support groups: $e');
+      return [];
+    }
+  }
+
+  /// Check if the current user is the support user (external) in a support chat.
+  Future<bool> isSupportUser(String chatId) async {
+    final currentUid = _currentUid;
+    if (currentUid == null) return false;
+
+    try {
+      final chatDoc = await _chatsCollection.doc(chatId).get();
+      if (!chatDoc.exists) return false;
+      final data = chatDoc.data() as Map<String, dynamic>? ?? {};
+      return data['support_user_uid'] == currentUid;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Get role member UIDs for a support chat (for updating all member userChats on new message)
+  Future<List<String>> _getSupportChatMemberUids(String chatId) async {
+    try {
+      final snapshot = await _chatsCollection
+          .doc(chatId)
+          .collection('members')
+          .get();
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
   /// Get user's chat list stream
   Stream<List<UserChat>> subscribeToUserChats(String uid) {
     return _userChatsCollection(uid)
@@ -337,6 +551,11 @@ class ChatRepository {
 
       await batch.commit();
 
+      // For support chats, update all members' userChats timestamps
+      if (chatId.startsWith('support_')) {
+        _updateSupportChatMemberTimestamps(chatId, currentUid);
+      }
+
       // Clear typing status
       await PresenceService.instance.setTyping(chatId, false);
 
@@ -344,6 +563,23 @@ class ChatRepository {
     } catch (e) {
       print('❌ ChatRepository: Error sending text message: $e');
       rethrow;
+    }
+  }
+
+  /// Update all support chat members' userChats timestamps (fire-and-forget)
+  Future<void> _updateSupportChatMemberTimestamps(String chatId, String excludeUid) async {
+    try {
+      final memberUids = await _getSupportChatMemberUids(chatId);
+      final batch = _firestore.batch();
+      for (final uid in memberUids) {
+        if (uid == excludeUid) continue; // Already updated in the main batch
+        batch.update(_userChatsCollection(uid).doc(chatId), {
+          'updated_at': FieldValue.serverTimestamp(),
+        });
+      }
+      await batch.commit();
+    } catch (e) {
+      print('⚠️ ChatRepository: Error updating support chat member timestamps: $e');
     }
   }
 
@@ -511,6 +747,11 @@ class ChatRepository {
       });
 
       await batch.commit();
+
+      // For support chats, update all members' userChats timestamps
+      if (chatId.startsWith('support_')) {
+        _updateSupportChatMemberTimestamps(chatId, currentUid);
+      }
 
       return message;
     } on FirebaseException catch (e) {

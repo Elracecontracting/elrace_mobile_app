@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
+import 'package:flutter/foundation.dart';
+import 'package:flutter/rendering.dart';
 import 'package:camera/camera.dart';
 import 'package:cunning_document_scanner/cunning_document_scanner.dart';
 import 'package:image/image.dart' as img;
@@ -52,6 +54,10 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
   int _pendingImagesCount = 0;
   int _totalCapturedCount = 0;
   String _processingStatusText = '';
+
+  // Screenshot capture key
+  final GlobalKey _captureKey = GlobalKey();
+  int _savePendingCount = 0;
 
   // Inline scan/filter state
   final ImageProcessingService _imageProcessingService =
@@ -297,53 +303,97 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
     super.dispose();
   }
 
-  Future<void> _takePicture() async {
-    if (_isCapturing || _controller == null) return;
+  void _takePicture() {
+    final boundary = _captureKey.currentContext?.findRenderObject()
+        as RenderRepaintBoundary?;
+    if (boundary == null) return;
 
-    _isCapturing = true; // Direct assignment, no setState for speed
+    // Increment count instantly — zero delay for UI feedback
+    _totalCapturedCount++;
+    _savePendingCount++;
+    if (mounted) setState(() {});
 
+    // Fire-and-forget: capture + encode + save all in background
+    _captureAndSave(boundary);
+  }
+
+  /// Entire capture pipeline runs async without blocking UI
+  Future<void> _captureAndSave(RenderRepaintBoundary boundary) async {
     try {
-      // Capture photo immediately
-      final file = await _controller!.takePicture();
+      // pixelRatio 2.0 gives great quality, much faster than 3.0
+      final ui.Image image = await boundary.toImage(pixelRatio: 2.0);
+      final int width = image.width;
+      final int height = image.height;
+      final ByteData? byteData =
+          await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+      image.dispose();
 
-      // Capture current date/time at moment of capture
-      final captureDate = _currentDate;
-      final captureTime = _currentTime;
-      final captureLocation = _currentLocation;
-
-      // Reset capturing flag immediately
-      _isCapturing = false;
-
-      // Increment total captured count
-      if (mounted) {
-        setState(() {
-          _totalCapturedCount++;
-        });
+      if (byteData == null) {
+        _savePendingCount--;
+        if (mounted) setState(() {});
+        return;
       }
 
-      // Add to queue (non-blocking, no await for instant response)
-      _imageQueueService.addImageToQueue(
-        imagePath: file.path,
-        currentDate: captureDate,
-        currentTime: captureTime,
-        currentLocation: captureLocation,
-        logoBytes: _logoBytes,
-      );
+      // Encode to JPEG in background isolate to avoid jank
+      final Uint8List rgba = byteData.buffer.asUint8List();
 
-      // Don't go back - allow multiple photos
+      final Uint8List jpgBytes = await compute(_encodeRgbaToJpg, _EncodeParams(
+        rgba: rgba,
+        width: width,
+        height: height,
+      ));
+
+      // Save to gallery
+      final tempDir = await getTemporaryDirectory();
+      final filePath =
+          '${tempDir.path}/photo_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      await File(filePath).writeAsBytes(jpgBytes, flush: true);
+      await Gal.putImage(filePath, album: 'RCC');
+      try {
+        await File(filePath).delete();
+      } catch (_) {}
+      debugPrint('✓ Photo saved to gallery');
     } catch (e) {
-      debugPrint("Camera error: $e");
-      _isCapturing = false;
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      debugPrint('✗ Capture/save error: $e');
     }
+    _savePendingCount--;
+    if (mounted) setState(() {});
+  }
+
+  /// Overlay text style matching the live preview
+  TextStyle _overlayTextStyle(double fontSize) {
+    return GoogleFonts.inter(
+      fontSize: fontSize,
+      color: Colors.grey[200]!.withOpacity(0.85),
+      fontWeight: FontWeight.w400,
+      shadows: [
+        Shadow(
+          color: Colors.grey.withOpacity(0.5),
+          offset: const Offset(-1, -1),
+          blurRadius: 2,
+        ),
+        Shadow(
+          color: Colors.grey.withOpacity(0.5),
+          offset: const Offset(1, -1),
+          blurRadius: 2,
+        ),
+        Shadow(
+          color: Colors.grey.withOpacity(0.5),
+          offset: const Offset(1, 1),
+          blurRadius: 2,
+        ),
+        Shadow(
+          color: Colors.grey.withOpacity(0.5),
+          offset: const Offset(-1, 1),
+          blurRadius: 2,
+        ),
+        Shadow(
+          color: Colors.grey.withOpacity(0.3),
+          offset: const Offset(0, 0),
+          blurRadius: 4,
+        ),
+      ],
+    );
   }
 
   Future<String?> _composeWithOverlay(String imagePath) async {
@@ -847,14 +897,61 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
             ),
 
             /// ================================
-            /// CAMERA PREVIEW (4:3 ASPECT RATIO)
+            /// CAMERA PREVIEW WITH OVERLAYS (SCREENSHOT CAPTURE)
             /// ================================
             Center(
-              child: AspectRatio(
-                aspectRatio: 3 / 4,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12.r),
-                  child: CameraPreview(_controller!),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12.r),
+                child: RepaintBoundary(
+                  key: _captureKey,
+                  child: AspectRatio(
+                    aspectRatio: 3 / 4,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        // Camera feed
+                        CameraPreview(_controller!),
+                        // Logo (top-left)
+                        Positioned(
+                          top: 5.h,
+                          left: 10.w,
+                          child: Image.asset(
+                            'assets/logo/rcc2.png',
+                            height: 27.h,
+                            filterQuality: FilterQuality.high,
+                          ),
+                        ),
+                        // Date/time/location (bottom-right)
+                        Positioned(
+                          bottom: 12.h,
+                          right: 12.w,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                _currentTime,
+                                style: _overlayTextStyle(16.sp),
+                              ),
+                              SizedBox(height: 2.h),
+                              Text(
+                                _currentDate,
+                                style: _overlayTextStyle(16.sp),
+                              ),
+                              if (_currentLocation.isNotEmpty) ...[
+                                SizedBox(height: 4.h),
+                                Text(
+                                  _currentLocation,
+                                  style: _overlayTextStyle(14.sp),
+                                  textAlign: TextAlign.right,
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -888,26 +985,6 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                           onPressed: () => Navigator.pop(context),
                         ),
                       ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            /// ================================
-            /// LOGO OVERLAY ON CAMERA (LEFT TOP)
-            /// ================================
-            Center(
-              child: AspectRatio(
-                aspectRatio: 3 / 4,
-                child: Padding(
-                  padding: EdgeInsets.only(top: 5.h, left: 10.w),
-                  child: Align(
-                    alignment: Alignment.topLeft,
-                    child: Image.asset(
-                      'assets/logo/rcc2.png',
-                      height: 27.h,
-                      filterQuality: FilterQuality.high,
                     ),
                   ),
                 ),
@@ -962,130 +1039,6 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
               ),
 
             /// ================================
-            /// DATE + TIME + LOCATION OVERLAY ON CAMERA (BOTTOM)
-            /// ================================
-            Positioned(
-              bottom: H * 0.15 + 40.h,
-              right: 20.w,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    _currentTime,
-                    style: GoogleFonts.inter(
-                      fontSize: 16.sp,
-                      color: Colors.grey[200]!.withOpacity(0.85),
-                      fontWeight: FontWeight.w400,
-                      shadows: [
-                        Shadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          offset: const Offset(-1, -1),
-                          blurRadius: 2,
-                        ),
-                        Shadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          offset: const Offset(1, -1),
-                          blurRadius: 2,
-                        ),
-                        Shadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          offset: const Offset(1, 1),
-                          blurRadius: 2,
-                        ),
-                        Shadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          offset: const Offset(-1, 1),
-                          blurRadius: 2,
-                        ),
-                        Shadow(
-                          color: Colors.grey.withOpacity(0.3),
-                          offset: const Offset(0, 0),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 2.h),
-                  Text(
-                    _currentDate,
-                    style: GoogleFonts.inter(
-                      fontSize: 16.sp,
-                      color: Colors.grey[200]!.withOpacity(0.85),
-                      fontWeight: FontWeight.w400,
-                      shadows: [
-                        Shadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          offset: const Offset(-1, -1),
-                          blurRadius: 2,
-                        ),
-                        Shadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          offset: const Offset(1, -1),
-                          blurRadius: 2,
-                        ),
-                        Shadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          offset: const Offset(1, 1),
-                          blurRadius: 2,
-                        ),
-                        Shadow(
-                          color: Colors.grey.withOpacity(0.5),
-                          offset: const Offset(-1, 1),
-                          blurRadius: 2,
-                        ),
-                        Shadow(
-                          color: Colors.grey.withOpacity(0.3),
-                          offset: const Offset(0, 0),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_currentLocation.isNotEmpty) ...[
-                    SizedBox(height: 4.h),
-                    Text(
-                      _currentLocation,
-                      style: GoogleFonts.inter(
-                        fontSize: 14.sp,
-                      color: Colors.grey[200]!.withOpacity(0.85),
-                        fontWeight: FontWeight.w400,
-                        shadows: [
-                          Shadow(
-                            color: Colors.grey.withOpacity(0.5),
-                            offset: const Offset(-1, -1),
-                            blurRadius: 2,
-                          ),
-                          Shadow(
-                            color: Colors.grey.withOpacity(0.5),
-                            offset: const Offset(1, -1),
-                            blurRadius: 2,
-                          ),
-                          Shadow(
-                            color: Colors.grey.withOpacity(0.5),
-                            offset: const Offset(1, 1),
-                            blurRadius: 2,
-                          ),
-                          Shadow(
-                            color: Colors.grey.withOpacity(0.5),
-                            offset: const Offset(-1, 1),
-                            blurRadius: 2,
-                          ),
-                          Shadow(
-                            color: Colors.grey.withOpacity(0.3),
-                            offset: const Offset(0, 0),
-                            blurRadius: 4,
-                          ),
-                        ],
-                      ),
-                      textAlign: TextAlign.right,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            /// ================================
             /// BOTTOM CONTROLS CONTAINER
             /// ================================
             Positioned(
@@ -1110,7 +1063,8 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                     children: [
                       /// ——— PROCESSING STATUS INDICATOR ———
                       if (_processingStatusText.isNotEmpty ||
-                          _pendingImagesCount > 0)
+                          _pendingImagesCount > 0 ||
+                          _savePendingCount > 0)
                         Container(
                           margin: EdgeInsets.only(bottom: 4.h),
                           padding: EdgeInsets.symmetric(
@@ -1122,7 +1076,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (_imageQueueService.isProcessing)
+                              if (_imageQueueService.isProcessing || _savePendingCount > 0)
                                 Padding(
                                   padding: EdgeInsets.only(right: 6.w),
                                   child: SizedBox(
@@ -1135,9 +1089,11 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                                   ),
                                 ),
                               Text(
-                                _processingStatusText.isNotEmpty
-                                    ? _processingStatusText
-                                    : 'Saving $_pendingImagesCount photo${_pendingImagesCount > 1 ? 's' : ''}...',
+                                _savePendingCount > 0
+                                    ? 'Saving $_savePendingCount photo${_savePendingCount > 1 ? 's' : ''}...'
+                                    : _processingStatusText.isNotEmpty
+                                        ? _processingStatusText
+                                        : 'Saving $_pendingImagesCount photo${_pendingImagesCount > 1 ? 's' : ''}...',
                                 style: GoogleFonts.inter(
                                   fontSize: 10.sp,
                                   color: Colors.white,
@@ -1150,29 +1106,18 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
 
                       /// ——— SHOOT BUTTON ———
                       GestureDetector(
-                        onTap: _isCapturing ? null : _takePicture,
+                        onTap: _takePicture,
                         child: Container(
                           width: 50.w,
                           height: 50.w,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: _isCapturing
-                                ? Colors.white.withOpacity(0.5)
-                                : Colors.white,
+                            color: Colors.white,
                             border: Border.all(
                               color: Colors.white.withOpacity(0.3),
                               width: 55.w,
                             ),
                           ),
-                          child: _isCapturing
-                              ? Padding(
-                                  padding: EdgeInsets.all(10.w),
-                                  child: const CircularProgressIndicator(
-                                    color: Colors.black12,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : null,
                         ),
                       ),
                       SizedBox(height: 6.h),
@@ -1182,8 +1127,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           _glassButton("SCAN", _openScanner),
-                          _glassButton(
-                              "PHOTO", _isCapturing ? () {} : _takePicture),
+                          _glassButton("PHOTO", _takePicture),
                           _glassButton("QR", _openQrScanner),
                         ],
                       ),
@@ -1792,4 +1736,23 @@ class _FilterMeta {
   final IconData icon;
 
   _FilterMeta(this.label, this.color, this.icon);
+}
+
+/// Parameters for RGBA → JPG encoding in isolate
+class _EncodeParams {
+  final Uint8List rgba;
+  final int width;
+  final int height;
+  _EncodeParams({required this.rgba, required this.width, required this.height});
+}
+
+/// Runs in a background isolate — converts raw RGBA pixels to JPEG
+Uint8List _encodeRgbaToJpg(_EncodeParams p) {
+  final image = img.Image.fromBytes(
+    width: p.width,
+    height: p.height,
+    bytes: p.rgba.buffer,
+    numChannels: 4,
+  );
+  return Uint8List.fromList(img.encodeJpg(image, quality: 90));
 }

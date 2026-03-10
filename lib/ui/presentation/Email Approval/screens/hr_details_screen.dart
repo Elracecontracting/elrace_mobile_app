@@ -24,6 +24,8 @@ class HrDetailsScreen extends StatefulWidget {
 }
 
 class _HrDetailsScreenState extends State<HrDetailsScreen> {
+  static const String _localFakeHrRequestId = 'LOCAL_FAKE_HR_001';
+
   bool _isLoading = true;
   String _error = '';
 
@@ -47,9 +49,30 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
     return fallback;
   }
 
+  bool get _isLocalFakeRequest => widget.requestId == _localFakeHrRequestId;
+
+  Map<String, dynamic> _buildLocalFakeFormData() {
+    return {
+      'request_no': 'REQ/FAKE/001',
+      'request_type': 'Annual Leave',
+      'employee_name': 'Local Test Employee',
+      'employee_id': 'EMP-FAKE-001',
+      'request_date': '2026-03-04',
+      'start_date': '2026-03-10',
+      'duration': '3',
+      'end_date': '2026-03-12',
+      'balance_leave': '8',
+    };
+  }
+
   @override
   void initState() {
     super.initState();
+    if (_isLocalFakeRequest) {
+      _formData = _buildLocalFakeFormData();
+      _isLoading = false;
+      return;
+    }
     _fetchHrDetails();
   }
 
@@ -80,10 +103,10 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
 
       final streamed = await request.send();
       final response = await http.Response.fromStream(streamed);
-      
+
       print('🔵 Response Status: ${response.statusCode}');
       print('🔵 Response Body: ${response.body}');
-      
+
       final data = jsonDecode(response.body);
 
       if (data['result'] != null) {
@@ -117,7 +140,8 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
   Widget _card({required Widget child, EdgeInsets? padding}) {
     return Container(
       width: double.infinity,
-      padding: padding ?? EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.w),
+      padding:
+          padding ?? EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.w),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12.r),
@@ -158,15 +182,16 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
 
   Widget _buildEmployeeImage(String imageData) {
     // Check if it's a base64 encoded image
-    if (imageData.startsWith('data:image') || 
-        (!imageData.startsWith('http://') && !imageData.startsWith('https://'))) {
+    if (imageData.startsWith('data:image') ||
+        (!imageData.startsWith('http://') &&
+            !imageData.startsWith('https://'))) {
       try {
         // Remove the data:image/png;base64, prefix if it exists
         String base64String = imageData;
         if (imageData.contains('base64,')) {
           base64String = imageData.split('base64,')[1];
         }
-        
+
         final bytes = base64Decode(base64String);
         return Image.memory(
           bytes,
@@ -186,7 +211,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
         );
       }
     }
-    
+
     // It's a URL, use Image.network
     return Image.network(
       imageData,
@@ -296,11 +321,20 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
       _formData['request_date_to'],
     ]);
 
-    final balanceLeave = _pick([
+    String balanceLeaveRaw = _pick([
       _formData['balance_leave'],
       _formData['remaining_leaves'],
       _formData['leave_balance'],
     ]);
+    // Format balance leave to avoid excessive decimal places
+    final balanceLeave = () {
+      if (balanceLeaveRaw.isEmpty) return balanceLeaveRaw;
+      final num? parsed = num.tryParse(balanceLeaveRaw);
+      if (parsed == null) return balanceLeaveRaw;
+      // Show as integer if no fractional part, else 2 decimal places
+      if (parsed == parsed.truncate()) return parsed.toInt().toString();
+      return parsed.toStringAsFixed(2);
+    }();
 
     final userId =
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
@@ -341,11 +375,12 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                               SizedBox(height: 8.w),
                               Text(
                                 'HR DETAILS',
+                                textAlign: TextAlign.center,
                                 style: GoogleFonts.inter(
-                                  fontSize: 14.sp,
+                                  fontSize: 20.sp,
                                   fontWeight: FontWeight.w900,
                                   color: const Color(0xFF0E0E0E),
-                                  letterSpacing: 0.6,
+                                  letterSpacing: 1.2,
                                 ),
                               ),
                               SizedBox(height: 14.w),
@@ -356,7 +391,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                                 padding: EdgeInsets.symmetric(
                                     horizontal: 16.w, vertical: 12.w),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF6B6B6B),
+                                  color: const Color(0xFF1C1C1E),
                                   borderRadius: BorderRadius.circular(50.r),
                                 ),
                                 child: Row(
@@ -385,7 +420,8 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                                     SizedBox(width: 12.w),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             employeeName,
@@ -401,7 +437,8 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                                               style: GoogleFonts.inter(
                                                 fontSize: 14.sp,
                                                 fontWeight: FontWeight.w600,
-                                                color: Colors.white.withOpacity(0.9),
+                                                color: Colors.white
+                                                    .withOpacity(0.9),
                                               ),
                                             ),
                                         ],
@@ -458,7 +495,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _label('Request Details'),
+                                    Center(child: _label('Request Details')),
                                     SizedBox(height: 12.w),
                                     _detailRow('Request Date', requestDate),
                                     Divider(
@@ -512,6 +549,8 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                                 color: Colors.white,
                                 height: 1,
                               ),
+                              showHrApproveConfirmation: true,
+                              enableFakeApproveDemo: _isLocalFakeRequest,
                             ),
                           ),
                         ),

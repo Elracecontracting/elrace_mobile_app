@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 /// خدمة إشعارات تذكير Check In/Out
 ///
@@ -22,6 +25,7 @@ class CheckInReminderNotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  bool _exactAlarmGranted = false;
 
   // Notification IDs
   static const int _checkOutReminderId = 1000;
@@ -63,30 +67,81 @@ class CheckInReminderNotificationService {
     print('🔔 Check-in/out reminder notification service initialized');
   }
 
-  /// طلب صلاحيات الإشعارات والإشعارات الدقيقة
+  /// طلب صلاحيات الإشعارات والإشعارات الدقيقة + إيقاف تحسين البطارية (Samsung)
   Future<void> _requestNotificationPermissions() async {
     try {
       // طلب صلاحية الإشعارات العادية (Android 13+)
       final notificationStatus = await Permission.notification.request();
       print('📱 Notification permission: ${notificationStatus.isGranted}');
 
-      // طلب صلاحية الإشعارات الدقيقة (Exact Alarms)
-      // على Android 12 (API 31) وما فوق
-      if (await Permission.scheduleExactAlarm.isDenied) {
-        print('⚠️ Requesting exact alarm permission...');
-        // في Android 14+ المستخدم يحتاج الموافقة يدوياً من الإعدادات
-        await Permission.scheduleExactAlarm.request();
-      }
+      if (Platform.isAndroid) {
+        // طلب إيقاف تحسين البطارية (مهم جداً لـ Samsung)
+        // Samsung One UI يوقف الإشعارات المجدولة بسبب "Sleeping apps"
+        await _requestBatteryOptimizationExemption();
 
-      final alarmStatus = await Permission.scheduleExactAlarm.status;
-      print('⏰ Exact alarm permission: ${alarmStatus.isGranted}');
+        // طلب صلاحية الإشعارات الدقيقة (Exact Alarms)
+        // على Android 12 (API 31) وما فوق
+        try {
+          if (await Permission.scheduleExactAlarm.isDenied) {
+            print('⚠️ Requesting exact alarm permission...');
+            await Permission.scheduleExactAlarm.request();
+          }
 
-      if (!alarmStatus.isGranted) {
-        print('❌ Exact alarm permission NOT granted!');
-        print('💡 User needs to enable "Alarms & reminders" in app settings');
+          final alarmStatus = await Permission.scheduleExactAlarm.status;
+          _exactAlarmGranted = alarmStatus.isGranted;
+          print('⏰ Exact alarm permission: $_exactAlarmGranted');
+
+          if (!_exactAlarmGranted) {
+            print('⚠️ Exact alarm NOT granted - will use inexact alarms as fallback');
+          }
+        } catch (e) {
+          print('⚠️ Error checking exact alarm permission: $e');
+          _exactAlarmGranted = false;
+        }
+      } else {
+        // iOS لا يحتاج exact alarm permission
+        _exactAlarmGranted = true;
       }
     } catch (e) {
       print('⚠️ Error requesting permissions: $e');
+    }
+  }
+
+  /// طلب إيقاف تحسين البطارية - مهم جداً لأجهزة Samsung
+  /// Samsung One UI يضع التطبيقات في "Sleeping apps" مما يمنع الإشعارات المجدولة
+  Future<void> _requestBatteryOptimizationExemption() async {
+    try {
+      final status = await Permission.ignoreBatteryOptimizations.status;
+      print('🔋 Battery optimization status: ${status.isGranted ? "EXEMPT" : "NOT EXEMPT"}');
+
+      if (!status.isGranted) {
+        print('🔋 Requesting battery optimization exemption (important for Samsung)...');
+        final result = await Permission.ignoreBatteryOptimizations.request();
+        print('🔋 Battery optimization exemption result: ${result.isGranted ? "GRANTED" : "DENIED"}');
+
+        if (!result.isGranted) {
+          print('⚠️ Battery optimization NOT disabled!');
+          print('💡 Samsung users: Go to Settings > Apps > El Race > Battery > Unrestricted');
+        }
+      }
+
+      // تسجيل معلومات الجهاز للتشخيص
+      try {
+        final deviceInfo = DeviceInfoPlugin();
+        final androidInfo = await deviceInfo.androidInfo;
+        print('📱 Device: ${androidInfo.manufacturer} ${androidInfo.model}');
+        print('📱 Android SDK: ${androidInfo.version.sdkInt}');
+
+        if (androidInfo.manufacturer.toLowerCase().contains('samsung')) {
+          print('⚠️ Samsung device detected - aggressive battery optimization may block notifications');
+          print('💡 Ensure app is NOT in "Sleeping apps" or "Deep sleeping apps"');
+          print('💡 Settings > Battery > Background usage limits > Never sleeping apps > Add El Race');
+        }
+      } catch (e) {
+        print('⚠️ Could not get device info: $e');
+      }
+    } catch (e) {
+      print('⚠️ Error requesting battery optimization exemption: $e');
     }
   }
 
@@ -128,13 +183,34 @@ class CheckInReminderNotificationService {
     print('✅ Check-in/out notification channels created');
   }
 
+  /// تحديد وضع الجدولة المناسب حسب صلاحية exact alarm
+  AndroidScheduleMode get _scheduleMode {
+    if (_exactAlarmGranted) {
+      return AndroidScheduleMode.exactAllowWhileIdle;
+    } else {
+      // Fallback: inexact alarm - يعمل بدون صلاحية exact alarm
+      // مهم لأجهزة Samsung اللي ما تعطي صلاحية exact alarm
+      print('⚠️ Using inexactAllowWhileIdle mode (exact alarm not granted)');
+      return AndroidScheduleMode.inexactAllowWhileIdle;
+    }
+  }
+
   /// جدولة إشعارات التذكير بـ check out (من 4 مساءً - 5 مساءً)
   Future<void> scheduleCheckOutReminders() async {
     await initialize();
     await cancelCheckOutReminders(); // إلغاء أي إشعارات سابقة
 
+    // إعادة فحص صلاحية exact alarm قبل الجدولة
+    if (Platform.isAndroid) {
+      try {
+        final alarmStatus = await Permission.scheduleExactAlarm.status;
+        _exactAlarmGranted = alarmStatus.isGranted;
+      } catch (_) {}
+    }
+
     final now = tz.TZDateTime.now(tz.local);
     print('⏰ Current time: ${now.toString()}');
+    print('⏰ Schedule mode: ${_exactAlarmGranted ? "EXACT" : "INEXACT (fallback)"}');
 
     // جدول إشعارات كل 15 دقيقة من الساعة 4 مساءً حتى 5 مساءً
     final reminderTimes = [
@@ -184,7 +260,7 @@ class CheckInReminderNotificationService {
               presentSound: true,
             ),
           ),
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          androidScheduleMode: _scheduleMode,
           matchDateTimeComponents: DateTimeComponents.time, // يتكرر يومياً
         );
         scheduledCount++;
@@ -192,6 +268,43 @@ class CheckInReminderNotificationService {
             '✅ Scheduled check-out reminder #${idCounter - _checkOutReminderId + 1} at ${targetTime.toString()}');
       } catch (e) {
         print('❌ Error scheduling check-out reminder #${idCounter}: $e');
+        // محاولة ثانية بوضع inexact إذا فشل exact
+        if (_exactAlarmGranted) {
+          try {
+            _exactAlarmGranted = false;
+            await _notificationsPlugin.zonedSchedule(
+              idCounter,
+              '⏰ Check Out Reminder',
+              'Don\'t forget to Check Out',
+              targetTime,
+              const NotificationDetails(
+                android: AndroidNotificationDetails(
+                  'check_out_reminder_channel',
+                  'Check Out Reminders',
+                  channelDescription: 'Check-out reminders',
+                  importance: Importance.max,
+                  priority: Priority.max,
+                  category: AndroidNotificationCategory.alarm,
+                  icon: '@mipmap/ic_launcher',
+                  playSound: true,
+                  enableVibration: true,
+                  fullScreenIntent: false,
+                ),
+                iOS: DarwinNotificationDetails(
+                  presentAlert: true,
+                  presentBadge: true,
+                  presentSound: true,
+                ),
+              ),
+              androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+              matchDateTimeComponents: DateTimeComponents.time,
+            );
+            scheduledCount++;
+            print('✅ Retry with inexact mode succeeded for #${idCounter}');
+          } catch (e2) {
+            print('❌ Retry also failed for #${idCounter}: $e2');
+          }
+        }
       }
 
       idCounter++;
@@ -206,8 +319,17 @@ class CheckInReminderNotificationService {
     await initialize();
     await cancelCheckInReminders(); // إلغاء أي إشعارات سابقة
 
+    // إعادة فحص صلاحية exact alarm قبل الجدولة
+    if (Platform.isAndroid) {
+      try {
+        final alarmStatus = await Permission.scheduleExactAlarm.status;
+        _exactAlarmGranted = alarmStatus.isGranted;
+      } catch (_) {}
+    }
+
     final now = tz.TZDateTime.now(tz.local);
     print('⏰ Current time: ${now.toString()}');
+    print('⏰ Schedule mode: ${_exactAlarmGranted ? "EXACT" : "INEXACT (fallback)"}');
 
     // جدول إشعارات كل 15 دقيقة من الساعة 8 صباحاً حتى 9 صباحاً
     final reminderTimes = [
@@ -257,7 +379,7 @@ class CheckInReminderNotificationService {
               presentSound: true,
             ),
           ),
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          androidScheduleMode: _scheduleMode,
           matchDateTimeComponents: DateTimeComponents.time, // يتكرر يومياً
         );
         scheduledCount++;
@@ -265,6 +387,43 @@ class CheckInReminderNotificationService {
             '✅ Scheduled check-in reminder #${idCounter - _checkInReminderId + 1} at ${targetTime.toString()}');
       } catch (e) {
         print('❌ Error scheduling check-in reminder #${idCounter}: $e');
+        // محاولة ثانية بوضع inexact إذا فشل exact
+        if (_exactAlarmGranted) {
+          try {
+            _exactAlarmGranted = false;
+            await _notificationsPlugin.zonedSchedule(
+              idCounter,
+              '⏰ Check In Reminder',
+              'Don\'t forget to Check In',
+              targetTime,
+              const NotificationDetails(
+                android: AndroidNotificationDetails(
+                  'check_in_reminder_channel',
+                  'Check In Reminders',
+                  channelDescription: 'Check-in reminders',
+                  importance: Importance.max,
+                  priority: Priority.max,
+                  category: AndroidNotificationCategory.alarm,
+                  icon: '@mipmap/ic_launcher',
+                  playSound: true,
+                  enableVibration: true,
+                  fullScreenIntent: false,
+                ),
+                iOS: DarwinNotificationDetails(
+                  presentAlert: true,
+                  presentBadge: true,
+                  presentSound: true,
+                ),
+              ),
+              androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+              matchDateTimeComponents: DateTimeComponents.time,
+            );
+            scheduledCount++;
+            print('✅ Retry with inexact mode succeeded for #${idCounter}');
+          } catch (e2) {
+            print('❌ Retry also failed for #${idCounter}: $e2');
+          }
+        }
       }
 
       idCounter++;

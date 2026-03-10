@@ -116,6 +116,13 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       return false;
     }
 
+    final loginData = SharedPref.getLoginData();
+    final token = loginData.result?.token;
+    if (token == null || token.isEmpty) {
+      _showDialogMessage("Authentication token is missing.");
+      return false;
+    }
+
     final employeeIds = _selectedEmployees.map((e) => e['id']).toList();
     final employeeNames =
         _selectedEmployees.map((e) => e['name'].toString()).join(', ');
@@ -196,6 +203,9 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     try {
       final loginData = SharedPref.getLoginData();
       final token = loginData.result?.token;
+      if (token == null || token.isEmpty) {
+        throw Exception('Authentication token missing');
+      }
 
       final headers = {
         "Content-Type": "application/json",

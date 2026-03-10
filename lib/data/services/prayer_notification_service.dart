@@ -41,6 +41,8 @@ class PrayerNotificationService {
   }
 
   Future<void> showAdhanNotification(String prayerName) async {
+    // playSound=false هنا لأن AudioPlayer يتولى تشغيل الصوت مستقلاً
+    // لتفادي تشغيل صوتين للأذان في نفس الوقت
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
       prayerAdhanChannelId,
@@ -49,8 +51,7 @@ class PrayerNotificationService {
       importance: Importance.high,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
-      playSound: true,
-      sound: RawResourceAndroidNotificationSound('athan'),
+      playSound: false,
       enableVibration: true,
       visibility: NotificationVisibility.public,
       autoCancel: true, // تختفي تلقائياً عند الضغط عليها
@@ -61,7 +62,7 @@ class PrayerNotificationService {
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
-      presentSound: true,
+      presentSound: false, // الصوت يشتغل من AudioPlayer
       interruptionLevel: InterruptionLevel.timeSensitive,
     );
 

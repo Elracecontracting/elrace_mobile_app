@@ -24,6 +24,8 @@ class ChatScreen extends StatefulWidget {
   final String title;
   final ChatType chatType;
   final String? peerUid;
+  final String? supportUserUid; // For support chats: the external user's UID
+  final String? supportGroupTitle; // For support chats: the group title (e.g. "HR")
 
   const ChatScreen({
     super.key,
@@ -31,6 +33,8 @@ class ChatScreen extends StatefulWidget {
     required this.title,
     required this.chatType,
     this.peerUid,
+    this.supportUserUid,
+    this.supportGroupTitle,
   });
 
   @override
@@ -46,6 +50,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   bool _isRecording = false;
   bool _isMuted = false;
   Timer? _typingTimer;
+
+  /// Support chat state
+  bool get _isSupportChat => widget.chatType == ChatType.support;
+  bool get _isExternalUser => _isSupportChat && widget.supportUserUid == _currentUid;
+  
+  /// Cache of member names for support chat (uid -> name)
+  final Map<String, String> _memberNames = {};
 
   /// Starred message IDs (live from Firestore)
   Set<String> _starredIds = {};
@@ -68,6 +79,11 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     // Cancel any pending notifications for this chat
     ChatNotificationService.instance.cancelNotificationsForChat(widget.chatId);
 
+    // Load member names for support chats (group members see real names)
+    if (_isSupportChat && !_isExternalUser) {
+      _loadSupportChatMemberNames();
+    }
+
     // Subscribe to starred message IDs
     _starredSub =
         ChatRepository.instance.subscribeToStarredMessageIds().listen((ids) {
@@ -79,6 +95,40 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final userChat = await ChatRepository.instance.getUserChat(widget.chatId);
     if (mounted && userChat != null) {
       setState(() => _isMuted = userChat.muted);
+    }
+  }
+
+  /// Load member names for support chat so group members see who sent what
+  Future<void> _loadSupportChatMemberNames() async {
+    try {
+      final members = await ChatRepository.instance.getChatMembers(widget.chatId);
+      final uids = members.map((m) => m.uid).toList();
+      final users = await UserRepository.instance.getUsersByIds(uids);
+      if (mounted) {
+        setState(() {
+          for (final user in users) {
+            _memberNames[user.uid] = user.name;
+          }
+        });
+      }
+    } catch (e) {
+      print('⚠️ ChatScreen: Error loading support chat member names: $e');
+    }
+  }
+
+  /// Get display name for a sender in support chat
+  String _getSupportSenderName(String senderId) {
+    if (_isExternalUser) {
+      // External user: all non-self messages show group name
+      if (senderId == _currentUid) return 'You';
+      return widget.supportGroupTitle ?? widget.title;
+    } else {
+      // Group member: show real names
+      if (senderId == _currentUid) return 'You';
+      if (senderId == widget.supportUserUid) {
+        return widget.title; // The external user's name
+      }
+      return _memberNames[senderId] ?? 'Team member';
     }
   }
 
@@ -199,6 +249,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                             if (widget.chatType == ChatType.dm &&
                                 widget.peerUid != null)
                               _buildPresenceStatus(),
+                            if (_isSupportChat)
+                              Text(
+                                _isExternalUser
+                                    ? 'Department Support'
+                                    : 'Support Chat • ${widget.supportGroupTitle ?? ""}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white70,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -357,6 +418,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             // Check if we should show date header
             final showDateHeader = _shouldShowDateHeader(messages, index);
 
+            // For support chats, determine sender display name
+            String? senderDisplayName;
+            if (_isSupportChat && !isMe) {
+              senderDisplayName = _getSupportSenderName(message.senderId);
+            }
+
             return Column(
               children: [
                 if (showDateHeader) _buildDateHeader(message.createdAt),
@@ -364,6 +431,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   message: message,
                   isMe: isMe,
                   isStarred: _starredIds.contains(message.id),
+                  senderName: senderDisplayName,
+                  showSenderName: _isSupportChat && !isMe,
                   onStar: _onStarMessage,
                   onReply: _onReplyMessage,
                   onForward: _onForwardMessage,
@@ -500,6 +569,16 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final preview = message.getPreviewText();
     final isMyMessage = message.senderId == _currentUid;
 
+    // Determine display name for the reply header
+    String replyToName;
+    if (isMyMessage) {
+      replyToName = 'You';
+    } else if (_isSupportChat) {
+      replyToName = _getSupportSenderName(message.senderId);
+    } else {
+      replyToName = widget.title;
+    }
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -530,7 +609,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  isMyMessage ? 'You' : widget.title,
+                  replyToName,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,

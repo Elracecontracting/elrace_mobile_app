@@ -216,8 +216,8 @@ class _RequestPermissionState extends State<RequestPermission> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Container(
-                                padding:
-                                    EdgeInsets.symmetric(horizontal: 6.w, vertical: 5.h),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 6.w, vertical: 5.h),
                                 decoration: BoxDecoration(
                                   border: Border.all(color: Colors.grey),
                                   borderRadius: BorderRadius.circular(20.r),
@@ -299,7 +299,9 @@ class _RequestPermissionState extends State<RequestPermission> {
                         width: double.infinity,
                         height: 48.h,
                         child: ElevatedButton(
-                          onPressed: isSubmitting ? null : _submitTempPermissionRequest,
+                          onPressed: isSubmitting
+                              ? null
+                              : _submitTempPermissionRequest,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: _accentGrey,
                             shape: RoundedRectangleBorder(
@@ -313,7 +315,8 @@ class _RequestPermissionState extends State<RequestPermission> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                                    valueColor:
+                                        AlwaysStoppedAnimation(Colors.white),
                                   ),
                                 )
                               : Text(
@@ -476,8 +479,7 @@ class _RequestPermissionState extends State<RequestPermission> {
                   decoration: InputDecoration(
                     border: InputBorder.none,
                     isDense: true,
-                    hintText:
-                        'This application is designed for super shops. By using\nthis application they can enlist all their products in one\nplace and can deliver. Customers will get a one-stop\nsolution for their daily shopping.',
+                    hintText: 'Write your description...',
                     hintStyle: GoogleFonts.lexendDeca(
                       color: const Color(0xFF24252C).withAlpha(120),
                       fontSize: 12.43.sp,
@@ -528,13 +530,13 @@ class _RequestPermissionState extends State<RequestPermission> {
 
   Widget _buildNotice() {
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Icon(Icons.info_outline, size: 20.w, color: Colors.grey),
         SizedBox(width: 8.w),
         Expanded(
           child: Text(
-            translate('request.temp_permission_notice'),
+            'Maximum Hours per month is 6 Hours',
             style: GoogleFonts.inter(
               fontSize: 9.sp,
               color: Colors.black87,
@@ -688,7 +690,8 @@ class _RequestPermissionState extends State<RequestPermission> {
 
     if (text.isEmpty || selection.start == 0) {
       _descController.text = '$prefix$text';
-      _descController.selection = TextSelection.collapsed(offset: prefix.length);
+      _descController.selection =
+          TextSelection.collapsed(offset: prefix.length);
     } else {
       final newText =
           '${text.substring(0, selection.start)}\n$prefix${text.substring(selection.start)}';
@@ -706,8 +709,8 @@ class _RequestPermissionState extends State<RequestPermission> {
 
     for (int i = 0; i < lines.length; i++) {
       if (lines[i].trim().isNotEmpty) {
-        newLines.add(
-            '${i + 1}. ${lines[i].replaceAll(RegExp(r'^\d+\.\s*'), '')}');
+        newLines
+            .add('${i + 1}. ${lines[i].replaceAll(RegExp(r'^\d+\.\s*'), '')}');
       } else {
         newLines.add(lines[i]);
       }

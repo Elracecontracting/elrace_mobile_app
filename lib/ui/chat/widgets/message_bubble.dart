@@ -17,7 +17,8 @@ class MessageBubble extends StatelessWidget {
   final Message message;
   final bool isMe;
   final bool isStarred;
-  final String? senderName; // for showing reply-to sender name in group chats
+  final String? senderName; // for showing sender name in group/support chats
+  final bool showSenderName; // whether to display the sender name above the bubble
   final MessageActionCallback? onStar;
   final MessageActionCallback? onReply;
   final MessageActionCallback? onForward;
@@ -28,6 +29,7 @@ class MessageBubble extends StatelessWidget {
     required this.isMe,
     this.isStarred = false,
     this.senderName,
+    this.showSenderName = false,
     this.onStar,
     this.onReply,
     this.onForward,
@@ -49,6 +51,18 @@ class MessageBubble extends StatelessWidget {
           child: Column(
             crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
+              if (showSenderName && senderName != null && !isMe)
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, bottom: 2),
+                  child: Text(
+                    senderName!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF6B7B8D),
+                    ),
+                  ),
+                ),
               _buildBubble(context),
               _buildStatus(context),
             ],

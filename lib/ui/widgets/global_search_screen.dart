@@ -11,8 +11,8 @@ import 'package:el_race/utils/global_search_navigation_helper.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/ui/presentation/lpo/widgets/lpo_card_widget.dart';
-import 'package:el_race/ui/presentation/my_projects/domain/entities/project_entity.dart';
-import 'package:el_race/ui/presentation/my_projects/presentation/widgets/project_card_widget.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/screens/my_project.dart'
+    show buildProjectCard;
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_bloc.dart';
 import 'package:el_race/ui/presentation/my_projects/data/repositories/project_repository_impl.dart';
 import 'package:el_race/ui/presentation/my_projects/data/datasources/project_remote_datasource.dart';
@@ -407,10 +407,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         child: _buildLpoCard(item),
       );
     } else if (item.category == 'projects') {
-      return InkWell(
-        onTap: () => _navigateToDetail(item),
-        child: _buildProjectCard(context, item),
-      );
+      return _buildProjectCard(item);
     } else if (item.category == 'petty_cash') {
       return _buildPettyCashCard(item);
     } else if (item.category == 'my_actions') {
@@ -813,35 +810,46 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   }
 
   // Build Project Card
-  Widget _buildProjectCard(BuildContext context, GlobalSearchItem item) {
+  Widget _buildProjectCard(GlobalSearchItem item) {
     final data = item.additionalData ?? {};
 
-    final project = ProjectEntity(
-      projectId: item.id,
-      partnerId: data['partner_id']?[0]?.toString() ??
-          data['partner_id']?.toString() ??
-          '',
-      name: item.title,
-      agreementId: data['agreement_id'] ??
-          data['analytic_account_id']?[1] ??
-          data['analytic_account_id']?.toString() ??
-          '',
-      woRefNo: data['wo_ref_no'] ?? item.title,
-      woAmount: double.tryParse(data['wo_amount']?.toString() ??
-              data['amount']?.toString() ??
-              '0') ??
-          0.0,
-      projectStatus: data['project_status'] ?? data['stage_id']?[1] ?? 'Active',
-      date: data['date'] ?? DateTime.now().toString(),
-      dateStart:
-          data['date_start'] ?? data['date'] ?? DateTime.now().toString(),
-      projectManagerPhoto: data['project_manager_photo'],
-      differenceDays:
-          int.tryParse(data['difference_days']?.toString() ?? '0') ?? 0,
-    );
+    final dynamic countRaw = data['total_projects'] ??
+        data['project_count'] ??
+        data['difference_days'];
+    final int projectsCount = countRaw is num
+        ? countRaw.toInt()
+        : int.tryParse(countRaw?.toString() ?? '0') ?? 0;
 
-    final bloc = context.read<ProjectListBloc>();
-    return ProjectCardWidget(item: project, bloc: bloc);
+    final dynamic amountRaw = data['total_projects_amount'] ??
+        data['wo_amount'] ??
+        data['amount'] ??
+        data['amount_total'];
+    final double amountAed = amountRaw is num
+        ? amountRaw.toDouble()
+        : double.tryParse(amountRaw?.toString() ?? '0') ?? 0.0;
+
+    final String cardId = (data['agreement_id'] ??
+            data['analytic_account_id']?[1] ??
+            data['wo_ref_no'] ??
+            item.id)
+        .toString();
+
+    final String photoUrl = (data['photo_url'] ??
+            data['partner_photo'] ??
+            data['project_manager_photo'] ??
+            '')
+        .toString();
+
+    return GestureDetector(
+      onTap: () => _navigateToDetail(item),
+      child: buildProjectCard(
+        id: cardId,
+        name: item.title,
+        photoUrl: photoUrl,
+        projectsCount: projectsCount,
+        amountAed: amountAed,
+      ),
+    );
   }
 
   // Build Petty Cash Card
@@ -860,112 +868,103 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             : (double.tryParse(rawAmount.toString()) ?? 0.0).toStringAsFixed(2))
         : '0.00';
 
+    final requesterName = (data['employee_name'] ??
+            data['requested_by'] ??
+            data['create_uid']?[1] ??
+            item.title)
+        .toString();
+
+    final requestNo =
+        (data['name'] ?? data['reference'] ?? data['id'] ?? item.id).toString();
+
+    final requesterImage =
+        (data['employee_image'] ?? data['requested_by_user_photo'] ?? '')
+            .toString();
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 5.0),
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 60),
-        decoration: BoxDecoration(
-          image: const DecorationImage(
-            image: AssetImage('assets/png/item_bg_green.png'),
-            fit: BoxFit.cover,
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
+      child: GestureDetector(
+        onTap: () => _navigateToDetail(item),
+        child: Container(
+          height: 84.h,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(50.r),
+            border: Border.all(color: const Color(0xFFBDBDBD), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha(15),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              )
+            ],
           ),
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withAlpha((0.1 * 255).toInt()),
-              blurRadius: 4,
-              spreadRadius: 2,
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(30, 8, 15, 12),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    status,
-                    style: GoogleFonts.inter(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: appFontColor,
-                    ),
+              SizedBox(width: 10.w),
+              _buildPettyCashAvatar(requesterImage),
+              SizedBox(width: 10.w),
+              Container(
+                width: 1,
+                height: 52.h,
+                color: const Color(0xFFBDBDBD),
+              ),
+              SizedBox(width: 12.w),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: 8.w),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        requestNo,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0B2B7A),
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        amount,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
+                      ),
+                      SizedBox(height: 3.h),
+                      Text(
+                        requesterName.isNotEmpty ? requesterName : date,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.lexendDeca(
+                          fontSize: 11.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF484848).withOpacity(0.72),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              const SizedBox(width: 15),
-              const SizedBox(
-                height: 30,
-                child: VerticalDivider(
-                  color: Colors.grey,
-                  thickness: 2,
                 ),
               ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Date',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: const Color(0xff151544),
-                      ),
-                    ),
-                    Text(
-                      date,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ],
+              Padding(
+                padding: EdgeInsets.only(right: 14.w),
+                child: Image.asset(
+                  _pettyStatusBadgeAsset(status),
+                  width: 24.w,
+                  height: 24.w,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Icon(
+                    Icons.circle,
+                    color: const Color(0xFF9AA0A6),
+                    size: 16.sp,
+                  ),
                 ),
               ),
-              const SizedBox(
-                height: 30,
-                child: VerticalDivider(
-                  color: Colors.grey,
-                  thickness: 2,
-                ),
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Amount',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: appFontColor,
-                      ),
-                    ),
-                    Text(
-                      amount,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 0),
-              const CircleAvatar(
-                radius: 10,
-                backgroundImage: AssetImage('assets/png/tick-petty.png'),
-              ),
-              const SizedBox(width: 5),
             ],
           ),
         ),
@@ -1156,6 +1155,47 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildPettyCashAvatar(String imageUrl) {
+    final hasImage = imageUrl.trim().isNotEmpty;
+    return Container(
+      width: 54.w,
+      height: 54.w,
+      padding: EdgeInsets.all(3.w),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: const Color(0xFFBDBDBD), width: 1),
+      ),
+      child: ClipOval(
+        child: hasImage
+            ? Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(
+                  color: const Color(0xFFE9E9E9),
+                  child: Icon(Icons.person, color: Colors.grey[600]),
+                ),
+              )
+            : Container(
+                color: const Color(0xFFE9E9E9),
+                child: Icon(Icons.person, color: Colors.grey[600]),
+              ),
+      ),
+    );
+  }
+
+  String _pettyStatusBadgeAsset(String status) {
+    switch (status.trim().toLowerCase()) {
+      case 'approved':
+        return 'assets/newapp/approvedBadge.png';
+      case 'rejected':
+      case 'cancelled':
+      case 'canceled':
+        return 'assets/newapp/rejectBadge.png';
+      default:
+        return 'assets/newapp/warningBadge.png';
+    }
   }
 
   String _formatPettyCashDate(String date) {

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:el_race/core/services/notification_api_service.dart';
 
 class NotificationStorageService {
   static const String _notificationsKey = 'stored_notifications';
@@ -20,7 +21,8 @@ class NotificationStorageService {
       final prefs = await SharedPreferences.getInstance();
 
       // Get existing notifications
-      List<Map<String, dynamic>> notifications = await getNotifications();
+      List<Map<String, dynamic>> notifications =
+          await _getStoredNotifications();
 
       // Determine category from data or default to 'notification'
       String notificationCategory =
@@ -45,8 +47,7 @@ class NotificationStorageService {
       }
 
       // Save to preferences
-      final jsonString = jsonEncode(notifications);
-      await prefs.setString(_notificationsKey, jsonString);
+      await _saveStoredNotifications(notifications, prefs);
 
       // Update unread count
       await _updateUnreadCount();
@@ -63,6 +64,75 @@ class NotificationStorageService {
   /// Get all notifications
   static Future<List<Map<String, dynamic>>> getNotifications() async {
     try {
+      final localNotifications = await _getStoredNotifications();
+
+      final apiResult = await NotificationApiService.getNotifications(
+        page: 1,
+        perPage: 100,
+        category: 'all',
+        unreadOnly: false,
+      );
+
+      final normalized = apiResult.notifications
+          .map(_normalizeApiNotification)
+          .toList(growable: false);
+
+      final prefs = await SharedPreferences.getInstance();
+      await _saveStoredNotifications(normalized, prefs);
+
+      if (apiResult.unreadCount != null) {
+        await prefs.setInt(_unreadCountKey, apiResult.unreadCount!);
+      } else {
+        await _updateUnreadCount();
+      }
+
+      return normalized;
+    } catch (e) {
+      print('⚠️ Notification API unavailable, using local cache: $e');
+      return _getStoredNotifications();
+    }
+  }
+
+  static Map<String, dynamic> _normalizeApiNotification(
+      Map<String, dynamic> raw) {
+    final normalized = Map<String, dynamic>.from(raw);
+
+    dynamic notificationData = raw['data'];
+    if (notificationData is String && notificationData.trim().isNotEmpty) {
+      try {
+        notificationData = jsonDecode(notificationData);
+      } catch (_) {
+        // Keep original string when backend sends non-JSON content.
+      }
+    }
+
+    final rawRead = raw['is_read'] ?? raw['isRead'] ?? false;
+    final isRead = rawRead == true ||
+        rawRead == 1 ||
+        rawRead.toString().toLowerCase() == 'true';
+
+    normalized['id'] =
+        (raw['id'] ?? DateTime.now().millisecondsSinceEpoch).toString();
+    normalized['title'] =
+        (raw['title'] ?? raw['subject'] ?? 'Notification').toString();
+    normalized['body'] = (raw['body'] ?? raw['message'] ?? '').toString();
+    normalized['imageUrl'] = raw['image_url'] ?? raw['imageUrl'];
+    normalized['data'] = notificationData;
+    normalized['category'] = (raw['category'] ?? raw['type'] ?? 'notification')
+        .toString()
+        .toLowerCase();
+    normalized['timestamp'] = (raw['created_at'] ??
+            raw['timestamp'] ??
+            DateTime.now().toIso8601String())
+        .toString();
+    normalized['isRead'] = isRead;
+    normalized['readAt'] = raw['read_at'] ?? raw['readAt'];
+
+    return normalized;
+  }
+
+  static Future<List<Map<String, dynamic>>> _getStoredNotifications() async {
+    try {
       final prefs = await SharedPreferences.getInstance();
       final jsonString = prefs.getString(_notificationsKey);
 
@@ -78,26 +148,40 @@ class NotificationStorageService {
     }
   }
 
+  static Future<void> _saveStoredNotifications(
+    List<Map<String, dynamic>> notifications,
+    SharedPreferences prefs,
+  ) async {
+    final jsonString = jsonEncode(notifications);
+    await prefs.setString(_notificationsKey, jsonString);
+  }
+
   /// Mark a notification as read
   static Future<void> markAsRead(String notificationId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      List<Map<String, dynamic>> notifications = await getNotifications();
+      List<Map<String, dynamic>> notifications =
+          await _getStoredNotifications();
 
       // Find and update the notification
       final index = notifications.indexWhere((n) => n['id'] == notificationId);
       if (index != -1) {
         notifications[index]['isRead'] = true;
+        notifications[index]['readAt'] = DateTime.now().toIso8601String();
 
         // Save updated list
-        final jsonString = jsonEncode(notifications);
-        await prefs.setString(_notificationsKey, jsonString);
+        await _saveStoredNotifications(notifications, prefs);
 
         // Update unread count
         await _updateUnreadCount();
 
         // Notify listeners that count changed
         onCountChanged?.call();
+      }
+
+      final remoteOk = await NotificationApiService.markAsRead(notificationId);
+      if (!remoteOk) {
+        print('⚠️ Notification marked read locally, remote API call failed.');
       }
     } catch (e) {
       print('❌ Error marking notification as read: $e');
@@ -108,7 +192,8 @@ class NotificationStorageService {
   static Future<void> markAllAsRead() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      List<Map<String, dynamic>> notifications = await getNotifications();
+      List<Map<String, dynamic>> notifications =
+          await _getStoredNotifications();
 
       // Mark all as read
       for (var notification in notifications) {
@@ -116,14 +201,18 @@ class NotificationStorageService {
       }
 
       // Save updated list
-      final jsonString = jsonEncode(notifications);
-      await prefs.setString(_notificationsKey, jsonString);
+      await _saveStoredNotifications(notifications, prefs);
 
       // Update unread count
       await prefs.setInt(_unreadCountKey, 0);
 
       // Notify listeners that count changed
       onCountChanged?.call();
+
+      final remoteOk = await NotificationApiService.markAllAsRead();
+      if (!remoteOk) {
+        print('⚠️ Notifications marked read locally, remote API call failed.');
+      }
     } catch (e) {
       print('❌ Error marking all as read: $e');
     }
@@ -132,7 +221,18 @@ class NotificationStorageService {
   /// Get unread notification count
   static Future<int> getUnreadCount() async {
     try {
-      final notifications = await getNotifications();
+      final apiUnreadCount = await NotificationApiService.getUnreadCount();
+      if (apiUnreadCount != null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt(_unreadCountKey, apiUnreadCount);
+        return apiUnreadCount;
+      }
+    } catch (e) {
+      print('⚠️ Error getting unread count from API, fallback to local: $e');
+    }
+
+    try {
+      final notifications = await _getStoredNotifications();
       return notifications.where((n) => n['isRead'] == false).length;
     } catch (e) {
       print('❌ Error getting unread count: $e');
@@ -144,7 +244,8 @@ class NotificationStorageService {
   static Future<void> _updateUnreadCount() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final count = await getUnreadCount();
+      final notifications = await _getStoredNotifications();
+      final count = notifications.where((n) => n['isRead'] == false).length;
       await prefs.setInt(_unreadCountKey, count);
     } catch (e) {
       print('❌ Error updating unread count: $e');
@@ -155,14 +256,14 @@ class NotificationStorageService {
   static Future<void> deleteNotification(String notificationId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      List<Map<String, dynamic>> notifications = await getNotifications();
+      List<Map<String, dynamic>> notifications =
+          await _getStoredNotifications();
 
       // Remove the notification
       notifications.removeWhere((n) => n['id'] == notificationId);
 
       // Save updated list
-      final jsonString = jsonEncode(notifications);
-      await prefs.setString(_notificationsKey, jsonString);
+      await _saveStoredNotifications(notifications, prefs);
 
       // Update unread count
       await _updateUnreadCount();

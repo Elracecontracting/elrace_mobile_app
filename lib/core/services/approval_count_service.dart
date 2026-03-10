@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/core/services/approval_viewed_service.dart';
 import 'package:http/http.dart' as http;
 
 class ApprovalCountService {
@@ -76,25 +75,8 @@ class ApprovalCountService {
           final data = result['data'][actualKey];
 
           if (data is List) {
-            // Get viewed items for this category
-            final viewedIds =
-                await ApprovalViewedService.getViewedItemsForType(category);
-
-            print('🔍 Category $category - Viewed IDs: $viewedIds');
-
-            // Filter out viewed items
-            final unviewedItems = data.where((item) {
-              final itemId = item['id']?.toString() ?? '';
-              final isViewed = viewedIds.contains(itemId);
-              if (isViewed) {
-                print('   ⏭️ Skipping viewed item: $itemId');
-              }
-              return !isViewed;
-            }).toList();
-
-            print(
-                '📊 Category $category: ${data.length} total, ${viewedIds.length} viewed, ${unviewedItems.length} unviewed');
-            return unviewedItems.length;
+            print('📊 Category $category: ${data.length} total pending');
+            return data.length;
           }
         }
       }

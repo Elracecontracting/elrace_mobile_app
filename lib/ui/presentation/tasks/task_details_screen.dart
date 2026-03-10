@@ -42,6 +42,7 @@ class TaskDetailsScreen extends StatelessWidget {
         return Colors.grey;
     }
   }
+
   String _formatDate(DateTime? date) {
     if (date == null) return '-';
     return DateFormat('yyyy-MM-dd HH:mm').format(date);
@@ -850,7 +851,7 @@ class _EditTaskSheetState extends State<_EditTaskSheet> {
               controller: descController,
               maxLines: 4,
               decoration: InputDecoration(
-                hintText: 'Enter description',
+                hintText: 'Write your description...',
                 border:
                     OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 enabledBorder: OutlineInputBorder(

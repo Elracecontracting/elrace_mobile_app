@@ -160,8 +160,8 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text('Select Petty Cash Holder',
-                            style:
-                                TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16)),
                         const SizedBox(height: 16),
                         TextField(
                           onChanged: (value) {
@@ -199,10 +199,10 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                                           title: Text(userItem['name'],
                                               style: const TextStyle(
                                                   fontSize: 13)),
-                                          tileColor:
-                                              selectedUser?['id'] == userItem['id']
-                                                  ? Colors.blue.shade100
-                                                  : Colors.transparent,
+                                          tileColor: selectedUser?['id'] ==
+                                                  userItem['id']
+                                              ? Colors.blue.shade100
+                                              : Colors.transparent,
                                           onTap: () => setDialogState(() {
                                             selectedUser = userItem;
                                           }),
@@ -401,19 +401,23 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
         hintStyle: fieldTextStyle(true),
         filled: false,
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         suffixIcon: suffixIcon,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(28),
-          borderSide: BorderSide(color: Colors.black.withOpacity(0.25), width: 1),
+          borderSide:
+              BorderSide(color: Colors.black.withOpacity(0.25), width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(28),
-          borderSide: BorderSide(color: Colors.black.withOpacity(0.25), width: 1),
+          borderSide:
+              BorderSide(color: Colors.black.withOpacity(0.25), width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(28),
-          borderSide: BorderSide(color: Colors.black.withOpacity(0.35), width: 1.2),
+          borderSide:
+              BorderSide(color: Colors.black.withOpacity(0.35), width: 1.2),
         ),
       );
     }
@@ -422,7 +426,9 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800, height: 1.1)),
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 16, fontWeight: FontWeight.w800, height: 1.1)),
           const SizedBox(height: 6),
           child,
         ],
@@ -448,7 +454,8 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
               child: GestureDetector(
                 onTap: () => FocusScope.of(context).unfocus(),
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 420),
                     child: Container(
@@ -460,15 +467,19 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('+ ADD EXPENSE', style: labelStyle, textAlign: TextAlign.center),
+                          const Text('+ ADD EXPENSE',
+                              style: labelStyle, textAlign: TextAlign.center),
                           const SizedBox(height: 18),
-
                           labeledField(
                             label: 'Amount',
                             child: TextField(
                               controller: amout,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              inputFormatters: [ThousandsSeparatorInputFormatter()],
+                              keyboardType:
+                                  const TextInputType.numberWithOptions(
+                                      decimal: true),
+                              inputFormatters: [
+                                ThousandsSeparatorInputFormatter()
+                              ],
                               textAlign: TextAlign.center,
                               style: fieldTextStyle(false),
                               onChanged: (value) => setState(() {
@@ -478,7 +489,6 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                             ),
                           ),
                           const SizedBox(height: 14),
-
                           labeledField(
                             label: 'Pettycash holder',
                             child: TextField(
@@ -487,11 +497,11 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                               textAlign: TextAlign.center,
                               style: fieldTextStyle(user.text.trim().isEmpty),
                               onTap: _showPettyCashUserDialog,
-                              decoration: pillDecoration(hintText: translate('pettycash.select_user')),
+                              decoration: pillDecoration(
+                                  hintText: translate('pettycash.select_user')),
                             ),
                           ),
                           const SizedBox(height: 14),
-
                           labeledField(
                             label: 'Invoice Date',
                             child: TextField(
@@ -500,17 +510,19 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                               textAlign: TextAlign.center,
                               style: fieldTextStyle(false),
                               onTap: _pickDate,
-                              decoration: pillDecoration(hintText: DateFormat('dd/MM/yyyy').format(selectedDate)),
+                              decoration: pillDecoration(
+                                  hintText: DateFormat('dd/MM/yyyy')
+                                      .format(selectedDate)),
                             ),
                           ),
                           const SizedBox(height: 14),
-
                           labeledField(
                             label: 'Expense type',
                             child: DropdownButtonHideUnderline(
                               child: DropdownButton2<String>(
-                                value:
-                                    isExpenseTypePlaceholder ? null : selectedExpenseType,
+                                value: isExpenseTypePlaceholder
+                                    ? null
+                                    : selectedExpenseType,
                                 isExpanded: true,
                                 hint: Center(
                                   child: Text(
@@ -583,24 +595,23 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                                 ),
                                 menuItemStyleData: const MenuItemStyleData(
                                   height: 44,
-                                  padding: EdgeInsets.symmetric(
-                                      horizontal: 16),
+                                  padding: EdgeInsets.symmetric(horizontal: 16),
                                 ),
                               ),
                             ),
                           ),
-
                           const SizedBox(height: 14),
                           labeledField(
                             label: translate('pettycash.description'),
                             child: TextField(
                               maxLines: 3,
                               style: fieldTextStyle(false),
-                              onChanged: (value) => setState(() => description = value),
-                              decoration: pillDecoration(hintText: translate('pettycash.description')),
+                              onChanged: (value) =>
+                                  setState(() => description = value),
+                              decoration: pillDecoration(
+                                  hintText: 'Write your description...'),
                             ),
                           ),
-
                           const SizedBox(height: 18),
                           SizedBox(
                             width: double.infinity,
@@ -616,11 +627,15 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                                   ? const SizedBox(
                                       width: 20,
                                       height: 20,
-                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                          color: Colors.white, strokeWidth: 2),
                                     )
                                   : const Text(
                                       '+ ADD EXPENSE',
-                                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Colors.white),
+                                      style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white),
                                     ),
                             ),
                           ),

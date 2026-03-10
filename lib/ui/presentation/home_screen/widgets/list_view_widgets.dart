@@ -63,9 +63,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     if (mounted) {
       setState(() {
         // Filter out my_notes widget
-        activeWidgets = widgets
-            .where((w) => w.id != 'my_notes')
-            .toList();
+        activeWidgets = widgets.where((w) => w.id != 'my_notes').toList();
         isLoading = false;
       });
     }
@@ -150,7 +148,9 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     return Stack(
       children: [
         GrayCardComponent(
-          onClick: isReorderMode ? null : () => Util.pushPage(const TaskSheetPage(), context),
+          onClick: isReorderMode
+              ? null
+              : () => Util.pushPage(const TaskSheetPage(), context),
           cardTitle: 'Timesheet',
           upperCaseTitle: false,
           backgroundImagePath: 'assets/png/t-sheet.png',
@@ -195,7 +195,9 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         child: Stack(
           children: [
             GrayCardComponent(
-              onClick: isReorderMode ? null : () => Util.pushPage(const PettyCashScreen(), context),
+              onClick: isReorderMode
+                  ? null
+                  : () => Util.pushPage(const PettyCashScreen(), context),
               cardTitle: translate('home.petty_cash'),
               titleColor: Colors.white,
               backgroundImagePath:
@@ -234,7 +236,9 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
             '0';
 
     return GrayCardComponent(
-      onClick: isReorderMode ? null : () => Util.pushPage(const LpoListScreen(), context),
+      onClick: isReorderMode
+          ? null
+          : () => Util.pushPage(const LpoListScreen(), context),
       cardTitle: translate('home.lpo'),
       titleColor: Colors.white,
       backgroundImagePath: 'assets/newapp/Lpo_background_widget.png',
@@ -264,11 +268,13 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     return Stack(
       children: [
         GrayCardComponent(
-          onClick: isReorderMode ? null : () => Util.pushPage(const MyDocumentsScreen(), context),
-          cardTitle: translate('home.documents'),
+          onClick: isReorderMode
+              ? null
+              : () => Util.pushPage(const MyDocumentsScreen(), context),
+          cardTitle: translate(''),
           titleColor: Colors.white,
-          backgroundImagePath:
-              'assets/newapp/my_document_widet_background_new.png',
+          backgroundImagePath: 'assets/newapp/newicon/my Document (1).png',
+          backgroundFit: BoxFit.fill,
           childWidget: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -277,52 +283,6 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                 child: const SizedBox(),
               ),
             ],
-          ),
-        ),
-        Positioned(
-          right: 10.w,
-          top: 10.w,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16.r),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-              child: Container(
-                width: 30.w,
-                height: 30.w,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(100.r),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.white.withOpacity(0.45),
-                      Colors.white.withOpacity(0.25),
-                    ],
-                  ),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.35),
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.14),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Text(
-                  docsCount.toUpperCase(),
-                  style: GoogleFonts.koulen(
-                    color: Colors.white,
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: 0.09,
-                  ),
-                ),
-              ),
-            ),
           ),
         ),
       ],
@@ -342,10 +302,12 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         GrayCardComponent(
           cardTitle: translate('home.my_notes'),
           backgroundImagePath: 'assets/png/blue_card.png',
-          onClick: isReorderMode ? null : () => Navigator.push(
-            context,
-            SlideRightPageRoute(child: const MyNotesScreen()),
-          ),
+          onClick: isReorderMode
+              ? null
+              : () => Navigator.push(
+                    context,
+                    SlideRightPageRoute(child: const MyNotesScreen()),
+                  ),
           childWidget: const SizedBox.shrink(),
         ),
         Positioned(
@@ -392,29 +354,31 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               titleColor: Colors.white,
               backgroundImagePath:
                   'assets/newapp/task_managment_widget_backdround.png',
-              onClick: isReorderMode ? null : () {
-                if (hasError) {
-                  // Show error message in a snackbar when tapped
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                          tasksProvider.errorMessage ?? 'Failed to load tasks'),
-                      action: SnackBarAction(
-                        label: 'Retry',
-                        onPressed: () => tasksProvider.loadTasks(),
-                      ),
-                      duration: const Duration(seconds: 5),
-                    ),
-                  );
-                } else {
-                  // Navigate to new Tasks Dashboard
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const TasksDashboardScreen(),
-                    ),
-                  );
-                }
-              },
+              onClick: isReorderMode
+                  ? null
+                  : () {
+                      if (hasError) {
+                        // Show error message in a snackbar when tapped
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(tasksProvider.errorMessage ??
+                                'Failed to load tasks'),
+                            action: SnackBarAction(
+                              label: 'Retry',
+                              onPressed: () => tasksProvider.loadTasks(),
+                            ),
+                            duration: const Duration(seconds: 5),
+                          ),
+                        );
+                      } else {
+                        // Navigate to new Tasks Dashboard
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const TasksDashboardScreen(),
+                          ),
+                        );
+                      }
+                    },
               childWidget: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : hasError
@@ -479,7 +443,9 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                 Color(0xFFADB2BD),
               ],
             ),
-            onClick: isReorderMode ? null : () => Util.pushPage(const MyProject(), context),
+            onClick: isReorderMode
+                ? null
+                : () => Util.pushPage(const MyProject(), context),
             childWidget: Directionality(
               textDirection: TextDirection.ltr,
               child: DefaultTextStyle(
@@ -571,7 +537,10 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           GrayCardComponent(
             cardTitle: 'HR Requests',
             backgroundImagePath: 'assets/newapp/blue_widget_background.png',
-            onClick: isReorderMode ? null : () => Util.pushPage(const HrRequestsMenuPage(), context),
+            backgroundFit: BoxFit.fill,
+            onClick: isReorderMode
+                ? null
+                : () => Util.pushPage(const HrRequestsMenuPage(), context),
             childWidget: const SizedBox.shrink(),
           ),
           Positioned.fill(
@@ -584,7 +553,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                     'assets/newapp/R.png',
                     height: 220.h,
                     fit: BoxFit.contain,
-                    color: const Color(0xFF62AAE0),
+                    color: const Color.fromARGB(255, 138, 188, 226),
                     colorBlendMode: BlendMode.srcIn,
                   ),
                 ),
@@ -609,7 +578,9 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           // Keep base component untouched; hide its title for this card only.
           cardTitle: '',
           backgroundImagePath: 'assets/newapp/media_widget_background.png',
-          onClick: isReorderMode ? null : () => Util.pushPage(const MediaListScreen(), context),
+          onClick: isReorderMode
+              ? null
+              : () => Util.pushPage(const MediaListScreen(), context),
           childWidget: Directionality(
             textDirection: TextDirection.ltr,
             child: DefaultTextStyle(
@@ -669,7 +640,9 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       cardTitle: translate('home.my_report'),
       titleColor: Colors.white,
       backgroundImagePath: 'assets/newapp/my_report_widget_background.png',
-      onClick: isReorderMode ? null : () => Util.pushPage(const ReportAppHomeScreen(), context),
+      onClick: isReorderMode
+          ? null
+          : () => Util.pushPage(const ReportAppHomeScreen(), context),
       topPadding: true,
       childWidget: const SizedBox.shrink(),
       // childWidget: Container(
@@ -713,7 +686,9 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               GrayCardComponent(
                 cardTitle: translate('home.attendance'),
                 backgroundImagePath: 'assets/newapp/blue_widget_background.png',
-                onClick: isReorderMode ? null : () => Util.pushPage(const AttendancePage(), context),
+                onClick: isReorderMode
+                    ? null
+                    : () => Util.pushPage(const AttendancePage(), context),
                 childWidget: const SizedBox.shrink(),
               ),
               Positioned.fill(
@@ -815,74 +790,74 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: activeWidgets.length,
                     onReorder: _reorderWidgets,
-                        proxyDecorator: (child, index, animation) {
-                          // Custom decorator to remove white frame and improve visual feedback
-                          return AnimatedBuilder(
-                            animation: animation,
-                            builder: (context, child) {
-                              final double elevation = Tween<double>(
-                                begin: 0.0,
-                                end: 8.0,
-                              ).evaluate(animation);
-                              final double scale = Tween<double>(
-                                begin: 1.0,
-                                end: 1.05,
-                              ).evaluate(animation);
+                    proxyDecorator: (child, index, animation) {
+                      // Custom decorator to remove white frame and improve visual feedback
+                      return AnimatedBuilder(
+                        animation: animation,
+                        builder: (context, child) {
+                          final double elevation = Tween<double>(
+                            begin: 0.0,
+                            end: 8.0,
+                          ).evaluate(animation);
+                          final double scale = Tween<double>(
+                            begin: 1.0,
+                            end: 1.05,
+                          ).evaluate(animation);
 
-                              return Transform.scale(
-                                scale: scale,
-                                child: Material(
-                                  elevation: elevation + 6,
-                                  color: Colors.transparent,
-                                  shadowColor: Colors.black.withOpacity(0.35),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(12),
-                                    child: child,
-                                  ),
-                                ),
-                              );
-                            },
-                            child: child,
-                          );
-                        },
-                        itemBuilder: (context, index) {
-                          final widget = activeWidgets[index];
-                          return TiltingCard(
-                            key: ValueKey(widget.id),
-                            child: Column(
-                              children: [
-                                _buildCustomWidget(widget),
-                                const SizedBox(height: 10),
-                              ],
+                          return Transform.scale(
+                            scale: scale,
+                            child: Material(
+                              elevation: elevation + 6,
+                              color: Colors.transparent,
+                              shadowColor: Colors.black.withOpacity(0.35),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: child,
+                              ),
                             ),
                           );
                         },
-                      )
-                    else
-                      // عرض ListView العادي مع إمكانية Long Press
-                      ...activeWidgets.map((widget) {
-                        return InkWell(
-                          onLongPress: () {
-                            // Provide strong haptic feedback when entering reorder mode
-                            _vibrateEnterReorder();
-                            // تفعيل وضع إعادة الترتيب عند الضغط الطويل
-                            bloc.add(const ToggleReorderModeEvent());
-                          },
-                          splashColor: Colors.transparent,
-                          highlightColor: Colors.transparent,
-                          hoverColor: Colors.transparent,
-                          focusColor: Colors.transparent,
-                          child: Column(
-                            children: [
-                              _buildCustomWidget(widget),
-                              const SizedBox(height: 10),
-                            ],
-                          ),
-                        );
-                      }),
+                        child: child,
+                      );
+                    },
+                    itemBuilder: (context, index) {
+                      final widget = activeWidgets[index];
+                      return TiltingCard(
+                        key: ValueKey(widget.id),
+                        child: Column(
+                          children: [
+                            _buildCustomWidget(widget),
+                            const SizedBox(height: 10),
+                          ],
+                        ),
+                      );
+                    },
+                  )
+                else
+                  // عرض ListView العادي مع إمكانية Long Press
+                  ...activeWidgets.map((widget) {
+                    return InkWell(
+                      onLongPress: () {
+                        // Provide strong haptic feedback when entering reorder mode
+                        _vibrateEnterReorder();
+                        // تفعيل وضع إعادة الترتيب عند الضغط الطويل
+                        bloc.add(const ToggleReorderModeEvent());
+                      },
+                      splashColor: Colors.transparent,
+                      highlightColor: Colors.transparent,
+                      hoverColor: Colors.transparent,
+                      focusColor: Colors.transparent,
+                      child: Column(
+                        children: [
+                          _buildCustomWidget(widget),
+                          const SizedBox(height: 10),
+                        ],
+                      ),
+                    );
+                  }),
 
                 // إضافة مساحة إضافية في الأسفل عندما يكون في وضع التعديل
                 if (bloc.isReorderMode) SizedBox(height: 100.h),

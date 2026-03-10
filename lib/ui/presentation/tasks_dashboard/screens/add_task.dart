@@ -36,36 +36,36 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   late TextEditingController _daysController;
   late TextEditingController _descriptionController;
   late TextEditingController _titleController;
-  
+
   // Dates
   DateTime _startDate = DateTime.now();
-  
+
   DateTime get _endDate => _startDate.add(Duration(days: _daysValue.toInt()));
-  
+
   String _formatDate(DateTime date) {
     return DateFormat('dd MMM yyyy').format(date).toUpperCase();
   }
-  
+
   // Projects from backend
   List<ProjectOption> _projects = [];
   ProjectOption? _selectedProject;
   bool _isLoadingProjects = true;
-  
+
   // Departments from backend (teams API)
   List<String> _departments = [];
   String? _selectedDepartment;
   bool _isLoadingDepartments = true;
-  
+
   // Team members from backend
   List<TeamMember> _allMembers = [];
   List<TeamMember> _selectedMembers = [];
   List<TeamMember> _selectedFollowers = [];
   bool _isLoadingMembers = true;
-  
+
   // Attachments
   List<File> _attachments = [];
   final ImagePicker _imagePicker = ImagePicker();
-  
+
   // Linked Report (optional)
   List<FolderModel> _folders = [];
   List<ReportModel> _reportsForSelectedFolder = [];
@@ -73,19 +73,20 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   ReportModel? _selectedReport;
   bool _isLoadingFolders = true;
   bool _isLoadingReports = false;
-  
+
   // Submit state
   bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
-    _daysController = TextEditingController(text: _daysValue.toInt().toString());
+    _daysController =
+        TextEditingController(text: _daysValue.toInt().toString());
     _descriptionController = TextEditingController();
     _titleController = TextEditingController();
     _loadData();
   }
-  
+
   Future<void> _loadData() async {
     // Load projects, departments, and members in parallel
     final results = await Future.wait([
@@ -93,7 +94,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       TeamsApiService.getUniqueDepartments(),
       TeamMembersApiService.instance.getTeamMembers(),
     ]);
-    
+
     if (mounted) {
       setState(() {
         _projects = results[0] as List<ProjectOption>;
@@ -102,28 +103,30 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         _isLoadingProjects = false;
         _isLoadingDepartments = false;
         _isLoadingMembers = false;
-        
+
         // Don't set default selections - let user choose
       });
     }
-    
+
     // Load folders for report linking
     await _loadFolders();
   }
-  
+
   Future<void> _loadFolders() async {
     try {
-      final reportsProvider = Provider.of<ReportProvider>(context, listen: false);
-      
+      final reportsProvider =
+          Provider.of<ReportProvider>(context, listen: false);
+
       // Initialize provider if not already initialized
       final loginData = SharedPref.getLoginDataOrNull();
       if (loginData != null) {
-        final baseUrl = loginData.result?.data?.webBaseUrl ?? 'https://erp.elrace.com';
+        final baseUrl =
+            loginData.result?.data?.webBaseUrl ?? 'https://erp.elrace.com';
         await reportsProvider.init(base: baseUrl);
       }
-      
+
       await reportsProvider.fetchAllFolders();
-      
+
       if (mounted) {
         setState(() {
           _folders = reportsProvider.folders;
@@ -139,18 +142,19 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       }
     }
   }
-  
+
   Future<void> _loadReportsForFolder(String folderId) async {
     setState(() {
       _isLoadingReports = true;
       _selectedReport = null;
       _reportsForSelectedFolder = [];
     });
-    
+
     try {
-      final reportsProvider = Provider.of<ReportProvider>(context, listen: false);
+      final reportsProvider =
+          Provider.of<ReportProvider>(context, listen: false);
       await reportsProvider.fetchAllReports(folderID: folderId);
-      
+
       if (mounted) {
         setState(() {
           _reportsForSelectedFolder = reportsProvider.reports;
@@ -195,11 +199,13 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       // Convert to TaskMember list for progress tracking
       List<TaskMember>? assignedMembers;
       if (_selectedMembers.isNotEmpty) {
-        assignedMembers = _selectedMembers.map((m) => TaskMember(
-          name: m.name,
-          odooId: m.id.toString(),
-          isCompleted: false,
-        )).toList();
+        assignedMembers = _selectedMembers
+            .map((m) => TaskMember(
+                  name: m.name,
+                  odooId: m.id.toString(),
+                  isCompleted: false,
+                ))
+            .toList();
       }
 
       // Get follower names (for backward compatibility)
@@ -211,11 +217,13 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       // Convert followers to TaskMember list
       List<TaskMember>? followedUpBy;
       if (_selectedFollowers.isNotEmpty) {
-        followedUpBy = _selectedFollowers.map((m) => TaskMember(
-          name: m.name,
-          odooId: m.id.toString(),
-          isCompleted: false,
-        )).toList();
+        followedUpBy = _selectedFollowers
+            .map((m) => TaskMember(
+                  name: m.name,
+                  odooId: m.id.toString(),
+                  isCompleted: false,
+                ))
+            .toList();
       }
 
       // Get attachment file names
@@ -233,8 +241,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       // Create the todo model
       final todo = TodoModel(
         title: title,
-        description: _descriptionController.text.trim().isNotEmpty 
-            ? _descriptionController.text.trim() 
+        description: _descriptionController.text.trim().isNotEmpty
+            ? _descriptionController.text.trim()
             : null,
         department: _selectedDepartment,
         startDate: _startDate,
@@ -266,7 +274,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        
+
         // Navigate back to previous screen
         Navigator.of(context).pop(true);
       }
@@ -309,8 +317,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
             padding: const EdgeInsets.all(20.0),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-              // Header
-              Row(
+                // Header
+                Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     SvgPicture.asset(
@@ -330,155 +338,190 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                     ),
                   ],
                 ),
-              const SizedBox(height: 5),
-              
-              // Task Title
-              _buildBorderedFieldWithLabel(
-                label: 'Task\nTitle',
-                child: _buildTextField(hint: 'Enter task title', controller: _titleController),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 5),
 
-              // Project Name
-              _buildBorderedFieldWithLabel(
-                label: 'Project\nName',
-                child: _isLoadingProjects
-                    ? _buildDropdownShimmer()
-                    : _buildProjectDropdown(),
-              ),
-              const SizedBox(height: 20),
-
-              // Task Department
-              _buildBorderedFieldWithLabel(
-                label: 'Task\nDepartment',
-                child: _isLoadingDepartments
-                    ? _buildDropdownShimmer()
-                    : _buildDepartmentDropdown(),
-              ),
-              const SizedBox(height: 20),
-
-              // Add Member
-              _buildSectionLabel('Add Member'),
-              const SizedBox(height: 12),
-              _buildMembersSection(
-                selectedMembers: _selectedMembers,
-                onAdd: () => _showMemberPicker(isFollower: false),
-                onRemove: (member) {
-                  setState(() => _selectedMembers.remove(member));
-                },
-              ),
-              const SizedBox(height: 20),
-
-              // Linked Report (Optional)
-              _buildBorderedFieldWithLabel(
-                label: 'Linked Report\n(Optional)',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Folder Selection
-                    _isLoadingFolders
-                        ? _buildDropdownShimmer()
-                        : _buildFolderDropdown(),
-                    if (_selectedFolder != null) ...[
-                      const SizedBox(height: 12),
-                      // Report Selection
-                      _isLoadingReports
-                          ? _buildDropdownShimmer()
-                          : _buildReportDropdown(),
-                    ],
-                  ],
+                // Task Title
+                _buildBorderedFieldWithLabel(
+                  label: 'Task\nTitle',
+                  child: _buildTextField(
+                      hint: 'Enter task title', controller: _titleController),
                 ),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 20),
 
-              // Description
-              _buildDescriptionSection(),
-              const SizedBox(height: 20),
+                // Project Name
+                _buildBorderedFieldWithLabel(
+                  label: 'Project\nName',
+                  child: _isLoadingProjects
+                      ? _buildDropdownShimmer()
+                      : _buildProjectDropdown(),
+                ),
+                const SizedBox(height: 20),
 
-              // Days Section with Dates
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  // Days TextField
-                  Column(
+                // Task Department
+                _buildBorderedFieldWithLabel(
+                  label: 'Task\nDepartment',
+                  child: _isLoadingDepartments
+                      ? _buildDropdownShimmer()
+                      : _buildDepartmentDropdown(),
+                ),
+                const SizedBox(height: 20),
+
+                // Add Member
+                _buildSectionLabel('Add Member'),
+                const SizedBox(height: 12),
+                _buildMembersSection(
+                  selectedMembers: _selectedMembers,
+                  onAdd: () => _showMemberPicker(isFollower: false),
+                  onRemove: (member) {
+                    setState(() => _selectedMembers.remove(member));
+                  },
+                ),
+                const SizedBox(height: 20),
+
+                // Linked Report (Optional)
+                _buildBorderedFieldWithLabel(
+                  label: 'Linked Report\n(Optional)',
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Days',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        width: 120,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: Colors.transparent,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Color(0xFFD0D0D0), width: 1.5),
-                        ),
-                        child: Center(
-                          child: TextField(
-                            controller: _daysController,
-                        textAlign: TextAlign.center,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(2),
-                        ],
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black,
-                        ),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.only(bottom: 4),
-                        ),
-                        onChanged: (value) {
-                          if (value.isNotEmpty) {
-                            setState(() {
-                              _daysValue = double.tryParse(value) ?? 5;
-                            });
-                          }
-                        },
-                      ),
-                    ),
-                  ),
+                      // Folder Selection
+                      _isLoadingFolders
+                          ? _buildDropdownShimmer()
+                          : _buildFolderDropdown(),
+                      if (_selectedFolder != null) ...[
+                        const SizedBox(height: 12),
+                        // Report Selection
+                        _isLoadingReports
+                            ? _buildDropdownShimmer()
+                            : _buildReportDropdown(),
+                      ],
                     ],
                   ),
+                ),
+                const SizedBox(height: 20),
 
-                  // Start Date
-                  GestureDetector(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: _startDate,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (picked != null) {
-                        setState(() => _startDate = picked);
-                      }
-                    },
-                    child: Column(
+                // Description
+                _buildDescriptionSection(),
+                const SizedBox(height: 20),
+
+                // Days Section with Dates
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // Days TextField
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'START DATE',
+                          'Days',
                           style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
-                            color: Colors.green,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          width: 120,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: Color(0xFFD0D0D0), width: 1.5),
+                          ),
+                          child: Center(
+                            child: TextField(
+                              controller: _daysController,
+                              textAlign: TextAlign.center,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(2),
+                              ],
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.only(bottom: 4),
+                              ),
+                              onChanged: (value) {
+                                if (value.isNotEmpty) {
+                                  setState(() {
+                                    _daysValue = double.tryParse(value) ?? 5;
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // Start Date
+                    GestureDetector(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _startDate,
+                          firstDate: DateTime.now(),
+                          lastDate:
+                              DateTime.now().add(const Duration(days: 365)),
+                        );
+                        if (picked != null) {
+                          setState(() => _startDate = picked);
+                        }
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'START DATE',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.green,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _formatDate(_startDate),
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Divider
+                    Container(
+                      width: 1,
+                      height: 40,
+                      color: Colors.grey[300],
+                    ),
+
+                    // End Date
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'END DATE',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.red,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _formatDate(_startDate),
+                          _formatDate(_endDate),
                           style: GoogleFonts.poppins(
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
@@ -487,111 +530,79 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                         ),
                       ],
                     ),
-                  ),
+                  ],
+                ),
+                const SizedBox(height: 20),
 
-                  // Divider
-                  Container(
-                    width: 1,
-                    height: 40,
-                    color: Colors.grey[300],
-                  ),
+                // Following By
+                _buildSectionLabel('Following By'),
+                const SizedBox(height: 12),
+                _buildMembersSection(
+                  selectedMembers: _selectedFollowers,
+                  onAdd: () => _showMemberPicker(isFollower: true),
+                  onRemove: (member) {
+                    setState(() => _selectedFollowers.remove(member));
+                  },
+                ),
+                const SizedBox(height: 20),
 
-                  // End Date
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'END DATE',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red,
+                // Attachments
+                _buildSectionLabel('Attachments'),
+                const SizedBox(height: 12),
+                _buildAttachmentsSection(),
+                const SizedBox(height: 50),
+
+                // Submit Button
+                Center(
+                  child: Container(
+                    width: 220,
+                    height: 55,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF8BC6EC), Color(0xFF9599E2)],
+                        begin: Alignment.centerLeft,
+                        end: Alignment.centerRight,
+                      ),
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF8BC6EC).withOpacity(0.4),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton(
+                      onPressed: _isSubmitting ? null : _submitTask,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(30),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _formatDate(_endDate),
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.grey[400],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Following By
-              _buildSectionLabel('Following By'),
-              const SizedBox(height: 12),
-              _buildMembersSection(
-                selectedMembers: _selectedFollowers,
-                onAdd: () => _showMemberPicker(isFollower: true),
-                onRemove: (member) {
-                  setState(() => _selectedFollowers.remove(member));
-                },
-              ),
-              const SizedBox(height: 20),
-
-              // Attachments
-              _buildSectionLabel('Attachments'),
-              const SizedBox(height: 12),
-              _buildAttachmentsSection(),
-              const SizedBox(height: 50),
-
-              // Submit Button
-              Center(
-                child: Container(
-                  width: 220,
-                  height: 55,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF8BC6EC), Color(0xFF9599E2)],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                    borderRadius: BorderRadius.circular(30),
-                    boxShadow: [
-                      BoxShadow(
-                        color: const Color(0xFF8BC6EC).withOpacity(0.4),
-                        blurRadius: 12,
-                        offset: const Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: ElevatedButton(
-                    onPressed: _isSubmitting ? null : _submitTask,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                    ),
-                    child: _isSubmitting
-                        ? const SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2,
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              'SUBMIT TASK',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                                letterSpacing: 1,
+                              ),
                             ),
-                          )
-                        : Text(
-                            'SUBMIT TASK',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                              letterSpacing: 1,
-                            ),
-                          ),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 30),
+                const SizedBox(height: 30),
               ]),
             ),
           ),
@@ -602,7 +613,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
 
   Widget _buildSectionLabel(String label) {
     final parts = label.split('\n');
-    
+
     if (parts.length > 1) {
       // Two-line label (first line gray, second line black bold)
       return Column(
@@ -639,9 +650,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     }
   }
 
-  Widget _buildBorderedFieldWithLabel({required String label, required Widget child}) {
+  Widget _buildBorderedFieldWithLabel(
+      {required String label, required Widget child}) {
     final parts = label.split('\n');
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -686,7 +698,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
     );
   }
 
-  Widget _buildTextField({String hint = '', int maxLines = 1, TextEditingController? controller}) {
+  Widget _buildTextField(
+      {String hint = '', int maxLines = 1, TextEditingController? controller}) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -703,7 +716,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
             color: Colors.grey[400],
           ),
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
         style: GoogleFonts.poppins(fontSize: 14),
       ),
@@ -737,7 +751,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 color: Colors.grey[400],
               ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
             style: GoogleFonts.poppins(fontSize: 14, color: Colors.black),
           ),
@@ -1055,7 +1070,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 value: report,
                 child: Row(
                   children: [
-                    Icon(Icons.description_outlined, size: 18, color: Colors.grey[500]),
+                    Icon(Icons.description_outlined,
+                        size: 18, color: Colors.grey[500]),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -1191,25 +1207,21 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   Widget _buildAddButton() {
     return Column(
       children: [
-       DottedBorder(
-      borderType: BorderType.Circle,
-      color: Colors.black,
-      strokeWidth: 2,
-      dashPattern: [6, 4],
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Colors.white,
+        DottedBorder(
+          borderType: BorderType.Circle,
+          color: Colors.black,
+          strokeWidth: 2,
+          dashPattern: [6, 4],
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+            ),
+            child: Icon(Icons.add, size: 25, color: Colors.black),
+          ),
         ),
-        child:            Icon(Icons.add, size: 25, color: Colors.black),
-
-        
-        
-       
-      ),
-    ),
         const SizedBox(height: 4),
         Text(
           'Add',
@@ -1221,7 +1233,6 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       ],
     );
   }
-
 
   /*   Text(
               'Add',
@@ -1334,7 +1345,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                         shape: BoxShape.circle,
                         color: Colors.white,
                       ),
-                      child: const Icon(Icons.add, size: 25, color: Colors.black),
+                      child:
+                          const Icon(Icons.add, size: 25, color: Colors.black),
                     ),
                   ),
                   const SizedBox(height: 4),
@@ -1361,7 +1373,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   }
 
   /// Build avatar for a selected member with remove option
-  Widget _buildSelectedMemberAvatar(TeamMember member, Function(TeamMember) onRemove) {
+  Widget _buildSelectedMemberAvatar(
+      TeamMember member, Function(TeamMember) onRemove) {
     return GestureDetector(
       onLongPress: () => onRemove(member),
       child: Stack(
@@ -1391,7 +1404,9 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   ),
                   child: Center(
                     child: Text(
-                      member.name.isNotEmpty ? member.name[0].toUpperCase() : '?',
+                      member.name.isNotEmpty
+                          ? member.name[0].toUpperCase()
+                          : '?',
                       style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -1600,7 +1615,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 child: const Icon(Icons.photo_library, color: Colors.blue),
               ),
               title: Text('Pick from Gallery', style: GoogleFonts.poppins()),
-              subtitle: Text('Select images from your gallery', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+              subtitle: Text('Select images from your gallery',
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
               onTap: () async {
                 Navigator.pop(context);
                 final XFile? image = await _imagePicker.pickImage(
@@ -1621,7 +1637,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 child: const Icon(Icons.camera_alt, color: Colors.green),
               ),
               title: Text('Take Photo', style: GoogleFonts.poppins()),
-              subtitle: Text('Capture a new photo', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+              subtitle: Text('Capture a new photo',
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
               onTap: () async {
                 Navigator.pop(context);
                 final XFile? image = await _imagePicker.pickImage(
@@ -1642,7 +1659,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 child: const Icon(Icons.picture_as_pdf, color: Colors.red),
               ),
               title: Text('Pick PDF File', style: GoogleFonts.poppins()),
-              subtitle: Text('Select a PDF document', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+              subtitle: Text('Select a PDF document',
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
               onTap: () async {
                 Navigator.pop(context);
                 final result = await FilePicker.platform.pickFiles(
@@ -1650,7 +1668,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   allowedExtensions: ['pdf'],
                 );
                 if (result != null && result.files.single.path != null) {
-                  setState(() => _attachments.add(File(result.files.single.path!)));
+                  setState(
+                      () => _attachments.add(File(result.files.single.path!)));
                 }
               },
             ),
@@ -1664,12 +1683,14 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 child: const Icon(Icons.folder_open, color: Colors.orange),
               ),
               title: Text('Pick Any File', style: GoogleFonts.poppins()),
-              subtitle: Text('Select any document', style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
+              subtitle: Text('Select any document',
+                  style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
               onTap: () async {
                 Navigator.pop(context);
                 final result = await FilePicker.platform.pickFiles();
                 if (result != null && result.files.single.path != null) {
-                  setState(() => _attachments.add(File(result.files.single.path!)));
+                  setState(
+                      () => _attachments.add(File(result.files.single.path!)));
                 }
               },
             ),
@@ -1732,9 +1753,11 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 children: [
                   _buildParagraphIconButton(_formatAlignLeft),
                   const SizedBox(width: 8),
-                  _buildIconButton(Icons.format_list_bulleted, _formatBulletList),
+                  _buildIconButton(
+                      Icons.format_list_bulleted, _formatBulletList),
                   const SizedBox(width: 8),
-                  _buildIconButton(Icons.format_list_numbered, _formatNumberedList),
+                  _buildIconButton(
+                      Icons.format_list_numbered, _formatNumberedList),
                 ],
               ),
             ],
@@ -1750,7 +1773,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
               color: Colors.black87,
             ),
             decoration: InputDecoration(
-              hintText: 'Enter task description...',
+              hintText: 'Write your description...',
               hintStyle: GoogleFonts.poppins(
                 fontSize: 13,
                 color: Colors.grey[400],
@@ -1797,7 +1820,8 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           borderRadius: BorderRadius.circular(6),
           child: Padding(
             padding: const EdgeInsets.all(4),
-            child: Image.asset('assets/png/paragraphIcon.png', fit: BoxFit.contain),
+            child: Image.asset('assets/png/paragraphIcon.png',
+                fit: BoxFit.contain),
           ),
         ),
       ),
@@ -1815,7 +1839,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       final lines = value.split('\n');
       if (lines.length >= 2) {
         final previousLine = lines[lines.length - 2].trim();
-        
+
         // Check if previous line starts with bullet point
         if (previousLine.startsWith('• ')) {
           final newText = value + '• ';
@@ -1827,7 +1851,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
           );
           return;
         }
-        
+
         // Check if previous line starts with number
         final numberMatch = RegExp(r'^(\d+)\.\s').firstMatch(previousLine);
         if (numberMatch != null) {
@@ -1924,9 +1948,10 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   void _formatBulletList() {
     final text = _descriptionController.text;
     if (text.isEmpty) return;
-    
+
     final lines = text.split('\n');
-    final formattedLines = lines.where((line) => line.trim().isNotEmpty).map((line) {
+    final formattedLines =
+        lines.where((line) => line.trim().isNotEmpty).map((line) {
       final trimmed = line.trim();
       if (trimmed.startsWith('• ')) return trimmed;
       if (RegExp(r'^\d+\.\s').hasMatch(trimmed)) {
@@ -1934,7 +1959,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       }
       return '• $trimmed';
     }).join('\n');
-    
+
     _descriptionController.text = formattedLines;
     _descriptionController.selection = TextSelection.fromPosition(
       TextPosition(offset: formattedLines.length),
@@ -1944,10 +1969,11 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
   void _formatNumberedList() {
     final text = _descriptionController.text;
     if (text.isEmpty) return;
-    
+
     final lines = text.split('\n');
     int number = 1;
-    final formattedLines = lines.where((line) => line.trim().isNotEmpty).map((line) {
+    final formattedLines =
+        lines.where((line) => line.trim().isNotEmpty).map((line) {
       final trimmed = line.trim();
       if (trimmed.startsWith('• ')) {
         return '${number++}. ${trimmed.substring(2)}';
@@ -1957,7 +1983,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       }
       return '${number++}. $trimmed';
     }).join('\n');
-    
+
     _descriptionController.text = formattedLines;
     _descriptionController.selection = TextSelection.fromPosition(
       TextPosition(offset: formattedLines.length),
@@ -2122,10 +2148,12 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                           widget.onMemberSelected(member);
                           setState(() {}); // Refresh to show selection
                         },
-                        leading: member.image != null && member.image!.isNotEmpty
+                        leading: member.image != null &&
+                                member.image!.isNotEmpty
                             ? CircleAvatar(
                                 radius: 20.w,
-                                backgroundColor: const Color(0xFF1A1A53).withOpacity(0.1),
+                                backgroundColor:
+                                    const Color(0xFF1A1A53).withOpacity(0.1),
                                 backgroundImage: NetworkImage(member.image!),
                                 onBackgroundImageError: (_, __) {},
                                 child: Container(
@@ -2195,9 +2223,9 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
 /// Shimmer animation widget
 class _ShimmerWidget extends StatefulWidget {
   final Widget child;
-  
+
   const _ShimmerWidget({required this.child});
-  
+
   @override
   State<_ShimmerWidget> createState() => _ShimmerWidgetState();
 }

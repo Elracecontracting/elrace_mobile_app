@@ -230,6 +230,7 @@ class _BarChart extends StatelessWidget {
     final maxValue = values.values.fold<int>(0, (m, v) => v > m ? v : m);
     final maxHeight = 220.w;
     final minBarHeight = 12.w; // الحد الأدنى للعمود إذا كانت القيمة > 0
+    final zeroBarHeight = 6.w; // إظهار عمود صغير حتى لو كانت القيمة 0
 
     return SizedBox(
       height: maxHeight + 36.w,
@@ -239,9 +240,9 @@ class _BarChart extends StatelessWidget {
         children: values.entries.map((entry) {
           // حساب النسبة بناءً على القيمة القصوى
           final ratio = maxValue == 0 ? 0.0 : entry.value / maxValue;
-          // طول العمود يتناسب مع الرقم - إذا كانت القيمة 0 يكون الطول 0
+          // طول العمود يتناسب مع الرقم - حتى القيمة 0 لها طول صغير مرئي
           final double barHeight = entry.value == 0
-              ? 0
+              ? zeroBarHeight
               : (maxHeight * ratio).clamp(minBarHeight, maxHeight);
 
           return SizedBox(

@@ -299,6 +299,7 @@ Widget buildProjectCard({
   }
 
   final formattedAmount = NumberFormat('#,##0.##', 'en').format(amountAed);
+  const cardDataGray = Color(0xB8484848);
 
   return Container(
     margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
@@ -322,14 +323,18 @@ Widget buildProjectCard({
       borderRadius: BorderRadius.circular(22.r),
       child: Stack(
         children: [
-          Positioned.fill(
-            child: Align(
-              alignment: Alignment.centerRight,
+          Positioned(
+            top: 0,
+            bottom: 0,
+            right: 0,
+            child: IgnorePointer(
               child: Opacity(
-                opacity: 0.10,
+                opacity: 0.08,
                 child: Image.asset(
-                  'assets/png/grey_bg.png',
-                  fit: BoxFit.cover,
+                  'assets/newapp/for_attachments.png',
+                  width: 150.w,
+                  fit: BoxFit.fitHeight,
+                  alignment: Alignment.centerRight,
                   errorBuilder: (_, __, ___) => const SizedBox(),
                 ),
               ),
@@ -346,11 +351,11 @@ Widget buildProjectCard({
                     children: [
                       Center(
                         child: Text(
-                          'Partner',
+                          'Agreement no',
                           style: GoogleFonts.inter(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
-                            color: greyText,
+                            color: cardDataGray,
                             letterSpacing: 0.6,
                           ),
                           maxLines: 1,
@@ -360,11 +365,11 @@ Widget buildProjectCard({
                       Align(
                         alignment: Alignment.topRight,
                         child: Text(
-                          '',
+                          DateFormat('MM/dd/yyyy').format(DateTime.now()),
                           style: GoogleFonts.inter(
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w600,
-                            color: greyText,
+                            color: cardDataGray,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -411,13 +416,13 @@ Widget buildProjectCard({
                             color: Colors.black,
                           ),
                           children: [
-                            const TextSpan(text: 'Projects# '),
+                            const TextSpan(text: 'Work Order# '),
                             TextSpan(
                               text: '$projectsCount',
                               style: GoogleFonts.inter(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w600,
-                                color: greyText,
+                                color: cardDataGray,
                               ),
                             ),
                           ],
@@ -440,11 +445,11 @@ Widget buildProjectCard({
                             children: [
                               const TextSpan(text: 'Amount# '),
                               TextSpan(
-                                text: formattedAmount,
+                                text: '$formattedAmount M',
                                 style: GoogleFonts.inter(
                                   fontSize: 12.sp,
                                   fontWeight: FontWeight.w600,
-                                  color: greyText,
+                                  color: cardDataGray,
                                 ),
                               ),
                             ],
@@ -465,7 +470,7 @@ Widget buildProjectCard({
                       style: GoogleFonts.inter(
                         fontSize: 11.5.sp,
                         fontWeight: FontWeight.w700,
-                        color: greyText,
+                        color: cardDataGray,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

@@ -34,21 +34,22 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   String certificateNo = '';
   String description = '';
   bool isLoading = false;
-  
+
   // Holiday list includes:
   // Only official public holidays (NOT weekends)
   // Weekends are regular working days that can be selected
   final Set<DateTime> holidays = {};
   final Set<DateTime> officialHolidays = {}; // Official holidays from API
   bool isLoadingHolidays = false;
-  
+
   // Minimum start date (20 days from now for SHORT leave)
   late DateTime minimumStartDate;
-  
+
   // SHORT leave restrictions
   static const int maxShortLeaveDays = 7; // Maximum 7 days for SHORT leave
-  static const int shortLeaveGapDays = 30; // Minimum 30 days gap between SHORT leaves
-  
+  static const int shortLeaveGapDays =
+      30; // Minimum 30 days gap between SHORT leaves
+
   // Text formatting states
   bool isBold = false;
   bool isItalic = false;
@@ -76,15 +77,15 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
 
   Future<void> _fetchHolidaysFromAPI() async {
     setState(() => isLoadingHolidays = true);
-    
+
     try {
       final token = SharedPref.getLoginData().result?.token;
       final url = Uri.parse('https://erp.elrace.com/api/public/holidays');
-      
+
       debugPrint('🔵 === FETCHING HOLIDAYS FROM API ===');
       debugPrint('🔵 URL: $url');
       debugPrint('🔵 Token: ${token?.substring(0, 20)}...');
-      
+
       final response = await http.post(
         url,
         headers: {
@@ -104,38 +105,42 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
 
       if (response.statusCode == 200) {
         final result = jsonDecode(response.body);
-        
+
         debugPrint('🔵 Parsed Result: $result');
-        
+
         if (result['result'] != null && result['result'] is List) {
           final List<dynamic> holidayList = result['result'];
-          
-          debugPrint('🔵 Total Holiday Periods from API: ${holidayList.length}');
-          
+
+          debugPrint(
+              '🔵 Total Holiday Periods from API: ${holidayList.length}');
+
           for (var holiday in holidayList) {
             try {
               final String dateFrom = holiday['date_from'];
               final String dateTo = holiday['date_to'];
               final String name = holiday['name'] ?? 'Holiday';
-              
+
               final startDate = DateTime.parse(dateFrom);
               final endDate = DateTime.parse(dateTo);
-              
+
               // Add all days in the holiday range
               DateTime current = startDate;
-              while (current.isBefore(endDate) || current.isAtSameMomentAs(endDate)) {
-                final holidayDate = DateTime(current.year, current.month, current.day);
+              while (current.isBefore(endDate) ||
+                  current.isAtSameMomentAs(endDate)) {
+                final holidayDate =
+                    DateTime(current.year, current.month, current.day);
                 holidays.add(holidayDate);
-                officialHolidays.add(holidayDate); // Add to official holidays list
+                officialHolidays
+                    .add(holidayDate); // Add to official holidays list
                 current = current.add(const Duration(days: 1));
               }
-              
+
               debugPrint('🔵 Added holiday: $name ($dateFrom to $dateTo)');
             } catch (e) {
               debugPrint('❌ Error parsing holiday: $e');
             }
           }
-          
+
           debugPrint('🔵 Total holidays loaded from API: ${holidays.length}');
         } else {
           debugPrint('⚠️ No holidays in API response');
@@ -146,15 +151,11 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
     } catch (e) {
       debugPrint('❌ Error fetching holidays from API: $e');
     }
-    
+
     debugPrint('🔵 Total holidays after adding weekends: ${holidays.length}');
-    
+
     setState(() => isLoadingHolidays = false);
   }
-
-
-
-
 
   Future<void> _initAsync() async {
     await _fetchLeaveBalance();
@@ -186,21 +187,22 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
     // Check if date is selectable
     if (!_isDateSelectable(date)) {
       String errorMessage = 'Selected date is not available. ';
-      
+
       if (_isHoliday(date)) {
         errorMessage += 'Cannot select a holiday.';
       } else if (_isWithin3DaysOfHoliday(date)) {
-        errorMessage += 'Cannot select dates within 3 days before or 4 days after official holidays.';
+        errorMessage +=
+            'Cannot select dates within 3 days before or 4 days after official holidays.';
       } else if (date.isBefore(minimumStartDate)) {
         errorMessage += 'Must be at least 20 days from request date.';
       } else {
         errorMessage += 'Please choose a valid working day.';
       }
-      
+
       _showErrorDialog(errorMessage);
       return;
     }
-    
+
     setState(() {
       if (startDate == null || (endDate != null)) {
         startDate = date;
@@ -215,7 +217,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
       }
     });
   }
-  
+
   bool _isDateSelectable(DateTime date) {
     // Cannot select past dates
     final today = DateTime.now();
@@ -223,19 +225,20 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
       debugPrint('🔴 Date not selectable: $date (Past date)');
       return false;
     }
-    
+
     // Cannot select dates before minimum start date
     if (date.isBefore(minimumStartDate)) {
-      debugPrint('🔴 Date not selectable: $date (Before minimum: $minimumStartDate)');
+      debugPrint(
+          '🔴 Date not selectable: $date (Before minimum: $minimumStartDate)');
       return false;
     }
-    
+
     // Cannot select holidays
     if (_isHoliday(date)) {
       debugPrint('🔴 Date not selectable: $date (Holiday)');
       return false;
     }
-    
+
     // Cannot select dates within 3 days before or after a holiday
     // This applies to both ANNUAL and SHORT leave
     if (widget.leaveType == 'ANNUAL' || widget.leaveType == 'SHORT') {
@@ -244,15 +247,15 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
         return false;
       }
     }
-    
+
     debugPrint('🟢 Date selectable: $date');
     return true;
   }
-  
+
   bool _isHoliday(DateTime date) {
     return holidays.any((holiday) => _isSameDay(holiday, date));
   }
-  
+
   bool _isWithin3DaysOfHoliday(DateTime date) {
     // Check if date is within restricted days before or after any OFFICIAL holiday
     // Restriction: 3 days BEFORE holiday + 4 days AFTER holiday
@@ -260,33 +263,35 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
     // NOTE: This applies to official holidays only, NOT weekends
     for (final holiday in officialHolidays) {
       final daysDifference = date.difference(holiday).inDays;
-      
+
       // Check if date is 3 days before the holiday (negative difference)
       if (daysDifference < 0 && daysDifference >= -3) {
-        debugPrint('🔴 Date blocked: $date (${daysDifference.abs()} days before holiday)');
+        debugPrint(
+            '🔴 Date blocked: $date (${daysDifference.abs()} days before holiday)');
         return true;
       }
-      
+
       // Check if date is 4 days after the holiday (positive difference)
       if (daysDifference > 0 && daysDifference <= 4) {
-        debugPrint('🔴 Date blocked: $date ($daysDifference days after holiday)');
+        debugPrint(
+            '🔴 Date blocked: $date ($daysDifference days after holiday)');
         return true;
       }
     }
     return false;
   }
-  
+
   int _calculateWorkingDays(DateTime start, DateTime end) {
     int workingDays = 0;
     DateTime current = start;
-    
+
     while (current.isBefore(end) || _isSameDay(current, end)) {
       if (!_isHoliday(current)) {
         workingDays++;
       }
       current = current.add(const Duration(days: 1));
     }
-    
+
     return workingDays;
   }
 
@@ -300,17 +305,17 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
       _showErrorDialog('Please enter certificate number for sick leave.');
       return;
     }
-    
+
     // SHORT leave specific validations
     if (widget.leaveType == 'SHORT') {
       final durationInt = int.tryParse(duration) ?? 0;
-      
+
       // Check maximum 7 days
       if (durationInt > maxShortLeaveDays) {
         _showErrorDialog('Short leave cannot exceed $maxShortLeaveDays days.');
         return;
       }
-      
+
       // TODO: Check 30 days gap from last SHORT leave
       // This needs API call to get employee's last SHORT leave date
       // For now, we'll send it to backend and let it validate
@@ -348,7 +353,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
 
       if (!mounted) return;
 
-      if (response.statusCode == 200 && data['result']?['status'] == 'success') {
+      if (response.statusCode == 200 &&
+          data['result']?['status'] == 'success') {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Request submitted successfully!')),
         );
@@ -400,7 +406,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
       case 'SICK':
         return 'Please be aware that you have to submit your request within 3 days or you will not be eligible';
       case 'SHORT':
-        return 'Max 7 days. Submit 20 days ahead. Blocked 3 days before & 4 days after official holidays.';
+        return 'Please be aware that you are eligible for 4 leaves per year';
       case 'ANNUAL':
         return 'Must submit 20 days in advance. Blocked 3 days before & 4 days after official holidays.';
       default:
@@ -427,7 +433,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
         ),
       );
     }
-    
+
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: const HeaderWidget(),
@@ -511,14 +517,19 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                               maxLines: 3,
                               decoration: const InputDecoration(
                                 border: InputBorder.none,
-                                hintText: 'This application is designed for super shops...',
+                                hintText: 'Write your description...',
                                 hintStyle: TextStyle(fontSize: 12),
                               ),
                               style: TextStyle(
-                                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-                                fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+                                fontWeight: isBold
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                                fontStyle: isItalic
+                                    ? FontStyle.italic
+                                    : FontStyle.normal,
                               ),
-                              onChanged: (val) => setState(() => description = val),
+                              onChanged: (val) =>
+                                  setState(() => description = val),
                             ),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -529,7 +540,9 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                                     IconButton(
                                       icon: Icon(Icons.format_bold,
                                           size: 18.w,
-                                          color: isBold ? _accentGrey : Colors.grey),
+                                          color: isBold
+                                              ? _accentGrey
+                                              : Colors.grey),
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
                                       onPressed: () {
@@ -544,7 +557,9 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                                     IconButton(
                                       icon: Icon(Icons.format_italic,
                                           size: 18.w,
-                                          color: isItalic ? _accentGrey : Colors.grey),
+                                          color: isItalic
+                                              ? _accentGrey
+                                              : Colors.grey),
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
                                       onPressed: () {
@@ -559,7 +574,9 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                                     IconButton(
                                       icon: Icon(Icons.format_list_bulleted,
                                           size: 18.w,
-                                          color: isBulletList ? _accentGrey : Colors.grey),
+                                          color: isBulletList
+                                              ? _accentGrey
+                                              : Colors.grey),
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
                                       onPressed: () {
@@ -575,7 +592,9 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                                     IconButton(
                                       icon: Icon(Icons.format_list_numbered,
                                           size: 18.w,
-                                          color: isNumberedList ? _accentGrey : Colors.grey),
+                                          color: isNumberedList
+                                              ? _accentGrey
+                                              : Colors.grey),
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
                                       onPressed: () {
@@ -590,7 +609,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                                 ),
                                 Text(
                                   '${description.trim().isEmpty ? 0 : description.trim().split(RegExp(r'\s+')).length}/50',
-                                  style: TextStyle(fontSize: 10.sp, color: Colors.grey),
+                                  style: TextStyle(
+                                      fontSize: 10.sp, color: Colors.grey),
                                 ),
                               ],
                             ),
@@ -601,9 +621,10 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
 
                       // Notice
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Icon(Icons.info_outline, size: 20.w, color: Colors.grey),
+                          Icon(Icons.info_outline,
+                              size: 20.w, color: Colors.grey),
                           SizedBox(width: 8.w),
                           Expanded(
                             child: Text(
@@ -638,7 +659,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                                    valueColor:
+                                        AlwaysStoppedAnimation(Colors.white),
                                   ),
                                 )
                               : Text(
@@ -681,7 +703,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                 icon: const Icon(Icons.chevron_left),
                 onPressed: () {
                   setState(() {
-                    displayedMonth = DateTime(displayedMonth.year, displayedMonth.month - 1);
+                    displayedMonth =
+                        DateTime(displayedMonth.year, displayedMonth.month - 1);
                   });
                 },
               ),
@@ -693,7 +716,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                     items: List.generate(12, (i) => i + 1)
                         .map((m) => DropdownMenuItem(
                               value: m,
-                              child: Text(DateFormat('MMM').format(DateTime(2000, m))),
+                              child: Text(
+                                  DateFormat('MMM').format(DateTime(2000, m))),
                             ))
                         .toList(),
                     onChanged: (val) {
@@ -709,7 +733,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                     value: displayedMonth.year,
                     underline: const SizedBox(),
                     items: List.generate(10, (i) => DateTime.now().year - 5 + i)
-                        .map((y) => DropdownMenuItem(value: y, child: Text('$y')))
+                        .map((y) =>
+                            DropdownMenuItem(value: y, child: Text('$y')))
                         .toList(),
                     onChanged: (val) {
                       if (val != null) {
@@ -725,7 +750,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                 icon: const Icon(Icons.chevron_right),
                 onPressed: () {
                   setState(() {
-                    displayedMonth = DateTime(displayedMonth.year, displayedMonth.month + 1);
+                    displayedMonth =
+                        DateTime(displayedMonth.year, displayedMonth.month + 1);
                   });
                 },
               ),
@@ -778,7 +804,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
       final isSelectable = _isDateSelectable(date);
       final isHolidayDate = _isHoliday(date);
       final isNearHoliday = _isWithin3DaysOfHoliday(date);
-      
+
       days.add(
         GestureDetector(
           onTap: isSelectable ? () => _onDateSelected(date) : null,
@@ -831,7 +857,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
       rows.add(
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: days.sublist(i, (i + 7 > days.length) ? days.length : i + 7),
+          children:
+              days.sublist(i, (i + 7 > days.length) ? days.length : i + 7),
         ),
       );
       rows.add(SizedBox(height: 4.h));
@@ -898,15 +925,17 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   void _insertListPrefix(String prefix) {
     final text = _descController.text;
     final selection = _descController.selection;
-    
+
     if (text.isEmpty || selection.start == 0) {
       _descController.text = '$prefix$text';
-      _descController.selection = TextSelection.collapsed(offset: prefix.length);
+      _descController.selection =
+          TextSelection.collapsed(offset: prefix.length);
     } else {
       final newText =
           '${text.substring(0, selection.start)}\n$prefix${text.substring(selection.start)}';
       _descController.text = newText;
-      _descController.selection = TextSelection.collapsed(offset: selection.start + prefix.length + 1);
+      _descController.selection =
+          TextSelection.collapsed(offset: selection.start + prefix.length + 1);
     }
     description = _descController.text;
   }
@@ -915,15 +944,16 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
     final text = _descController.text;
     final lines = text.split('\n');
     final newLines = <String>[];
-    
+
     for (int i = 0; i < lines.length; i++) {
       if (lines[i].trim().isNotEmpty) {
-        newLines.add('${i + 1}. ${lines[i].replaceAll(RegExp(r'^\d+\.\s*'), '')}');
+        newLines
+            .add('${i + 1}. ${lines[i].replaceAll(RegExp(r'^\d+\.\s*'), '')}');
       } else {
         newLines.add(lines[i]);
       }
     }
-    
+
     _descController.text = newLines.join('\n');
     description = _descController.text;
   }

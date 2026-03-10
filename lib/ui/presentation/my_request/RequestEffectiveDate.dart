@@ -21,6 +21,7 @@ class EffectiveDatePage extends StatefulWidget {
 class _EffectiveDatePageState extends State<EffectiveDatePage> {
   String selectedMissionType = "Reason";
   DateTime joinedDate = DateTime.now();
+  // Auto-managed by system; user should not edit this field.
   DateTime leaveEndDate = DateTime.now();
   DateTime displayedMonth = DateTime.now();
   String description = '';
@@ -41,27 +42,9 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
   ];
   bool dropdownOpen = false;
 
-  Future<void> _pickLeaveEndDate() async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: leaveEndDate,
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-    if (picked != null) {
-      setState(() {
-        leaveEndDate = picked;
-      });
-    }
-  }
-
   void _onCalendarDateSelected(DateTime date) {
     setState(() {
       joinedDate = date;
-      // Keep leave end date >= joined date by default (user can adjust via picker)
-      if (leaveEndDate.isBefore(joinedDate)) {
-        leaveEndDate = joinedDate;
-      }
     });
   }
 
@@ -219,7 +202,6 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                       _buildInfoRow(
                         'Leave End Date',
                         _formatDate(leaveEndDate),
-                        trailingTap: _pickLeaveEndDate,
                       ),
                       SizedBox(height: 20.h),
                       Text(
@@ -239,7 +221,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                         width: double.infinity,
                         height: 48.h,
                         child: ElevatedButton(
-                          onPressed: isSubmitting ? null : _submitEffectiveDateRequest,
+                          onPressed:
+                              isSubmitting ? null : _submitEffectiveDateRequest,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF5E5E5E),
                             shape: RoundedRectangleBorder(
@@ -253,7 +236,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                                   height: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation(Colors.white),
+                                    valueColor:
+                                        AlwaysStoppedAnimation(Colors.white),
                                   ),
                                 )
                               : Text(
@@ -346,7 +330,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                     });
                   },
                   child: Container(
-                    padding: EdgeInsets.symmetric(vertical: 14.h, horizontal: 20.w),
+                    padding:
+                        EdgeInsets.symmetric(vertical: 14.h, horizontal: 20.w),
                     alignment: Alignment.centerLeft,
                     child: Text(
                       options[i],
@@ -412,7 +397,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                   SizedBox(width: 10.w),
                   IconButton(
                     icon: Icon(Icons.format_italic,
-                        size: 18.w, color: isItalic ? Colors.blue : Colors.grey),
+                        size: 18.w,
+                        color: isItalic ? Colors.blue : Colors.grey),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () {
@@ -502,7 +488,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                 icon: const Icon(Icons.chevron_left),
                 onPressed: () {
                   setState(() {
-                    displayedMonth = DateTime(displayedMonth.year, displayedMonth.month - 1);
+                    displayedMonth =
+                        DateTime(displayedMonth.year, displayedMonth.month - 1);
                   });
                 },
               ),
@@ -514,7 +501,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                     items: List.generate(12, (i) => i + 1)
                         .map((m) => DropdownMenuItem(
                               value: m,
-                              child: Text(DateFormat('MMM').format(DateTime(2000, m))),
+                              child: Text(
+                                  DateFormat('MMM').format(DateTime(2000, m))),
                             ))
                         .toList(),
                     onChanged: (val) {
@@ -530,7 +518,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                     value: displayedMonth.year,
                     underline: const SizedBox(),
                     items: List.generate(10, (i) => DateTime.now().year - 5 + i)
-                        .map((y) => DropdownMenuItem(value: y, child: Text('$y')))
+                        .map((y) =>
+                            DropdownMenuItem(value: y, child: Text('$y')))
                         .toList(),
                     onChanged: (val) {
                       if (val != null) {
@@ -546,7 +535,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                 icon: const Icon(Icons.chevron_right),
                 onPressed: () {
                   setState(() {
-                    displayedMonth = DateTime(displayedMonth.year, displayedMonth.month + 1);
+                    displayedMonth =
+                        DateTime(displayedMonth.year, displayedMonth.month + 1);
                   });
                 },
               ),
@@ -617,7 +607,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
       rows.add(
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: days.sublist(i, (i + 7 > days.length) ? days.length : i + 7),
+          children:
+              days.sublist(i, (i + 7 > days.length) ? days.length : i + 7),
         ),
       );
       rows.add(SizedBox(height: 4.h));
@@ -629,7 +620,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
-  Widget _buildInfoRow(String label, String value, {VoidCallback? trailingTap}) {
+  Widget _buildInfoRow(String label, String value,
+      {VoidCallback? trailingTap}) {
     return InkWell(
       onTap: trailingTap,
       borderRadius: BorderRadius.circular(8.r),
@@ -683,7 +675,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
 
     if (text.isEmpty || selection.start == 0) {
       _descController.text = '$prefix$text';
-      _descController.selection = TextSelection.collapsed(offset: prefix.length);
+      _descController.selection =
+          TextSelection.collapsed(offset: prefix.length);
     } else {
       final newText =
           '${text.substring(0, selection.start)}\n$prefix${text.substring(selection.start)}';
@@ -701,7 +694,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
 
     for (int i = 0; i < lines.length; i++) {
       if (lines[i].trim().isNotEmpty) {
-        newLines.add('${i + 1}. ${lines[i].replaceAll(RegExp(r'^\d+\.\s*'), '')}');
+        newLines
+            .add('${i + 1}. ${lines[i].replaceAll(RegExp(r'^\d+\.\s*'), '')}');
       } else {
         newLines.add(lines[i]);
       }

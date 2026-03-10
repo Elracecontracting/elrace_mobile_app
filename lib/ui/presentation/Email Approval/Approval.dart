@@ -461,7 +461,6 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         selectedCategoryKey == _CategoryKeys.pettyCash) {
       return HrAndPettycashCard(
         approvalItems: approvalItems,
-        categoryType: selectedCategoryKey,
       );
     } else if (selectedCategoryKey == _CategoryKeys.rfq ||
         selectedCategoryKey == _CategoryKeys.invoice) {
@@ -491,38 +490,37 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     required bool isSelected,
     int count = 0,
   }) {
-    return Stack(
-      clipBehavior: Clip.none,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Container(
-          width: 85.w,
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: const Color(0xFF8E8E8E),
-              width: 1.2,
-            ),
-         
-          ),
-          child: Container(
-        
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-              // Solid/gradient based on selection
-              color: isSelected ? const Color(0xFF1A2540) : null,
-
-            ),
-            child: Center(
-              child: SvgPicture.asset(
-                icon,
-                height: 44.w,
-                width: 44.w,
-                fit: BoxFit.contain,
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 85.w,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: const Color(0xFF8E8E8E),
+                  width: 1.2,
+                ),
+              ),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: isSelected ? const Color(0xFF1A2540) : null,
+                ),
+                child: Center(
+                  child: SvgPicture.asset(
+                    icon,
+                    height: 44.w,
+                    width: 44.w,
+                    fit: BoxFit.contain,
+                  ),
+                ),
               ),
             ),
-          ),
-        ),
         // Badge for count
         if (count > 0)
           Positioned(
@@ -555,6 +553,23 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
               ),
             ),
           ),
+          ],
+        ),
+        SizedBox(height: 6.h),
+        SizedBox(
+          width: 85.w,
+          child: Text(
+            title,
+            style: GoogleFonts.inter(
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF1A2540),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+          ),
+        ),
       ],
     );
   }

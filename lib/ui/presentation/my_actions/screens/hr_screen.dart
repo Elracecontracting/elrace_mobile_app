@@ -102,8 +102,9 @@ class _HrScreenState extends State<HrScreen> {
                         title: item.requestType?.trim().isNotEmpty == true
                             ? item.requestType!
                             : 'REQUEST',
-                        employeeName:
-                            item.employeeName.trim().isEmpty ? '-' : item.employeeName,
+                        employeeName: item.employeeName.trim().isEmpty
+                            ? '-'
+                            : item.employeeName,
                         requestId: '${item.id}',
                         updatedAt: _formatDate(item.date),
                         statusBadgeAsset: _statusBadgeAsset(item.status),
@@ -177,6 +178,7 @@ class _HrRequestCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: 150.h,
       decoration: BoxDecoration(
         color: const Color(0xFFF3F3F3),
         borderRadius: BorderRadius.circular(28.r),
@@ -185,78 +187,97 @@ class _HrRequestCard extends StatelessWidget {
       child: Stack(
         children: [
           _StatusRibbon(assetPath: statusBadgeAsset),
-          Padding(
-            padding: EdgeInsets.fromLTRB(18.w, 18.h, 18.w, 14.h),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Text(
-                    requestNo.trim().isEmpty ? 'REQ/-' : requestNo,
-                    style: GoogleFonts.inter(
-                      fontSize: 17.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0D3E7F),
+          MediaQuery(
+            data: MediaQuery.of(context).copyWith(
+              textScaler: TextScaler.noScaling,
+            ),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(18.w, 10.h, 18.w, 15.h),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.topLeft,
+                    child: SizedBox(
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(
+                            child: Text(
+                              requestNo.trim().isEmpty ? 'REQ/-' : requestNo,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.inter(
+                                fontSize: 17.sp,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF0D3E7F),
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            title.toUpperCase(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.poppins(
+                              fontSize: 13.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                            ),
+                          ),
+                          SizedBox(height: 2.h),
+                          Text(
+                            employeeName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.lexendDeca(
+                              fontSize: 11.sp,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF484848).withOpacity(0.72),
+                            ),
+                          ),
+                          SizedBox(height: 1.h),
+                          Text(
+                            requestId,
+                            style: GoogleFonts.inter(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF686868),
+                            ),
+                          ),
+                          const Spacer(),
+                          Align(
+                            alignment: Alignment.bottomRight,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  'Last Updated',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFFB1B1B1),
+                                  ),
+                                ),
+                                Text(
+                                  updatedAt,
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFFB1B1B1),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ),
-                SizedBox(height: 8.h),
-                Text(
-                  title.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13.sp,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-                Text(
-                  employeeName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.lexendDeca(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF484848).withOpacity(0.72),
-                  ),
-                ),
-                SizedBox(height: 1.h),
-                Text(
-                  requestId,
-                  style: GoogleFonts.inter(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF686868),
-                  ),
-                ),
-                SizedBox(height: 8.h),
-                Align(
-                  alignment: Alignment.bottomRight,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        'Last Updated',
-                        style: GoogleFonts.inter(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFFB1B1B1),
-                        ),
-                      ),
-                      Text(
-                        updatedAt,
-                        style: GoogleFonts.inter(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFFB1B1B1),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                  );
+                },
+              ),
             ),
           ),
         ],

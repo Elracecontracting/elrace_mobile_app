@@ -33,6 +33,11 @@ class HeaderWidget extends StatefulWidget implements PreferredSizeWidget {
 }
 
 class _HeaderWidgetState extends State<HeaderWidget> {
+  static const String _heroTag = 'global_header_widget_hero';
+  static String _cachedImageBase64 = '';
+  static int _cachedNotificationCount = 0;
+  static int _cachedApprovalCount = 0;
+
   String _imageBase64 = '';
   int _notificationCount = 0;
   int _approvalCount = 0;
@@ -40,6 +45,11 @@ class _HeaderWidgetState extends State<HeaderWidget> {
   @override
   void initState() {
     super.initState();
+
+    _imageBase64 = _cachedImageBase64;
+    _notificationCount = _cachedNotificationCount;
+    _approvalCount = _cachedApprovalCount;
+
     _loadUserData();
     _loadNotificationCount();
     _loadApprovalCount();
@@ -79,6 +89,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
     if (!SharedPref.isUserAuthenticated()) return;
     final data = SharedPref.getLoginData();
     _imageBase64 = data.result?.data?.image_url ?? '';
+    _cachedImageBase64 = _imageBase64;
   }
 
   Future<void> _loadNotificationCount() async {
@@ -86,6 +97,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
     if (mounted) {
       setState(() {
         _notificationCount = count;
+        _cachedNotificationCount = count;
       });
     }
   }
@@ -97,6 +109,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
     if (mounted) {
       setState(() {
         _approvalCount = count;
+        _cachedApprovalCount = count;
         print('   - ✅ State updated with count: $count');
       });
     } else {
@@ -124,7 +137,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
         height: double.infinity,
       );
     }
-    
+
     // Check if it's a URL (starts with http:// or https://)
     if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
       return Image.network(
@@ -140,7 +153,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
         ),
       );
     }
-    
+
     // Check if it's valid base64
     if (_isValidBase64(imageData)) {
       try {
@@ -154,7 +167,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
         // Fall through to default
       }
     }
-    
+
     // Default fallback
     return Image.asset(
       'assets/png/profile_1.png',
@@ -167,320 +180,326 @@ class _HeaderWidgetState extends State<HeaderWidget> {
   @override
   Widget build(BuildContext context) {
     var bloc = HomeBloc.get(context);
-    return AppBar(
-      automaticallyImplyLeading: false,
-      backgroundColor: Colors.transparent,
-      centerTitle: true,
-      elevation: 0,
-      toolbarHeight: SizeConfig().getHeight(100),
-      flexibleSpace: Container(
-        padding: EdgeInsets.zero,
-        width: ScreenUtil().screenWidth,
-        height: SizeConfig().getHeight(115),
-        decoration: const BoxDecoration(
-          image: DecorationImage(
-            image: AssetImage('assets/png/header_bg.png'),
-            fit: BoxFit.cover,
+    return Hero(
+      tag: _heroTag,
+      transitionOnUserGestures: true,
+      child: AppBar(
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.transparent,
+        centerTitle: true,
+        elevation: 0,
+        toolbarHeight: SizeConfig().getHeight(100),
+        flexibleSpace: Container(
+          padding: EdgeInsets.zero,
+          width: ScreenUtil().screenWidth,
+          height: SizeConfig().getHeight(115),
+          decoration: const BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/png/header_bg.png'),
+              fit: BoxFit.cover,
+            ),
           ),
-        ),
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            PositionedDirectional(
-              top: SizeConfig().getHeight(40.w),
-              start: SizeConfig().getWidth(10),
-              //left: SizeConfig().getWidth(15),
-              child: GestureDetector(
-                onTap: () {
-                  // Navigate to home screen from anywhere
-                  // First pop all pushed routes back to the home screen
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                  // Then reset to the main home tab
-                  final bloc = HomeBloc.get(context);
-                  bloc.add(ChangeCurrentIndex(index: 1));
-                },
-                child: Image.asset(
-                  'assets/gif/el-race-logo.gif',
-                  fit: BoxFit.cover,
-                  height: SizeConfig().getHeight(55),
-                  width: SizeConfig().getWidth(110),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              PositionedDirectional(
+                top: SizeConfig().getHeight(40.w),
+                start: SizeConfig().getWidth(10),
+                //left: SizeConfig().getWidth(15),
+                child: GestureDetector(
+                  onTap: () {
+                    // Navigate to home screen from anywhere
+                    // First pop all pushed routes back to the home screen
+                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    // Then reset to the main home tab
+                    final bloc = HomeBloc.get(context);
+                    bloc.add(ChangeCurrentIndex(index: 1));
+                  },
+                  child: Image.asset(
+                    'assets/gif/el-race-logo.gif',
+                    fit: BoxFit.cover,
+                    height: SizeConfig().getHeight(55),
+                    width: SizeConfig().getWidth(110),
+                  ),
                 ),
               ),
-            ),
-            SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                    horizontal: SizeConfig().getWidth(20), vertical: 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SizedBox(
-                      width: SizeConfig().getWidth(200),
-                    ),
-                    Row(
-                      children: [
-                        // Global Search Icon (New)
-                        GestureDetector(
-                          onTap: () {
-                            if (SharedPref.isUserAuthenticated()) {
-                              // Check current route to prevent stacking search screens
-                              final currentRoute = ModalRoute.of(context);
-                              final currentRouteName =
-                                  currentRoute?.settings.name;
+              SafeArea(
+                bottom: false,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                      horizontal: SizeConfig().getWidth(20), vertical: 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        width: SizeConfig().getWidth(200),
+                      ),
+                      Row(
+                        children: [
+                          // Global Search Icon (New)
+                          GestureDetector(
+                            onTap: () {
+                              if (SharedPref.isUserAuthenticated()) {
+                                // Check current route to prevent stacking search screens
+                                final currentRoute = ModalRoute.of(context);
+                                final currentRouteName =
+                                    currentRoute?.settings.name;
 
-                              // Don't navigate if already on Global Search screen
-                              if (currentRouteName == '/global_search') {
-                                return;
+                                // Don't navigate if already on Global Search screen
+                                if (currentRouteName == '/global_search') {
+                                  return;
+                                }
+
+                                Navigator.push(
+                                  context,
+                                  SlideRightPageRoute(
+                                    child: const GlobalSearchScreen(),
+                                    settings: const RouteSettings(
+                                        name: '/global_search'),
+                                  ),
+                                );
                               }
-
-                              Navigator.push(
-                                context,
-                                SlideRightPageRoute(
-                                  child: const GlobalSearchScreen(),
-                                  settings: const RouteSettings(
-                                      name: '/global_search'),
-                                ),
-                              );
-                            }
-                          },
-                          child: Icon(
-                            Icons.search,
-                            size: 28,
-                            color: Colors.black.withOpacity(0.7),
+                            },
+                            child: Icon(
+                              Icons.search,
+                              size: 28,
+                              color: Colors.black.withOpacity(0.7),
+                            ),
                           ),
-                        ),
 
-                        SizedBox(width: SizeConfig().getWidth(10)),
-                        // Old Search Icon (hidden by flag)
-                        widget.hidden
-                            ? const SizedBox.shrink()
-                            : GestureDetector(
-                                onTap: () {
-                                  if (SharedPref.isUserAuthenticated()) {
-                                    Navigator.push(
-                                      context,
-                                      SlideRightPageRoute(
-                                        child: const WidgetSearchScreen(),
+                          SizedBox(width: SizeConfig().getWidth(10)),
+                          // Old Search Icon (hidden by flag)
+                          widget.hidden
+                              ? const SizedBox.shrink()
+                              : GestureDetector(
+                                  onTap: () {
+                                    if (SharedPref.isUserAuthenticated()) {
+                                      Navigator.push(
+                                        context,
+                                        SlideRightPageRoute(
+                                          child: const WidgetSearchScreen(),
+                                        ),
+                                      );
+                                    }
+                                  },
+                                  child: SizedBox(
+                                    width: 30,
+                                    height: 30,
+                                    child: Icon(
+                                      Icons.search,
+                                      size: 28,
+                                      color: Colors.black.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ),
+                          widget.hidden
+                              ? const SizedBox.shrink()
+                              : SizedBox(width: SizeConfig().getWidth(10)),
+                          GestureDetector(
+                            onTap: () async {
+                              if (SharedPref.isUserAuthenticated()) {
+                                // Check current route by name
+                                final currentRoute = ModalRoute.of(context);
+                                final currentRouteName =
+                                    currentRoute?.settings.name;
+
+                                // Don't navigate if already on Approvals page
+                                if (currentRouteName == '/approvals') {
+                                  return;
+                                }
+
+                                // If on Notifications, replace it; otherwise push
+                                if (currentRouteName == '/notifications') {
+                                  await Navigator.pushReplacement(
+                                    context,
+                                    SlideRightPageRoute(
+                                      child: const ApprovalsScreen(),
+                                      settings: const RouteSettings(
+                                          name: '/approvals'),
+                                    ),
+                                  );
+                                } else {
+                                  await Navigator.push(
+                                    context,
+                                    SlideRightPageRoute(
+                                      child: const ApprovalsScreen(),
+                                      settings: const RouteSettings(
+                                          name: '/approvals'),
+                                    ),
+                                  );
+                                }
+                                // Refresh approval count after returning
+                                _loadApprovalCount();
+                              }
+                            },
+                            child: Stack(
+                              alignment: Alignment.topRight,
+                              children: [
+                                SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: Image.asset(
+                                    'assets/png/approval_icon.png',
+                                    fit: BoxFit.contain,
+                                  ),
+                                ),
+                                // Badge for approval count
+                                if (_approvalCount > 0)
+                                  Positioned(
+                                    right: 0,
+                                    top: -2,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(3),
+                                      constraints: const BoxConstraints(
+                                        minWidth: 16,
+                                        minHeight: 16,
                                       ),
-                                    );
-                                  }
-                                },
-                                child: SizedBox(
+                                      decoration: const BoxDecoration(
+                                        color: red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        _approvalCount > 99
+                                            ? '99+'
+                                            : _approvalCount.toString(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(width: SizeConfig().getWidth(10)),
+                          GestureDetector(
+                            onTap: () async {
+                              print('🔔 [HEADER] Notification bell tapped');
+                              print(
+                                  '   - User authenticated: ${SharedPref.isUserAuthenticated()}');
+
+                              if (SharedPref.isUserAuthenticated()) {
+                                // Check current route by name
+                                final currentRoute = ModalRoute.of(context);
+                                final currentRouteName =
+                                    currentRoute?.settings.name;
+
+                                // Don't navigate if already on Notifications page
+                                if (currentRouteName == '/notifications') {
+                                  print(
+                                      '   - ⚠️ Already on notifications screen, ignoring tap');
+                                  return;
+                                }
+
+                                print('   - ✅ Opening notification screen...');
+
+                                // If on Approvals, replace it; otherwise push
+                                if (currentRouteName == '/approvals') {
+                                  await Navigator.pushReplacement(
+                                    context,
+                                    SlideRightPageRoute(
+                                      child: const NotificationScreen(),
+                                      settings: const RouteSettings(
+                                          name: '/notifications'),
+                                    ),
+                                  );
+                                } else {
+                                  await Navigator.push(
+                                    context,
+                                    SlideRightPageRoute(
+                                      child: const NotificationScreen(),
+                                      settings: const RouteSettings(
+                                          name: '/notifications'),
+                                    ),
+                                  );
+                                }
+
+                                print(
+                                    '   - ✅ Returned from notification screen');
+                                // Refresh notification count after returning
+                                _loadNotificationCount();
+                              } else {
+                                print('   - ❌ User not authenticated');
+                              }
+                            },
+                            child: Stack(
+                              alignment: Alignment.topRight,
+                              children: [
+                                SizedBox(
                                   width: 30,
                                   height: 30,
-                                  child: Icon(
-                                    Icons.search,
-                                    size: 28,
-                                    color: Colors.black.withOpacity(0.7),
+                                  child: Image.asset(
+                                    'assets/png/bell_image.png',
+                                    fit: BoxFit.contain,
                                   ),
                                 ),
-                              ),
-                        widget.hidden
-                            ? const SizedBox.shrink()
-                            : SizedBox(width: SizeConfig().getWidth(10)),
-                        GestureDetector(
-                          onTap: () async {
-                            if (SharedPref.isUserAuthenticated()) {
-                              // Check current route by name
-                              final currentRoute = ModalRoute.of(context);
-                              final currentRouteName =
-                                  currentRoute?.settings.name;
-
-                              // Don't navigate if already on Approvals page
-                              if (currentRouteName == '/approvals') {
-                                return;
-                              }
-
-                              // If on Notifications, replace it; otherwise push
-                              if (currentRouteName == '/notifications') {
-                                await Navigator.pushReplacement(
-                                  context,
-                                  SlideRightPageRoute(
-                                    child: const ApprovalsScreen(),
-                                    settings:
-                                        const RouteSettings(name: '/approvals'),
-                                  ),
-                                );
-                              } else {
-                                await Navigator.push(
-                                  context,
-                                  SlideRightPageRoute(
-                                    child: const ApprovalsScreen(),
-                                    settings:
-                                        const RouteSettings(name: '/approvals'),
-                                  ),
-                                );
-                              }
-                              // Refresh approval count after returning
-                              _loadApprovalCount();
-                            }
-                          },
-                          child: Stack(
-                            alignment: Alignment.topRight,
-                            children: [
-                              SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: Image.asset(
-                                  'assets/png/approval_icon.png',
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                              // Badge for approval count
-                              if (_approvalCount > 0)
                                 Positioned(
                                   right: 0,
                                   top: -2,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(3),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 16,
-                                      minHeight: 16,
-                                    ),
-                                    decoration: const BoxDecoration(
-                                      color: red,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Text(
-                                      _approvalCount > 99
-                                          ? '99+'
-                                          : _approvalCount.toString(),
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
+                                  child: _notificationCount > 0
+                                      ? Container(
+                                          padding: const EdgeInsets.all(3),
+                                          constraints: const BoxConstraints(
+                                            minWidth: 16,
+                                            minHeight: 16,
+                                          ),
+                                          decoration: const BoxDecoration(
+                                            color: red,
+                                            shape: BoxShape.circle,
+                                          ),
+                                          child: Text(
+                                            _notificationCount > 99
+                                                ? '99+'
+                                                : _notificationCount.toString(),
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        )
+                                      : const SizedBox.shrink(),
                                 ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        SizedBox(width: SizeConfig().getWidth(10)),
-                        GestureDetector(
-                          onTap: () async {
-                            print('🔔 [HEADER] Notification bell tapped');
-                            print(
-                                '   - User authenticated: ${SharedPref.isUserAuthenticated()}');
-
-                            if (SharedPref.isUserAuthenticated()) {
-                              // Check current route by name
-                              final currentRoute = ModalRoute.of(context);
-                              final currentRouteName =
-                                  currentRoute?.settings.name;
-
-                              // Don't navigate if already on Notifications page
-                              if (currentRouteName == '/notifications') {
-                                print(
-                                    '   - ⚠️ Already on notifications screen, ignoring tap');
+                          SizedBox(width: SizeConfig().getWidth(15)),
+                          GestureDetector(
+                            onTap: () {
+                              if (!SharedPref.isUserAuthenticated()) {
+                                Util.pushPage(const SignInScreen(), context);
                                 return;
                               }
-
-                              print('   - ✅ Opening notification screen...');
-
-                              // If on Approvals, replace it; otherwise push
-                              if (currentRouteName == '/approvals') {
-                                await Navigator.pushReplacement(
-                                  context,
-                                  SlideRightPageRoute(
-                                    child: const NotificationScreen(),
-                                    settings: const RouteSettings(
-                                        name: '/notifications'),
-                                  ),
-                                );
-                              } else {
-                                await Navigator.push(
-                                  context,
-                                  SlideRightPageRoute(
-                                    child: const NotificationScreen(),
-                                    settings: const RouteSettings(
-                                        name: '/notifications'),
-                                  ),
-                                );
-                              }
-
-                              print('   - ✅ Returned from notification screen');
-                              // Refresh notification count after returning
-                              _loadNotificationCount();
-                            } else {
-                              print('   - ❌ User not authenticated');
-                            }
-                          },
-                          child: Stack(
-                            alignment: Alignment.topRight,
-                            children: [
-                              SizedBox(
-                                width: 30,
-                                height: 30,
-                                child: Image.asset(
-                                  'assets/png/bell_image.png',
-                                  fit: BoxFit.contain,
-                                ),
+                              Provider.of<ProfileBoxProvider>(context,
+                                      listen: false)
+                                  .toggleProfileBox();
+                            },
+                            child: Container(
+                              width: 34,
+                              height: 34,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border:
+                                    Border.all(color: Colors.white, width: 2),
                               ),
-                              Positioned(
-                                right: 0,
-                                top: -2,
-                                child: _notificationCount > 0
-                                    ? Container(
-                                        padding: const EdgeInsets.all(3),
-                                        constraints: const BoxConstraints(
-                                          minWidth: 16,
-                                          minHeight: 16,
-                                        ),
-                                        decoration: const BoxDecoration(
-                                          color: red,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: Text(
-                                          _notificationCount > 99
-                                              ? '99+'
-                                              : _notificationCount.toString(),
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      )
-                                    : const SizedBox.shrink(),
+                              child: ClipOval(
+                                child: _getProfileImage(_imageBase64),
                               ),
-                            ],
-                          ),
-                        ),
-                        SizedBox(width: SizeConfig().getWidth(15)),
-                        GestureDetector(
-                          onTap: () {
-                            if (!SharedPref.isUserAuthenticated()) {
-                              Util.pushPage(const SignInScreen(), context);
-                              return;
-                            }
-                            Provider.of<ProfileBoxProvider>(context,
-                                    listen: false)
-                                .toggleProfileBox();
-                          },
-                          child: Container(
-                            width: 34,
-                            height: 34,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white, width: 2),
-                            ),
-                            child: ClipOval(
-                              child: _getProfileImage(_imageBase64),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

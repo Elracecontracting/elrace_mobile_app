@@ -20,6 +20,7 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 
 import '../../../widgets/custom_slider_button.dart';
 import 'attachment_viewer_screen.dart';
+import 'family_documents_tab.dart';
 import 'company_documents_tab.dart';
 import 'share_documents_tab.dart';
 
@@ -361,33 +362,16 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
       if (response.statusCode == 200 &&
           data['result'] != null &&
           data['result']['status'] == 'success') {
-        final List groupList = (data['result']['data'] ?? []) as List;
+        final List list = (data['result']['data'] ?? []) as List;
 
         if (kDebugMode) {
-          debugPrint('📄 My Documents: ${groupList.length} groups');
-          for (var i = 0; i < groupList.length; i++) {
-            _debugPrintLong('📄 Group $i: ${jsonEncode(groupList[i])}');
+          debugPrint('📄 My Documents: total=${list.length}');
+          for (var i = 0; i < list.length; i++) {
+            _debugPrintLong('📄 Document $i: ${jsonEncode(list[i])}');
           }
         }
-
-        // Flatten grouped response: each group has document_type + documents[]
-        final flatDocs = <Map<String, dynamic>>[];
-        for (final group in groupList) {
-          final groupMap = group as Map<String, dynamic>;
-          final type = (groupMap['document_type'] ?? groupMap['type'] ?? 'DOCUMENT').toString();
-          final docs = (groupMap['documents'] ?? [groupMap]) as List;
-          for (final doc in docs) {
-            final map = Map<String, dynamic>.from(doc as Map);
-            map['type'] = type;
-            flatDocs.add(map);
-          }
-        }
-
-        final mapped = flatDocs.map<Map<String, dynamic>>((map) {
-          final type = (map['type'] ?? 'DOCUMENT').toString();
-          final name = (map['name'] ?? '').toString();
-
-          String icon = 'assets/png/other-documetns-icon.png';
+        String resolveIcon(String type, String name) {
+          var icon = 'assets/png/other-documetns-icon.png';
           final t = type.toLowerCase();
           final n = name.toLowerCase();
 
@@ -399,9 +383,15 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
             icon = 'assets/png/contract-icon.png';
           } else if (t.contains('passport')) {
             icon = 'assets/png/passport.png';
-          } else if (t.contains('emirates') || t.contains('id') || n.contains('emirates') || n.contains('eid')) {
+          } else if (t.contains('emirates') ||
+              t.contains('id') ||
+              n.contains('emirates') ||
+              n.contains('eid')) {
             icon = 'assets/png/emitates_id.png';
-          } else if (t.contains('driving') || t.contains('license') || n.contains('driving') || n.contains('license')) {
+          } else if (t.contains('driving') ||
+              t.contains('license') ||
+              n.contains('driving') ||
+              n.contains('license')) {
             icon = 'assets/png/driving_license.png';
           } else if (t.contains('insurance') || n.contains('insurance')) {
             icon = 'assets/png/personal-icon.png';
@@ -409,22 +399,62 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
             icon = 'assets/png/labor-cards-icon.png';
           } else if (t.contains('personal') || t.contains('profile')) {
             icon = 'assets/png/personal-icon.png';
-          } else if (t.contains('family')) {
-            icon = 'assets/png/other-documetns-icon.png';
           }
 
-          return {
-            'id': map['id'],
-            'icon': icon,
-            'title': type.toUpperCase(),
-            'name': name,
-            'issue_date': map['issue_date'],
-            'expiry_date': map['expiry_date'],
-            'description': map['description'],
-            'attachment_ids': map['attachment_ids'] ?? [],
-            '_isFamily': familyOnly,
-          };
-        }).toList();
+          return icon;
+        }
+
+        final mapped = <Map<String, dynamic>>[];
+
+        for (final raw in list) {
+          if (raw is! Map) continue;
+
+          final group = Map<String, dynamic>.from(raw as Map);
+          final groupType =
+              (group['document_type'] ?? group['type'] ?? 'DOCUMENT')
+                  .toString();
+          final groupDocs = group['documents'];
+
+          if (groupDocs is List && groupDocs.isNotEmpty) {
+            for (final docRaw in groupDocs) {
+              if (docRaw is! Map) continue;
+              final map = Map<String, dynamic>.from(docRaw as Map);
+
+              final type =
+                  (map['document_type'] ?? map['type'] ?? groupType).toString();
+              final name = (map['name'] ?? '').toString();
+
+              mapped.add({
+                'id': map['id'],
+                'icon': resolveIcon(type, name),
+                'title': type.toUpperCase(),
+                'name': name,
+                'issue_date': map['issue_date'],
+                'expiry_date': map['expiry_date'],
+                'description': map['description'],
+                'attachment_ids': map['attachment_ids'] ?? [],
+                '_isFamily': familyOnly,
+              });
+            }
+          } else {
+            final map = group;
+            final type =
+                (map['document_type'] ?? map['type'] ?? groupType).toString();
+            final name = (map['name'] ?? '').toString();
+
+            mapped.add({
+              'id': map['id'],
+              'icon': resolveIcon(type, name),
+              'title': type.toUpperCase(),
+              'name': name,
+              'issue_date': map['issue_date'],
+              'expiry_date': map['expiry_date'],
+              'description': map['description'],
+              'attachment_ids': map['attachment_ids'] ?? [],
+              '_isFamily': familyOnly,
+            });
+          }
+        }
 
         // Apply search filter if keyword is provided
         final filteredMapped = keyword != null && keyword.trim().isNotEmpty
@@ -463,14 +493,8 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
   }
 
   List<Map<String, dynamic>> _filteredDocs() {
-    if (currentIndex == 0) {
-      // My Documents tab: exclude "Family" type documents
-      return documents.where((doc) {
-        final type = (doc['title'] ?? '').toString().toUpperCase();
-        return type != 'FAMILY';
-      }).toList();
-    }
-    // Family tab or other: return all documents as-is
+    // Documents are already filtered by family_only from API
+    // Just return them as is since filtering happens server-side
     return documents;
   }
 
@@ -625,13 +649,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
                 return InkWell(
                   onTap: () {
-                    if (currentIndex != index) {
-                      setState(() => currentIndex = index);
-                      // Re-fetch documents when switching between My Documents & Family tabs
-                      if (index == 0 || index == 1) {
-                        _fetchMyDocuments();
-                      }
-                    }
+                    setState(() => currentIndex = index);
                   },
                   child: Container(
                     alignment: Alignment.center,
@@ -680,11 +698,12 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           SizedBox(height: 8.h),
           // ── Tab Content ──
           Expanded(
-            child: (currentIndex == 0 || currentIndex == 1)
+            child: currentIndex == 0
                 ? _buildMyDocumentsContent()
                 : IndexedStack(
-                    index: currentIndex - 2,
+                    index: currentIndex - 1,
                     children: const [
+                      FamilyDocumentsTab(),
                       CompanyDocumentsTab(),
                       ShareDocumentsTab(),
                     ],
@@ -1380,16 +1399,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
   String? _attachedFilePath;
   bool _isUploading = false;
 
-  bool get _isFamily => widget.type == DocumentDialogType.family;
   bool get _showIdAndExpiry => widget.type != DocumentDialogType.company;
-
-  @override
-  void initState() {
-    super.initState();
-    if (_isFamily) {
-      _selectedType = 'Family';
-    }
-  }
 
   String get _dialogTitle {
     switch (widget.type) {
@@ -1460,22 +1470,14 @@ class _DocumentDialogState extends State<DocumentDialog> {
     final id = _idController.text.trim();
     final selectedType = (_selectedType ?? '').trim();
     if (selectedType.isEmpty) {
-      _sliderKey.currentState?.resetSlider();
       _showErrorDialog('Please select document type.');
       return;
     }
-    if (_showIdAndExpiry && !_isFamily && id.isEmpty) {
-      _sliderKey.currentState?.resetSlider();
+    if (_showIdAndExpiry && id.isEmpty) {
       _showErrorDialog('Please fill in ID number.');
       return;
     }
-    if (_isFamily && id.isEmpty) {
-      _sliderKey.currentState?.resetSlider();
-      _showErrorDialog('Please enter a document name.');
-      return;
-    }
     if ((_attachedFilePath ?? '').isEmpty) {
-      _sliderKey.currentState?.resetSlider();
       _showErrorDialog('Please attach a file.');
       return;
     }
@@ -1514,7 +1516,6 @@ class _DocumentDialogState extends State<DocumentDialog> {
         'photo': 5,
         'CV': 6,
         'Certifications': 7,
-        'Family': 8,
       };
 
       final documentTypeId = documentTypeIds[selectedType] ?? 1;
@@ -1668,88 +1669,74 @@ class _DocumentDialogState extends State<DocumentDialog> {
               ),
               SizedBox(height: 14.h),
 
-              // Document type dropdown (hidden for family - auto-set to 'Family')
-              if (_isFamily)
-                _buildPillField(
-                  child: Center(
-                    child: Text(
-                      'Family Document',
-                      style: GoogleFonts.aBeeZee(
-                        color: Colors.black87,
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                  ),
-                )
-              else
-                _buildPillField(
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton2<String>(
-                      value: _selectedType,
-                      isExpanded: true,
-                      hint: Center(
-                        child: Text(
-                          'document type',
-                          style: GoogleFonts.aBeeZee(
-                            color: Colors.grey,
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w400,
-                            letterSpacing: 1.0,
-                          ),
+              // Document type dropdown
+              _buildPillField(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton2<String>(
+                    value: _selectedType,
+                    isExpanded: true,
+                    hint: Center(
+                      child: Text(
+                        'document type',
+                        style: GoogleFonts.aBeeZee(
+                          color: Colors.grey,
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w400,
+                          letterSpacing: 1.0,
                         ),
                       ),
-                      items: _types
-                          .map(
-                            (t) => DropdownMenuItem<String>(
-                              value: t,
-                              child: Center(
-                                child: Text(
-                                  t,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.aBeeZee(
-                                    color: Colors.black87,
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.w400,
-                                  ),
+                    ),
+                    items: _types
+                        .map(
+                          (t) => DropdownMenuItem<String>(
+                            value: t,
+                            child: Center(
+                              child: Text(
+                                t,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.aBeeZee(
+                                  color: Colors.black87,
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w400,
                                 ),
                               ),
                             ),
-                          )
-                          .toList(),
-                      onChanged: (v) => setState(() => _selectedType = v),
-                      // Keep the pill container as the button background.
-                      buttonStyleData: ButtonStyleData(
-                        height: 30.h,
-                        padding: EdgeInsets.symmetric(horizontal: 4.w),
-                        decoration: const BoxDecoration(color: Colors.transparent),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (v) => setState(() => _selectedType = v),
+                    // Keep the pill container as the button background.
+                    buttonStyleData: ButtonStyleData(
+                      height: 30.h,
+                      padding: EdgeInsets.symmetric(horizontal: 4.w),
+                      decoration:
+                          const BoxDecoration(color: Colors.transparent),
+                    ),
+                    iconStyleData: const IconStyleData(
+                      icon: Icon(Icons.keyboard_arrow_down_rounded),
+                      iconSize: 20,
+                      iconEnabledColor: Colors.grey,
+                    ),
+                    dropdownStyleData: DropdownStyleData(
+                      maxHeight: 260.h,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16.r),
+                        color: Colors.white,
                       ),
-                      iconStyleData: const IconStyleData(
-                        icon: Icon(Icons.keyboard_arrow_down_rounded),
-                        iconSize: 20,
-                        iconEnabledColor: Colors.grey,
+                      offset: const Offset(0, -4),
+                      scrollbarTheme: ScrollbarThemeData(
+                        radius: const Radius.circular(40),
+                        thickness: WidgetStateProperty.all(6),
+                        thumbVisibility: WidgetStateProperty.all(true),
                       ),
-                      dropdownStyleData: DropdownStyleData(
-                        maxHeight: 260.h,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16.r),
-                          color: Colors.white,
-                        ),
-                        offset: const Offset(0, -4),
-                        scrollbarTheme: ScrollbarThemeData(
-                          radius: const Radius.circular(40),
-                          thickness: WidgetStateProperty.all(6),
-                          thumbVisibility: WidgetStateProperty.all(true),
-                        ),
-                      ),
-                      menuItemStyleData: MenuItemStyleData(
-                        height: 44.h,
-                        padding: EdgeInsets.symmetric(horizontal: 12.w),
-                      ),
+                    ),
+                    menuItemStyleData: MenuItemStyleData(
+                      height: 44.h,
+                      padding: EdgeInsets.symmetric(horizontal: 12.w),
                     ),
                   ),
                 ),
+              ),
 
               if (_showIdAndExpiry) ...[
                 SizedBox(height: 10.h),
@@ -1763,7 +1750,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
                     ),
                     onTapOutside: (_) => FocusScope.of(context).unfocus(),
                     decoration: InputDecoration(
-                      hintText: _isFamily ? 'Document Name' : 'ID Number',
+                      hintText: 'ID Number',
                       hintStyle: GoogleFonts.aBeeZee(
                         color: Colors.grey,
                         fontSize: 12.sp,
@@ -1772,8 +1759,8 @@ class _DocumentDialogState extends State<DocumentDialog> {
                       ),
                       border: InputBorder.none,
                       isDense: true,
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                     ),
                   ),
                 ),
