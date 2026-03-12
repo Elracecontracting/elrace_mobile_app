@@ -214,9 +214,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         c.type == ChatType.role || c.type == ChatType.group)
                     .toList();
 
-                // Bottom list shows DMs and support chats (groups already shown above)
+                // Bottom list shows only DMs (groups already shown above)
                 final directChats =
-                    allChats.where((c) => c.type == ChatType.dm || c.type == ChatType.support).toList();
+                    allChats.where((c) => c.type == ChatType.dm).toList();
 
                 return NotificationListener<ScrollNotification>(
                   onNotification: (scrollNotification) {
@@ -431,8 +431,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
           title: userChat.title ?? 'Chat',
           chatType: userChat.type,
           peerUid: userChat.peerUid,
-          supportUserUid: userChat.supportUserUid,
-          supportGroupTitle: userChat.supportGroupTitle,
         ),
       ),
     );
@@ -649,22 +647,6 @@ class _ChatListTile extends StatelessWidget {
             ),
           );
         },
-      );
-    }
-
-    // Support chat avatar
-    if (userChat.type == ChatType.support) {
-      return _avatarShell(
-        isOnline: true,
-        child: CircleAvatar(
-          radius: 24,
-          backgroundColor: const Color(0xFF1D2449).withOpacity(0.1),
-          child: const Icon(
-            Icons.support_agent_rounded,
-            color: Color(0xFF1D2449),
-            size: 26,
-          ),
-        ),
       );
     }
 

@@ -74,10 +74,10 @@ class Chat {
   final DateTime createdAt;
   final DateTime updatedAt;
   final LastMessage? lastMessage;
-  
+
   // DM-specific fields
   final List<String>? dmPair; // [uidA, uidB] sorted alphabetically
-  
+
   // Role/Group-specific fields
   final int? roleId;
   final int? branchId;
@@ -86,7 +86,8 @@ class Chat {
   final String? photoUrl;
 
   // Support chat-specific fields
-  final String? supportUserUid; // The external user who initiated the support chat
+  final String?
+      supportUserUid; // The external user who initiated the support chat
 
   Chat({
     required this.id,
@@ -150,9 +151,8 @@ class Chat {
       lastMessage: data['last_message'] != null
           ? LastMessage.fromMap(data['last_message'] as Map<String, dynamic>)
           : null,
-      dmPair: data['dm_pair'] != null
-          ? List<String>.from(data['dm_pair'])
-          : null,
+      dmPair:
+          data['dm_pair'] != null ? List<String>.from(data['dm_pair']) : null,
       roleId: data['role_id'],
       branchId: data['branch_id'],
       companyId: data['company_id'],

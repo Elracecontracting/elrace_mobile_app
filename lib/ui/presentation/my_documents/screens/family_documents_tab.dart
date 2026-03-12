@@ -14,7 +14,14 @@ import 'attachment_viewer_screen.dart';
 /// Shows folder categories (Emirates ID, Birth Certificates, etc.)
 /// Tapping a folder opens a grid of individual document cards.
 class FamilyDocumentsTab extends StatefulWidget {
-  const FamilyDocumentsTab({super.key});
+  const FamilyDocumentsTab({
+    super.key,
+    required this.isActive,
+    this.onAddDocument,
+  });
+
+  final bool isActive;
+  final VoidCallback? onAddDocument;
 
   @override
   State<FamilyDocumentsTab> createState() => _FamilyDocumentsTabState();
@@ -190,6 +197,15 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
   }
 
   @override
+  void didUpdateWidget(covariant FamilyDocumentsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset to folders view whenever user leaves Family tab.
+    if (oldWidget.isActive && !widget.isActive) {
+      _selectedFolder = null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
@@ -199,9 +215,8 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
         }
         return true;
       },
-      child: _selectedFolder != null
-          ? _buildDocumentsList()
-          : _buildFoldersList(),
+      child:
+          _selectedFolder != null ? _buildDocumentsList() : _buildFoldersList(),
     );
   }
 
@@ -239,15 +254,15 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
           // Folder name label at top-right
           Positioned(
             top: 8.h,
-            right:35.w,
+            right: 35.w,
             child: Text(
-                folder['name'],
-                style: GoogleFonts.aBeeZee(
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                ),
+              folder['name'],
+              style: GoogleFonts.aBeeZee(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
               ),
+            ),
           ),
         ],
       ),
@@ -270,8 +285,8 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                 border: Border.all(color: const Color(0xffD9D9D9)),
               ),
               child: Padding(
-                padding: EdgeInsets.symmetric(
-                    horizontal: 13.5.w, vertical: 8.5.h),
+                padding:
+                    EdgeInsets.symmetric(horizontal: 13.5.w, vertical: 8.5.h),
                 child: Text(
                   'Files No.  |  ${docs.length + 1}',
                   style: GoogleFonts.aBeeZee(
@@ -302,7 +317,7 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                 // Add new document card
                 return GestureDetector(
                   onTap: () {
-                    // TODO: Open add document dialog
+                    widget.onAddDocument?.call();
                   },
                   child: Container(
                     decoration: BoxDecoration(

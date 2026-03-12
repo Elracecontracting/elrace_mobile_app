@@ -57,6 +57,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   bool isNumberedList = false;
   final TextEditingController _descController = TextEditingController();
 
+  DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+
   @override
   void initState() {
     super.initState();
@@ -219,15 +221,20 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   }
 
   bool _isDateSelectable(DateTime date) {
+    // Sick leave supports selecting past dates (retroactive request use case).
+    if (widget.leaveType == 'SICK') {
+      return true;
+    }
+
     // Cannot select past dates
-    final today = DateTime.now();
-    if (date.isBefore(DateTime(today.year, today.month, today.day))) {
+    final today = _dateOnly(DateTime.now());
+    if (_dateOnly(date).isBefore(today)) {
       debugPrint('🔴 Date not selectable: $date (Past date)');
       return false;
     }
 
     // Cannot select dates before minimum start date
-    if (date.isBefore(minimumStartDate)) {
+    if (_dateOnly(date).isBefore(_dateOnly(minimumStartDate))) {
       debugPrint(
           '🔴 Date not selectable: $date (Before minimum: $minimumStartDate)');
       return false;
@@ -282,6 +289,11 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   }
 
   int _calculateWorkingDays(DateTime start, DateTime end) {
+    // Sick leave duration should count all consecutive days from certificate.
+    if (widget.leaveType == 'SICK') {
+      return end.difference(start).inDays + 1;
+    }
+
     int workingDays = 0;
     DateTime current = start;
 
@@ -304,6 +316,23 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
     if (widget.leaveType == 'SICK' && certificateNo.trim().isEmpty) {
       _showErrorDialog('Please enter certificate number for sick leave.');
       return;
+    }
+
+    // Backdated sick leave can only be submitted within 3 days
+    // after the last sick day (assumes return-to-work is next day).
+    if (widget.leaveType == 'SICK') {
+      final today = _dateOnly(DateTime.now());
+      final selectedEndDate = _dateOnly(endDate!);
+
+      if (selectedEndDate.isBefore(today)) {
+        final lastAllowedSubmitDate =
+            selectedEndDate.add(const Duration(days: 3));
+        if (today.isAfter(lastAllowedSubmitDate)) {
+          _showErrorDialog(
+              'Late sick leave can only be submitted within 3 days after returning to work.');
+          return;
+        }
+      }
     }
 
     // SHORT leave specific validations
@@ -404,7 +433,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   String _getNoticeText() {
     switch (widget.leaveType) {
       case 'SICK':
-        return 'Please be aware that you have to submit your request within 3 days or you will not be eligible';
+        return 'Sick leave requires a certificate number. Backdated sick leave must be submitted within 3 days after returning to work.';
       case 'SHORT':
         return 'Please be aware that you are eligible for 4 leaves per year';
       case 'ANNUAL':
@@ -802,8 +831,10 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
           date.isBefore(endDate!);
 
       final isSelectable = _isDateSelectable(date);
-      final isHolidayDate = _isHoliday(date);
-      final isNearHoliday = _isWithin3DaysOfHoliday(date);
+      final bool enforceHolidayBlocks = widget.leaveType != 'SICK';
+      final isHolidayDate = enforceHolidayBlocks && _isHoliday(date);
+      final isNearHoliday =
+          enforceHolidayBlocks && _isWithin3DaysOfHoliday(date);
 
       days.add(
         GestureDetector(

@@ -585,13 +585,13 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
       'title': translate('home.family_document'),
     },
     {
-      'icon': 'assets/png/folder.png',
-      'icon_unfocus': 'assets/png/folder_unfocus.png',
+      'icon': 'assets/newapp/newicon/for_company document.png',
+      'icon_unfocus': 'assets/newapp/newicon/for_company document.png',
       'title': 'Company Documents',
     },
     {
-      'icon': 'assets/png/folder.png',
-      'icon_unfocus': 'assets/png/folder_unfocus.png',
+      'icon': 'assets/newapp/newicon/for_shared_document.png',
+      'icon_unfocus': 'assets/newapp/newicon/for_shared_document.png',
       'title': 'Share Documents',
     },
   ];
@@ -702,10 +702,19 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                 ? _buildMyDocumentsContent()
                 : IndexedStack(
                     index: currentIndex - 1,
-                    children: const [
-                      FamilyDocumentsTab(),
-                      CompanyDocumentsTab(),
-                      ShareDocumentsTab(),
+                    children: [
+                      FamilyDocumentsTab(
+                        isActive: currentIndex == 1,
+                        onAddDocument: () {
+                          _showDocumentDialogByType(DocumentDialogType.family);
+                        },
+                      ),
+                      CompanyDocumentsTab(
+                        onAddDocument: () {
+                          _showDocumentDialogByType(DocumentDialogType.company);
+                        },
+                      ),
+                      const ShareDocumentsTab(),
                     ],
                   ),
           ),
@@ -941,6 +950,15 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
   }
 
   void showDocumentDialog(BuildContext context) async {
+    final type = currentIndex == 1
+        ? DocumentDialogType.family
+        : currentIndex == 2
+            ? DocumentDialogType.company
+            : DocumentDialogType.my;
+    _showDocumentDialogByType(type);
+  }
+
+  Future<void> _showDocumentDialogByType(DocumentDialogType type) async {
     final result = await showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -950,11 +968,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           ),
           elevation: 0,
           backgroundColor: Colors.transparent,
-          child: DocumentDialog(
-            type: currentIndex == 1
-                ? DocumentDialogType.family
-                : DocumentDialogType.my,
-          ),
+          child: DocumentDialog(type: type),
         );
       },
     );
@@ -1667,7 +1681,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
                   letterSpacing: 0.6,
                 ),
               ),
-              SizedBox(height: 14.h),
+              SizedBox(height: _showIdAndExpiry ? 14.h : 28.h),
 
               // Document type dropdown
               _buildPillField(
@@ -1737,6 +1751,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
                   ),
                 ),
               ),
+              SizedBox(height: _showIdAndExpiry ? 14.h : 40.h),
 
               if (_showIdAndExpiry) ...[
                 SizedBox(height: 10.h),

@@ -42,6 +42,9 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
   ];
   bool dropdownOpen = false;
 
+  bool get _isWorkResumption =>
+      _mapReasonToApiValue(selectedMissionType) == 'work_resumption';
+
   void _onCalendarDateSelected(DateTime date) {
     setState(() {
       joinedDate = date;
@@ -72,6 +75,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
     final token = SharedPref.getLoginData().result?.token;
     final url = Uri.parse("https://erp.elrace.com/api/submit_request");
 
+    final isWorkResumption = _isWorkResumption;
+
     final body = jsonEncode({
       "jsonrpc": "2.0",
       "params": {
@@ -79,7 +84,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
         "leave_type": null,
         "joined_date": DateFormat('yyyy-MM-dd').format(joinedDate),
         "start_date": _formatDateTime(joinedDate),
-        "end_date": _formatDateTime(leaveEndDate),
+        "end_date": isWorkResumption ? _formatDateTime(leaveEndDate) : null,
         "description": description,
         "note": description,
         "job_type": null,
@@ -87,7 +92,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
         "job_date": null,
         "e_reason": _mapReasonToApiValue(selectedMissionType),
         "join_date": null,
-        "late_days": calculateLateDays(),
+        "late_days": isWorkResumption ? calculateLateDays() : null,
         "attachment": null,
         "client_details": null,
         "project_details": null,
@@ -196,13 +201,16 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                       _buildCalendar(),
                       SizedBox(height: 20.h),
                       _buildInfoRow('Joining Date', _formatDate(joinedDate)),
-                      SizedBox(height: 12.h),
-                      _buildInfoRow('Late Days', '${calculateLateDays()} days'),
-                      SizedBox(height: 12.h),
-                      _buildInfoRow(
-                        'Leave End Date',
-                        _formatDate(leaveEndDate),
-                      ),
+                      if (_isWorkResumption) ...[
+                        SizedBox(height: 12.h),
+                        _buildInfoRow(
+                            'Late Days', '${calculateLateDays()} days'),
+                        SizedBox(height: 12.h),
+                        _buildInfoRow(
+                          'Leave End Date',
+                          _formatDate(leaveEndDate),
+                        ),
+                      ],
                       SizedBox(height: 20.h),
                       Text(
                         translate('common.description'),
@@ -215,8 +223,11 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                       SizedBox(height: 8.h),
                       _buildDescriptionField(),
                       SizedBox(height: 16.h),
-                      _buildNotice(primary),
-                      SizedBox(height: 24.h),
+                      if (_isWorkResumption) ...[
+                        _buildNotice(primary),
+                        SizedBox(height: 24.h),
+                      ] else
+                        SizedBox(height: 8.h),
                       SizedBox(
                         width: double.infinity,
                         height: 48.h,
