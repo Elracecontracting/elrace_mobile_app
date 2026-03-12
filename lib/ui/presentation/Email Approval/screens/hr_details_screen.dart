@@ -27,38 +27,78 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
   static const Map<int, String> _caseByTypeId = {
     35849: 'sick',
     35651: 'short',
+    35842: 'annual',
+    24602: 'maternity',
     35847: 'job_mission',
     35564: 'temporary_permission',
     35841: 'clearance',
     35837: 'effective_date',
-    34068: 'certificate_request',
+    34068: 'salary_certificate',
     32938: 'loan',
-    33800: 'salary_increment',
+    33800: 'increment',
+    32312: 'promotion',
     18915: 'parental',
-    31615: 'resign',
+    31615: 'resignation',
     25165: 'termination',
     31875: 'transfer',
     30388: 'passport',
     35803: 'leave_encashment',
+    33244: 'car_rent',
   };
 
   static const Map<String, String> _caseTitle = {
+    'sim': 'Sim Card Request',
     'sick': 'Sick Leave',
     'short': 'Short Leave',
+    'annual': 'Annual Leave',
+    'maternity': 'Maternity Leave',
     'job_mission': 'Job Mission',
     'temporary_permission': 'Temporary Permission',
     'clearance': 'Clearance',
     'effective_date': 'Effective Date',
+    'salary_certificate': 'Salary Certificate',
     'certificate_request': 'Certificate Request',
     'loan': 'Loan',
+    'increment': 'Salary Increment',
     'salary_increment': 'Salary Increment',
+    'promotion': 'Promotion',
     'parental': 'Parental',
+    'resignation': 'Resignation',
     'resign': 'Resign',
     'termination': 'Termination',
     'transfer': 'Transfer',
     'passport': 'Passport',
     'leave_encashment': 'Leave Encashment',
+    'car_rent': 'Car Rent',
     'generic': 'HR Request',
+  };
+
+  static const Map<String, String> _caseByTypeCode = {
+    'sim': 'sim',
+    'annualleave_short': 'short',
+    'annualleave_sick': 'sick',
+    'annualleave_annual': 'annual',
+    'annualleave_parental': 'parental',
+    'annualleave_maternity': 'maternity',
+    'clearance': 'clearance',
+    'temp': 'temporary_permission',
+    'effective_date': 'effective_date',
+    'jm': 'job_mission',
+    'resignation': 'resignation',
+    'resign': 'resignation',
+    'encashment': 'leave_encashment',
+    'salary_certificate': 'salary_certificate',
+    'certificate_request': 'salary_certificate',
+    'loan': 'loan',
+    'promotion': 'promotion',
+    'transfer': 'transfer',
+    'increment': 'increment',
+    'salary_increment': 'increment',
+    'termination': 'termination',
+    'carrent': 'car_rent',
+    'car_rent': 'car_rent',
+    'passport': 'passport',
+    'passport_request': 'passport',
   };
 
   bool _isLoading = true;
@@ -91,6 +131,10 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
       return Map<String, dynamic>.from(value as Map);
     }
     return const {};
+  }
+
+  String _normalizeToken(String value) {
+    return value.trim().toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
   }
 
   int? _toInt(dynamic value) {
@@ -150,33 +194,55 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
       return _caseByTypeId[caseId] ?? 'generic';
     }
 
+    final rawTypeCode = _pick([
+      _pickFromMaps(requestMaps, [
+        'request_type_code',
+        'request_code',
+        'type_code',
+        'leave_type_code',
+        'request_type',
+        'leave_type',
+      ]),
+      widget.type,
+    ]);
+
+    if (rawTypeCode.isNotEmpty) {
+      final normalizedTypeCode = _normalizeToken(rawTypeCode);
+      final mapped = _caseByTypeCode[normalizedTypeCode];
+      if (mapped != null) return mapped;
+    }
+
     final n = requestName.toLowerCase();
+    if (n.contains('sim')) return 'sim';
     if (n.contains('sick')) return 'sick';
     if (n.contains('short')) return 'short';
+    if (n.contains('annual')) return 'annual';
+    if (n.contains('maternity')) return 'maternity';
+    if (n.contains('parental')) return 'parental';
     if (n.contains('job mission') || n.contains('مهمة')) return 'job_mission';
     if (n.contains('temporary')) return 'temporary_permission';
     if (n.contains('clearance')) return 'clearance';
     if (n.contains('effective')) return 'effective_date';
-    if (n.contains('certificate')) return 'certificate_request';
+    if (n.contains('certificate')) return 'salary_certificate';
     if (n.contains('loan')) return 'loan';
-    if (n.contains('salary') && n.contains('increment')) {
-      return 'salary_increment';
-    }
-    if (n.contains('parental')) return 'parental';
-    if (n.contains('resign')) return 'resign';
+    if (n.contains('promotion')) return 'promotion';
+    if (n.contains('salary') && n.contains('increment')) return 'increment';
+    if (n.contains('increment')) return 'increment';
+    if (n.contains('resign')) return 'resignation';
     if (n.contains('terminat')) return 'termination';
     if (n.contains('transfer')) return 'transfer';
     if (n.contains('passport')) return 'passport';
     if (n.contains('encash')) return 'leave_encashment';
+    if (n.contains('car') && n.contains('rent')) return 'car_rent';
     return 'generic';
   }
 
   List<_DetailItem> _buildRequestDetailItems(
-      String caseKey, List<Map<String, dynamic>> requestMaps) {
+      String caseKey, List<Map<String, dynamic>> dataMaps) {
     List<_DetailItem> makeItems(List<_FieldDef> defs) {
       final items = <_DetailItem>[];
       for (final def in defs) {
-        final value = _pickFromMaps(requestMaps, def.keys);
+        final value = _pickFromMaps(dataMaps, def.keys);
         if (value.isNotEmpty) {
           items.add(_DetailItem(def.label, value, multiline: def.multiline));
         }
@@ -185,9 +251,11 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
     }
 
     final common = [
-      const _FieldDef('Requested By', ['requested_by', 'requester_name']),
+      const _FieldDef(
+          'Requested By', ['requested_by', 'requester_name', 'employee_name']),
       const _FieldDef('Request Date', [
         'request_date',
+        'request_datetime',
         'request_date_from',
         'date',
         'create_date',
@@ -195,52 +263,124 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
     ];
 
     switch (caseKey) {
+      case 'sim':
+        return makeItems([
+          ...common,
+          const _FieldDef('Company No.', ['company_no']),
+          const _FieldDef('Employee ID', ['employee_id', 'emp_id']),
+        ]);
       case 'sick':
         return makeItems([
           ...common,
           const _FieldDef('Start Date', ['start_date', 'request_date_from']),
-          const _FieldDef('Duration', ['duration', 'number_of_days']),
-          const _FieldDef('End Date', ['end_date', 'request_date_to']),
-          const _FieldDef('Balance Leave', ['balance_leave', 'leave_balance']),
-          const _FieldDef('Certificate No', ['certificate_no']),
-          const _FieldDef('Description', ['description', 'note'],
-              multiline: true),
+          const _FieldDef('Requested Duration', [
+            'requested_duration',
+            'duration',
+            'number_of_days',
+          ]),
+          const _FieldDef('Remaining Leave Days', [
+            'remaining_leave_days',
+            'balance_leave',
+            'leave_balance',
+          ]),
+          const _FieldDef('Allowed Sick Days', ['allowed_sick_days']),
+          const _FieldDef('Sick Leave Reference No', [
+            'sick_leave_reference_no',
+            'certificate_no',
+          ]),
+          const _FieldDef('Emirates ID', ['emirates_id']),
+          const _FieldDef('Review Validation URL', [
+            'review_validation_url',
+            'validation_url',
+            'review_url',
+          ]),
+          const _FieldDef('Note', ['note', 'description'], multiline: true),
         ]);
       case 'short':
+        return makeItems([
+          ...common,
+          const _FieldDef('Start Date', ['start_date', 'request_date_from']),
+          const _FieldDef('Requested Duration', [
+            'requested_duration',
+            'duration',
+            'number_of_days',
+          ]),
+          const _FieldDef('Remaining Leave Days', [
+            'remaining_leave_days',
+            'balance_leave',
+            'leave_balance',
+          ]),
+        ]);
+      case 'annual':
+        return makeItems([
+          ...common,
+          const _FieldDef('Start Date', ['start_date', 'request_date_from']),
+          const _FieldDef('End Date', ['end_date', 'request_date_to']),
+          const _FieldDef('Requested Duration', [
+            'requested_duration',
+            'duration',
+            'number_of_days',
+          ]),
+          const _FieldDef('Available Days', ['available_days']),
+          const _FieldDef('Remaining Leave Days', [
+            'remaining_leave_days',
+            'balance_leave',
+            'leave_balance',
+          ]),
+          const _FieldDef('Annual Short Leaves Remaining', [
+            'annual_short_leaves_remaining',
+          ]),
+          const _FieldDef('Note', ['note', 'description'], multiline: true),
+        ]);
       case 'parental':
         return makeItems([
           ...common,
           const _FieldDef('Start Date', ['start_date', 'request_date_from']),
-          const _FieldDef('Duration', ['duration', 'number_of_days']),
           const _FieldDef('End Date', ['end_date', 'request_date_to']),
-          const _FieldDef('Balance Leave', ['balance_leave', 'leave_balance']),
-          const _FieldDef('Description', ['description', 'note'],
-              multiline: true),
+          const _FieldDef('Requested Duration', [
+            'requested_duration',
+            'duration',
+            'number_of_days',
+          ]),
+          const _FieldDef('Birth Attachment', ['birth_attachment']),
+        ]);
+      case 'maternity':
+        return makeItems([
+          ...common,
+          const _FieldDef('Start Date', ['start_date', 'request_date_from']),
+          const _FieldDef('End Date', ['end_date', 'request_date_to']),
+          const _FieldDef('Requested Duration', [
+            'requested_duration',
+            'duration',
+            'number_of_days',
+          ]),
+          const _FieldDef(
+              'Discharge Report Attachment', ['discharge_report_attachment']),
         ]);
       case 'job_mission':
         return makeItems([
           ...common,
-          const _FieldDef('Start Date', ['start_date', 'request_date_from']),
-          const _FieldDef('End Date', ['end_date', 'request_date_to']),
           const _FieldDef('Start Time', ['start_time', 'job_time']),
           const _FieldDef('Duration Type', ['duration_type']),
-          const _FieldDef('Mission Type', ['job_mission_type', 'job_type']),
+          const _FieldDef('Job Mission Type', ['job_mission_type', 'job_type']),
+          const _FieldDef('Only Afternoon', ['only_afternoon']),
           const _FieldDef('Client Details', ['client_details']),
           const _FieldDef('Project Details', ['project_details']),
-          const _FieldDef('Note', ['note'], multiline: true),
+          const _FieldDef('Note', ['note', 'description'], multiline: true),
         ]);
       case 'temporary_permission':
         return makeItems([
           ...common,
-          const _FieldDef('Start Date', ['start_date', 'request_date_from']),
           const _FieldDef('Available Days', ['available_days']),
-          const _FieldDef('End Date', ['end_date', 'request_date_to']),
-          const _FieldDef('Leave Balance', ['leave_balance', 'balance_leave']),
-          const _FieldDef(
-              'Start Hour', ['start_hour', 'start_time', 'hour_from']),
-          const _FieldDef('Duration Type', ['duration_type']),
-          const _FieldDef('Description', ['description', 'note'],
-              multiline: true),
+          const _FieldDef('Remaining Leave Days', [
+            'remaining_leave_days',
+            'leave_balance',
+            'balance_leave',
+          ]),
+          const _FieldDef('Temp Hours', ['temp_hours']),
+          const _FieldDef('Temp Selection', ['temp_selection']),
+          const _FieldDef('Start Time', ['start_time', 'hour_from']),
+          const _FieldDef('Note', ['note', 'description'], multiline: true),
         ]);
       case 'clearance':
         return makeItems([
@@ -248,87 +388,95 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
           const _FieldDef('Last Work Date', ['last_work_date', 'end_date']),
           const _FieldDef(
               'Reason For Leaving', ['reason_for_leaving', 'reason']),
-          const _FieldDef('Description', ['description', 'note'],
-              multiline: true),
         ]);
       case 'effective_date':
         return makeItems([
           ...common,
           const _FieldDef('Joined Date', ['joined_date', 'join_date']),
-          const _FieldDef('Reason', ['e_reason', 'reason']),
-          const _FieldDef('Description', ['description', 'note'],
-              multiline: true),
+          const _FieldDef('Discipline Reason', [
+            'discipline_reason',
+            'e_reason',
+            'reason',
+          ]),
         ]);
+      case 'salary_certificate':
       case 'certificate_request':
         return makeItems([
           ...common,
           const _FieldDef(
               'Certificate Type', ['certificate_type', 'document_type']),
           const _FieldDef('Language', ['certificate_language', 'language']),
-          const _FieldDef('Purpose', ['purpose']),
-          const _FieldDef('Description', ['description', 'note'],
-              multiline: true),
+          const _FieldDef('Note', ['note', 'description'], multiline: true),
         ]);
       case 'loan':
         return makeItems([
           ...common,
+          const _FieldDef('EOS Date', ['eos_date']),
+          const _FieldDef('Loan Type', ['loan_type']),
+          const _FieldDef('Net Worked Days', ['net_worked_days']),
+          const _FieldDef('Years', ['years']),
+          const _FieldDef('Total Absent Days', ['total_absent_days']),
+          const _FieldDef('Total Gratuity', ['total_gratuity']),
           const _FieldDef(
               'Loan Amount', ['loan_amount', 'amount', 'requested_amount']),
-          const _FieldDef('Installment Amount',
-              ['installment_amount', 'monthly_installment']),
-          const _FieldDef(
-              'Installments', ['installment_count', 'number_of_installments']),
-          const _FieldDef(
-              'Deduction Start Date', ['deduction_start_date', 'start_date']),
-          const _FieldDef('Description', ['description', 'note'],
-              multiline: true),
         ]);
-      case 'salary_increment':
+      case 'promotion':
         return makeItems([
           ...common,
           const _FieldDef('Effective Date', ['effective_date']),
-          const _FieldDef('Suggested Increment by Employee', [
-            'employee_suggested_increment',
-            'suggested_increment_by_employee',
-            'suggested_increment',
-          ]),
-          const _FieldDef('Suggested by Manager', [
-            'manager_suggested_increment',
-            'suggested_by_manager',
-          ]),
-          const _FieldDef('New Salary', ['new_salary', 'salary_new']),
-          const _FieldDef('Evaluation Score %', [
-            'evaluation_score',
-            'evaluation_score_percent',
-          ]),
+          const _FieldDef('New Job', ['new_job']),
+          const _FieldDef('Old Manager', ['old_manager']),
+          const _FieldDef('New Manager', ['new_manager']),
+          const _FieldDef('Overall Score', ['overall_score']),
         ]);
+      case 'increment':
+      case 'salary_increment':
+        return makeItems([
+          ...common,
+          const _FieldDef('Increment Effective Date', [
+            'increment_effective_date',
+            'effective_date',
+          ]),
+          const _FieldDef('Salary Max', ['salary_max']),
+          const _FieldDef(
+              'Employee Suggested Salary', ['employee_suggested_salary']),
+          const _FieldDef(
+              'Manager Suggested Salary', ['manager_suggested_salary']),
+          const _FieldDef('Suggested Total', ['suggested_total']),
+          const _FieldDef('Evaluation Attachment', ['evaluation_attachment']),
+          const _FieldDef('Overall Score', ['overall_score']),
+        ]);
+      case 'resignation':
       case 'resign':
         return makeItems([
           ...common,
-          const _FieldDef('Last Work Date', ['last_work_date', 'end_date']),
           const _FieldDef(
-              'Reason For Leaving', ['reason_for_leaving', 'reason']),
-          const _FieldDef('Description', ['description', 'note'],
-              multiline: true),
+              'Notice Period Start Date', ['notice_period_start_date']),
+          const _FieldDef('Resignation Type', ['resignation_type']),
+          const _FieldDef(
+              'Expected Relieving Date', ['expected_relieving_date']),
+          const _FieldDef('Notice Period', ['notice_period']),
+          const _FieldDef('Reason', ['reason', 'note'], multiline: true),
         ]);
       case 'termination':
         return makeItems([
           ...common,
-          const _FieldDef('Termination Date', ['termination_date', 'end_date']),
-          const _FieldDef('Reason', ['reason']),
-          const _FieldDef('Description', ['description', 'note'],
-              multiline: true),
+          const _FieldDef('Termination Type', ['termination_type']),
+          const _FieldDef('Termination Reason', ['termination_reason']),
+          const _FieldDef('Employee Last Day', ['emp_last_day']),
+          const _FieldDef('Company No.', ['company_no']),
+          const _FieldDef('Note', ['note', 'description'], multiline: true),
         ]);
       case 'transfer':
         return makeItems([
           ...common,
-          const _FieldDef(
-              'From Department', ['from_department', 'department_from']),
-          const _FieldDef('To Department', ['to_department', 'department_to']),
-          const _FieldDef('From Section', ['from_section']),
-          const _FieldDef('To Section', ['to_section']),
           const _FieldDef('Effective Date', ['effective_date']),
-          const _FieldDef('Reason', ['reason', 'description'], multiline: true),
+          const _FieldDef('Transfer Type', ['transfer_type']),
+          const _FieldDef('New Manager', ['new_manager']),
+          const _FieldDef('Transfer From', ['transfer_from']),
+          const _FieldDef('Transfer To', ['transfer_to']),
+          const _FieldDef('Forman', ['forman']),
+          const _FieldDef('Reason', ['reason', 'note'], multiline: true),
         ]);
       case 'passport':
         return makeItems([
@@ -337,28 +485,43 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
           const _FieldDef('Issue Date', ['issue_date']),
           const _FieldDef('Expiry Date', ['expiry_date']),
           const _FieldDef('Return Date', ['return_date']),
-          const _FieldDef('Description', ['description', 'note'],
-              multiline: true),
+          const _FieldDef('Note', ['note', 'description'], multiline: true),
         ]);
       case 'leave_encashment':
         return makeItems([
           ...common,
           const _FieldDef(
-              'Available Balance', ['available_balance', 'leave_balance']),
-          const _FieldDef(
-              'Encash Days', ['encash_days', 'days_to_encash', 'duration']),
-          const _FieldDef('Amount', ['encash_amount', 'amount']),
-          const _FieldDef('Description', ['description', 'note'],
-              multiline: true),
+              'Encashment Days', ['encashment_days', 'encash_days']),
+          const _FieldDef('Available Days', ['available_days']),
+          const _FieldDef('Request Date To', ['request_date_to']),
+          const _FieldDef('Remaining Leave Days', [
+            'remaining_leave_days',
+            'available_balance',
+            'leave_balance',
+          ]),
+          const _FieldDef('GM Attachment', ['gm_attachment']),
+          const _FieldDef('Note', ['note', 'description'], multiline: true),
+        ]);
+      case 'car_rent':
+        return makeItems([
+          ...common,
+          const _FieldDef('Car Request Type', ['car_req_type']),
+          const _FieldDef('Rent Type', ['rent_type']),
+          const _FieldDef('Rent Duration', ['rent_duration']),
+          const _FieldDef('Company No.', ['company_no']),
+          const _FieldDef('Note', ['note', 'description'], multiline: true),
         ]);
       default:
         return makeItems([
           ...common,
           const _FieldDef('Start Date', ['start_date', 'request_date_from']),
-          const _FieldDef('Duration', ['duration', 'number_of_days']),
+          const _FieldDef('Duration', [
+            'requested_duration',
+            'duration',
+            'number_of_days',
+          ]),
           const _FieldDef('End Date', ['end_date', 'request_date_to']),
-          const _FieldDef('Description', ['description', 'note'],
-              multiline: true),
+          const _FieldDef('Note', ['note', 'description'], multiline: true),
         ]);
     }
   }
@@ -732,7 +895,8 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
     final employeeDetails = <_DetailItem>[
       _DetailItem('Employee Type',
           _pickFromMaps(employeeMaps, ['type', 'employee_type'])),
-      _DetailItem('Section', _pickFromMaps(employeeMaps, ['section'])),
+      _DetailItem(
+          'Section', _pickFromMaps(employeeMaps, ['section', 'department'])),
       _DetailItem('Job Position',
           _pickFromMaps(employeeMaps, ['job_title', 'job_position'])),
       _DetailItem('City/Branch',
@@ -745,7 +909,12 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
           'Total Working Days', _pickFromMaps(employeeMaps, ['working_days'])),
     ].where((item) => item.value.isNotEmpty).toList();
 
-    final requestDetailItems = _buildRequestDetailItems(caseKey, requestMaps);
+    final detailMaps = <Map<String, dynamic>>[
+      _requestInfo,
+      _formData,
+      _employeeInfo,
+    ];
+    final requestDetailItems = _buildRequestDetailItems(caseKey, detailMaps);
 
     final userId =
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
