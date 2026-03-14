@@ -157,11 +157,27 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   }
 
   /// Loads a single category in the background and updates state when done.
-  Future<void> _loadCategory(String categoryKey) async {
-    if (_categoryLoading[categoryKey] == true) return; // already in-flight
-    if (_categoryLoaded[categoryKey] == true) return;  // already done
+  Future<void> _loadCategory(String categoryKey, {bool force = false}) async {
+    if (_categoryLoading[categoryKey] == true) {
+      debugPrint(
+          '⏳ [ApprovalsScreen] Skip loading $categoryKey (already loading)');
+      return;
+    }
+    if (!force && _categoryLoaded[categoryKey] == true) {
+      debugPrint(
+          '✅ [ApprovalsScreen] Skip loading $categoryKey (already loaded)');
+      return;
+    }
 
-    setState(() => _categoryLoading[categoryKey] = true);
+    debugPrint(
+        '🔄 [ApprovalsScreen] Loading category=$categoryKey force=$force');
+    setState(() {
+      _categoryLoading[categoryKey] = true;
+      if (force) {
+        _categoryLoaded[categoryKey] = false;
+        categoryErrors.remove(categoryKey);
+      }
+    });
 
     try {
       final items = await _fetchCategoryData(categoryKey);
@@ -173,30 +189,42 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
           case 'rfq':
             rfqItems = items.map((i) => {...i, 'category': 'RFQ'}).toList();
           case 'invoice':
-            invoiceItems = items.map((i) => {...i, 'category': 'INVOICE'}).toList();
+            invoiceItems =
+                items.map((i) => {...i, 'category': 'INVOICE'}).toList();
           case 'petty_cash':
-            pettyCashItems = items.map((i) => {...i, 'category': 'PETTY CASH'}).toList();
+            pettyCashItems =
+                items.map((i) => {...i, 'category': 'PETTY CASH'}).toList();
         }
-        allItems = [...hrItems, ...rfqItems, ...invoiceItems, ...pettyCashItems];
+        allItems = [
+          ...hrItems,
+          ...rfqItems,
+          ...invoiceItems,
+          ...pettyCashItems
+        ];
         approvalItems = _getFilteredItems();
         _categoryLoading[categoryKey] = false;
         _categoryLoaded[categoryKey] = true;
       });
+      debugPrint(
+        '✅ [ApprovalsScreen] Loaded $categoryKey with ${items.length} items',
+      );
     } catch (e) {
       if (!mounted) return;
       setState(() {
         categoryErrors[categoryKey] = e.toString();
         _categoryLoading[categoryKey] = false;
       });
+      debugPrint('❌ [ApprovalsScreen] Failed loading $categoryKey: $e');
     }
   }
 
   /// Fires all 4 categories in parallel without blocking the UI.
-  void _loadAllCategoriesInBackground() {
-    _loadCategory('hr');
-    _loadCategory('rfq');
-    _loadCategory('invoice');
-    _loadCategory('petty_cash');
+  void _loadAllCategoriesInBackground({bool force = false}) {
+    debugPrint('🚀 [ApprovalsScreen] Loading all categories (force=$force)');
+    _loadCategory('hr', force: force);
+    _loadCategory('rfq', force: force);
+    _loadCategory('invoice', force: force);
+    _loadCategory('petty_cash', force: force);
   }
 
   List<dynamic> _getApprovalListForSelectedCategory() {
@@ -246,6 +274,12 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
       if (!mounted) return;
       setState(() => _delayedLoading = false);
     }
+  }
+
+  void _refreshApprovalsAfterAction() {
+    debugPrint('🔁 [ApprovalsScreen] Refresh requested after approve/reject');
+    _loadAllCategoriesInBackground(force: true);
+    _fetchDelayedCount();
   }
 
   String _tabTitleFor(String categoryKey) {
@@ -381,7 +415,9 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                               }
                               WidgetsBinding.instance.addPostFrameCallback((_) {
                                 if (mounted && _isScrolled) {
-                                  setState(() { _isScrolled = false; });
+                                  setState(() {
+                                    _isScrolled = false;
+                                  });
                                 }
                               });
                             },
@@ -461,11 +497,13 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         selectedCategoryKey == _CategoryKeys.pettyCash) {
       return HrAndPettycashCard(
         approvalItems: approvalItems,
+        onRefresh: _refreshApprovalsAfterAction,
       );
     } else if (selectedCategoryKey == _CategoryKeys.rfq ||
         selectedCategoryKey == _CategoryKeys.invoice) {
       return InvoiceAndRfqCard(
         approvalItems: approvalItems,
+        onRefresh: _refreshApprovalsAfterAction,
         categoryType: selectedCategoryKey,
       );
     }
@@ -476,11 +514,16 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   /// Maps a category UI key to the API group_type string.
   String _categoryApiKey(String categoryKey) {
     switch (categoryKey) {
-      case _CategoryKeys.hr: return 'hr';
-      case _CategoryKeys.rfq: return 'rfq';
-      case _CategoryKeys.invoice: return 'invoice';
-      case _CategoryKeys.pettyCash: return 'petty_cash';
-      default: return categoryKey;
+      case _CategoryKeys.hr:
+        return 'hr';
+      case _CategoryKeys.rfq:
+        return 'rfq';
+      case _CategoryKeys.invoice:
+        return 'invoice';
+      case _CategoryKeys.pettyCash:
+        return 'petty_cash';
+      default:
+        return categoryKey;
     }
   }
 
@@ -521,38 +564,39 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                 ),
               ),
             ),
-        // Badge for count
-        if (count > 0)
-          Positioned(
-            right: -5,
-            top: -5,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: red,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: Colors.white,
-                  width: 2,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+            // Badge for count
+            if (count > 0)
+              Positioned(
+                right: -5,
+                top: -5,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: red,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: Colors.white,
+                      width: 2,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 4,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              child: Text(
-                count > 99 ? '99+' : count.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
+                  child: Text(
+                    count > 99 ? '99+' : count.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-            ),
-          ),
           ],
         ),
         SizedBox(height: 6.h),

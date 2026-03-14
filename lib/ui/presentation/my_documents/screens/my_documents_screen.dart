@@ -24,6 +24,36 @@ import 'family_documents_tab.dart';
 import 'company_documents_tab.dart';
 import 'share_documents_tab.dart';
 
+const String _familyTaggedDocumentIdsKey = 'my_documents_family_tagged_ids_v1';
+
+Set<int> _loadTaggedDocumentIds(String key) {
+  try {
+    final raw = SharedPref.preferences.getPreferenceString(key);
+    if (raw.trim().isEmpty) return <int>{};
+
+    final decoded = jsonDecode(raw);
+    if (decoded is! List) return <int>{};
+
+    return decoded
+        .map((e) => int.tryParse(e.toString()))
+        .whereType<int>()
+        .toSet();
+  } catch (_) {
+    return <int>{};
+  }
+}
+
+Future<void> _saveTaggedDocumentIds(String key, Set<int> ids) async {
+  await SharedPref.preferences
+      .setPreferencesString(key, jsonEncode(ids.toList(growable: false)));
+}
+
+Future<void> _tagDocumentAsFamily(int id) async {
+  final ids = _loadTaggedDocumentIds(_familyTaggedDocumentIdsKey);
+  ids.add(id);
+  await _saveTaggedDocumentIds(_familyTaggedDocumentIdsKey, ids);
+}
+
 class MyDocumentsScreen extends StatefulWidget {
   const MyDocumentsScreen({
     super.key,
@@ -316,6 +346,8 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
       // Determine family_only based on currentIndex (0 = personal, 1 = family)
       final bool familyOnly = currentIndex == 1;
+      final familyTaggedIds =
+          _loadTaggedDocumentIds(_familyTaggedDocumentIdsKey);
 
       final Map<String, dynamic> params = {
         'family_only': familyOnly,
@@ -423,6 +455,12 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
               final type =
                   (map['document_type'] ?? map['type'] ?? groupType).toString();
               final name = (map['name'] ?? '').toString();
+              final docIdInt = int.tryParse((map['id'] ?? '').toString());
+
+              final resolvedIsFamily = familyOnly ||
+                  _isFamilyDoc(group) ||
+                  _isFamilyDoc(map) ||
+                  (docIdInt != null && familyTaggedIds.contains(docIdInt));
 
               mapped.add({
                 'id': map['id'],
@@ -433,7 +471,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                 'expiry_date': map['expiry_date'],
                 'description': map['description'],
                 'attachment_ids': map['attachment_ids'] ?? [],
-                '_isFamily': familyOnly,
+                '_isFamily': resolvedIsFamily,
               });
             }
           } else {
@@ -441,6 +479,12 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
             final type =
                 (map['document_type'] ?? map['type'] ?? groupType).toString();
             final name = (map['name'] ?? '').toString();
+            final docIdInt = int.tryParse((map['id'] ?? '').toString());
+
+            final resolvedIsFamily = familyOnly ||
+                _isFamilyDoc(group) ||
+                _isFamilyDoc(map) ||
+                (docIdInt != null && familyTaggedIds.contains(docIdInt));
 
             mapped.add({
               'id': map['id'],
@@ -451,7 +495,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
               'expiry_date': map['expiry_date'],
               'description': map['description'],
               'attachment_ids': map['attachment_ids'] ?? [],
-              '_isFamily': familyOnly,
+              '_isFamily': resolvedIsFamily,
             });
           }
         }
@@ -466,8 +510,12 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
               }).toList()
             : mapped;
 
+        final visibleMapped = familyOnly
+            ? filteredMapped.where((d) => d['_isFamily'] == true).toList()
+            : filteredMapped.where((d) => d['_isFamily'] != true).toList();
+
         setState(() {
-          documents = filteredMapped;
+          documents = visibleMapped;
           _loading = false;
         });
       } else {
@@ -649,7 +697,18 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
                 return InkWell(
                   onTap: () {
+                    if (currentIndex == index) return;
                     setState(() => currentIndex = index);
+
+                    // Keep My/Family lists in sync with selected tab source.
+                    if (index == 0 || index == 1) {
+                      final keyword = _searchController.text.trim();
+                      unawaited(
+                        _fetchMyDocuments(
+                          keyword: keyword.isEmpty ? null : keyword,
+                        ),
+                      );
+                    }
                   },
                   child: Container(
                     alignment: Alignment.center,
@@ -705,6 +764,8 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                     children: [
                       FamilyDocumentsTab(
                         isActive: currentIndex == 1,
+                        documents: documents,
+                        onOpenDocument: _openDocumentAttachment,
                         onAddDocument: () {
                           _showDocumentDialogByType(DocumentDialogType.family);
                         },
@@ -976,7 +1037,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     // If document was added successfully, refresh the list
     if (result == true) {
       print('🔄 Refreshing documents list...');
-      _fetchMyDocuments();
+      await _fetchMyDocuments();
     }
   }
 
@@ -1479,19 +1540,344 @@ class _DocumentDialogState extends State<DocumentDialog> {
     }
   }
 
+  String _normalizeToken(dynamic value) {
+    return (value ?? '')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  bool _isUploadSuccess(dynamic decodedBody) {
+    if (decodedBody is! Map) return false;
+
+    final result = decodedBody['result'];
+    if (result is! Map) return false;
+
+    final statusRaw = result['status'];
+    final successRaw = result['success'];
+
+    final statusToken = _normalizeToken(statusRaw);
+    if (statusToken == 'success' ||
+        statusToken == 'ok' ||
+        statusToken == 'true') {
+      return true;
+    }
+
+    if (successRaw is bool) return successRaw;
+    final successToken = _normalizeToken(successRaw);
+    return successToken == '1' ||
+        successToken == 'true' ||
+        successToken == 'success';
+  }
+
+  String _extractUploadMessage(dynamic decodedBody) {
+    if (decodedBody is! Map) return 'Upload failed';
+
+    final result = decodedBody['result'];
+    if (result is Map) {
+      final message = result['message']?.toString();
+      if (message != null && message.trim().isNotEmpty) {
+        return message.trim();
+      }
+    }
+
+    final error = decodedBody['error'];
+    if (error is Map) {
+      final errorMessage = error['message']?.toString();
+      if (errorMessage != null && errorMessage.trim().isNotEmpty) {
+        return errorMessage.trim();
+      }
+    }
+
+    return 'Upload failed';
+  }
+
+  int? _extractUploadedDocumentId(dynamic decodedBody) {
+    if (decodedBody is! Map) return null;
+    final result = decodedBody['result'];
+    if (result is! Map) return null;
+
+    final raw = result['document_id'] ?? result['id'] ?? result['record_id'];
+    if (raw is int) return raw;
+    return int.tryParse(raw?.toString() ?? '');
+  }
+
+  String _targetCollectionLabel() {
+    switch (widget.type) {
+      case DocumentDialogType.family:
+        return 'Family Documents';
+      case DocumentDialogType.company:
+        return 'Company Documents';
+      case DocumentDialogType.my:
+      default:
+        return 'My Documents';
+    }
+  }
+
+  List<Map<String, dynamic>> _extractDocumentMaps(List<dynamic> rawGroups) {
+    final docs = <Map<String, dynamic>>[];
+
+    for (final groupRaw in rawGroups) {
+      if (groupRaw is! Map) continue;
+      final group = Map<String, dynamic>.from(groupRaw);
+
+      final nested = group['documents'];
+      if (nested is List && nested.isNotEmpty) {
+        for (final item in nested) {
+          if (item is Map) {
+            docs.add(Map<String, dynamic>.from(item));
+          }
+        }
+      } else {
+        docs.add(group);
+      }
+    }
+
+    return docs;
+  }
+
+  String _attachmentSignature(dynamic attachmentIds) {
+    if (attachmentIds is List && attachmentIds.isNotEmpty) {
+      final values = attachmentIds
+          .map((e) {
+            if (e is Map) {
+              return (e['attachment_id'] ?? e['id'] ?? e['attachmentId'])
+                  .toString();
+            }
+            return e.toString();
+          })
+          .where((e) => e.trim().isNotEmpty)
+          .toList(growable: false)
+        ..sort();
+      return values.join(',');
+    }
+
+    if (attachmentIds is Map) {
+      return (attachmentIds['attachment_id'] ??
+              attachmentIds['id'] ??
+              attachmentIds['attachmentId'] ??
+              '')
+          .toString();
+    }
+
+    return (attachmentIds ?? '').toString();
+  }
+
+  Set<String> _buildDocumentFingerprints(List<dynamic> rawGroups) {
+    final docs = _extractDocumentMaps(rawGroups);
+    final fingerprints = <String>{};
+
+    for (final doc in docs) {
+      final id = (doc['id'] ?? '').toString();
+      final type = _normalizeToken(doc['document_type'] ?? doc['type']);
+      final name = _normalizeToken(doc['name']);
+      final idNumber = _normalizeToken(doc['id_number']);
+      final attachment = _normalizeToken(
+        _attachmentSignature(doc['attachment_ids']) +
+            (doc['attachment_name'] ?? doc['attachment_filename'] ?? '')
+                .toString(),
+      );
+      final updatedAt = _normalizeToken(
+        doc['write_date'] ?? doc['updated_at'] ?? doc['create_date'],
+      );
+
+      fingerprints.add('$id|$type|$name|$idNumber|$attachment|$updatedAt');
+    }
+
+    return fingerprints;
+  }
+
+  Future<Set<String>?> _snapshotDocumentsBeforeUpload({
+    required String token,
+  }) async {
+    final url = Uri.parse('https://erp.elrace.com/api/get_employee_documents');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+    final familyOnly = widget.type == DocumentDialogType.family;
+    final body = jsonEncode({
+      'jsonrpc': '2.0',
+      'params': {
+        'family_only': familyOnly,
+      },
+    });
+
+    try {
+      final response = await http.post(url, headers: headers, body: body);
+      if (response.statusCode != 200) return null;
+
+      final decoded = jsonDecode(response.body);
+      final result = decoded['result'];
+      if (result is! Map || _normalizeToken(result['status']) != 'success') {
+        return null;
+      }
+
+      final dataList = result['data'];
+      if (dataList is! List) return null;
+
+      return _buildDocumentFingerprints(dataList);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  bool _containsUploadedDocument(
+    List<dynamic> rawGroups, {
+    required String selectedType,
+    required String idNumber,
+    required String attachmentFileName,
+    int? uploadedDocumentId,
+  }) {
+    final selectedTypeToken = _normalizeToken(selectedType);
+    final idNumberToken = _normalizeToken(idNumber);
+    final attachmentToken = _normalizeToken(attachmentFileName);
+
+    for (final groupRaw in rawGroups) {
+      if (groupRaw is! Map) continue;
+      final group = Map<String, dynamic>.from(groupRaw);
+
+      final dynamic nested = group['documents'];
+      final docs = <Map<String, dynamic>>[];
+      if (nested is List && nested.isNotEmpty) {
+        for (final item in nested) {
+          if (item is Map) {
+            docs.add(Map<String, dynamic>.from(item));
+          }
+        }
+      } else {
+        docs.add(group);
+      }
+
+      for (final doc in docs) {
+        final docId = int.tryParse((doc['id'] ?? '').toString());
+        if (uploadedDocumentId != null && docId == uploadedDocumentId) {
+          return true;
+        }
+
+        final typeToken = _normalizeToken(doc['document_type'] ?? doc['type']);
+        final nameToken = _normalizeToken(doc['name']);
+        final idToken = _normalizeToken(doc['id_number']);
+        final attachmentNameToken = _normalizeToken(
+          doc['attachment_name'] ??
+              doc['attachment_filename'] ??
+              doc['file_name'],
+        );
+
+        final typeMatch = selectedTypeToken.isEmpty
+            ? true
+            : (typeToken == selectedTypeToken ||
+                typeToken.contains(selectedTypeToken) ||
+                selectedTypeToken.contains(typeToken));
+
+        final idMatch = idNumberToken.isEmpty
+            ? true
+            : (idToken == idNumberToken || nameToken == idNumberToken);
+
+        final attachmentMatch = attachmentToken.isEmpty
+            ? false
+            : (attachmentNameToken == attachmentToken ||
+                attachmentNameToken.contains(attachmentToken));
+
+        if ((typeMatch && idMatch) || attachmentMatch) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  Future<bool> _verifyDocumentAdded({
+    required String token,
+    required String selectedType,
+    required String idNumber,
+    required String attachmentFileName,
+    int? uploadedDocumentId,
+    Set<String>? beforeFingerprints,
+  }) async {
+    final url = Uri.parse('https://erp.elrace.com/api/get_employee_documents');
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+
+    final bool familyOnly = widget.type == DocumentDialogType.family;
+    final scopesToCheck = familyOnly ? <bool>[true, false] : <bool>[familyOnly];
+
+    for (var attempt = 0; attempt < 3; attempt++) {
+      for (final scope in scopesToCheck) {
+        final body = jsonEncode({
+          'jsonrpc': '2.0',
+          'params': {
+            'family_only': scope,
+          },
+        });
+
+        try {
+          final response = await http.post(url, headers: headers, body: body);
+          if (response.statusCode == 200) {
+            final decoded = jsonDecode(response.body);
+            final result = decoded['result'];
+            if (result is Map) {
+              final statusOk = _normalizeToken(result['status']) == 'success';
+              final dataList = result['data'];
+              if (statusOk && dataList is List) {
+                final afterFingerprints = _buildDocumentFingerprints(dataList);
+                if (beforeFingerprints != null &&
+                    beforeFingerprints.isNotEmpty) {
+                  final hasDelta = afterFingerprints.any((fingerprint) =>
+                      !beforeFingerprints.contains(fingerprint));
+                  if (hasDelta) {
+                    return true;
+                  }
+                }
+
+                final found = _containsUploadedDocument(
+                  dataList,
+                  selectedType: selectedType,
+                  idNumber: idNumber,
+                  attachmentFileName: attachmentFileName,
+                  uploadedDocumentId: uploadedDocumentId,
+                );
+                if (found) {
+                  return true;
+                }
+              }
+            }
+          }
+        } catch (_) {
+          // Retry a couple of times to allow backend processing delay.
+        }
+      }
+
+      if (attempt < 2) {
+        await Future.delayed(Duration(milliseconds: 600 * (attempt + 1)));
+      }
+    }
+
+    return false;
+  }
+
   Future<void> _submit() async {
     // Validate required fields
     final id = _idController.text.trim();
     final selectedType = (_selectedType ?? '').trim();
     if (selectedType.isEmpty) {
+      _sliderKey.currentState?.resetSlider();
       _showErrorDialog('Please select document type.');
       return;
     }
     if (_showIdAndExpiry && id.isEmpty) {
+      _sliderKey.currentState?.resetSlider();
       _showErrorDialog('Please fill in ID number.');
       return;
     }
     if ((_attachedFilePath ?? '').isEmpty) {
+      _sliderKey.currentState?.resetSlider();
       _showErrorDialog('Please attach a file.');
       return;
     }
@@ -1502,19 +1888,22 @@ class _DocumentDialogState extends State<DocumentDialog> {
 
     try {
       final token = SharedPref.getLoginData().result?.token ?? '';
-      final userName = SharedPref.getLoginData().result?.data?.name ?? '';
       final url =
           Uri.parse('https://erp.elrace.com/api/upload_employee_document');
 
       // Debug: Check values before sending
-      print('🔍 Debug - userName: "$userName"');
       print('🔍 Debug - selectedType: "$selectedType"');
       print('🔍 Debug - id: "$id"');
 
-      if (userName.isEmpty) {
-        print('❌ Error: userName is empty!');
+      if (token.isEmpty) {
+        print('❌ Error: auth token is empty!');
+        _sliderKey.currentState?.resetSlider();
+        _showErrorDialog('Session expired. Please login again.');
         return;
       }
+
+      final beforeFingerprints =
+          await _snapshotDocumentsBeforeUpload(token: token);
 
       if (selectedType.isEmpty) {
         print('❌ Error: selectedType is null or empty!');
@@ -1545,43 +1934,91 @@ class _DocumentDialogState extends State<DocumentDialog> {
         'Authorization': 'Bearer $token',
       };
 
-      final params = {
-        'name': _showIdAndExpiry ? id : selectedType,
+      final params = <String, dynamic>{
+        // Use human-readable name for better grouping/display in fetched list.
+        'name': selectedType,
+        'document_type': selectedType,
         'document_type_id': documentTypeId,
-        'issue_date': _expiryDate?.toIso8601String().split('T')[0],
-        'expiry_date': _expiryDate?.toIso8601String().split('T')[0],
         'description': 'Document uploaded via mobile app',
         'attachment': base64File,
         'attachment_filename': _attachedFileName,
+        // Keep upload scope explicit for backend routing.
+        'family_only': widget.type == DocumentDialogType.family,
       };
+
+      if (widget.type == DocumentDialogType.family) {
+        params['document_scope'] = 'family';
+      } else if (widget.type == DocumentDialogType.company) {
+        params['document_scope'] = 'company';
+      } else {
+        params['document_scope'] = 'my';
+      }
+
+      if (_showIdAndExpiry && id.isNotEmpty) {
+        params['id_number'] = id;
+      }
+
+      final selectedDate = _expiryDate?.toIso8601String().split('T')[0];
+      if (selectedDate != null && selectedDate.isNotEmpty) {
+        params['issue_date'] = selectedDate;
+        params['expiry_date'] = selectedDate;
+      }
+
       final body = jsonEncode({
         'jsonrpc': '2.0',
         'params': params,
       });
 
       print('📤 Uploading document...');
-      print(
-          '📦 Request params: ${jsonEncode(params..remove('file_data'))}'); // Don't print file_data (too long)
+      final safeDebugParams = Map<String, dynamic>.from(params);
+      if (safeDebugParams.containsKey('attachment')) {
+        final len = safeDebugParams['attachment']?.toString().length ?? 0;
+        safeDebugParams['attachment'] = '[base64 omitted, length=$len]';
+      }
+      print('📦 Request params: ${jsonEncode(safeDebugParams)}');
       final response = await http.post(url, headers: headers, body: body);
       final data = jsonDecode(response.body);
 
       print('📥 Upload response: ${response.body}');
 
-      if (response.statusCode == 200 &&
-          data['result'] != null &&
-          data['result']['status'] == 'success') {
-        print('✅ Document uploaded successfully!');
-        if (mounted) {
-          _showSuccessDialog();
-        }
-      } else {
-        final errorMessage = data['result']?['message'] ??
-            data['error']?['message'] ??
-            'Upload failed';
+      final isSuccess = response.statusCode == 200 && _isUploadSuccess(data);
+      if (!isSuccess) {
+        final errorMessage = _extractUploadMessage(data);
         if (mounted) {
           _sliderKey.currentState?.resetSlider();
           _showErrorDialog(errorMessage);
         }
+        return;
+      }
+
+      final uploadedDocumentId = _extractUploadedDocumentId(data);
+      if (widget.type == DocumentDialogType.family &&
+          uploadedDocumentId != null) {
+        await _tagDocumentAsFamily(uploadedDocumentId);
+      }
+
+      final appearsInList = await _verifyDocumentAdded(
+        token: token,
+        selectedType: selectedType,
+        idNumber: id,
+        attachmentFileName: _attachedFileName ?? '',
+        uploadedDocumentId: uploadedDocumentId,
+        beforeFingerprints: beforeFingerprints,
+      );
+
+      if (!appearsInList) {
+        if (mounted) {
+          _sliderKey.currentState?.resetSlider();
+          _showErrorDialog(
+            'Upload response was successful, but the document did not appear in ${_targetCollectionLabel()}. Please try again.',
+          );
+        }
+        return;
+      }
+
+      print('✅ Document uploaded and verified in list!');
+      if (mounted) {
+        _showSuccessDialog(message: _extractUploadMessage(data));
       }
     } catch (e) {
       print('❌ Upload error: $e');
@@ -1598,12 +2035,14 @@ class _DocumentDialogState extends State<DocumentDialog> {
     }
   }
 
-  void _showSuccessDialog() {
+  void _showSuccessDialog({String? message}) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Success'),
-        content: const Text('Document uploaded successfully!'),
+        content: Text(message?.trim().isNotEmpty == true
+            ? message!.trim()
+            : 'Document uploaded successfully!'),
         actions: [
           TextButton(
             onPressed: () {

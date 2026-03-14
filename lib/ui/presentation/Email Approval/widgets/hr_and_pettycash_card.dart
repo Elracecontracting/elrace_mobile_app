@@ -489,6 +489,8 @@ class HrAndPettycashCard extends StatelessWidget {
 
           return GestureDetector(
             onTap: () async {
+              debugPrint(
+                  '👆 [MyApproval][HR/PettyCash] Tap -> category=$category, id=$id');
               // Mark item as viewed
               print('🔵 Marking as viewed - Category: $category, ID: $id');
               await ApprovalViewedService.markAsViewed(
@@ -526,10 +528,15 @@ class HrAndPettycashCard extends StatelessWidget {
                             },
                           );
                 // Trigger a rebuild to update the list after dialog closes
+                debugPrint(
+                  '↩️ [MyApproval][HR/PettyCash] Back from details -> category=$category, id=$id, result=$result',
+                );
                 if (result == true) {
                   // Update approval count badge
                   ApprovalCountService.onCountChanged?.call();
                   // Refresh the list
+                  debugPrint(
+                      '🔁 [MyApproval][HR/PettyCash] Triggering onRefresh callback');
                   onRefresh?.call();
                 }
               }

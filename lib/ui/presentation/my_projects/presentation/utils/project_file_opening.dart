@@ -82,14 +82,26 @@ Future<void> openProjectFileInApp(
   }
 
   final uri = Uri.parse(normalizedUrl);
-  final launched = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+  final launched = await launchUrl(
+    uri,
+    mode: LaunchMode.inAppWebView,
+    webViewConfiguration: const WebViewConfiguration(
+      enableJavaScript: true,
+      enableDomStorage: true,
+    ),
+  );
   if (!context.mounted) return;
   if (!launched) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Could not open file: $normalizedUrl'),
-        backgroundColor: Colors.red,
-      ),
-    );
+    final launchedInBrowserView =
+        await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+    if (!context.mounted) return;
+    if (!launchedInBrowserView) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Could not open file: $normalizedUrl'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

@@ -5,6 +5,7 @@ import 'package:el_race/ui/presentation/Email%20Approval/screens/hr_details_scre
 import 'package:el_race/ui/presentation/Email%20Approval/screens/invoice_details_screen.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/screens/pettycash_details_screen.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/screens/rfq_details_screen.dart';
+import 'package:el_race/ui/presentation/Notification/notification_mute_settings_screen.dart';
 import 'package:el_race/ui/presentation/circular_announcement/data/circular_announcement_api_service.dart';
 import 'package:el_race/ui/presentation/circular_announcement/data/circular_announcement_model.dart';
 import 'package:el_race/ui/presentation/circular_announcement/widgets/circular_announcement_file_viewer.dart';
@@ -42,12 +43,207 @@ class _NotificationScreenState extends State<NotificationScreen> {
   CircularAnnouncementResponse? _circularAnnouncementData;
   bool _isLoadingCircularAnnouncement = false;
   String? _circularAnnouncementError;
+  Map<String, bool> _muteSettings = const {};
+  bool _isMuteSettingsLoading = true;
 
   @override
   void initState() {
     super.initState();
+    _loadMuteSettings();
     _loadNotifications();
     _loadCircularAnnouncements(); // Load from API
+  }
+
+  Future<void> _loadMuteSettings() async {
+    try {
+      final settings = await NotificationStorageService.getMuteSettings();
+      if (!mounted) return;
+      setState(() {
+        _muteSettings = settings;
+        _isMuteSettingsLoading = false;
+      });
+    } catch (e) {
+      print('Error loading mute settings: $e');
+      if (!mounted) return;
+      setState(() => _isMuteSettingsLoading = false);
+    }
+  }
+
+  bool _isCategoryMuted(String category) {
+    if (_muteSettings['global'] == true) return true;
+    return _muteSettings[category.toLowerCase()] == true;
+  }
+
+  Future<void> _openMuteSettings() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const NotificationMuteSettingsScreen(),
+      ),
+    );
+
+    if (!mounted) return;
+    await _loadMuteSettings();
+    await _loadNotifications();
+    await _loadCircularAnnouncements();
+  }
+
+  String _displayCategoryName(String category) {
+    switch (category.toLowerCase()) {
+      case 'announcement':
+        return 'Announcements';
+      case 'circular':
+        return 'Circulars';
+      case 'notification':
+      default:
+        return 'Notifications';
+    }
+  }
+
+  Widget _buildMuteSettingsEntryCard() {
+    final globalMuted = _muteSettings['global'] == true;
+    final mutedCount = _muteSettings.entries
+        .where((entry) => entry.key != 'global' && entry.value)
+        .length;
+
+    final subtitle = _isMuteSettingsLoading
+        ? 'Loading mute channels...'
+        : globalMuted
+            ? 'All channels are currently muted.'
+            : mutedCount == 0
+                ? 'All channels are active.'
+                : '$mutedCount channels are muted.';
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(20.r),
+      onTap: _openMuteSettings,
+      child: Ink(
+        padding: EdgeInsets.all(14.w),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20.r),
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFFF4F7FE),
+              Color(0xFFEAF1FF),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          border: Border.all(color: const Color(0xFFD0DAEC)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 42.w,
+              height: 42.w,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: appFontColor.withValues(alpha: 0.12),
+              ),
+              child: Icon(
+                globalMuted
+                    ? Icons.notifications_off_rounded
+                    : Icons.tune_rounded,
+                color: appFontColor,
+                size: 22.sp,
+              ),
+            ),
+            SizedBox(width: 12.w),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Mute Notification Channels',
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF0D1F47),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13.sp,
+                    ),
+                  ),
+                  SizedBox(height: 2.h),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inter(
+                      color: const Color(0xFF5E6D88),
+                      fontWeight: FontWeight.w500,
+                      fontSize: 11.sp,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              size: 16.sp,
+              color: const Color(0xFF2C4C91),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMutedState(String category) {
+    final name = _displayCategoryName(category);
+    return Container(
+      width: double.infinity,
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFF),
+        borderRadius: BorderRadius.circular(20.r),
+        border: Border.all(color: const Color(0xFFD7DEED)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 58.w,
+            height: 58.w,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF273E7B).withValues(alpha: 0.12),
+            ),
+            child: Icon(
+              Icons.volume_off_rounded,
+              color: const Color(0xFF273E7B),
+              size: 30.sp,
+            ),
+          ),
+          SizedBox(height: 10.h),
+          Text(
+            '$name is muted',
+            style: GoogleFonts.koulen(
+              color: const Color(0xFF132B64),
+              fontSize: 25.sp,
+            ),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            'Open mute settings to enable this channel again.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              color: const Color(0xFF60708D),
+              fontWeight: FontWeight.w500,
+              fontSize: 11.5.sp,
+            ),
+          ),
+          SizedBox(height: 12.h),
+          ElevatedButton.icon(
+            onPressed: _openMuteSettings,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1B3E86),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+            ),
+            icon: const Icon(Icons.settings_rounded),
+            label: const Text('Open Mute Settings'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadNotifications() async {
@@ -488,6 +684,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           ),
                           child: Column(
                             children: [
+                              Padding(
+                                padding:
+                                    EdgeInsets.fromLTRB(16.w, 0, 16.w, 12.h),
+                                child: _buildMuteSettingsEntryCard(),
+                              ),
                               SizedBox(
                                 height: 55.w,
                                 child: ListView.separated(
@@ -655,6 +856,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
   /// Build content based on selected tab
   Widget _buildContentForTab() {
     final selectedCategory = notificationType[currentIndex]['category'];
+
+    if (_isMuteSettingsLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (_isCategoryMuted(selectedCategory)) {
+      return _buildMutedState(selectedCategory);
+    }
 
     // For Notifications tab (index 0) - use local storage
     if (selectedCategory == 'notification') {
