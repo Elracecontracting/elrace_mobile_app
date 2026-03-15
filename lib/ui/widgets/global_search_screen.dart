@@ -40,6 +40,37 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = 'lpo';
 
+  String? _asNonEmptyString(dynamic value) {
+    final s = value?.toString().trim();
+    if (s == null || s.isEmpty) return null;
+    if (s.toLowerCase() == 'false' || s.toLowerCase() == 'null') return null;
+    return s;
+  }
+
+  String? _normalizeImageUrl(String? url) {
+    if (url == null || url.isEmpty) return null;
+
+    // Some payloads come as "https:/domain..." (missing slash).
+    if (url.startsWith('https:/') && !url.startsWith('https://')) {
+      return url.replaceFirst('https:/', 'https://');
+    }
+    if (url.startsWith('http:/') && !url.startsWith('http://')) {
+      return url.replaceFirst('http:/', 'http://');
+    }
+
+    // Handle scheme-less absolute URL.
+    if (url.startsWith('//')) {
+      return 'https:$url';
+    }
+
+    // Handle relative path from backend.
+    if (url.startsWith('/')) {
+      return 'https://erp.elrace.com$url';
+    }
+
+    return url;
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -257,55 +288,54 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   /// Petty Cash skeleton loader
   Widget _buildPettyCashSkeleton() {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 5.h, horizontal: 5.w),
-      height: 80.h,
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(30, 8, 15, 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildShimmerBox(width: 60.w, height: 20.h),
-            const SizedBox(width: 15),
-            const SizedBox(
-              height: 30,
-              child: VerticalDivider(color: Colors.grey, thickness: 2),
-            ),
-            const SizedBox(width: 5),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildShimmerBox(width: 50.w, height: 15.h),
-                  SizedBox(height: 4.h),
-                  _buildShimmerBox(width: 70.w, height: 15.h),
-                ],
-              ),
-            ),
-            const SizedBox(
-              height: 30,
-              child: VerticalDivider(color: Colors.grey, thickness: 2),
-            ),
-            const SizedBox(width: 5),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildShimmerBox(width: 50.w, height: 15.h),
-                  SizedBox(height: 4.h),
-                  _buildShimmerBox(width: 70.w, height: 15.h),
-                ],
-              ),
-            ),
-            const SizedBox(width: 10),
-            _buildShimmerBox(width: 20.w, height: 20.h, isCircle: true),
-          ],
+        margin: EdgeInsets.symmetric(vertical: 5.h, horizontal: 5.w),
+        height: 152.h,
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(30.r),
         ),
-      ),
-    );
+        child: Stack(
+          children: [
+            Positioned(
+              top: 0,
+              left: 0,
+              child: _buildShimmerBox(width: 73.w, height: 41.h),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 12.h),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(child: _buildShimmerBox(width: 120.w, height: 14.h)),
+                  SizedBox(height: 26.h),
+                  _buildShimmerBox(width: 170.w, height: 18.h),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      SizedBox(width: 86.w),
+                      Expanded(
+                        child: Center(
+                          child: _buildShimmerBox(width: 90.w, height: 24.h),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 92.w,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            _buildShimmerBox(width: 64.w, height: 10.h),
+                            SizedBox(height: 4.h),
+                            _buildShimmerBox(width: 74.w, height: 10.h),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ));
   }
 
   /// LPO skeleton loader
@@ -727,8 +757,10 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                 })
             .toList(),
         lpoCount: null,
-        clientPhoto: lpoModel.clientPhoto,
-        requestedByUserPhoto: lpoModel.requestedByUserPhoto,
+        clientPhoto:
+            _normalizeImageUrl(_asNonEmptyString(lpoModel.clientPhoto)),
+        requestedByUserPhoto: _normalizeImageUrl(
+            _asNonEmptyString(lpoModel.requestedByUserPhoto)),
         requestedBy: lpoModel.requestedBy,
         requesterManager: lpoModel.requesterManager,
         state: lpoModel.state,
@@ -800,8 +832,10 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
       amount: _pickAmount(),
       attachments: (data['attachments'] as List?) ?? const [],
       lpoCount: data['lpo_count'],
-      clientPhoto: data['partner_photo'] ?? data['client_photo'],
-      requestedByUserPhoto: data['requested_by_user_photo'],
+      clientPhoto: _normalizeImageUrl(
+          _asNonEmptyString(data['partner_photo'] ?? data['client_photo'])),
+      requestedByUserPhoto: _normalizeImageUrl(
+          _asNonEmptyString(data['requested_by_user_photo'])),
       requestedBy: data['requested_by'],
       requesterManager: data['requester_manager'],
       state: data['state'] ?? data['status'],
@@ -855,114 +889,127 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   // Build Petty Cash Card
   Widget _buildPettyCashCard(GlobalSearchItem item) {
     final data = item.additionalData ?? {};
-    final status =
-        (data['state'] ?? data['status'])?.toString().toUpperCase() ??
-            'SUBMITTED';
-    final date = data['date'] == false || data['date'] == null
-        ? 'N/A'
-        : _formatPettyCashDate(data['date'].toString());
-    final rawAmount = data['total_amount'] ?? data['amount'];
-    final amount = rawAmount != null
-        ? (rawAmount is num
-            ? rawAmount.toStringAsFixed(2)
-            : (double.tryParse(rawAmount.toString()) ?? 0.0).toStringAsFixed(2))
-        : '0.00';
+    final status = (data['state'] ?? data['status'])?.toString() ?? 'pending';
 
-    final requesterName = (data['employee_name'] ??
-            data['requested_by'] ??
-            data['create_uid']?[1] ??
-            item.title)
-        .toString();
+    final requestNoRaw = _asNonEmptyString(data['reference']) ??
+        _asNonEmptyString(data['name']) ??
+        _asNonEmptyString(item.title) ??
+        item.id.toString();
 
-    final requestNo =
-        (data['name'] ?? data['reference'] ?? data['id'] ?? item.id).toString();
+    final titleRaw = _asNonEmptyString(data['employee_name']) ??
+        _asNonEmptyString(data['requested_by']) ??
+        _asNonEmptyString(item.subtitle) ??
+        _asNonEmptyString(item.title) ??
+        'PETTY CASH';
 
-    final requesterImage =
-        (data['employee_image'] ?? data['requested_by_user_photo'] ?? '')
-            .toString();
+    final rawAmount =
+        data['amount_total'] ?? data['total_amount'] ?? data['amount'];
+    final amount = _formatPettyCashAmount(rawAmount);
+
+    final dateRaw = _asNonEmptyString(data['date']) ??
+        _asNonEmptyString(data['create_date']) ??
+        _asNonEmptyString(data['write_date']);
+    final lastUpdated = _formatPettyCashDate(dateRaw ?? '');
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
       child: GestureDetector(
         onTap: () => _navigateToDetail(item),
         child: Container(
-          height: 84.h,
+          height: 152.h,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(50.r),
-            border: Border.all(color: const Color(0xFFBDBDBD), width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(15),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              )
-            ],
+            color: const Color(0xFFF9F9F9),
+            borderRadius: BorderRadius.circular(30.r),
+            border: Border.all(color: const Color(0xFF9F9F9F), width: 1),
           ),
-          child: Row(
+          child: Stack(
             children: [
-              SizedBox(width: 10.w),
-              _buildPettyCashAvatar(requesterImage),
-              SizedBox(width: 10.w),
-              Container(
-                width: 1,
-                height: 52.h,
-                color: const Color(0xFFBDBDBD),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(right: 8.w),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        requestNo,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0B2B7A),
-                        ),
-                      ),
-                      SizedBox(height: 4.h),
-                      Text(
-                        amount,
-                        style: GoogleFonts.poppins(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black,
-                        ),
-                      ),
-                      SizedBox(height: 3.h),
-                      Text(
-                        requesterName.isNotEmpty ? requesterName : date,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.lexendDeca(
-                          fontSize: 11.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF484848).withOpacity(0.72),
-                        ),
-                      ),
-                    ],
+              Positioned(
+                top: 0,
+                left: 0,
+                child: ClipRRect(
+                  borderRadius:
+                      BorderRadius.only(topLeft: Radius.circular(30.r)),
+                  child: Image.asset(
+                    _pettyStatusBadgeAsset(status),
+                    width: 73.w,
+                    height: 41.h,
+                    fit: BoxFit.contain,
                   ),
                 ),
               ),
               Padding(
-                padding: EdgeInsets.only(right: 14.w),
-                child: Image.asset(
-                  _pettyStatusBadgeAsset(status),
-                  width: 24.w,
-                  height: 24.w,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Icon(
-                    Icons.circle,
-                    color: const Color(0xFF9AA0A6),
-                    size: 16.sp,
-                  ),
+                padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 12.h),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Text(
+                        requestNoRaw,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0A3887),
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: 26.h),
+                    Text(
+                      titleRaw.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.poppins(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF083A85),
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                    const Spacer(),
+                    Row(
+                      children: [
+                        SizedBox(width: 86.w),
+                        Expanded(
+                          child: Center(
+                            child: Text(
+                              amount,
+                              style: GoogleFonts.inter(
+                                fontSize: 22.sp,
+                                fontWeight: FontWeight.w800,
+                                color: const Color(0xFF073A85),
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(
+                          width: 92.w,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                'Last Updated',
+                                style: GoogleFonts.inter(
+                                  fontSize: 9.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFFB8B8B8),
+                                ),
+                              ),
+                              Text(
+                                lastUpdated,
+                                style: GoogleFonts.inter(
+                                  fontSize: 9.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFFB8B8B8),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -970,6 +1017,19 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         ),
       ),
     );
+  }
+
+  String _formatPettyCashAmount(dynamic rawAmount) {
+    if (rawAmount == null) return '';
+    final value = rawAmount is num
+        ? rawAmount.toDouble()
+        : double.tryParse(rawAmount.toString()) ?? 0.0;
+
+    final formatter = NumberFormat.decimalPattern();
+    if (value == value.roundToDouble()) {
+      return formatter.format(value.toInt());
+    }
+    return formatter.format(value);
   }
 
   /// Build My Actions search result card
@@ -1012,20 +1072,19 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     }
 
     return Card(
-      margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
-      elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.r),
-      ),
-      child: Container(
-        padding: EdgeInsets.all(14.w),
-        decoration: BoxDecoration(
+        margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 5.h),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16.r),
-          color: Colors.white,
-          border: Border.all(color: Colors.grey[200]!),
         ),
-        child: Row(
-          children: [
+        child: Container(
+          padding: EdgeInsets.all(14.w),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16.r),
+            color: Colors.white,
+            border: Border.all(color: Colors.grey[200]!),
+          ),
+          child: Row(children: [
             // Status indicator
             Container(
               width: 4.w,
@@ -1068,7 +1127,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                   Row(
                     children: [
                       if (employeeName.isNotEmpty) ...[
-                        Icon(Icons.person_outline, size: 14.sp, color: Colors.grey[500]),
+                        Icon(Icons.person_outline,
+                            size: 14.sp, color: Colors.grey[500]),
                         SizedBox(width: 4.w),
                         Flexible(
                           child: Text(
@@ -1085,7 +1145,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                       if (requestType.isNotEmpty) ...[
                         SizedBox(width: 8.w),
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 2.h),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 6.w, vertical: 2.h),
                           decoration: BoxDecoration(
                             color: const Color(0xFF1A2540).withOpacity(0.08),
                             borderRadius: BorderRadius.circular(4.r),
@@ -1106,7 +1167,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                     SizedBox(height: 2.h),
                     Text(
                       vendor,
-                      style: GoogleFonts.inter(fontSize: 11.sp, color: Colors.grey[500]),
+                      style: GoogleFonts.inter(
+                          fontSize: 11.sp, color: Colors.grey[500]),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -1121,7 +1183,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               children: [
                 if (amountTotal != null && amountTotal != 0)
                   Text(
-                    NumberFormat.decimalPattern().format(amountTotal is num ? amountTotal : double.tryParse(amountTotal.toString()) ?? 0),
+                    NumberFormat.decimalPattern().format(amountTotal is num
+                        ? amountTotal
+                        : double.tryParse(amountTotal.toString()) ?? 0),
                     style: GoogleFonts.inter(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w800,
@@ -1131,7 +1195,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                 SizedBox(height: 4.h),
                 Text(
                   formattedDate,
-                  style: GoogleFonts.inter(fontSize: 11.sp, color: Colors.grey[500]),
+                  style: GoogleFonts.inter(
+                      fontSize: 11.sp, color: Colors.grey[500]),
                 ),
                 SizedBox(height: 4.h),
                 Container(
@@ -1151,38 +1216,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPettyCashAvatar(String imageUrl) {
-    final hasImage = imageUrl.trim().isNotEmpty;
-    return Container(
-      width: 54.w,
-      height: 54.w,
-      padding: EdgeInsets.all(3.w),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFBDBDBD), width: 1),
-      ),
-      child: ClipOval(
-        child: hasImage
-            ? Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: const Color(0xFFE9E9E9),
-                  child: Icon(Icons.person, color: Colors.grey[600]),
-                ),
-              )
-            : Container(
-                color: const Color(0xFFE9E9E9),
-                child: Icon(Icons.person, color: Colors.grey[600]),
-              ),
-      ),
-    );
+          ]),
+        ));
   }
 
   String _pettyStatusBadgeAsset(String status) {
@@ -1199,10 +1234,13 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   }
 
   String _formatPettyCashDate(String date) {
-    if (date.isEmpty) return '--';
+    if (date.isEmpty) return '--/--/----';
     try {
-      final dt = DateTime.parse(date);
-      return DateFormat('dd/MM/yy').format(dt);
+      final normalized = date.contains(' ') && !date.contains('T')
+          ? date.replaceFirst(' ', 'T')
+          : date;
+      final dt = DateTime.parse(normalized);
+      return DateFormat('MM/dd/yyyy').format(dt);
     } catch (_) {
       return date;
     }

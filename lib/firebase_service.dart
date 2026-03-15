@@ -277,6 +277,23 @@ class FirebaseService {
     RemoteNotification? notification = message.notification;
 
     if (notification != null) {
+      String category = 'notification';
+      if (message.data.containsKey('category')) {
+        category = message.data['category'].toString();
+      } else if (message.data.containsKey('type')) {
+        category = message.data['type'].toString();
+      }
+
+      final isMuted = await NotificationStorageService.shouldMuteNotification(
+        category: category,
+        data: message.data,
+      );
+      if (isMuted) {
+        print(
+            '🔇 Foreground notification suppressed by mute settings: category=$category');
+        return;
+      }
+
       const AndroidNotificationDetails androidDetails =
           AndroidNotificationDetails(
         'high_importance_channel',

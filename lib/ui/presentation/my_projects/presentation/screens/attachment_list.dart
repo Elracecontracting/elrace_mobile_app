@@ -10,13 +10,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:slide_to_act/slide_to_act.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/folder_model.dart';
 import 'package:el_race/ui/presentation/my_projects/data/datasources/project_remote_datasource.dart';
 import 'package:http/http.dart' as http;
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/utils/project_file_opening.dart';
 
 class AttachmentListScreen extends StatefulWidget {
   final ProjectListBloc bloc;
@@ -418,16 +418,11 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
 
   void _downloadFile(String url, String fileName) async {
     try {
-      // Complete URL
-      final fullUrl = 'https://erp.elrace.com$url';
-
-      // Launch URL to download
-      final Uri uri = Uri.parse(fullUrl);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
-      } else {
-        throw Exception('Could not launch $fullUrl');
-      }
+      await openProjectFileInApp(
+        context,
+        rawUrl: url,
+        fileName: fileName,
+      );
     } catch (e) {
       print('Error downloading file: $e');
     }

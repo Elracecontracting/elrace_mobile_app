@@ -326,8 +326,8 @@ class ContentItemWidget extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12.r),
                       onTap: onTap,
                       child: Container(
-                        height: 26.h,
-                        padding: EdgeInsets.symmetric(horizontal: 12.w),
+                        height: 30.h,
+                        padding: EdgeInsets.symmetric(horizontal: 14.w),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: const Color(0xFF6E6E6E),
@@ -336,7 +336,7 @@ class ContentItemWidget extends StatelessWidget {
                         child: Text(
                           'View',
                           style: GoogleFonts.poppins(
-                            fontSize: 11.sp,
+                            fontSize: 12.sp,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),

@@ -387,98 +387,143 @@ class _RequestPermissionState extends State<RequestPermission> {
 
   Widget _buildReasonCard() {
     return Container(
-      padding: EdgeInsets.all(12.w),
+      width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
-      child: Column(
-        children: [
-          TextField(
-            controller: _descController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              border: InputBorder.none,
-              hintText: 'Write your description...',
-              hintStyle: TextStyle(fontSize: 12),
-            ),
-            style: TextStyle(
-              fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-              fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
-            ),
-            onChanged: (val) => setState(() => description = val),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.format_bold,
-                        size: 18.w, color: isBold ? _accentGrey : Colors.grey),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () {
-                      setState(() {
-                        isBold = !isBold;
-                        _applyFormatting();
-                      });
-                    },
-                  ),
-                  SizedBox(width: 10.w),
-                  IconButton(
-                    icon: Icon(Icons.format_italic,
-                        size: 18.w,
-                        color: isItalic ? _accentGrey : Colors.grey),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () {
-                      setState(() {
-                        isItalic = !isItalic;
-                        _applyFormatting();
-                      });
-                    },
-                  ),
-                  SizedBox(width: 10.w),
-                  IconButton(
-                    icon: Icon(Icons.format_list_bulleted,
-                        size: 18.w,
-                        color: isBulletList ? _accentGrey : Colors.grey),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () {
-                      setState(() {
-                        isBulletList = !isBulletList;
-                        isNumberedList = false;
-                        _insertListPrefix('â€¢ ');
-                      });
-                    },
-                  ),
-                  SizedBox(width: 10.w),
-                  IconButton(
-                    icon: Icon(Icons.format_list_numbered,
-                        size: 18.w,
-                        color: isNumberedList ? _accentGrey : Colors.grey),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () {
-                      setState(() {
-                        isNumberedList = !isNumberedList;
-                        isBulletList = false;
-                        _insertNumberedList();
-                      });
-                    },
-                  ),
-                ],
-              ),
-              Text(
-                '${description.trim().isEmpty ? 0 : description.trim().split(RegExp(r'\\s+')).length}/50',
-                style: TextStyle(fontSize: 10.sp, color: Colors.grey),
-              ),
-            ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16.95.r),
+        border: Border.all(
+          width: 1.13,
+          color: const Color(0xFFB0B0B0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(10),
+            blurRadius: 36.16,
+            offset: Offset(0, 4.52.h),
+            spreadRadius: 0,
           ),
         ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(11.30.w, 11.30.h, 11.30.w, 10.h),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Reason',
+                    style: GoogleFonts.lexendDeca(
+                      color: const Color(0xFF6E6A7C),
+                      fontSize: 14.69.sp,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ),
+                Wrap(
+                  spacing: 15.82.w,
+                  children: [
+                    _buildMiniFormatButton(
+                      icon: Icons.format_bold,
+                      isActive: isBold,
+                      onTap: () {
+                        setState(() {
+                          isBold = !isBold;
+                          _applyFormatting();
+                        });
+                      },
+                    ),
+                    _buildMiniFormatButton(
+                      icon: Icons.format_list_numbered,
+                      isActive: isNumberedList,
+                      onTap: () {
+                        setState(() {
+                          isNumberedList = !isNumberedList;
+                          isBulletList = false;
+                          _insertNumberedList();
+                        });
+                      },
+                    ),
+                    _buildMiniFormatButton(
+                      icon: Icons.format_list_bulleted,
+                      isActive: isBulletList,
+                      onTap: () {
+                        setState(() {
+                          isBulletList = !isBulletList;
+                          isNumberedList = false;
+                          _insertListPrefix('GÇó ');
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            SizedBox(height: 12.h),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(11.30.r),
+                border: Border.all(
+                  width: 1.13,
+                  color: const Color(0xFFD9D9D9),
+                ),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.h),
+                child: TextField(
+                  controller: _descController,
+                  minLines: 4,
+                  maxLines: 4,
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    isDense: true,
+                    hintText: 'Write your description...',
+                    hintStyle: GoogleFonts.lexendDeca(
+                      color: const Color(0xFF24252C).withAlpha(120),
+                      fontSize: 12.43.sp,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                  style: GoogleFonts.lexendDeca(
+                    color: const Color(0xFF24252C),
+                    fontSize: 12.43.sp,
+                    fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
+                    fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+                  ),
+                  onChanged: (val) => setState(() => description = val),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiniFormatButton({
+    required IconData icon,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    return SizedBox(
+      width: 29.70.w,
+      height: 24.91.h,
+      child: Material(
+        color: const Color(0xFFD9D9D9),
+        borderRadius: BorderRadius.circular(4.95.r),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(4.95.r),
+          onTap: onTap,
+          child: Center(
+            child: Icon(
+              icon,
+              size: 16.w,
+              color: isActive ? _primary : const Color(0xFF24252C),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -596,7 +641,7 @@ class _RequestPermissionState extends State<RequestPermission> {
           SnackBar(content: Text(translate('request.request_submitted'))),
         );
         Navigator.pop(
-            context, true); // âœ… Go back to MyRequestsPage with refresh flag
+            context, true); // G£à Go back to MyRequestsPage with refresh flag
       } else {
         _showErrorDialog(
             data["result"]?['message'] ?? translate('request.request_failed'));

@@ -1,20 +1,27 @@
-import 'dart:convert';
+import 'dart:async';
 
-import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-
-import 'attachment_viewer_screen.dart';
 
 /// Family Documents Tab
 /// Shows folder categories (Emirates ID, Birth Certificates, etc.)
 /// Tapping a folder opens a grid of individual document cards.
 class FamilyDocumentsTab extends StatefulWidget {
-  const FamilyDocumentsTab({super.key});
+  const FamilyDocumentsTab({
+    super.key,
+    required this.isActive,
+    required this.documents,
+    this.onOpenDocument,
+    this.onAddDocument,
+  });
+
+  final bool isActive;
+  final List<Map<String, dynamic>> documents;
+  final Future<void> Function(Map<String, dynamic> document)? onOpenDocument;
+  final VoidCallback? onAddDocument;
 
   @override
   State<FamilyDocumentsTab> createState() => _FamilyDocumentsTabState();
@@ -26,6 +33,25 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
 
   // Currently selected folder (null = show folders list)
   String? _selectedFolder;
+
+  List<Map<String, dynamic>> _liveFamilyDocuments() {
+    final docs = widget.documents;
+    if (docs.isEmpty) return const [];
+
+    final familyDocs = docs.where((doc) {
+      final explicitFamily =
+          doc['_isFamily'] == true || doc['is_family'] == true;
+      if (explicitFamily) return true;
+
+      final type = (doc['title'] ?? doc['document_type'] ?? doc['type'] ?? '')
+          .toString()
+          .toLowerCase();
+      final name = (doc['name'] ?? '').toString().toLowerCase();
+      return type.contains('family') || name.contains('family');
+    }).toList();
+
+    return familyDocs;
+  }
 
   // ── Fake data for folders ──
   final List<Map<String, dynamic>> _folders = [
@@ -190,7 +216,22 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
   }
 
   @override
+  void didUpdateWidget(covariant FamilyDocumentsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reset to folders view whenever user leaves Family tab.
+    if (oldWidget.isActive && !widget.isActive) {
+      _selectedFolder = null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final liveDocs = _liveFamilyDocuments();
+
+    if (liveDocs.isNotEmpty) {
+      return _buildLiveDocumentsList(liveDocs);
+    }
+
     return WillPopScope(
       onWillPop: () async {
         if (_selectedFolder != null) {
@@ -199,9 +240,178 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
         }
         return true;
       },
-      child: _selectedFolder != null
-          ? _buildDocumentsList()
-          : _buildFoldersList(),
+      child:
+          _selectedFolder != null ? _buildDocumentsList() : _buildFoldersList(),
+    );
+  }
+
+  Widget _buildLiveDocumentsList(List<Map<String, dynamic>> docs) {
+    return Column(
+      children: [
+        Padding(
+          padding: EdgeInsets.only(left: 20.w, top: 8.h, bottom: 8.h),
+          child: Align(
+            alignment: Alignment.topLeft,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(30.18),
+                border: Border.all(color: const Color(0xffD9D9D9)),
+              ),
+              child: Padding(
+                padding:
+                    EdgeInsets.symmetric(horizontal: 13.5.w, vertical: 8.5.h),
+                child: Text(
+                  'Files No.  |  ${docs.length + 1}',
+                  style: GoogleFonts.aBeeZee(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w400,
+                    fontStyle: FontStyle.italic,
+                    letterSpacing: .10,
+                    color: const Color(0xff949494),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Expanded(
+          child: GridView.builder(
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            itemCount: docs.length + 1,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12.w,
+              mainAxisSpacing: 12.h,
+              childAspectRatio: 0.75,
+            ),
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                return GestureDetector(
+                  onTap: () => widget.onAddDocument?.call(),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20.r),
+                      border: Border.all(color: const Color(0xffD9D9D9)),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.note_add_outlined,
+                          size: 48.sp,
+                          color: const Color(0xff949494),
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          'Add New',
+                          style: GoogleFonts.aBeeZee(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w400,
+                            fontStyle: FontStyle.italic,
+                            color: const Color(0xff949494),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+
+              final doc = docs[index - 1];
+              final iconPath =
+                  (doc['icon'] ?? 'assets/png/other-documetns-icon.png')
+                      .toString();
+              final docName =
+                  (doc['name'] ?? doc['title'] ?? 'Document').toString();
+              final expiryDateText = _formatDate(doc['expiry_date']);
+              final issueDateText = _formatDate(doc['issue_date']);
+              final dateText =
+                  expiryDateText.isNotEmpty ? expiryDateText : issueDateText;
+
+              var isExpired = false;
+              final rawExpiry = doc['expiry_date'];
+              if (rawExpiry != null && rawExpiry != false) {
+                try {
+                  final expiry = DateTime.parse(rawExpiry.toString());
+                  isExpired = expiry.isBefore(DateTime.now());
+                } catch (_) {
+                  isExpired = false;
+                }
+              }
+
+              return GestureDetector(
+                onTap: () {
+                  if (widget.onOpenDocument != null) {
+                    unawaited(widget.onOpenDocument!(doc));
+                  }
+                },
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20.r),
+                    border: Border.all(
+                      color: isExpired
+                          ? const Color(0xFFBA1719)
+                          : const Color(0xffD9D9D9),
+                      width: isExpired ? 2 : 1,
+                    ),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(10.w),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12.r),
+                            child: Image.asset(
+                              iconPath,
+                              fit: BoxFit.contain,
+                              width: double.infinity,
+                              errorBuilder: (_, __, ___) => Icon(
+                                Icons.insert_drive_file_outlined,
+                                size: 44.sp,
+                                color: const Color(0xff949494),
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 6.h),
+                        Text(
+                          docName,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.aBeeZee(
+                            fontSize: 12.sp,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black,
+                          ),
+                        ),
+                        if (dateText.isNotEmpty) ...[
+                          SizedBox(height: 2.h),
+                          Text(
+                            dateText,
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            style: GoogleFonts.aBeeZee(
+                              fontSize: 10.sp,
+                              fontWeight: FontWeight.w400,
+                              color: isExpired
+                                  ? const Color(0xFFBA1719)
+                                  : const Color(0xff949494),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -239,15 +449,15 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
           // Folder name label at top-right
           Positioned(
             top: 8.h,
-            right:35.w,
+            right: 35.w,
             child: Text(
-                folder['name'],
-                style: GoogleFonts.aBeeZee(
-                  fontSize: 13.sp,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black87,
-                ),
+              folder['name'],
+              style: GoogleFonts.aBeeZee(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w700,
+                color: Colors.black87,
               ),
+            ),
           ),
         ],
       ),
@@ -270,8 +480,8 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                 border: Border.all(color: const Color(0xffD9D9D9)),
               ),
               child: Padding(
-                padding: EdgeInsets.symmetric(
-                    horizontal: 13.5.w, vertical: 8.5.h),
+                padding:
+                    EdgeInsets.symmetric(horizontal: 13.5.w, vertical: 8.5.h),
                 child: Text(
                   'Files No.  |  ${docs.length + 1}',
                   style: GoogleFonts.aBeeZee(
@@ -302,7 +512,7 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                 // Add new document card
                 return GestureDetector(
                   onTap: () {
-                    // TODO: Open add document dialog
+                    widget.onAddDocument?.call();
                   },
                   child: Container(
                     decoration: BoxDecoration(

@@ -349,19 +349,6 @@ Widget buildProjectCard({
                   height: 18.h,
                   child: Stack(
                     children: [
-                      Center(
-                        child: Text(
-                          'Agreement no',
-                          style: GoogleFonts.inter(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w600,
-                            color: cardDataGray,
-                            letterSpacing: 0.6,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
                       Align(
                         alignment: Alignment.topRight,
                         child: Text(

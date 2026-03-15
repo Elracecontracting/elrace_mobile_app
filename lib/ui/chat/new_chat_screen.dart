@@ -3,7 +3,11 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../../chat/chat.dart';
+import '../../chat/models/chat.dart';
+import '../../chat/models/chat_user.dart';
+import '../../chat/repositories/chat_repository.dart';
+import '../../chat/repositories/user_repository.dart';
+import '../../chat/services/presence_service.dart';
 import '../../resources/app_colors.dart';
 import 'chat_screen.dart';
 
@@ -18,14 +22,14 @@ class NewChatScreen extends StatefulWidget {
 class _NewChatScreenState extends State<NewChatScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  
+
   List<ChatUser> _searchResults = [];
   List<Chat> _availableGroups = []; // Role groups available for support chat
   List<Chat> _filteredGroups = []; // Filtered by search query
   bool _isSearching = false;
   String _errorMessage = '';
   Timer? _debounce;
-  
+
   String? _currentUid;
   ChatUser? _currentUser;
 
@@ -35,7 +39,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
     _currentUid = FirebaseAuth.instance.currentUser?.uid;
     _loadCurrentUser();
     _searchController.addListener(_onSearchChanged);
-    
+
     // Auto-focus search field
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _searchFocusNode.requestFocus();
@@ -82,7 +86,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
 
   Future<void> _performSearch() async {
     final query = _searchController.text.trim().toLowerCase();
-    
+
     if (query.isEmpty) {
       setState(() {
         _searchResults = [];
@@ -95,9 +99,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
     if (query.length < 2) {
       setState(() {
         _searchResults = [];
-        _filteredGroups = _availableGroups.where((g) =>
-          (g.title ?? '').toLowerCase().contains(query)
-        ).toList();
+        _filteredGroups = _availableGroups
+            .where((g) => (g.title ?? '').toLowerCase().contains(query))
+            .toList();
         _errorMessage = 'أدخل حرفين على الأقل للبحث';
       });
       return;
@@ -110,14 +114,15 @@ class _NewChatScreenState extends State<NewChatScreen> {
 
     try {
       final result = await UserRepository.instance.searchUsers(query: query);
-      
+
       // Filter out current user
-      final filteredResults = result.users.where((u) => u.uid != _currentUid).toList();
-      
+      final filteredResults =
+          result.users.where((u) => u.uid != _currentUid).toList();
+
       // Filter groups by search query
-      final matchingGroups = _availableGroups.where((g) =>
-        (g.title ?? '').toLowerCase().contains(query)
-      ).toList();
+      final matchingGroups = _availableGroups
+          .where((g) => (g.title ?? '').toLowerCase().contains(query))
+          .toList();
 
       setState(() {
         _searchResults = filteredResults;
@@ -194,7 +199,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
       return _buildEmptyState();
     }
 
-    if (_errorMessage.isNotEmpty && _searchResults.isEmpty && _filteredGroups.isEmpty) {
+    if (_errorMessage.isNotEmpty &&
+        _searchResults.isEmpty &&
+        _filteredGroups.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -227,9 +234,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
             ),
           ),
           ..._filteredGroups.map((group) => _GroupSupportTile(
-            group: group,
-            onTap: () => _startSupportChat(group),
-          )),
+                group: group,
+                onTap: () => _startSupportChat(group),
+              )),
           if (_searchResults.isNotEmpty)
             const Divider(height: 16, indent: 16, endIndent: 16),
         ],
@@ -248,9 +255,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
               ),
             ),
           ..._searchResults.map((user) => _UserListTile(
-            user: user,
-            onTap: () => _startChat(user),
-          )),
+                user: user,
+                onTap: () => _startChat(user),
+              )),
         ],
       ],
     );
@@ -272,9 +279,9 @@ class _NewChatScreenState extends State<NewChatScreen> {
           ),
         ),
         ..._availableGroups.map((group) => _GroupSupportTile(
-          group: group,
-          onTap: () => _startSupportChat(group),
-        )),
+              group: group,
+              onTap: () => _startSupportChat(group),
+            )),
         const SizedBox(height: 24),
         Center(
           child: Column(
@@ -364,8 +371,6 @@ class _NewChatScreenState extends State<NewChatScreen> {
               chatId: chatId,
               title: group.title ?? 'Group ${group.roleId}',
               chatType: ChatType.support,
-              supportUserUid: _currentUid,
-              supportGroupTitle: group.title ?? 'Group ${group.roleId}',
             ),
           ),
         );
@@ -436,7 +441,7 @@ class _NewChatScreenState extends State<NewChatScreen> {
     } catch (e) {
       // Pop loading dialog
       if (mounted) Navigator.of(context).pop();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -467,9 +472,8 @@ class _UserListTile extends StatelessWidget {
           CircleAvatar(
             radius: 24,
             backgroundColor: AppColors.primaryBlackLight,
-            backgroundImage: user.avatarUrl != null 
-                ? NetworkImage(user.avatarUrl!) 
-                : null,
+            backgroundImage:
+                user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
             child: user.avatarUrl == null
                 ? Text(
                     _getInitials(user.name),
@@ -486,7 +490,7 @@ class _UserListTile extends StatelessWidget {
             builder: (context, snapshot) {
               final isOnline = snapshot.data?.online ?? false;
               if (!isOnline) return const SizedBox.shrink();
-              
+
               return Positioned(
                 right: 0,
                 bottom: 0,
@@ -526,7 +530,8 @@ class _UserListTile extends StatelessWidget {
               ),
               if (user.branchId != null) ...[
                 const SizedBox(width: 8),
-                Icon(Icons.location_on_outlined, size: 12, color: Colors.grey[500]),
+                Icon(Icons.location_on_outlined,
+                    size: 12, color: Colors.grey[500]),
                 const SizedBox(width: 4),
                 Text(
                   'Branch: ${user.branchId}',

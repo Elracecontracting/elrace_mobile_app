@@ -29,11 +29,11 @@ class DelayedRequestCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const double stripWidth = 42;
+    const double stripWidth = 34;
 
     return Container(
-      height: 134.w,
-      margin: EdgeInsets.symmetric(horizontal: 14.w, vertical: 4.w),
+      height: 165.w,
+      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.w),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
@@ -46,11 +46,11 @@ class DelayedRequestCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFFD8DCE1),
                     borderRadius: BorderRadius.circular(18.r),
-                    border: Border.all(color: const Color(0xFF80858C), width: 1),
+                    border:
+                        Border.all(color: const Color(0xFF80858C), width: 1),
                   ),
                 ),
               ),
-
               Positioned.fill(
                 child: Padding(
                   padding: EdgeInsets.only(
@@ -103,9 +103,9 @@ class DelayedRequestCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      SizedBox(height: 8.w),
+                      SizedBox(height: 6.w),
                       Padding(
-                        padding: EdgeInsets.only(left: 2.w),
+                        padding: EdgeInsets.only(left: 10.w),
                         child: Text(
                           requestType,
                           style: GoogleFonts.nunito(
@@ -113,7 +113,7 @@ class DelayedRequestCard extends StatelessWidget {
                             fontWeight: FontWeight.w900,
                             color: const Color(0xFF121212),
                           ),
-                          maxLines: 1,
+                          maxLines: 3,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -171,44 +171,44 @@ class DelayedRequestCard extends StatelessWidget {
                   width: stripWidth,
                   height: double.infinity,
                   child: ColoredBox(
-                      color: const Color(0xFFC62828),
-                      child: Center(
-                        child: FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '$daysDelayed',
+                    color: const Color(0xFFC62828),
+                    child: Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '$daysDelayed',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 20.sp,
+                                height: 1.0,
+                              ),
+                            ),
+                            SizedBox(height: 6.w),
+                            RotatedBox(
+                              quarterTurns: 3,
+                              child: Text(
+                                'Days Delayed',
                                 textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
                                   color: Colors.white,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 30.sp,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 8.sp,
                                   height: 1.0,
                                 ),
                               ),
-                              SizedBox(height: 6.w),
-                              RotatedBox(
-                                quarterTurns: 3,
-                                child: Text(
-                                  'Days Delayed',
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 9.sp,
-                                    height: 1.0,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
+                  ),
                 ),
               ),
             ],
@@ -220,7 +220,8 @@ class DelayedRequestCard extends StatelessWidget {
 
   Widget _buildEmployeeImage(double size) {
     final url = employeeImageUrl.trim();
-    if (url.isNotEmpty && (url.startsWith('http://') || url.startsWith('https://'))) {
+    if (url.isNotEmpty &&
+        (url.startsWith('http://') || url.startsWith('https://'))) {
       return Image.network(
         url,
         fit: BoxFit.cover,

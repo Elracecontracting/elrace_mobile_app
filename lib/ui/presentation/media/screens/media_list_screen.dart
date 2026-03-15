@@ -669,8 +669,8 @@ class _MediaListScreenState extends State<MediaListScreen> {
                         borderRadius: BorderRadius.circular(12.r),
                         onTap: () => _showPhotoPreview(context, primary),
                         child: Container(
-                          height: 15.h,
-                          padding: EdgeInsets.symmetric(horizontal: 11.w),
+                          height: 22.h,
+                          padding: EdgeInsets.symmetric(horizontal: 14.w),
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
                             color: const Color(0xFF6E6E6E),
@@ -679,7 +679,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                           child: Text(
                             'View',
                             style: GoogleFonts.poppins(
-                              fontSize: 11.5.sp,
+                              fontSize: 12.sp,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                             ),

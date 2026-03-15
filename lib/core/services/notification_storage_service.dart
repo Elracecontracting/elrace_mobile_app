@@ -5,9 +5,197 @@ import 'package:el_race/core/services/notification_api_service.dart';
 class NotificationStorageService {
   static const String _notificationsKey = 'stored_notifications';
   static const String _unreadCountKey = 'unread_notification_count';
+  static const String _muteSettingsKey = 'notification_mute_settings_v1';
+
+  static const Map<String, bool> _defaultMuteSettings = {
+    'global': false,
+    'notification': false,
+    'announcement': false,
+    'circular': false,
+    'hr': false,
+    'rfq': false,
+    'invoice': false,
+    'pettycash': false,
+    'lpo': false,
+    'chat': false,
+  };
 
   /// Callback to notify when notification count changes
   static void Function()? onCountChanged;
+
+  static String _normalizeChannelToken(String value) {
+    return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  static String _resolveChannel({
+    String? category,
+    Map<String, dynamic>? data,
+  }) {
+    final candidates = <dynamic>[
+      category,
+      data?['category'],
+      data?['type'],
+      data?['record_type'],
+      data?['target_type'],
+      data?['module'],
+      data?['entity'],
+      data?['resource_type'],
+      data?['model_name'],
+      data?['model'],
+      data?['screen'],
+    ];
+
+    for (final candidate in candidates) {
+      final normalized = _normalizeChannelToken(candidate?.toString() ?? '');
+      if (normalized.isEmpty) continue;
+
+      if (normalized.contains('announcement')) return 'announcement';
+      if (normalized.contains('circular')) return 'circular';
+      if (normalized.contains('chat') || normalized.contains('message')) {
+        return 'chat';
+      }
+      if (normalized.contains('rfq') || normalized == 'purchasequotation') {
+        return 'rfq';
+      }
+      if (normalized.contains('invoice') ||
+          normalized.contains('accountmove') ||
+          normalized == 'bill') {
+        return 'invoice';
+      }
+      if (normalized.contains('pettycash') ||
+          normalized.contains('hrexpensesheet') ||
+          normalized.contains('expense')) {
+        return 'pettycash';
+      }
+      if (normalized == 'po' ||
+          normalized == 'lpo' ||
+          normalized.contains('purchaseorder')) {
+        return 'lpo';
+      }
+      if (normalized == 'hr' ||
+          normalized.contains('hrrequest') ||
+          normalized.contains('leaverequest') ||
+          normalized.contains('employeerequest')) {
+        return 'hr';
+      }
+      if (normalized.contains('notification')) return 'notification';
+    }
+
+    return 'notification';
+  }
+
+  static bool _asBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    return value.toString().toLowerCase() == 'true';
+  }
+
+  static bool _hasAnyMuteEnabled(Map<String, bool> settings) {
+    return settings.entries.any((entry) => entry.value);
+  }
+
+  static Future<Map<String, bool>> getMuteSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_muteSettingsKey);
+
+    final merged = Map<String, bool>.from(_defaultMuteSettings);
+    if (raw == null || raw.trim().isEmpty) {
+      return merged;
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is Map) {
+        for (final entry in decoded.entries) {
+          final key = entry.key.toString().toLowerCase();
+          if (merged.containsKey(key)) {
+            merged[key] = _asBool(entry.value);
+          }
+        }
+      }
+    } catch (e) {
+      print('⚠️ Error parsing mute settings, using defaults: $e');
+    }
+
+    return merged;
+  }
+
+  static Future<void> setMuteSetting(String channel, bool muted) async {
+    final key = channel.trim().toLowerCase();
+    if (key.isEmpty || !_defaultMuteSettings.containsKey(key)) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final settings = await getMuteSettings();
+    settings[key] = muted;
+    await prefs.setString(_muteSettingsKey, jsonEncode(settings));
+
+    await _updateUnreadCount();
+    onCountChanged?.call();
+
+    print('🔕 Notification mute changed: $key -> $muted');
+  }
+
+  static Future<bool> isChannelMuted(String channel) async {
+    final settings = await getMuteSettings();
+    final globalMuted = settings['global'] == true;
+    if (globalMuted) return true;
+    return settings[channel.trim().toLowerCase()] == true;
+  }
+
+  static Future<bool> shouldMuteNotification({
+    String? category,
+    Map<String, dynamic>? data,
+  }) async {
+    final settings = await getMuteSettings();
+    if (settings['global'] == true) {
+      return true;
+    }
+
+    final channel = _resolveChannel(category: category, data: data);
+    return settings[channel] == true;
+  }
+
+  static Future<List<Map<String, dynamic>>> _applyMuteFilter(
+    List<Map<String, dynamic>> items,
+  ) async {
+    if (items.isEmpty) return items;
+
+    final settings = await getMuteSettings();
+    if (!_hasAnyMuteEnabled(settings)) {
+      return items;
+    }
+
+    final globalMuted = settings['global'] == true;
+    if (globalMuted) {
+      print('🔇 Global notifications mute is ON; hiding all notifications.');
+      return [];
+    }
+
+    final filtered = <Map<String, dynamic>>[];
+    for (final item in items) {
+      Map<String, dynamic>? data;
+      final rawData = item['data'];
+      if (rawData is Map<String, dynamic>) {
+        data = rawData;
+      } else if (rawData is Map) {
+        data = Map<String, dynamic>.from(rawData);
+      }
+
+      final channel = _resolveChannel(
+        category: item['category']?.toString(),
+        data: data,
+      );
+
+      if (settings[channel] == true) {
+        print(
+            '🔇 Notification hidden by mute setting: channel=$channel, id=${item['id']}');
+        continue;
+      }
+      filtered.add(item);
+    }
+
+    return filtered;
+  }
 
   /// Save a new notification
   static Future<void> saveNotification({
@@ -27,6 +215,16 @@ class NotificationStorageService {
       // Determine category from data or default to 'notification'
       String notificationCategory =
           category ?? data?['category'] ?? data?['type'] ?? 'notification';
+
+      final shouldMute = await shouldMuteNotification(
+        category: notificationCategory,
+        data: data,
+      );
+      if (shouldMute) {
+        print(
+            '🔇 Notification skipped (muted): title="$title", category=$notificationCategory');
+        return;
+      }
 
       // Create new notification
       final newNotification = {
@@ -77,19 +275,26 @@ class NotificationStorageService {
           .map(_normalizeApiNotification)
           .toList(growable: false);
 
-      final prefs = await SharedPreferences.getInstance();
-      await _saveStoredNotifications(normalized, prefs);
+      final muteSettings = await getMuteSettings();
+      final hasMute = _hasAnyMuteEnabled(muteSettings);
+      final filtered = await _applyMuteFilter(normalized);
 
-      if (apiResult.unreadCount != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await _saveStoredNotifications(filtered, prefs);
+
+      if (apiResult.unreadCount != null && !hasMute) {
         await prefs.setInt(_unreadCountKey, apiResult.unreadCount!);
       } else {
-        await _updateUnreadCount();
+        final unreadVisibleCount =
+            filtered.where((n) => n['isRead'] != true).length;
+        await prefs.setInt(_unreadCountKey, unreadVisibleCount);
       }
 
-      return normalized;
+      return filtered;
     } catch (e) {
       print('⚠️ Notification API unavailable, using local cache: $e');
-      return _getStoredNotifications();
+      final localOnly = await _getStoredNotifications();
+      return _applyMuteFilter(localOnly);
     }
   }
 
@@ -220,9 +425,12 @@ class NotificationStorageService {
 
   /// Get unread notification count
   static Future<int> getUnreadCount() async {
+    final settings = await getMuteSettings();
+    final hasMute = _hasAnyMuteEnabled(settings);
+
     try {
       final apiUnreadCount = await NotificationApiService.getUnreadCount();
-      if (apiUnreadCount != null) {
+      if (apiUnreadCount != null && !hasMute) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt(_unreadCountKey, apiUnreadCount);
         return apiUnreadCount;
@@ -232,7 +440,8 @@ class NotificationStorageService {
     }
 
     try {
-      final notifications = await _getStoredNotifications();
+      final notifications =
+          await _applyMuteFilter(await _getStoredNotifications());
       return notifications.where((n) => n['isRead'] == false).length;
     } catch (e) {
       print('❌ Error getting unread count: $e');
@@ -244,7 +453,8 @@ class NotificationStorageService {
   static Future<void> _updateUnreadCount() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final notifications = await _getStoredNotifications();
+      final notifications =
+          await _applyMuteFilter(await _getStoredNotifications());
       final count = notifications.where((n) => n['isRead'] == false).length;
       await prefs.setInt(_unreadCountKey, count);
     } catch (e) {

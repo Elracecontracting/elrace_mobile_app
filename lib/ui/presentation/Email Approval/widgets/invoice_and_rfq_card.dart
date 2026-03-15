@@ -15,7 +15,10 @@ class InvoiceAndRfqCard extends StatelessWidget {
   final VoidCallback? onRefresh;
   final String categoryType;
   const InvoiceAndRfqCard(
-      {super.key, required this.approvalItems, this.onRefresh, this.categoryType = ''});
+      {super.key,
+      required this.approvalItems,
+      this.onRefresh,
+      this.categoryType = ''});
 
   String _formatAmountForCard(String raw) {
     final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
@@ -126,7 +129,8 @@ class InvoiceAndRfqCard extends StatelessWidget {
                 height: 48.w,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.95), width: 2),
+                  border: Border.all(
+                      color: Colors.white.withOpacity(0.95), width: 2),
                 ),
                 child: ClipOval(
                   child: _buildEmployeeImage(
@@ -257,7 +261,8 @@ class InvoiceAndRfqCard extends StatelessWidget {
                 height: 48.w,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.95), width: 2),
+                  border: Border.all(
+                      color: Colors.white.withOpacity(0.95), width: 2),
                 ),
                 child: ClipOval(
                   child: _buildEmployeeImage(item["image_emp"], 48.w),
@@ -405,17 +410,26 @@ class InvoiceAndRfqCard extends StatelessWidget {
               fallback: "0");
 
           final rfqTitle = _getSafeString(
-            item["project_title"] ?? item["project"] ?? item["name"] ?? item["title"],
+            item["project_title"] ??
+                item["project"] ??
+                item["name"] ??
+                item["title"],
             fallback: 'N/A',
           );
 
           final rfqSubtitle = _getSafeString(
-            item["client_name"] ?? item["client"] ?? item["vendor"] ?? item["partner_name"],
+            item["client_name"] ??
+                item["client"] ??
+                item["vendor"] ??
+                item["partner_name"],
             fallback: 'N/A',
           );
 
           final rfqDate = _getSafeString(
-            item["date"] ?? item["request_date"] ?? item["create_date"] ?? item["created_date"],
+            item["date"] ??
+                item["request_date"] ??
+                item["create_date"] ??
+                item["created_date"],
             fallback: 'N/A',
           );
 
@@ -439,6 +453,8 @@ class InvoiceAndRfqCard extends StatelessWidget {
 
           return GestureDetector(
             onTap: () async {
+              debugPrint(
+                  '👆 [MyApproval][Invoice/RFQ] Tap -> type=$type, id=$id');
               // Mark item as viewed
               print('🔵 Marking as viewed - Type: $type, ID: $id');
               await ApprovalViewedService.markAsViewed(
@@ -463,7 +479,8 @@ class InvoiceAndRfqCard extends StatelessWidget {
                               builder: (_) => RfqDetailsScreen(
                                 requestId: id,
                                 type: type,
-                                initialData: Map<String, dynamic>.from(item as Map),
+                                initialData:
+                                    Map<String, dynamic>.from(item as Map),
                               ),
                             ),
                           )
@@ -477,12 +494,17 @@ class InvoiceAndRfqCard extends StatelessWidget {
                             },
                           );
                 // Trigger a rebuild to update the list after dialog closes
+                debugPrint(
+                  '↩️ [MyApproval][Invoice/RFQ] Back from details -> type=$type, id=$id, result=$result',
+                );
                 if (result == true) {
                   // Invalidate cache so header re-fetches fresh count from API
                   ApprovalCountService.invalidateCache();
                   // Update approval count badge
                   ApprovalCountService.onCountChanged?.call();
                   // Refresh the list
+                  debugPrint(
+                      '🔁 [MyApproval][Invoice/RFQ] Triggering onRefresh callback');
                   onRefresh?.call();
                 }
               }

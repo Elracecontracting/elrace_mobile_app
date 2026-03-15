@@ -1,11 +1,11 @@
 import 'package:el_race/ui/presentation/my_projects/data/datasources/project_remote_datasource.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/project_document_item_model.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/utils/project_file_opening.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 /// Screen to display cloud folders and files for a project
 class CloudDocumentsScreen extends StatefulWidget {
@@ -95,6 +95,7 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
   }
 
   Future<void> _onFileTap(ProjectDocumentItem file) async {
+    var isLoadingDialogVisible = false;
     try {
       // Show loading indicator
       showDialog(
@@ -104,6 +105,7 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
           child: CircularProgressIndicator(),
         ),
       );
+      isLoadingDialogVisible = true;
 
       // Get file details
       final response = await _dataSource.fetchFileDetails(
@@ -112,27 +114,33 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
       );
 
       // Hide loading
-      Navigator.pop(context);
-
-      // Open file URL
-      if (response.viewUrl.isNotEmpty) {
-        final uri = Uri.parse(response.viewUrl);
-        if (await canLaunchUrl(uri)) {
-          await launchUrl(uri, mode: LaunchMode.externalApplication);
-        } else {
-          // Try download URL
-          if (response.downloadUrl.isNotEmpty) {
-            final downloadUri = Uri.parse(response.downloadUrl);
-            await launchUrl(downloadUri, mode: LaunchMode.externalApplication);
-          }
-        }
-      } else if (file.downloadUrl != null && file.downloadUrl!.isNotEmpty) {
-        // Use download URL from list
-        final uri = Uri.parse(file.downloadUrl!);
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (mounted && isLoadingDialogVisible) {
+        Navigator.pop(context);
+        isLoadingDialogVisible = false;
       }
+
+      final resolvedUrl = response.viewUrl.isNotEmpty
+          ? response.viewUrl
+          : (response.downloadUrl.isNotEmpty
+              ? response.downloadUrl
+              : (file.downloadUrl ?? ''));
+
+      if (resolvedUrl.isEmpty) {
+        throw Exception('No file URL returned from server');
+      }
+
+      if (!mounted) return;
+
+      await openProjectFileInApp(
+        context,
+        rawUrl: resolvedUrl,
+        fileName: response.name.isNotEmpty ? response.name : file.name,
+      );
     } catch (e) {
-      Navigator.pop(context);
+      if (mounted && isLoadingDialogVisible) {
+        Navigator.pop(context);
+      }
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error opening file: ${e.toString()}'),
@@ -339,126 +347,115 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
   }
 
   Widget _buildFolderCard(ProjectDocumentItem folder) {
-    return GestureDetector(
+    return _buildUnifiedDocumentCard(
       onTap: () => _onFolderTap(folder),
-      child: Container(
-        margin: EdgeInsets.only(bottom: 12.h),
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(
-            color: const Color(0xFFE0E0E0),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Folder Icon
-            Container(
-              width: 48.w,
-              height: 48.w,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: Image.asset(
-                'assets/png/folder.png',
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(
-                    Icons.folder,
-                    size: 40.w,
-                    color: const Color(0xFFFFC107),
-                  );
-                },
-              ),
-            ),
-            SizedBox(width: 12.w),
-            // Folder Name
-            Expanded(
-              child: Text(
-                folder.name,
-                style: GoogleFonts.inter(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF151544),
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            // Arrow Icon
-            Icon(
-              Icons.chevron_right,
-              size: 24.w,
-              color: const Color(0xFF151544),
-            ),
-          ],
-        ),
+      name: folder.name,
+      leading: Image.asset(
+        'assets/png/folder.png',
+        width: 56.w,
+        height: 56.w,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return Icon(
+            Icons.folder,
+            size: 36.w,
+            color: const Color(0xFF151544),
+          );
+        },
       ),
     );
   }
 
   Widget _buildFileCard(ProjectDocumentItem file) {
-    return GestureDetector(
+    return _buildUnifiedDocumentCard(
       onTap: () => _onFileTap(file),
+      name: file.name,
+      leading: _buildFileIcon(file),
+    );
+  }
+
+  Widget _buildUnifiedDocumentCard({
+    required String name,
+    required Widget leading,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
       child: Container(
+        height: 82.h,
         margin: EdgeInsets.only(bottom: 12.h),
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.h),
         decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(
-            color: const Color(0xFFE0E0E0),
-            width: 1,
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFD6D6D6),
+              Color(0xFFD6D6D6),
+              Color(0xFFADB2BD),
+            ],
+            stops: [0.0, 0.4, 1.0],
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
+          borderRadius: BorderRadius.circular(18.r),
         ),
-        child: Row(
-          children: [
-            // File Icon based on type
-            Container(
-              width: 48.w,
-              height: 48.w,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: _buildFileIcon(file),
-            ),
-            SizedBox(width: 12.w),
-            // File Name
-            Expanded(
-              child: Text(
-                file.name,
-                style: GoogleFonts.inter(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w500,
-                  color: const Color(0xFF151544),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18.r),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: IgnorePointer(
+                    child: Opacity(
+                      opacity: 0.18,
+                      child: ColorFiltered(
+                        colorFilter: const ColorFilter.mode(
+                          Colors.grey,
+                          BlendMode.srcIn,
+                        ),
+                        child: SizedBox(
+                          width: 150.w,
+                          height: double.infinity,
+                          child: Image.asset(
+                            'assets/newapp/for_attachments.png',
+                            fit: BoxFit.contain,
+                            alignment: Alignment.centerRight,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            // Download Icon
-            Icon(
-              Icons.download,
-              size: 24.w,
-              color: const Color(0xFF151544),
-            ),
-          ],
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.h),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 62.w,
+                      height: 62.w,
+                      child: Center(child: leading),
+                    ),
+                    SizedBox(width: 16.w),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          name.isEmpty ? 'File Name' : name,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF2E3445),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
