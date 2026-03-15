@@ -14,6 +14,7 @@ class ChatInputBar extends StatefulWidget {
   final VoidCallback onPickImage;
   final VoidCallback onPickGallery;
   final VoidCallback onPickFile;
+  final VoidCallback? onPickSignableDoc;
   final VoidCallback onStartRecording;
   final VoidCallback onStopRecording;
   final VoidCallback onCancelRecording;
@@ -27,6 +28,7 @@ class ChatInputBar extends StatefulWidget {
     required this.onPickImage,
     required this.onPickGallery,
     required this.onPickFile,
+    this.onPickSignableDoc,
     required this.onStartRecording,
     required this.onStopRecording,
     required this.onCancelRecording,
@@ -128,6 +130,7 @@ class _ChatInputBarState extends State<ChatInputBar>
         _AttachmentButton(
           onPickGallery: widget.onPickGallery,
           onPickFile: widget.onPickFile,
+          onPickSignableDoc: widget.onPickSignableDoc,
           isLoading: widget.isLoading,
         ),
         const SizedBox(width: 10),
@@ -276,11 +279,13 @@ class _ChatInputBarState extends State<ChatInputBar>
 class _AttachmentButton extends StatelessWidget {
   final VoidCallback onPickGallery;
   final VoidCallback onPickFile;
+  final VoidCallback? onPickSignableDoc;
   final bool isLoading;
 
   const _AttachmentButton({
     required this.onPickGallery,
     required this.onPickFile,
+    this.onPickSignableDoc,
     required this.isLoading,
   });
 
@@ -296,9 +301,12 @@ class _AttachmentButton extends StatelessWidget {
           case 'file':
             onPickFile();
             break;
+          case 'signable_doc':
+            onPickSignableDoc?.call();
+            break;
         }
       },
-      offset: const Offset(0, -132),
+      offset: const Offset(0, -180),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       color: Colors.white,
       itemBuilder: (context) => [
@@ -322,6 +330,17 @@ class _AttachmentButton extends StatelessWidget {
             ],
           ),
         ),
+        if (onPickSignableDoc != null)
+          PopupMenuItem(
+            value: 'signable_doc',
+            child: Row(
+              children: [
+                Icon(Icons.draw, color: Colors.orange[700]),
+                const SizedBox(width: 12),
+                const Text('Document for Signing'),
+              ],
+            ),
+          ),
       ],
       child: Container(
         width: 32,

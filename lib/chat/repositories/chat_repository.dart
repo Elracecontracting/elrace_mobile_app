@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -9,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/models.dart';
 import '../services/presence_service.dart';
+import 'user_repository.dart';
 
 /// Repository for chat-related Firestore and Storage operations.
 /// 
@@ -31,7 +33,7 @@ class ChatRepository {
 
   // Configuration
   static const bool groupByBranch = false; // Set to true to group by branch
-  static const int defaultPageSize = 50;
+  static const int defaultPageSize = 25;
 
   // Collection references
   CollectionReference<Map<String, dynamic>> get _chatsCollection =>
@@ -387,6 +389,41 @@ class ChatRepository {
     }
   }
 
+  /// Get ALL role groups (for support tab — show every department).
+  /// Queries the users collection (which is readable) to discover all distinct roles.
+  Future<List<Chat>> getAllRoleGroups() async {
+    try {
+      final usersSnapshot = await _firestore.collection('users').get();
+
+      // Collect distinct roleId → roleName/title from users
+      final Map<int, String> roleMap = {};
+      for (final doc in usersSnapshot.docs) {
+        final data = doc.data();
+        final roleId = data['role_id'];
+        if (roleId == null || roleId == 0) continue;
+        if (roleMap.containsKey(roleId)) continue;
+        final roleName = data['role_name']?.toString();
+        roleMap[roleId as int] = roleName ?? 'Department $roleId';
+      }
+
+      // Build lightweight Chat objects for each role
+      return roleMap.entries.map((e) {
+        final chatId = Chat.generateRoleChatId(roleId: e.key);
+        return Chat(
+          id: chatId,
+          type: ChatType.role,
+          roleId: e.key,
+          title: e.value,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+      }).toList();
+    } catch (e) {
+      print('❌ ChatRepository: Error getting all role groups: $e');
+      return [];
+    }
+  }
+
   /// Check if the current user is the support user (external) in a support chat.
   Future<bool> isSupportUser(String chatId) async {
     final currentUid = _currentUid;
@@ -527,6 +564,17 @@ class ChatRepository {
     );
 
     try {
+      // For DM chats: ensure chat document + both userChats entries exist
+      String? _dmOtherUid;
+      List<String>? _dmPair;
+      if (chatId.startsWith('dm_')) {
+        _dmPair = _parseDmPair(chatId, currentUid);
+        if (_dmPair != null) {
+          _dmOtherUid = _dmPair.firstWhere((u) => u != currentUid, orElse: () => '');
+        }
+        await _ensureDmChatExists(chatId);
+      }
+
       final batch = _firestore.batch();
 
       // Add message
@@ -534,7 +582,7 @@ class ChatRepository {
 
       // Update chat last_message and updated_at
       final chatRef = _chatsCollection.doc(chatId);
-      batch.update(chatRef, {
+      final chatUpdate = <String, dynamic>{
         'last_message': {
           'text': text,
           'type': 'text',
@@ -542,14 +590,33 @@ class ChatRepository {
           'created_at': FieldValue.serverTimestamp(),
         },
         'updated_at': FieldValue.serverTimestamp(),
-      });
+      };
+      // Always include member_ids + dm_pair for DM chats so the doc is valid
+      // even if _ensureDmChatExists partially failed
+      if (_dmPair != null) {
+        chatUpdate['type'] = 'dm';
+        chatUpdate['dm_pair'] = _dmPair;
+        chatUpdate['member_ids'] = FieldValue.arrayUnion(_dmPair);
+      }
+      batch.set(chatRef, chatUpdate, SetOptions(merge: true));
 
       // Update sender's userChats entry
-      batch.update(_userChatsCollection(currentUid).doc(chatId), {
+      final senderChatUpdate = <String, dynamic>{
+        'type': chatId.startsWith('dm_') ? 'dm' : 'role',
         'updated_at': FieldValue.serverTimestamp(),
-      });
+      };
+      if (_dmOtherUid != null && _dmOtherUid.isNotEmpty) {
+        senderChatUpdate['peer_uid'] = _dmOtherUid;
+      }
+      batch.set(_userChatsCollection(currentUid).doc(chatId),
+          senderChatUpdate, SetOptions(merge: true));
 
       await batch.commit();
+
+      // For DM chats, also update the other user's userChats timestamp
+      if (chatId.startsWith('dm_')) {
+        _updateDmPeerTimestamp(chatId, currentUid);
+      }
 
       // For support chats, update all members' userChats timestamps
       if (chatId.startsWith('support_')) {
@@ -563,6 +630,165 @@ class ChatRepository {
     } catch (e) {
       print('❌ ChatRepository: Error sending text message: $e');
       rethrow;
+    }
+  }
+
+  /// Ensure DM chat doc, member entries, and both users' userChats entries exist.
+  /// Uses set(merge) everywhere so it's idempotent and works whether docs
+  /// exist or not. Individual writes so a failure on one doesn't block others.
+  Future<void> _ensureDmChatExists(String chatId) async {
+    final currentUid = _currentUid;
+    if (currentUid == null) return;
+
+    final dmPair = _parseDmPair(chatId, currentUid);
+    if (dmPair == null) {
+      print('⚠️ _ensureDmChatExists: Cannot parse UIDs from $chatId');
+      return;
+    }
+
+    final otherUid = dmPair.firstWhere((u) => u != currentUid, orElse: () => '');
+    if (otherUid.isEmpty) return;
+
+    print('🔍 _ensureDmChatExists: chatId=$chatId, currentUid=$currentUid, otherUid=$otherUid');
+
+    // Check if chat doc already exists — if yes, skip creation steps.
+    // Permission error on read is treated as "probably doesn't exist".
+    bool chatExists = false;
+    try {
+      final chatDoc = await _chatsCollection.doc(chatId).get();
+      chatExists = chatDoc.exists;
+    } catch (_) {
+      // Permission denied or other error — proceed to create
+    }
+
+    if (chatExists) {
+      print('✅ _ensureDmChatExists: Chat $chatId already exists');
+      // Still ensure the current user's userChats entry exists
+      try {
+        final peerUser = await UserRepository.instance.getUser(otherUid);
+        await _userChatsCollection(currentUid).doc(chatId).set({
+          'type': 'dm',
+          'peer_uid': otherUid,
+          'title': peerUser?.name ?? 'User',
+          'updated_at': FieldValue.serverTimestamp(),
+          'pinned': false,
+          'muted': false,
+        }, SetOptions(merge: true));
+      } catch (e) {
+        print('⚠️ _ensureDmChatExists: Error ensuring own userChats: $e');
+      }
+      return;
+    }
+
+    // Fetch user info for titles
+    final peerUser = await UserRepository.instance.getUser(otherUid);
+    final currentUser = await UserRepository.instance.getUser(currentUid);
+    final peerName = peerUser?.name ?? 'User';
+    final currentName = currentUser?.name ?? 'User';
+
+    // Step 1: Create/update chat document with member_ids
+    print('📝 _ensureDmChatExists: Step 1 — creating chat doc');
+    try {
+      await _chatsCollection.doc(chatId).set({
+        'type': 'dm',
+        'dm_pair': dmPair,
+        'member_ids': FieldValue.arrayUnion(dmPair),
+        'created_at': FieldValue.serverTimestamp(),
+        'updated_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      print('✅ Step 1 succeeded');
+    } catch (e) {
+      print('⚠️ Step 1 failed: $e');
+      // Don't return — the sendText batch will also try to create the doc
+    }
+
+    // Step 2: Create member entries for both users
+    for (final uid in dmPair) {
+      final user = uid == currentUid ? currentUser : peerUser;
+      try {
+        await _chatsCollection.doc(chatId).collection('members').doc(uid).set({
+          'joined_at': FieldValue.serverTimestamp(),
+          'role_id_snapshot': user?.roleId,
+          'branch_id_snapshot': user?.branchId,
+          'company_id_snapshot': user?.companyId,
+          'muted': false,
+        }, SetOptions(merge: true));
+      } catch (e) {
+        print('⚠️ _ensureDmChatExists: Member doc $uid: $e');
+      }
+    }
+
+    // Step 3: Create userChats entries for both users
+    try {
+      await _userChatsCollection(currentUid).doc(chatId).set({
+        'type': 'dm',
+        'peer_uid': otherUid,
+        'title': peerName,
+        'updated_at': FieldValue.serverTimestamp(),
+        'pinned': false,
+        'muted': false,
+      }, SetOptions(merge: true));
+    } catch (e) {
+      print('⚠️ _ensureDmChatExists: Own userChats: $e');
+    }
+
+    try {
+      await _userChatsCollection(otherUid).doc(chatId).set({
+        'type': 'dm',
+        'peer_uid': currentUid,
+        'title': currentName,
+        'updated_at': FieldValue.serverTimestamp(),
+        'pinned': false,
+        'muted': false,
+      }, SetOptions(merge: true));
+    } catch (e) {
+      print('⚠️ _ensureDmChatExists: Peer userChats: $e');
+    }
+
+    print('✅ _ensureDmChatExists: Chat $chatId setup complete');
+  }
+
+  /// Helper: parse DM pair from chat ID.
+  /// Returns [uidA, uidB] sorted, or null if parsing fails.
+  List<String>? _parseDmPair(String chatId, String currentUid) {
+    final withoutPrefix = chatId.replaceFirst('dm_', '');
+    String otherUid;
+    if (withoutPrefix.startsWith('${currentUid}_')) {
+      otherUid = withoutPrefix.substring(currentUid.length + 1);
+    } else if (withoutPrefix.endsWith('_$currentUid')) {
+      otherUid = withoutPrefix.substring(
+          0, withoutPrefix.length - currentUid.length - 1);
+    } else {
+      return null;
+    }
+    return Chat.getSortedDmPair(currentUid, otherUid);
+  }
+
+  /// Update the other user's userChats entry for a DM.
+  /// Creates a FULL entry (not just updated_at) so the chat appears
+  /// properly in the other user's chat list with title and peer info.
+  void _updateDmPeerTimestamp(String chatId, String currentUid) async {
+    try {
+      final dmPair = _parseDmPair(chatId, currentUid);
+      if (dmPair == null) return;
+      final otherUid = dmPair.firstWhere((uid) => uid != currentUid, orElse: () => '');
+      if (otherUid.isEmpty) return;
+
+      // Get current user's name so the other user sees it as the chat title
+      final currentUser = await UserRepository.instance.getUser(currentUid);
+      final currentName = currentUser?.name ?? 'User';
+
+      await _userChatsCollection(otherUid).doc(chatId).set({
+        'type': 'dm',
+        'peer_uid': currentUid,
+        'title': currentName,
+        'updated_at': FieldValue.serverTimestamp(),
+        'pinned': false,
+        'muted': false,
+      }, SetOptions(merge: true));
+      print('✅ _updateDmPeerTimestamp: Updated peer $otherUid userChats entry');
+    } catch (e) {
+      print('⚠️ ChatRepository: Error updating DM peer timestamp: $e');
     }
   }
 
@@ -634,6 +860,149 @@ class ChatRepository {
     );
   }
 
+  /// Send a signable document (PDF) with sign zones
+  Future<Message> sendSignableDocument(
+    String chatId,
+    File pdfFile, {
+    required List<SignZone> signZones,
+    String? caption,
+    int expiresInDays = 2,
+    int? pageCount,
+  }) async {
+    final currentUid = _currentUid;
+    if (currentUid == null) throw Exception('Not authenticated');
+
+    if (chatId.startsWith('dm_')) {
+      await _ensureDmChatExists(chatId);
+    }
+
+    if (!await pdfFile.exists()) {
+      throw Exception('File does not exist: ${pdfFile.path}');
+    }
+
+    final clientMsgId = _uuid.v4();
+    final messageRef = _chatsCollection.doc(chatId).collection('messages').doc();
+    final fileName = p.basename(pdfFile.path);
+    final fileSize = await pdfFile.length();
+    final storagePath = 'chat_media/$chatId/${messageRef.id}/$fileName';
+
+    try {
+      // Upload PDF
+      final ref = _storage.ref(storagePath);
+      final metadata = SettableMetadata(
+        contentType: 'application/pdf',
+        customMetadata: {'uploadedBy': currentUid, 'chatId': chatId},
+      );
+      final fileBytes = await pdfFile.readAsBytes();
+      await ref.putData(fileBytes, metadata);
+      final mediaUrl = await ref.getDownloadURL();
+
+      // Create message
+      final message = Message(
+        id: messageRef.id,
+        senderId: currentUid,
+        type: MessageType.signableDoc,
+        text: caption,
+        mediaUrl: mediaUrl,
+        mediaPath: storagePath,
+        fileName: fileName,
+        fileSize: fileSize,
+        mimeType: 'application/pdf',
+        createdAt: DateTime.now(),
+        clientMsgId: clientMsgId,
+        status: MessageStatus.sent,
+        signZones: signZones,
+        signStatus: SignStatus.pending,
+        signExpiresInDays: expiresInDays,
+        pageCount: pageCount,
+      );
+
+      final batch = _firestore.batch();
+      batch.set(messageRef, message.toFirestore());
+
+      // Update chat last_message
+      final chatUpdate = <String, dynamic>{
+        'last_message': {
+          'text': '📝 ${fileName}',
+          'type': 'signable_doc',
+          'sender_id': currentUid,
+          'created_at': FieldValue.serverTimestamp(),
+        },
+        'updated_at': FieldValue.serverTimestamp(),
+      };
+      if (chatId.startsWith('dm_')) {
+        final dmPair = _parseDmPair(chatId, currentUid);
+        if (dmPair != null) {
+          chatUpdate['type'] = 'dm';
+          chatUpdate['dm_pair'] = dmPair;
+          chatUpdate['member_ids'] = FieldValue.arrayUnion(dmPair);
+        }
+      }
+      batch.set(_chatsCollection.doc(chatId), chatUpdate, SetOptions(merge: true));
+
+      // Update sender's userChats
+      batch.set(_userChatsCollection(currentUid).doc(chatId), {
+        'type': chatId.startsWith('dm_') ? 'dm' : 'role',
+        'updated_at': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      await batch.commit();
+
+      if (chatId.startsWith('dm_')) {
+        _updateDmPeerTimestamp(chatId, currentUid);
+      }
+      if (chatId.startsWith('support_')) {
+        _updateSupportChatMemberTimestamps(chatId, currentUid);
+      }
+
+      return message;
+    } catch (e) {
+      print('❌ ChatRepository: Error sending signable document: $e');
+      rethrow;
+    }
+  }
+
+  /// Sign a document — uploads signed PDF and updates message
+  Future<void> signDocument(
+    String chatId,
+    String messageId,
+    Uint8List signedPdfBytes,
+    String originalFileName,
+  ) async {
+    final currentUid = _currentUid;
+    if (currentUid == null) throw Exception('Not authenticated');
+
+    try {
+      // Upload signed PDF
+      final signedFileName = 'signed_$originalFileName';
+      final storagePath = 'chat_media/$chatId/$messageId/$signedFileName';
+      final ref = _storage.ref(storagePath);
+      final metadata = SettableMetadata(
+        contentType: 'application/pdf',
+        customMetadata: {'signedBy': currentUid, 'chatId': chatId},
+      );
+      await ref.putData(signedPdfBytes, metadata);
+      final signedUrl = await ref.getDownloadURL();
+
+      // Update message document
+      await _chatsCollection
+          .doc(chatId)
+          .collection('messages')
+          .doc(messageId)
+          .update({
+        'sign_status': 'signed',
+        'signed_pdf_url': signedUrl,
+        'signed_at': FieldValue.serverTimestamp(),
+        'signed_by': currentUid,
+      });
+
+      print('✅ Document signed successfully: $messageId');
+    } catch (e) {
+      print('❌ ChatRepository: Error signing document: $e');
+      rethrow;
+    }
+  }
+
   /// Internal method to send media messages
   Future<Message> _sendMedia({
     required String chatId,
@@ -647,6 +1016,11 @@ class ChatRepository {
     final currentUid = _currentUid;
     if (currentUid == null) {
       throw Exception('Not authenticated');
+    }
+
+    // For DM chats: ensure chat document exists before uploading/writing
+    if (chatId.startsWith('dm_')) {
+      await _ensureDmChatExists(chatId);
     }
 
     // Verify file exists before attempting upload
@@ -731,7 +1105,7 @@ class ChatRepository {
 
       // Update chat last_message
       final previewText = message.getPreviewText();
-      batch.update(_chatsCollection.doc(chatId), {
+      final chatUpdate = <String, dynamic>{
         'last_message': {
           'text': previewText,
           'type': type.toJson(),
@@ -739,14 +1113,30 @@ class ChatRepository {
           'created_at': FieldValue.serverTimestamp(),
         },
         'updated_at': FieldValue.serverTimestamp(),
-      });
+      };
+      // Always include member_ids for DM chats
+      if (chatId.startsWith('dm_')) {
+        final dmPair = _parseDmPair(chatId, currentUid);
+        if (dmPair != null) {
+          chatUpdate['type'] = 'dm';
+          chatUpdate['dm_pair'] = dmPair;
+          chatUpdate['member_ids'] = FieldValue.arrayUnion(dmPair);
+        }
+      }
+      batch.set(_chatsCollection.doc(chatId), chatUpdate, SetOptions(merge: true));
 
       // Update sender's userChats
-      batch.update(_userChatsCollection(currentUid).doc(chatId), {
+      batch.set(_userChatsCollection(currentUid).doc(chatId), {
+        'type': chatId.startsWith('dm_') ? 'dm' : 'role',
         'updated_at': FieldValue.serverTimestamp(),
-      });
+      }, SetOptions(merge: true));
 
       await batch.commit();
+
+      // For DM chats, also update the other user's userChats timestamp
+      if (chatId.startsWith('dm_')) {
+        _updateDmPeerTimestamp(chatId, currentUid);
+      }
 
       // For support chats, update all members' userChats timestamps
       if (chatId.startsWith('support_')) {
@@ -816,53 +1206,109 @@ class ChatRepository {
     if (currentUid == null) return;
 
     try {
-      await _userChatsCollection(currentUid).doc(chatId).update({
+      // Use set(merge) instead of update — update fails if doc doesn't exist
+      await _userChatsCollection(currentUid).doc(chatId).set({
         'last_read_at': FieldValue.serverTimestamp(),
-      });
-      print('✅ ChatRepository: Marked $chatId as read');
+      }, SetOptions(merge: true));
     } catch (e) {
       print('❌ ChatRepository: Error marking chat as read: $e');
     }
+  }
+
+  /// Subscribe to total unread message count across all chats
+  Stream<int> subscribeToTotalUnreadCount() {
+    final currentUid = _currentUid;
+    if (currentUid == null) {
+      print('⚠️ subscribeToTotalUnreadCount: No current UID');
+      return Stream.value(0);
+    }
+
+    print('🔔 subscribeToTotalUnreadCount: Subscribing for uid=$currentUid');
+    return subscribeToUserChats(currentUid).asyncMap((chats) async {
+      print('🔔 subscribeToTotalUnreadCount: Got ${chats.length} chats');
+      int total = 0;
+      for (final chat in chats) {
+        if (chat.muted) continue;
+        final lastReadAt = chat.lastReadAt;
+        try {
+          Query query = _chatsCollection
+              .doc(chat.chatId)
+              .collection('messages');
+
+          // Only add created_at filter if user has read the chat before
+          if (lastReadAt != null) {
+            query = query.where('created_at',
+                isGreaterThan: Timestamp.fromDate(lastReadAt));
+          }
+
+          // Limit to avoid fetching too many docs when lastReadAt is null
+          query = query.limit(100);
+
+          // Fetch the docs and count those NOT from current user
+          final snapshot = await query.get();
+          final count = snapshot.docs.where((d) {
+            final data = d.data() as Map<String, dynamic>?;
+            return data?['sender_id'] != currentUid;
+          }).length;
+
+          if (count > 0) {
+            print('🔔 Chat ${chat.chatId}: $count unread (lastReadAt=$lastReadAt)');
+          }
+          total += count;
+        } catch (e) {
+          print('⚠️ subscribeToTotalUnreadCount: Error for ${chat.chatId}: $e');
+        }
+      }
+      print('🔔 subscribeToTotalUnreadCount: Total unread = $total');
+      return total;
+    });
   }
 
   /// Get unread count for a chat based on last_read_at
   Stream<int> subscribeToUnreadCount(String chatId) {
     final currentUid = _currentUid;
     if (currentUid == null) {
+      print('⚠️ subscribeToUnreadCount($chatId): No current UID');
       return Stream.value(0);
     }
 
-    // This is a simplified approach - count messages after last_read_at
-    // For accurate counts, consider using a Cloud Function
     return _userChatsCollection(currentUid)
         .doc(chatId)
         .snapshots()
         .asyncMap((userChatDoc) async {
-      if (!userChatDoc.exists) return 0;
+      if (!userChatDoc.exists) {
+        print('⚠️ subscribeToUnreadCount($chatId): userChats doc does NOT exist');
+        return 0;
+      }
 
       final data = userChatDoc.data();
       final lastReadAt = (data?['last_read_at'] as Timestamp?)?.toDate();
       
-      if (lastReadAt == null) {
-        // Never read - count all messages not from current user
-        final snapshot = await _chatsCollection
-            .doc(chatId)
-            .collection('messages')
-            .where('sender_id', isNotEqualTo: currentUid)
-            .count()
-            .get();
-        return snapshot.count ?? 0;
-      }
+      try {
+        Query query = _chatsCollection.doc(chatId).collection('messages');
 
-      // Count messages after last_read_at not from current user
-      final snapshot = await _chatsCollection
-          .doc(chatId)
-          .collection('messages')
-          .where('sender_id', isNotEqualTo: currentUid)
-          .where('created_at', isGreaterThan: Timestamp.fromDate(lastReadAt))
-          .count()
-          .get();
-      return snapshot.count ?? 0;
+        // Only add created_at filter if user has read the chat before
+        if (lastReadAt != null) {
+          query = query.where('created_at',
+              isGreaterThan: Timestamp.fromDate(lastReadAt));
+        }
+
+        // Limit to avoid fetching too many docs when lastReadAt is null
+        query = query.limit(100);
+
+        // Fetch and filter out current user's messages in-memory
+        final snapshot = await query.get();
+        final count = snapshot.docs.where((d) {
+          final data = d.data() as Map<String, dynamic>?;
+          return data?['sender_id'] != currentUid;
+        }).length;
+
+        if (count > 0) print('🔵 subscribeToUnreadCount($chatId): $count unread (lastReadAt=$lastReadAt)');
+        return count;
+      } catch (e) {
+        print('⚠️ subscribeToUnreadCount($chatId): Error: $e');
+        return 0;
+      }
     });
   }
 

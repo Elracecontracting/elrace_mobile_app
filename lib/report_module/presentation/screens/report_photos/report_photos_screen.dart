@@ -271,22 +271,27 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
 
       setState(() => _isLoading = true);
       final provider = Provider.of<ReportProvider>(context, listen: false);
-      for (final path in paths) {
-        final savedPath = await saveImageToAppStorage(
-          File(path),
-          widget.folderId + widget.folderId,
-        );
-        if (savedPath.isEmpty) continue;
-        try {
-          await provider.addReportItem(
-            reportId: widget.report.id,
-            imageFile: File(savedPath),
-            location: '',
-            description: '',
-            index: _photoItems.length,
-          );
-        } catch (_) {}
-      }
+
+      // Save all images to storage in parallel, then upload all in parallel
+      final savedPaths = await Future.wait(
+        paths.map((path) => saveImageToAppStorage(
+              File(path),
+              widget.folderId + widget.folderId,
+            )),
+      );
+
+      await Future.wait(
+        savedPaths.asMap().entries
+            .where((e) => e.value.isNotEmpty)
+            .map((e) => provider.addReportItem(
+                  reportId: widget.report.id,
+                  imageFile: File(e.value),
+                  location: '',
+                  description: '',
+                  index: _photoItems.length + e.key,
+                ).catchError((_) => null)),
+      );
+
       if (mounted) await _loadPhotos();
     } else {
       // Gallery: single pick
@@ -772,11 +777,13 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
       ),
     );
     if (newName == null || newName.isEmpty) return;
-    final idx = _pdfs.indexOf(pdf);
+    // Match by fileId so we always get the latest enriched object (with integer id)
+    final idx = _pdfs.indexWhere((p) => p.fileId == pdf.fileId);
     if (idx < 0) return;
+    final current = _pdfs[idx]; // may have id populated after enrichment
     // Update on server first
     final success = await reportProvider.renameReportPdf(
-      fileId: pdf.fileId,
+      fileId: current.id.isNotEmpty ? current.id : current.fileId,
       newFileName: '$newName.pdf',
     );
     // Always apply locally so rename feels instant;
@@ -784,10 +791,11 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
     if (mounted) {
       setState(() {
         _pdfs[idx] = ReportPdfModel(
-          fileId: pdf.fileId,
+          fileId: current.fileId,
+          id: current.id,
           fileName: '$newName.pdf',
-          createdAt: pdf.createdAt,
-          reportLink: pdf.reportLink,
+          createdAt: current.createdAt,
+          reportLink: current.reportLink,
         );
       });
     }
@@ -1001,7 +1009,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PdfDisplayScreen(link: pdf.reportLink),
+            builder: (_) => PdfDisplayScreen(link: pdf.reportLink, fileName: pdf.fileName),
           ),
         );
       },
@@ -1066,16 +1074,31 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
               elevation: 4,
               onSelected: (value) async {
                 if (value == 'share') {
-                  final name = pdf.fileName.replaceAll('.pdf', '');
-                  await Share.share(pdf.reportLink, subject: name);
+                  try {
+                    final response = await http.get(Uri.parse(pdf.reportLink));
+                    if (response.statusCode == 200) {
+                      final name = pdf.fileName.isEmpty ? 'report.pdf' : pdf.fileName;
+                      await Share.shareXFiles([
+                        XFile.fromData(response.bodyBytes,
+                            name: name.endsWith('.pdf') ? name : '$name.pdf',
+                            mimeType: 'application/pdf'),
+                      ]);
+                    }
+                  } catch (e) {
+                    debugPrint('Share error: $e');
+                  }
                 } else if (value == 'rename') {
                   await _renamePdf(pdf);
                 } else if (value == 'delete') {
+                  final fresh = _pdfs.firstWhere(
+                    (p) => p.fileId == pdf.fileId,
+                    orElse: () => pdf,
+                  );
                   final success = await reportProvider.deleteReportPdf(
-                    fileId: pdf.fileId,
+                    fileId: fresh.id.isNotEmpty ? fresh.id : fresh.fileId,
                   );
                   if (success && mounted) {
-                    setState(() => _pdfs.remove(pdf));
+                    setState(() => _pdfs.removeWhere((p) => p.fileId == pdf.fileId));
                   }
                 }
               },
@@ -1165,7 +1188,10 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
       final normalized = raw.replaceAll('/', '-').replaceFirst(' ', 'T');
       final parsed = DateTime.tryParse(normalized);
       if (parsed == null) return raw;
-      final local = parsed.toLocal();
+      // Server stores UTC – interpret as UTC then convert to device local time
+      final utc = DateTime.utc(parsed.year, parsed.month, parsed.day,
+          parsed.hour, parsed.minute, parsed.second);
+      final local = utc.toLocal();
       final formatted = DateFormat('dd/MM/yyyy  \"At\" hh:mm a').format(local);
       return formatted.replaceAll('AM', 'Am').replaceAll('PM', 'Pm');
     } catch (_) {

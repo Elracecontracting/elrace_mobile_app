@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ui';
 
+import 'package:el_race/core/services/approval_count_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/delayed/data/delayed_approvals_repository.dart';
@@ -181,6 +182,8 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         approvalItems = _getFilteredItems();
         _categoryLoading[categoryKey] = false;
         _categoryLoaded[categoryKey] = true;
+        // Sync badge in header with the actual loaded count
+        ApprovalCountService.updateCachedCount(allItems.length);
       });
     } catch (e) {
       if (!mounted) return;
@@ -197,6 +200,14 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     _loadCategory('rfq');
     _loadCategory('invoice');
     _loadCategory('petty_cash');
+  }
+
+  /// Force-reloads a category (clears the loaded flag so _loadCategory re-fetches).
+  void _forceReloadCategory(String categoryKey) {
+    setState(() {
+      _categoryLoaded[categoryKey] = false;
+    });
+    _loadCategory(categoryKey);
   }
 
   List<dynamic> _getApprovalListForSelectedCategory() {
@@ -461,12 +472,14 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         selectedCategoryKey == _CategoryKeys.pettyCash) {
       return HrAndPettycashCard(
         approvalItems: approvalItems,
+        onRefresh: () => _forceReloadCategory(_categoryApiKey(selectedCategoryKey)),
       );
     } else if (selectedCategoryKey == _CategoryKeys.rfq ||
         selectedCategoryKey == _CategoryKeys.invoice) {
       return InvoiceAndRfqCard(
         approvalItems: approvalItems,
         categoryType: selectedCategoryKey,
+        onRefresh: () => _forceReloadCategory(_categoryApiKey(selectedCategoryKey)),
       );
     }
 

@@ -161,6 +161,8 @@ class ChatNotificationService {
         return '🎵 Voice message';
       case MessageType.video:
         return '🎬 Video';
+      case MessageType.signableDoc:
+        return '📝 Document for signing';
       default:
         return '';
     }

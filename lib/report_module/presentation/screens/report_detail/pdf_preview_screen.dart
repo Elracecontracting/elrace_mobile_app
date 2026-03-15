@@ -10,7 +10,8 @@ import 'package:http/http.dart' as http;
 
 class PdfDisplayScreen extends StatefulWidget {
   final String link;
-  const PdfDisplayScreen({super.key, required this.link});
+  final String? fileName;
+  const PdfDisplayScreen({super.key, required this.link, this.fileName});
 
   @override
   State<PdfDisplayScreen> createState() => _PdfDisplayScreenState();
@@ -64,9 +65,11 @@ class _PdfDisplayScreenState extends State<PdfDisplayScreen> {
             color: CustomColors.maroon,
             borderColor: CustomColors.white,
             onPressed: () async {
+              final name = widget.fileName ?? widget.link.split('/').last;
               await Share.shareXFiles([
                 XFile.fromData(bytes,
-                    name: "report.pdf", mimeType: "application/pdf")
+                    name: name.endsWith('.pdf') ? name : '$name.pdf',
+                    mimeType: 'application/pdf')
               ]);
             },
           ),

@@ -286,15 +286,63 @@ class ReportProvider extends ChangeNotifier {
       },
     );
     print('body: $empId $reportId $folderId');
-    print('fetchReports: ${response.body}');
+    print('fetchReports raw response: ${response.body}');
     if (response.statusCode == 200) {
       final body = jsonDecode(response.body);
       final List<dynamic> data = body['data'];
-      return data.map((json) => ReportPdfModel.fromJson(json)).toList();
+      for (int i = 0; i < data.length; i++) {
+        print('📄 fetchReports item[$i] ALL FIELDS: ${data[i]}');
+      }
+      final pdfs = data.map((json) => ReportPdfModel.fromJson(json)).toList();
+      // Enrich with integer IDs from /reports/list
+      return await _enrichPdfsWithIds(
+        pdfs: pdfs,
+        empId: empId,
+        reportId: reportId,
+        folderId: folderId,
+      );
     } else {
       showFlushBar(navKey.currentContext!,
           message: jsonDecode(response.body)['message']);
       return [];
+    }
+  }
+
+  /// Calls /api/get_folder_report_list to get integer IDs and matches them
+  /// onto the PDF list by s3_key == file_id (hash).
+  Future<List<ReportPdfModel>> _enrichPdfsWithIds({
+    required List<ReportPdfModel> pdfs,
+    required String empId,
+    required String reportId,
+    required String folderId,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+          'POST', Uri.parse('$baseUrl/api/get_folder_report_list'))
+        ..fields.addAll({
+          'emp_id': empId,
+          'company_id': companyId,
+          'folder_id': folderId,
+        });
+      final streamed = await request.send();
+      final res = await streamed.stream.bytesToString();
+      print('📋 get_folder_report_list response: $res');
+      final listBody = jsonDecode(res);
+      final List<dynamic> listData = listBody['data'] ?? [];
+      // Build a map of s3_key (hash) → id (integer report id)
+      final Map<String, String> idMap = {};
+      for (final item in listData) {
+        final s3Key = item['s3_key']?.toString() ?? '';
+        final intId = (item['id'] ?? '').toString();
+        if (s3Key.isNotEmpty && intId.isNotEmpty) {
+          idMap[s3Key] = intId;
+        }
+      }
+      print('📋 get_folder_report_list idMap: $idMap');
+      return pdfs.map((p) => p.copyWith(id: idMap[p.fileId] ?? p.id)).toList();
+    } catch (e) {
+      print('📋 _enrichPdfsWithIds error: $e');
+      return pdfs;
     }
   }
 
@@ -349,21 +397,24 @@ class ReportProvider extends ChangeNotifier {
     required String fileId,
   }) async {
     try {
+      final fields = {
+        'emp_id': empID,
+        'report_id': fileId,
+      };
+      print('🗑️ deleteReportPdf REQUEST fields: $fields');
       var request = http.MultipartRequest(
           'POST', Uri.parse('$baseUrl/reports/delete'))
-        ..fields.addAll({
-          'emp_id': empID,
-          'report_id': fileId,
-        });
+        ..fields.addAll(fields);
       final response = await request.send();
       final res = await response.stream.bytesToString();
-      print('deleteReportPdf response: $res');
+      print('🗑️ deleteReportPdf STATUS: ${response.statusCode}');
+      print('🗑️ deleteReportPdf RESPONSE: $res');
       if (response.statusCode == 200) {
         return true;
       }
       return false;
     } catch (e) {
-      print('deleteReportPdf error: $e');
+      print('🗑️ deleteReportPdf error: $e');
       return false;
     }
   }
@@ -373,22 +424,25 @@ class ReportProvider extends ChangeNotifier {
     required String newFileName,
   }) async {
     try {
+      final fields = {
+        'emp_id': empID,
+        'report_id': fileId,
+        'name': newFileName,
+      };
+      print('✏️ renameReportPdf REQUEST fields: $fields');
       var request = http.MultipartRequest(
           'POST', Uri.parse('$baseUrl/reports/update'))
-        ..fields.addAll({
-          'emp_id': empID,
-          'report_id': fileId,
-          'name': newFileName,
-        });
+        ..fields.addAll(fields);
       final response = await request.send();
       final res = await response.stream.bytesToString();
-      print('renameReportPdf response: $res');
+      print('✏️ renameReportPdf STATUS: ${response.statusCode}');
+      print('✏️ renameReportPdf RESPONSE: $res');
       if (response.statusCode == 200) {
         return true;
       }
       return false;
     } catch (e) {
-      print('renameReportPdf error: $e');
+      print('✏️ renameReportPdf error: $e');
       return false;
     }
   }

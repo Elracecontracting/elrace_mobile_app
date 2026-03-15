@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:el_race/chat/chat.dart';
 import 'package:el_race/config/uaepass_config.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
@@ -462,6 +463,12 @@ class UaepassAuthService {
     );
     await SharedPref().setPreferencesBoolean('isRegistered', true);
     await HiveService.setUserLoggedIn(true);
+
+    // Initialize chat module immediately after login
+    ChatModuleHelper.instance
+        .initializeFromLoginResponse(loginResponse.toJson())
+        .then((_) => print('✅ Chat initialized after UAE PASS login'))
+        .catchError((e) => print('⚠️ Chat init after UAE PASS login failed: $e'));
   }
 
   bool _isCancelled(Uri uri) {

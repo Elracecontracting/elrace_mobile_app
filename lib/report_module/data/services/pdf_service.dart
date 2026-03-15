@@ -35,18 +35,20 @@ class PdfService {
     final imageMap = results[1] as Map<String, pw.MemoryImage>;
     final Uint8List logo = results[2] as Uint8List;
     final notoSanArabic = pw.Font.ttf(results[3] as ByteData);
-    final String profileId = userData?.result?.data?.emp_id ?? '';
+    final String userName = userData?.result?.data?.name ??
+        userData?.result?.data?.username ??
+        userData?.result?.data?.emp_name ??
+        '';
     pdf.addPage(
       pw.MultiPage(
         pageTheme: pw.PageTheme(
           pageFormat: PdfPageFormat.a4,
           margin: const pw.EdgeInsets.only(
               left: 32, right: 32, bottom: 20, top: 5),
-          buildBackground: (context) => _buildWatermark(context, profileId),
         ),
         header: (context) =>
             _buildHeader(context, logo, report, projectName, notoSanArabic),
-        footer: (context) => _buildFooter(context),
+        footer: (context) => _buildFooter(context, userName),
         build: (context) => _buildBody(
             context, logo, report, imageMap, userData, notoSanArabic),
       ),
@@ -470,16 +472,19 @@ class PdfService {
     return content;
   }
 
-  _buildFooter(context) {
-    CompanyModel companyData = CompanyRepository.company!;
-
+  _buildFooter(context, String userName) {
     return pw.Container(
         decoration: const pw.BoxDecoration(
             border: pw.Border(top: pw.BorderSide(width: 2))),
         padding: const pw.EdgeInsets.only(top: 10, left: 20, right: 20),
         child: pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.center,
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
+              if (userName.isNotEmpty)
+                pw.Text(
+                  userName,
+                  style: const pw.TextStyle(fontSize: 12),
+                ),
               pw.Text(
                 'Page ${context.pageNumber} of ${context.pagesCount}',
                 style: const pw.TextStyle(fontSize: 12),

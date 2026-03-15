@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/models.dart';
@@ -19,6 +20,10 @@ class ChatModuleHelper {
   bool _isInitialized = false;
   ChatSetupResult? _lastResult;
   ChatUserSession? _currentSession;
+
+  /// Notifies listeners when chat becomes enabled/disabled.
+  /// BottomNavBar listens to this to start the unread badge subscription.
+  final ValueNotifier<bool> chatEnabledNotifier = ValueNotifier<bool>(false);
 
   /// Check if chat module is initialized
   bool get isInitialized => _isInitialized;
@@ -82,6 +87,7 @@ class ChatModuleHelper {
 
       if (_lastResult!.success && _lastResult!.chatEnabled) {
         _isInitialized = true;
+        chatEnabledNotifier.value = true;
         
         // Initialize lifecycle observer for presence
         ChatLifecycleObserver.instance.initialize();
@@ -143,6 +149,7 @@ class ChatModuleHelper {
 
           if (result.success && result.chatEnabled) {
             _isInitialized = true;
+            chatEnabledNotifier.value = true;
             _lastResult = result;
             
             // Restore session model from cached data
@@ -285,6 +292,7 @@ class ChatModuleHelper {
       await FirebaseChatAuthService.instance.signOut();
       
       _isInitialized = false;
+      chatEnabledNotifier.value = false;
       _lastResult = null;
       _currentSession = null;
       

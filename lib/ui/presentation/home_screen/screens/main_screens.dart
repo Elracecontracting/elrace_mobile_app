@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:el_race/core/constants/app_images.dart';
@@ -7,6 +8,8 @@ import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/ui/presentation/qr_survey/screens/qr_survey_content_wrapper.dart';
 import 'package:el_race/ui/chat/chat_ui.dart';
+import 'package:el_race/chat/chat.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -111,12 +114,106 @@ class _MainScreenState extends State<MainScreen> {
   }
 }
 
-class CustomBottomNavBar extends StatelessWidget {
+class CustomBottomNavBar extends StatefulWidget {
   final bool isMain;
   const CustomBottomNavBar({super.key, this.isMain = true});
 
   @override
+  State<CustomBottomNavBar> createState() => _CustomBottomNavBarState();
+}
+
+class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
+  StreamSubscription<int>? _unreadSub;
+  StreamSubscription? _authSub;
+  Timer? _retryTimer;
+  int _totalUnread = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _startListening();
+  }
+
+  /// Try to subscribe to unread count. If chat module isn't ready yet,
+  /// set up retries via auth state changes + periodic timer + chatEnabledNotifier.
+  void _startListening() {
+    if (_trySubscribe()) return; // Success on first try
+
+    // Listen to ChatModuleHelper — fires the moment chat becomes enabled
+    ChatModuleHelper.instance.chatEnabledNotifier.addListener(_onChatEnabled);
+
+    // Auth listener: retry when user signs in
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null && _unreadSub == null) {
+        if (_trySubscribe()) {
+          _cancelRetries();
+        }
+      }
+    });
+
+    // Periodic retry every 2s as fallback
+    _retryTimer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (_trySubscribe()) {
+        _cancelRetries();
+      }
+      if (timer.tick >= 60) {
+        print('⚠️ BottomNav: Gave up retrying after 2 min');
+        _cancelRetries();
+      }
+    });
+  }
+
+  void _onChatEnabled() {
+    if (ChatModuleHelper.instance.isChatEnabled && _unreadSub == null) {
+      print('🔔 BottomNav: chatEnabledNotifier fired — trying subscribe');
+      if (_trySubscribe()) {
+        _cancelRetries();
+      }
+    }
+  }
+
+  /// Attempt to subscribe. Returns true if successful.
+  /// Only requires Firebase Auth uid — ChatRepository uses it directly.
+  bool _trySubscribe() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      return false;
+    }
+
+    _unreadSub?.cancel();
+    _unreadSub = ChatRepository.instance.subscribeToTotalUnreadCount().listen(
+      (count) {
+        print('🔔 BottomNav: Received unread count = $count');
+        if (mounted && count != _totalUnread) {
+          setState(() => _totalUnread = count);
+        }
+      },
+      onError: (e) {
+        print('⚠️ BottomNav: Unread count error: $e');
+      },
+    );
+    print('✅ BottomNav: Subscribed to unread count (uid=$uid)');
+    return true;
+  }
+
+  void _cancelRetries() {
+    _authSub?.cancel();
+    _authSub = null;
+    _retryTimer?.cancel();
+    _retryTimer = null;
+    ChatModuleHelper.instance.chatEnabledNotifier.removeListener(_onChatEnabled);
+  }
+
+  @override
+  void dispose() {
+    _unreadSub?.cancel();
+    _cancelRetries();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final isMain = widget.isMain;
     return BlocBuilder<HomeBloc, HomeState>(builder: (ctx, state) {
       var bloc = HomeBloc.get(ctx);
       if (bloc.enableBottomNav == false) return const SizedBox.shrink();
@@ -153,6 +250,7 @@ class CustomBottomNavBar extends StatelessWidget {
                       index: 3,
                       isMain: isMain,
                       icon: AppImages.chatIconNew,
+                      badgeCount: _totalUnread,
                     ),
                     _buildNavItem(
                       context,
@@ -180,7 +278,8 @@ class CustomBottomNavBar extends StatelessWidget {
       {required int index,
       dynamic icon,
       required bool isMain,
-      bool isIconData = false}) {
+      bool isIconData = false,
+      int badgeCount = 0}) {
     final bloc = HomeBloc.get(context);
     return IconButton(
       padding: EdgeInsets.zero,
@@ -193,8 +292,9 @@ class CustomBottomNavBar extends StatelessWidget {
             return;
           }
           if (index == 3) {
-            // Open chat
-            Navigator.push(
+            // Open chat — clear bottom nav badge (WhatsApp behavior)
+            setState(() => _totalUnread = 0);
+            await Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ChatListScreen()),
             );
@@ -225,16 +325,34 @@ class CustomBottomNavBar extends StatelessWidget {
       icon: SizedBox(
         height: 60.h,
         child: Center(
-          child: isIconData
-              ? Icon(icon as IconData,
-                  size: 30,
-                  color: bloc.currentIndex == index
-                      ? Colors.white
-                      : Colors.white.withOpacity(0.6))
-              : Image.asset(
-                  icon as String,
-                  width: 30.w,
-                ),
+          child: badgeCount > 0
+              ? Badge(
+                  label: Text(
+                    badgeCount > 99 ? '99+' : '$badgeCount',
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+                  ),
+                  backgroundColor: const Color(0xFFF04D57),
+                  child: isIconData
+                      ? Icon(icon as IconData,
+                          size: 30,
+                          color: bloc.currentIndex == index
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.6))
+                      : Image.asset(
+                          icon as String,
+                          width: 30.w,
+                        ),
+                )
+              : isIconData
+                  ? Icon(icon as IconData,
+                      size: 30,
+                      color: bloc.currentIndex == index
+                          ? Colors.white
+                          : Colors.white.withOpacity(0.6))
+                  : Image.asset(
+                      icon as String,
+                      width: 30.w,
+                    ),
         ),
       ),
     );

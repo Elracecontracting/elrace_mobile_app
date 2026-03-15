@@ -478,6 +478,8 @@ class InvoiceAndRfqCard extends StatelessWidget {
                           );
                 // Trigger a rebuild to update the list after dialog closes
                 if (result == true) {
+                  // Invalidate cache so header re-fetches fresh count from API
+                  ApprovalCountService.invalidateCache();
                   // Update approval count badge
                   ApprovalCountService.onCountChanged?.call();
                   // Refresh the list

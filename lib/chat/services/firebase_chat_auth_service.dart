@@ -4,8 +4,11 @@ import 'dart:math' show min, max;
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 
+import '../../main.dart' show navKey;
+import '../../ui/chat/chat_screen.dart';
 import '../models/models.dart';
 import '../repositories/chat_repository.dart';
 import '../repositories/user_repository.dart';
@@ -210,6 +213,7 @@ class FirebaseChatAuthService {
       print('🔔 FirebaseChatAuth: Setting up chat notifications...');
       await ChatNotificationService.instance.initialize();
       await ChatNotificationService.instance.startListening();
+      _wireChatNotificationTap();
 
       _isSetupComplete = true;
       print('✅ FirebaseChatAuth: Setup complete!');
@@ -289,6 +293,7 @@ class FirebaseChatAuthService {
         print('🔔 FirebaseChatAuth: Setting up chat notifications...');
         await ChatNotificationService.instance.initialize();
         await ChatNotificationService.instance.startListening();
+        _wireChatNotificationTap();
       } catch (e) {
         print(
             '⚠️ FirebaseChatAuth: Notification setup failed (non-fatal): $e');
@@ -314,6 +319,48 @@ class FirebaseChatAuthService {
   /// Returns true if already authenticated with valid token,
   /// or if reauthentication succeeded. Returns false if token expired
   /// and needs fresh token from backend.
+
+  /// Wire up notification tap to navigate to ChatScreen
+  void _wireChatNotificationTap() {
+    ChatNotificationService.instance.onNotificationTap =
+        (chatId, chatTitle, chatType) {
+      print('🔔 FirebaseChatAuth: Notification tapped → $chatId');
+      final ctx = navKey.currentContext;
+      if (ctx == null) return;
+
+      // Determine peerUid for DM chats
+      String? peerUid;
+      if (chatType == ChatType.dm) {
+        final currentUid = _auth.currentUser?.uid;
+        if (currentUid != null) {
+          // DM chat IDs are dm_{uid1}_{uid2} (sorted)
+          final parts = chatId.replaceFirst('dm_', '').split('_');
+          // parts might be ['920', 'odoo', '4291'] if uid contains underscore
+          // Reconstruct UIDs by finding the split point
+          final allParts = chatId.substring(3); // remove 'dm_'
+          // The two UIDs in the chatId are sorted; one is currentUid
+          if (allParts.startsWith('${currentUid}_')) {
+            peerUid = allParts.substring(currentUid.length + 1);
+          } else if (allParts.endsWith('_$currentUid')) {
+            peerUid = allParts.substring(
+                0, allParts.length - currentUid.length - 1);
+          }
+        }
+      }
+
+      Navigator.of(ctx).push(
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            chatId: chatId,
+            title: chatTitle,
+            chatType: chatType,
+            peerUid: peerUid,
+          ),
+        ),
+      );
+    };
+  }
+
   Future<bool> reauthenticate() async {
     // Check if user is already signed in with correct UID
     if (_auth.currentUser != null && _currentSession != null) {

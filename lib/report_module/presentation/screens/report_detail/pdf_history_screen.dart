@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:http/http.dart' as http;
 import 'package:el_race/report_module/core/constants/colors.dart';
 import 'package:el_race/report_module/core/constants/text_styles.dart';
 import 'package:el_race/report_module/core/utils/flush_bar.dart';
@@ -142,7 +143,7 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
                             context,
                             MaterialPageRoute(
                                 builder: (context) =>
-                                    PdfDisplayScreen(link: pdf.reportLink)));
+                                    PdfDisplayScreen(link: pdf.reportLink, fileName: pdf.fileName)));
                       },
                       onMoreClicked: () async {
                         int status = await showEditOptions(context,
@@ -155,12 +156,22 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
                               context,
                               MaterialPageRoute(
                                   builder: (context) =>
-                                      PdfDisplayScreen(link: pdf.reportLink)));
+                                      PdfDisplayScreen(link: pdf.reportLink, fileName: pdf.fileName)));
                           return;
                         }
 
                         if (status == 1) {
-                          await Share.shareUri(Uri.parse(pdf.reportLink));
+                          try {
+                            final response = await http.get(Uri.parse(pdf.reportLink));
+                            if (response.statusCode == 200) {
+                              final name = pdf.fileName.isEmpty ? 'report.pdf' : pdf.fileName;
+                              await Share.shareXFiles([
+                                XFile.fromData(response.bodyBytes,
+                                    name: name.endsWith('.pdf') ? name : '$name.pdf',
+                                    mimeType: 'application/pdf'),
+                              ]);
+                            }
+                          } catch (_) {}
                           return;
                         }
                         if (status == 2) {

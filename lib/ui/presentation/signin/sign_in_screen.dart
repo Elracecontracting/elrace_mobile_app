@@ -4,6 +4,7 @@ import 'dart:developer';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/auth/uaepass_auth_cubit.dart';
 import 'package:el_race/ui/auth/auth_loading_screen.dart';
+import 'package:el_race/chat/chat.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -186,6 +187,12 @@ class _SignInScreenState extends State<SignInScreen> {
           SharedPref().setPreferencesString(
               'loginResponse', jsonEncode(state.loginResponse.toJson()));
           SharedPref().setPreferencesBoolean('isRegistered', true);
+
+          // Initialize chat module immediately after login
+          ChatModuleHelper.instance
+              .initializeFromLoginResponse(state.loginResponse.toJson())
+              .then((_) => print('✅ Chat initialized after login'))
+              .catchError((e) => print('⚠️ Chat init after login failed: $e'));
 
           // ✅ Face Recognition with LOCAL storage only
           // In Test Mode: skip face verification (Apple review compliance)

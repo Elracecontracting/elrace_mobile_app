@@ -8,6 +8,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../chat/chat.dart';
 import '../../../resources/app_colors.dart';
+import 'signable_document_card.dart';
+import '../screens/sign_document_screen.dart';
 
 /// Callback types for message actions
 typedef MessageActionCallback = void Function(Message message);
@@ -213,6 +215,11 @@ class MessageBubble extends StatelessWidget {
         content = _VideoContent(message: message, isMe: isMe);
       case MessageType.file:
         content = _FileContent(message: message, textColor: textColor, isMe: isMe);
+      case MessageType.signableDoc:
+        content = _SignableDocContent(
+          message: message,
+          isMe: isMe,
+        );
     }
 
     // Wrap with reply-to preview if present
@@ -293,7 +300,8 @@ class MessageBubble extends StatelessWidget {
   }
 
   String _formatTime(DateTime time) {
-    return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+    final local = time.toLocal();
+    return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
   }
 }
 
@@ -666,6 +674,88 @@ class _VideoContent extends StatelessWidget {
     final seconds = duration.inSeconds % 60;
     return '$minutes:${seconds.toString().padLeft(2, '0')}';
   }
+}
+
+/// Signable document content — renders a SignableDocumentCard inside the bubble
+class _SignableDocContent extends StatelessWidget {
+  final Message message;
+  final bool isMe;
+
+  const _SignableDocContent({
+    required this.message,
+    required this.isMe,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(4),
+      child: SignableDocumentCard(
+        message: message,
+        isMe: isMe,
+        onSignNow: () => _openSignScreen(context),
+        onViewSigned: () => _openSignedViewer(context),
+      ),
+    );
+  }
+
+  void _openSignScreen(BuildContext context) {
+    // Find the chatId from the widget tree (passed via InheritedWidget or via
+    // the MessageBubble's context). We look for the Scaffold with ChatScreen.
+    // For simplicity, we extract chatId from the Navigator route arguments or
+    // pass it through. Here we use a simple approach: find it from context.
+    final chatId = _findChatId(context);
+    if (chatId == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SignDocumentScreen(
+          message: message,
+          chatId: chatId,
+        ),
+      ),
+    );
+  }
+
+  void _openSignedViewer(BuildContext context) {
+    final chatId = _findChatId(context);
+    if (chatId == null) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SignDocumentScreen(
+          message: message,
+          chatId: chatId,
+        ),
+      ),
+    );
+  }
+
+  String? _findChatId(BuildContext context) {
+    // Walk up the widget tree to find a ChatIdProvider
+    final provider = context.findAncestorWidgetOfExactType<ChatIdProvider>();
+    return provider?.chatId;
+  }
+}
+
+/// InheritedWidget to pass chatId down the widget tree
+class ChatIdProvider extends InheritedWidget {
+  final String chatId;
+
+  const ChatIdProvider({
+    super.key,
+    required this.chatId,
+    required super.child,
+  });
+
+  static String? of(BuildContext context) {
+    return context.findAncestorWidgetOfExactType<ChatIdProvider>()?.chatId;
+  }
+
+  @override
+  bool updateShouldNotify(ChatIdProvider oldWidget) => chatId != oldWidget.chatId;
 }
 
 class _FileContent extends StatelessWidget {

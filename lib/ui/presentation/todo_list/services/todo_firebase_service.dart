@@ -18,9 +18,29 @@ class TodoFirebaseService {
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // Get current user ID
-  String? get _currentUid => FirebaseAuth.instance.currentUser?.uid;
-  
+  // Get current user ID - fallback to firebase_uid from login data if Firebase Auth not signed in
+  String? get _currentUid {
+    final firebaseUid = FirebaseAuth.instance.currentUser?.uid;
+    if (firebaseUid != null) return firebaseUid;
+    // Fallback: use firebase_uid from backend login data
+    return SharedPref.getLoginData().result?.data?.firebase_uid;
+  }
+
+  // Ensure Firebase Auth is signed in using the custom token from login data
+  Future<void> _ensureSignedIn() async {
+    if (FirebaseAuth.instance.currentUser != null) return;
+    final loginData = SharedPref.getLoginData();
+    final customToken = loginData.result?.data?.firebase_custom_token;
+    if (customToken != null && customToken.isNotEmpty && customToken != 'false') {
+      try {
+        await FirebaseAuth.instance.signInWithCustomToken(customToken);
+        print('✅ TodoFirebaseService: Signed in to Firebase with custom token');
+      } catch (e) {
+        print('⚠️ TodoFirebaseService: Could not sign in with custom token: $e');
+      }
+    }
+  }
+
   // Get current user name from SharedPref
   String get _currentUserName {
     final loginData = SharedPref.getLoginData();
@@ -51,6 +71,7 @@ class TodoFirebaseService {
 
   /// Insert a new todo
   Future<String> insertTodo(TodoModel todo) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
@@ -66,6 +87,7 @@ class TodoFirebaseService {
 
   /// Update an existing todo
   Future<void> updateTodo(TodoModel todo) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
     if (todo.firebaseId == null) throw Exception('Todo has no Firebase ID');
@@ -83,6 +105,7 @@ class TodoFirebaseService {
 
   /// Delete a todo
   Future<void> deleteTodo(String todoId) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
@@ -97,6 +120,7 @@ class TodoFirebaseService {
 
   /// Get todo by ID
   Future<TodoModel?> getTodoById(String todoId) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
@@ -114,6 +138,7 @@ class TodoFirebaseService {
 
   /// Get all todos for current user
   Future<List<TodoModel>> getAllTodos() async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 

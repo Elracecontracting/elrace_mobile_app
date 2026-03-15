@@ -6,7 +6,27 @@ class ApprovalCountService {
   // Callback to notify when approval count changes
   static void Function()? onCountChanged;
 
+  /// Cached count — set by the Approval screen after loading real data.
+  /// -1 means no cache yet (will fetch from API).
+  static int _cachedCount = -1;
+
+  /// Called by the Approval screen after it has loaded all items.
+  /// Avoids a redundant API call and keeps the badge in sync with what's visible.
+  static void updateCachedCount(int count) {
+    _cachedCount = count;
+    onCountChanged?.call();
+  }
+
+  /// Invalidate the cache (call on logout or when the screen is disposed).
+  static void invalidateCache() {
+    _cachedCount = -1;
+  }
+
   static Future<int> getTotalApprovalCount() async {
+    // Return cached value immediately if available
+    if (_cachedCount >= 0) {
+      return _cachedCount;
+    }
     try {
       final token = SharedPref.getLoginData().result?.token;
       if (token == null || token.isEmpty) {
@@ -23,6 +43,7 @@ class ApprovalCountService {
 
       // Sum all counts
       final totalCount = results.reduce((a, b) => a + b);
+      _cachedCount = totalCount;
       print(
           '📊 Total approval count: $totalCount (HR: ${results[0]}, RFQ: ${results[1]}, Invoice: ${results[2]}, Petty Cash: ${results[3]})');
       return totalCount;

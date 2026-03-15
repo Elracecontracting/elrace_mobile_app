@@ -1,11 +1,14 @@
 import 'dart:convert';
 
+import 'package:el_race/chat/models/models.dart';
 import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/main.dart';
+import 'package:el_race/ui/chat/chat_screen.dart';
 import 'package:el_race/ui/presentation/Notification/notification_screen.dart';
 import 'package:el_race/ui/presentation/circular_announcement/screens/circular_announcement_screen.dart';
 import 'package:el_race/utils/string_utils.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -78,6 +81,16 @@ class FirebaseService {
       print('   - Title: ${message.notification?.title}');
       print('   - Body: ${message.notification?.body}');
       print('   - Data: ${message.data}');
+
+      // Skip chat push notifications in foreground — ChatNotificationService
+      // handles them via Firestore stream to avoid duplicates
+      final msgType = message.data['type']?.toString().toLowerCase() ??
+          message.data['category']?.toString().toLowerCase() ?? '';
+      if (msgType == 'chat_message' || msgType == 'chat') {
+        print('   - ⏭️ Chat message — handled by ChatNotificationService');
+        return;
+      }
+
       _showNotification(message);
       // Save notification to storage
       _saveNotificationToStorage(message);
@@ -367,6 +380,21 @@ class FirebaseService {
     if (navKey.currentContext != null) {
       final navigator = Navigator.of(navKey.currentContext!);
 
+      // Chat message notification — navigate directly to ChatScreen
+      if (category == 'chat_message' || category == 'chat') {
+        final chatId = payloadData?['chat_id']?.toString();
+        final chatTitle = payloadData?['chat_title']?.toString() ?? '';
+        final chatTypeStr = payloadData?['chat_type']?.toString() ?? 'dm';
+        print('   - ✅ Chat notification! Navigating to ChatScreen...');
+        print('   - chatId=$chatId, title=$chatTitle, type=$chatTypeStr');
+
+        if (chatId != null && chatId.isNotEmpty) {
+          // Lazy-import-safe: use dynamic import approach
+          _navigateToChatScreen(navigator, chatId, chatTitle, chatTypeStr);
+          return;
+        }
+      }
+
       if (category == 'circular' || category == 'announcement') {
         // Navigate to CircularAnnouncementScreen
         print('   - ✅ Navigating to Circular/Announcement screen...');
@@ -419,6 +447,52 @@ class FirebaseService {
       Future.delayed(const Duration(milliseconds: 500), () {
         _handleNotificationTap(payload);
       });
+    }
+  }
+
+  /// Navigate to ChatScreen from a push notification tap
+  static void _navigateToChatScreen(
+    NavigatorState navigator,
+    String chatId,
+    String chatTitle,
+    String chatTypeStr,
+  ) {
+    // Import dynamically to avoid circular deps
+    try {
+      final chatType = chatTypeStr == 'support'
+          ? ChatType.support
+          : chatTypeStr == 'role'
+              ? ChatType.role
+              : ChatType.dm;
+
+      // Determine peerUid for DM chats
+      String? peerUid;
+      if (chatType == ChatType.dm) {
+        final currentUid = FirebaseAuth.instance.currentUser?.uid;
+        if (currentUid != null) {
+          final allParts = chatId.substring(3); // remove 'dm_'
+          if (allParts.startsWith('${currentUid}_')) {
+            peerUid = allParts.substring(currentUid.length + 1);
+          } else if (allParts.endsWith('_$currentUid')) {
+            peerUid = allParts.substring(
+                0, allParts.length - currentUid.length - 1);
+          }
+        }
+      }
+
+      navigator.push(
+        MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            chatId: chatId,
+            title: chatTitle,
+            chatType: chatType,
+            peerUid: peerUid,
+          ),
+        ),
+      );
+      print('   - ✅ Chat navigation completed!');
+    } catch (e) {
+      print('   - ❌ Chat navigation failed: $e');
     }
   }
 }

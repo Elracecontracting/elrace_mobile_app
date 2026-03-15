@@ -3,6 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../chat/chat.dart';
@@ -25,11 +26,24 @@ class _ChatListScreenState extends State<ChatListScreen> {
   String? _currentUid;
   bool _isChatAvailable = false;
   bool _isInitializing = false;
-  bool _isScrolled = false;
+  final ValueNotifier<bool> _isScrolledNotifier = ValueNotifier(false);
 
   final TextEditingController _localSearchController = TextEditingController();
   final ValueNotifier<String> _searchNotifier = ValueNotifier('');
   Timer? _debounce;
+
+  // Tab state for Groups / Support — ValueNotifier so only tab section rebuilds
+  final ValueNotifier<int> _topTabNotifier = ValueNotifier(0); // 0 = Groups, 1 = Support
+  List<Chat> _supportGroups = [];
+
+  /// Cached chat stream — created once, reused across rebuilds
+  Stream<List<UserChat>>? _userChatsStream;
+
+  // Global user search state — ValueNotifiers so only the bottom section rebuilds
+  final ValueNotifier<List<ChatUser>> _globalResultsNotifier = ValueNotifier([]);
+  final ValueNotifier<bool> _globalSearchingNotifier = ValueNotifier(false);
+  ChatUser? _currentUser;
+  Timer? _globalDebounce;
 
   @override
   void initState() {
@@ -44,15 +58,71 @@ class _ChatListScreenState extends State<ChatListScreen> {
           _searchNotifier.value = q;
         }
       });
+
+      // Also trigger global user search
+      _globalDebounce?.cancel();
+      _globalDebounce = Timer(const Duration(milliseconds: 500), () {
+        _performGlobalSearch(_localSearchController.text.trim());
+      });
     });
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _globalDebounce?.cancel();
     _localSearchController.dispose();
     _searchNotifier.dispose();
+    _topTabNotifier.dispose();
+    _isScrolledNotifier.dispose();
+    _globalResultsNotifier.dispose();
+    _globalSearchingNotifier.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadCurrentUser() async {
+    if (_currentUid != null) {
+      _currentUser = await UserRepository.instance.getUser(_currentUid!);
+    }
+    // Load support groups for the Support tab
+    _loadSupportGroups();
+  }
+
+  Future<void> _loadSupportGroups() async {
+    try {
+      final groups = await ChatRepository.instance.getAllRoleGroups();
+      if (mounted) {
+        _supportGroups = groups;
+        // Only trigger rebuild of tab section via notifier
+        _topTabNotifier.notifyListeners();
+      }
+    } catch (e) {
+      print('⚠️ ChatListScreen: Error loading support groups: $e');
+    }
+  }
+
+  Future<void> _performGlobalSearch(String query) async {
+    if (query.length < 2) {
+      _globalResultsNotifier.value = [];
+      _globalSearchingNotifier.value = false;
+      return;
+    }
+
+    _globalSearchingNotifier.value = true;
+
+    try {
+      final result = await UserRepository.instance.searchUsers(query: query);
+      final filtered = result.users.where((u) => u.uid != _currentUid).toList();
+      if (mounted) {
+        _globalResultsNotifier.value = filtered;
+        _globalSearchingNotifier.value = false;
+      }
+    } catch (e) {
+      if (mounted) {
+        _globalResultsNotifier.value = [];
+        _globalSearchingNotifier.value = false;
+      }
+    }
   }
 
   Future<void> _initializeChat() async {
@@ -72,6 +142,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         if (result != null && result.chatEnabled) {
           _currentUid = FirebaseAuth.instance.currentUser?.uid;
           _isChatAvailable = true;
+          _loadCurrentUser();
           print('✅ ChatListScreen: Chat session restored successfully');
         } else {
           print(
@@ -85,6 +156,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         }
       }
     } else {
+      _loadCurrentUser();
       setState(() {});
     }
   }
@@ -179,7 +251,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
         child: Stack(
           children: [
             StreamBuilder<List<UserChat>>(
-              stream:
+              stream: _userChatsStream ??=
                   ChatRepository.instance.subscribeToUserChats(_currentUid!),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -209,6 +281,15 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
                 final allChats = snapshot.data ?? [];
 
+                // Pre-warm user cache for all DM peer avatars
+                final peerUids = allChats
+                    .where((c) => c.type == ChatType.dm && c.peerUid != null)
+                    .map((c) => c.peerUid!)
+                    .toList();
+                if (peerUids.isNotEmpty) {
+                  UserRepository.instance.prefetchUsers(peerUids);
+                }
+
                 final groups = allChats
                     .where((c) =>
                         c.type == ChatType.role || c.type == ChatType.group)
@@ -223,10 +304,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     if (scrollNotification is ScrollUpdateNotification ||
                         scrollNotification is ScrollEndNotification) {
                       final isScrolled = scrollNotification.metrics.pixels > 10;
-                      if (isScrolled != _isScrolled && mounted) {
-                        setState(() {
-                          _isScrolled = isScrolled;
-                        });
+                      if (isScrolled != _isScrolledNotifier.value) {
+                        _isScrolledNotifier.value = isScrolled;
                       }
                     }
                     return false;
@@ -240,51 +319,94 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           padding: const EdgeInsets.fromLTRB(16, 14, 16, 12),
                           child: _ChatSearchBar(
                             controller: _localSearchController,
-                            onOpenGlobalSearch: _openSearch,
+                            onClear: () {
+                              _globalResultsNotifier.value = [];
+                              _globalSearchingNotifier.value = false;
+                            },
                           ),
                         ),
                       ),
-                      // Groups header + horizontal list
+                      // ── Tabs (Groups | Support) — only this section rebuilds ──
                       SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
-                          child: Row(
-                            children: const [
-                              Text(
-                                'Groups',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      SliverToBoxAdapter(
-                        child: SizedBox(
-                          height: 82,
-                          child: groups.isEmpty
-                              ? const Center(
-                                  child: Text(
-                                    'No groups yet',
-                                    style: TextStyle(
-                                        color: Colors.white54, fontSize: 13),
+                        child: ValueListenableBuilder<int>(
+                          valueListenable: _topTabNotifier,
+                          builder: (context, tabIndex, _) {
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Tab buttons
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                                  child: Row(
+                                    children: [
+                                      _TopTab(
+                                        label: 'Groups',
+                                        isActive: tabIndex == 0,
+                                        onTap: () {
+                                          if (tabIndex != 0) _topTabNotifier.value = 0;
+                                        },
+                                      ),
+                                      const SizedBox(width: 14),
+                                      _TopTab(
+                                        label: 'Support',
+                                        isActive: tabIndex == 1,
+                                        onTap: () {
+                                          if (tabIndex != 1) _topTabNotifier.value = 1;
+                                        },
+                                      ),
+                                    ],
                                   ),
-                                )
-                              : ListView.builder(
-                                  padding: const EdgeInsets.only(left: 16),
-                                  scrollDirection: Axis.horizontal,
-                                  itemCount: groups.length,
-                                  itemBuilder: (context, i) {
-                                    final g = groups[i];
-                                    return _GroupQuickItem(
-                                      label: g.title ?? 'Group',
-                                      onTap: () => _openChat(g),
-                                    );
-                                  },
                                 ),
+                                // Tab content (horizontal bubbles)
+                                SizedBox(
+                                  height: 82,
+                                  child: tabIndex == 0
+                                      // ── Groups tab ──
+                                      ? (groups.isEmpty
+                                          ? const Center(
+                                              child: Text(
+                                                'No groups yet',
+                                                style: TextStyle(
+                                                    color: Colors.white54, fontSize: 13),
+                                              ),
+                                            )
+                                          : ListView.builder(
+                                              padding: const EdgeInsets.only(left: 16),
+                                              scrollDirection: Axis.horizontal,
+                                              itemCount: groups.length,
+                                              itemBuilder: (context, i) {
+                                                final g = groups[i];
+                                                return _GroupQuickItem(
+                                                  label: g.title ?? 'Group',
+                                                  onTap: () => _openChat(g),
+                                                );
+                                              },
+                                            ))
+                                      // ── Support tab ──
+                                      : (_supportGroups.isEmpty
+                                          ? const Center(
+                                              child: Text(
+                                                'No departments available',
+                                                style: TextStyle(
+                                                    color: Colors.white54, fontSize: 13),
+                                              ),
+                                            )
+                                          : ListView.builder(
+                                              padding: const EdgeInsets.only(left: 16),
+                                              scrollDirection: Axis.horizontal,
+                                              itemCount: _supportGroups.length,
+                                              itemBuilder: (context, i) {
+                                                final g = _supportGroups[i];
+                                                return _SupportGroupQuickItem(
+                                                  label: g.title ?? 'Dept ${g.roleId}',
+                                                  onTap: () => _startSupportChat(g),
+                                                );
+                                              },
+                                            )),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
                       const SliverToBoxAdapter(child: SizedBox(height: 14)),
@@ -308,62 +430,163 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           ),
                         ),
                       ),
-                      // Chat list items — only this part rebuilds on search
+                      // Chat list items — only this section rebuilds on search
                       ValueListenableBuilder<String>(
                         valueListenable: _searchNotifier,
                         builder: (context, query, _) {
-                          final filteredChats = query.isEmpty
-                              ? allChats
-                              : allChats
-                                  .where((c) => (c.title ?? '')
-                                      .toLowerCase()
-                                      .contains(query))
-                                  .toList();
+                          return ValueListenableBuilder<List<ChatUser>>(
+                            valueListenable: _globalResultsNotifier,
+                            builder: (context, globalResults, _) {
+                              return ValueListenableBuilder<bool>(
+                                valueListenable: _globalSearchingNotifier,
+                                builder: (context, isGlobalSearching, _) {
+                                  final filteredChats = query.isEmpty
+                                      ? allChats
+                                      : allChats
+                                          .where((c) => (c.title ?? '')
+                                              .toLowerCase()
+                                              .contains(query))
+                                          .toList();
 
-                          if (filteredChats.isEmpty) {
-                            return SliverFillRemaining(
-                              hasScrollBody: false,
-                              child: Container(
-                                color: Colors.white,
-                                child: Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.chat_bubble_outline,
-                                          size: 70, color: Colors.grey[400]),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        allChats.isEmpty
-                                            ? 'No chats yet'
-                                            : 'No results',
-                                        style: TextStyle(
-                                            fontSize: 17,
-                                            color: Colors.grey[700]),
+                                  final bool hasQuery = query.isNotEmpty;
+                                  final bool hasGlobalResults = globalResults.isNotEmpty;
+                                  final bool showNoResults = hasQuery && filteredChats.isEmpty && !hasGlobalResults && !isGlobalSearching;
+
+                                  if (showNoResults) {
+                                    return SliverFillRemaining(
+                                      hasScrollBody: false,
+                                      child: Container(
+                                        color: Colors.white,
+                                        child: Center(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.chat_bubble_outline,
+                                                  size: 70, color: Colors.grey[400]),
+                                              const SizedBox(height: 12),
+                                              Text(
+                                                allChats.isEmpty
+                                                    ? 'No chats yet'
+                                                    : 'No results',
+                                                style: TextStyle(
+                                                    fontSize: 17,
+                                                    color: Colors.grey[700]),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
-                          }
+                                    );
+                                  }
 
-                          return SliverList(
-                            delegate: SliverChildBuilderDelegate(
-                              (context, index) {
-                                final userChat = filteredChats[index];
-                                return Container(
-                                  color: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12),
-                                  child: _ChatListTile(
-                                    userChat: userChat,
-                                    currentUid: _currentUid!,
-                                    onTap: () => _openChat(userChat),
-                                  ),
-                                );
-                              },
-                              childCount: filteredChats.length,
-                            ),
+                                  // Build combined list: filtered chats + global user results
+                                  final List<Widget> items = [];
+
+                                  for (final userChat in filteredChats) {
+                                    items.add(
+                                      Container(
+                                        color: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                                        child: _ChatListTile(
+                                          userChat: userChat,
+                                          currentUid: _currentUid!,
+                                          onTap: () => _openChat(userChat),
+                                        ),
+                                      ),
+                                    );
+                                  }
+
+                                  // Show global search results when searching
+                                  if (hasQuery && (isGlobalSearching || hasGlobalResults)) {
+                                    items.add(
+                                      Container(
+                                        color: Colors.white,
+                                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                                        child: Row(
+                                          children: [
+                                            Text(
+                                              'Users',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w700,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                            if (isGlobalSearching) ...[
+                                              const SizedBox(width: 8),
+                                              const SizedBox(
+                                                width: 14,
+                                                height: 14,
+                                                child: CircularProgressIndicator(strokeWidth: 2),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                    );
+
+                                    for (final user in globalResults) {
+                                      items.add(
+                                        Container(
+                                          color: Colors.white,
+                                          child: _InlineUserTile(
+                                            user: user,
+                                            onTap: () => _startChatWithUser(user),
+                                          ),
+                                        ),
+                                      );
+                                    }
+
+                                    if (!isGlobalSearching && globalResults.isEmpty) {
+                                      items.add(
+                                        Container(
+                                          color: Colors.white,
+                                          padding: const EdgeInsets.symmetric(vertical: 16),
+                                          child: Center(
+                                            child: Text(
+                                              'No users found',
+                                              style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  }
+
+                                  if (items.isEmpty && !hasQuery) {
+                                    return SliverFillRemaining(
+                                      hasScrollBody: false,
+                                      child: Container(
+                                        color: Colors.white,
+                                        child: Center(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(Icons.chat_bubble_outline,
+                                                  size: 70, color: Colors.grey[400]),
+                                              const SizedBox(height: 12),
+                                              Text(
+                                                'No chats yet',
+                                                style: TextStyle(
+                                                    fontSize: 17,
+                                                    color: Colors.grey[700]),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+
+                                  return SliverList(
+                                    delegate: SliverChildBuilderDelegate(
+                                      (context, index) => items[index],
+                                      childCount: items.length,
+                                    ),
+                                  );
+                                },
+                              );
+                            },
                           );
                         },
                       ),
@@ -381,39 +604,44 @@ class _ChatListScreenState extends State<ChatListScreen> {
               top: 0,
               left: 0,
               right: 0,
-              child: ClipRect(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(
-                    sigmaX: _isScrolled ? 5.0 : 0.0,
-                    sigmaY: _isScrolled ? 5.0 : 0.0,
-                  ),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-                    decoration: BoxDecoration(
-                      color: _isScrolled
-                          ? Colors.white.withOpacity(0.10)
-                          : Colors.transparent,
-                      border: Border(
-                        bottom: BorderSide(
-                          color: _isScrolled
-                              ? Colors.white.withOpacity(0.25)
-                              : Colors.transparent,
-                          width: 1,
-                        ),
+              child: ValueListenableBuilder<bool>(
+                valueListenable: _isScrolledNotifier,
+                builder: (context, isScrolled, child) {
+                  return ClipRect(
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(
+                        sigmaX: isScrolled ? 5.0 : 0.0,
+                        sigmaY: isScrolled ? 5.0 : 0.0,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
-                          blurRadius: 4,
-                          offset: const Offset(0, 6),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+                        decoration: BoxDecoration(
+                          color: isScrolled
+                              ? Colors.white.withOpacity(0.10)
+                              : Colors.transparent,
+                          border: Border(
+                            bottom: BorderSide(
+                              color: isScrolled
+                                  ? Colors.white.withOpacity(0.25)
+                                  : Colors.transparent,
+                              width: 1,
+                            ),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.03),
+                              blurRadius: 4,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
-                      ],
+                        child:
+                            _SecondaryChatBar(onMessagesTap: _openStarredMessages),
+                      ),
                     ),
-                    child:
-                        _SecondaryChatBar(onMessagesTap: _openStarredMessages),
-                  ),
-                ),
+                  );
+                },
               ),
             ),
           ],
@@ -447,6 +675,65 @@ class _ChatListScreenState extends State<ChatListScreen> {
     );
   }
 
+  /// Start a support chat with a department group
+  Future<void> _startSupportChat(Chat group) async {
+    if (_currentUid == null || _currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please login first'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final chatId = await ChatRepository.instance.createOrGetSupportChat(
+        userUid: _currentUid!,
+        userName: _currentUser!.name,
+        targetRoleId: group.roleId!,
+        groupTitle: group.title ?? 'Group ${group.roleId}',
+        userRoleId: _currentUser!.roleId,
+        userBranchId: _currentUser!.branchId,
+        userCompanyId: _currentUser!.companyId,
+      );
+
+      if (mounted) Navigator.of(context).pop(); // dismiss loading
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChatScreen(
+              chatId: chatId,
+              title: group.title ?? 'Group ${group.roleId}',
+              chatType: ChatType.support,
+              supportUserUid: _currentUid,
+              supportGroupTitle: group.title ?? 'Group ${group.roleId}',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) Navigator.of(context).pop(); // dismiss loading
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to start support chat: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _openStarredMessages() {
     Navigator.push(
       context,
@@ -457,12 +744,37 @@ class _ChatListScreenState extends State<ChatListScreen> {
   }
 
   void _openSearch() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const NewChatScreen(),
-      ),
-    );
+    // Focus the local search bar instead of navigating away
+    _localSearchController.clear();
+    FocusScope.of(context).requestFocus(FocusNode());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Unfocus first so the keyboard doesn't linger from previous field
+    });
+  }
+
+  Future<void> _startChatWithUser(ChatUser user) async {
+    if (_currentUid == null) return;
+
+    // Generate chat ID deterministically
+    final chatId = Chat.generateDmChatId(_currentUid!, user.uid);
+
+    _localSearchController.clear();
+
+    // Just navigate to chat screen — the chat doc will be created
+    // when the first message is sent via ChatRepository.sendText
+    if (mounted) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ChatScreen(
+            chatId: chatId,
+            title: user.name,
+            chatType: ChatType.dm,
+            peerUid: user.uid,
+          ),
+        ),
+      );
+    }
   }
 }
 
@@ -634,19 +946,31 @@ class _ChatListTile extends StatelessWidget {
             PresenceService.instance.subscribeToUserPresence(userChat.peerUid!),
         builder: (context, snapshot) {
           final isOnline = snapshot.data?.online ?? false;
-          return _avatarShell(
-            isOnline: isOnline,
-            child: CircleAvatar(
-              radius: 24,
-              backgroundColor: const Color(0xFFECECEC),
-              child: Text(
-                _getInitials(userChat.title ?? '?'),
-                style: const TextStyle(
-                  color: Color(0xFF2E2E2E),
-                  fontWeight: FontWeight.w700,
+          return FutureBuilder<ChatUser?>(
+            future: UserRepository.instance.getUser(userChat.peerUid!),
+            builder: (context, userSnapshot) {
+              final peerUser = userSnapshot.data;
+              final avatarUrl = peerUser?.avatarUrl;
+              return _avatarShell(
+                isOnline: isOnline,
+                child: CircleAvatar(
+                  radius: 24,
+                  backgroundColor: const Color(0xFFECECEC),
+                  backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                      ? NetworkImage(avatarUrl)
+                      : null,
+                  child: avatarUrl == null || avatarUrl.isEmpty
+                      ? Text(
+                          _getInitials(userChat.title ?? '?'),
+                          style: const TextStyle(
+                            color: Color(0xFF2E2E2E),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                      : null,
                 ),
-              ),
-            ),
+              );
+            },
           );
         },
       );
@@ -842,8 +1166,9 @@ class _ChatListTile extends StatelessWidget {
   }
 
   String _formatTime(DateTime dateTime) {
+    final local = dateTime.toLocal();
     final now = DateTime.now();
-    final diff = now.difference(dateTime);
+    final diff = now.difference(local);
 
     if (diff.inSeconds < 60) return 'just now';
     if (diff.inMinutes == 1) return '1 min ago';
@@ -853,58 +1178,144 @@ class _ChatListTile extends StatelessWidget {
     if (diff.inDays == 1) return 'Yesterday';
     if (diff.inDays < 7) return '${diff.inDays} days ago';
 
-    return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
+    return '${local.day}/${local.month}/${local.year}';
   }
 }
 
 class _ChatSearchBar extends StatelessWidget {
   final TextEditingController controller;
-  final VoidCallback onOpenGlobalSearch;
+  final VoidCallback onClear;
 
   const _ChatSearchBar({
     required this.controller,
-    required this.onOpenGlobalSearch,
+    required this.onClear,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
-      controller: controller,
-      decoration: InputDecoration(
-        hintText: 'Search',
-        hintStyle: const TextStyle(
-          color: Color(0xFF9A9A9A),
-          fontWeight: FontWeight.w500,
-        ),
-        prefixIcon: const SizedBox(width: 14),
-        prefixIconConstraints: const BoxConstraints(minWidth: 14, minHeight: 0),
-        suffixIcon: IconButton(
-          tooltip: 'Search users',
-          onPressed: onOpenGlobalSearch,
-          icon: const Icon(Icons.search_rounded, color: Color(0xFF8E8E8E)),
-        ),
-        filled: true,
-        fillColor: Colors.white,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: BorderSide.none,
-        ),
-        contentPadding: const EdgeInsets.fromLTRB(0, 13, 12, 13),
-      ),
-      style: const TextStyle(
-        color: Color(0xFF1F1F1F),
-        fontWeight: FontWeight.w500,
-      ),
-      textInputAction: TextInputAction.search,
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: controller,
+      builder: (context, value, _) {
+        final hasText = value.text.isNotEmpty;
+        return TextField(
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: 'Search',
+            hintStyle: const TextStyle(
+              color: Color(0xFF9A9A9A),
+              fontWeight: FontWeight.w500,
+            ),
+            prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF8E8E8E)),
+            suffixIcon: hasText
+                ? IconButton(
+                    tooltip: 'Clear search',
+                    onPressed: () {
+                      controller.clear();
+                      onClear();
+                    },
+                    icon: const Icon(Icons.close_rounded, color: Color(0xFF8E8E8E), size: 20),
+                  )
+                : null,
+            filled: true,
+            fillColor: Colors.white,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(30),
+              borderSide: BorderSide.none,
+            ),
+            contentPadding: const EdgeInsets.fromLTRB(0, 13, 12, 13),
+          ),
+          style: const TextStyle(
+            color: Color(0xFF1F1F1F),
+            fontWeight: FontWeight.w500,
+          ),
+          textInputAction: TextInputAction.search,
+        );
+      },
     );
+  }
+}
+
+/// Inline user tile for global search results shown in chat list
+class _InlineUserTile extends StatelessWidget {
+  final ChatUser user;
+  final VoidCallback onTap;
+
+  const _InlineUserTile({
+    required this.user,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      onTap: onTap,
+      leading: Stack(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: AppColors.primaryBlackLight,
+            backgroundImage: user.avatarUrl != null
+                ? NetworkImage(user.avatarUrl!)
+                : null,
+            child: user.avatarUrl == null
+                ? Text(
+                    _getInitials(user.name),
+                    style: const TextStyle(
+                      color: AppColors.primaryColor,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                : null,
+          ),
+          StreamBuilder<PresenceStatus>(
+            stream: PresenceService.instance.subscribeToUserPresence(user.uid),
+            builder: (context, snapshot) {
+              final isOnline = snapshot.data?.online ?? false;
+              if (!isOnline) return const SizedBox.shrink();
+              return Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  width: 14,
+                  height: 14,
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 2),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+      title: Text(
+        user.name,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
+      subtitle: user.email != null
+          ? Text(
+              user.email!,
+              style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+            )
+          : null,
+      trailing: const Icon(Icons.message_rounded, color: AppColors.primaryColor, size: 22),
+    );
+  }
+
+  String _getInitials(String name) {
+    final parts = name.trim().split(' ');
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts[0].substring(0, 1).toUpperCase();
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
 }
 
@@ -1002,6 +1413,95 @@ class _GroupQuickItem extends StatelessWidget {
                       'assets/logo/rcc2.png',
                       fit: BoxFit.contain,
                     ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Tab button for Groups / Support toggle
+class _TopTab extends StatelessWidget {
+  final String label;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _TopTab({
+    required this.label,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
+        decoration: BoxDecoration(
+          color: isActive ? const Color(0xFFE9B23A) : Colors.white.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isActive ? const Color(0xFF1D2449) : Colors.white70,
+            fontSize: 15,
+            fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bubble item for support departments
+class _SupportGroupQuickItem extends StatelessWidget {
+  final String label;
+  final VoidCallback? onTap;
+
+  const _SupportGroupQuickItem({required this.label, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.only(right: 14),
+        child: SizedBox(
+          width: 64,
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(1.3),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border:
+                      Border.all(color: const Color(0xFFE9B23A), width: 1.2),
+                ),
+                child: const CircleAvatar(
+                  radius: 24,
+                  backgroundColor: Color(0xFF1D2449),
+                  child: Icon(
+                    Icons.support_agent_rounded,
+                    color: Color(0xFFE9B23A),
+                    size: 26,
                   ),
                 ),
               ),

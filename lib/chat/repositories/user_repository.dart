@@ -20,6 +20,12 @@ class UserRepository {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
 
+  /// In-memory user cache to avoid repeated Firestore reads
+  final Map<String, ChatUser> _userCache = {};
+  /// Cache expiry tracking (5 minutes)
+  final Map<String, DateTime> _cacheTimestamps = {};
+  static const _cacheDuration = Duration(minutes: 5);
+
   CollectionReference<Map<String, dynamic>> get _usersCollection =>
       _firestore.collection('users');
 
@@ -62,15 +68,42 @@ class UserRepository {
     }
   }
 
-  /// Get a user by UID
+  /// Get a user by UID (cached)
   Future<ChatUser?> getUser(String uid) async {
+    // Check cache first
+    final cached = _userCache[uid];
+    final cachedAt = _cacheTimestamps[uid];
+    if (cached != null && cachedAt != null && DateTime.now().difference(cachedAt) < _cacheDuration) {
+      return cached;
+    }
+
     try {
       final doc = await _usersCollection.doc(uid).get();
       if (!doc.exists) return null;
-      return ChatUser.fromFirestore(doc);
+      final user = ChatUser.fromFirestore(doc);
+      _userCache[uid] = user;
+      _cacheTimestamps[uid] = DateTime.now();
+      return user;
     } catch (e) {
       print('❌ UserRepository: Error getting user: $e');
-      return null;
+      return cached; // Return stale cache on error
+    }
+  }
+
+  /// Get a user from cache only (sync, no Firestore call)
+  ChatUser? getCachedUser(String uid) => _userCache[uid];
+
+  /// Pre-warm user cache for multiple UIDs
+  Future<void> prefetchUsers(List<String> uids) async {
+    final uncached = uids.where((uid) {
+      final cachedAt = _cacheTimestamps[uid];
+      return cachedAt == null || DateTime.now().difference(cachedAt) >= _cacheDuration;
+    }).toList();
+    if (uncached.isEmpty) return;
+    final users = await getUsersByIds(uncached);
+    for (final user in users) {
+      _userCache[user.uid] = user;
+      _cacheTimestamps[user.uid] = DateTime.now();
     }
   }
 

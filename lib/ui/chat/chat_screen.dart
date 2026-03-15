@@ -14,6 +14,7 @@ import '../../resources/app_colors.dart';
 import '../../core/utils/shared_pref.dart';
 import '../widgets/header_widget.dart';
 import 'chat_user_profile_screen.dart';
+import 'screens/sign_zone_picker_screen.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/chat_input_bar.dart';
 import 'widgets/typing_indicator.dart';
@@ -51,6 +52,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   bool _isMuted = false;
   Timer? _typingTimer;
 
+  /// Peer user info (cached for avatar)
+  ChatUser? _peerUser;
+
+  /// Messages stream — recreatable if the chat doc is created after first open
+  late Stream<List<Message>> _messagesStream;
+
+  /// Whether the stream has had an error (needs reconnect after first send)
+  bool _streamErrored = false;
+
   /// Support chat state
   bool get _isSupportChat => widget.chatType == ChatType.support;
   bool get _isExternalUser => _isSupportChat && widget.supportUserUid == _currentUid;
@@ -65,13 +75,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   /// Reply state (WhatsApp-style)
   Message? _replyingTo;
 
+  /// Optimistic (pending) messages — shown with clock icon until Firestore confirms
+  final List<Message> _pendingMessages = [];
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _currentUid = FirebaseAuth.instance.currentUser?.uid;
+    _messagesStream = ChatRepository.instance.subscribeToMessages(widget.chatId);
     _markAsRead();
-    _loadMuteStatus();
+    _loadPeerUser();
     _messageController.addListener(_onTextChanged);
 
     // Set this chat as active to suppress notifications
@@ -79,15 +93,21 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     // Cancel any pending notifications for this chat
     ChatNotificationService.instance.cancelNotificationsForChat(widget.chatId);
 
-    // Load member names for support chats (group members see real names)
-    if (_isSupportChat && !_isExternalUser) {
-      _loadSupportChatMemberNames();
-    }
+    // Defer non-critical loads so messages render first
+    Future.microtask(() {
+      if (!mounted) return;
+      _loadMuteStatus();
 
-    // Subscribe to starred message IDs
-    _starredSub =
-        ChatRepository.instance.subscribeToStarredMessageIds().listen((ids) {
-      if (mounted) setState(() => _starredIds = ids);
+      // Load member names for support chats (group members see real names)
+      if (_isSupportChat && !_isExternalUser) {
+        _loadSupportChatMemberNames();
+      }
+
+      // Subscribe to starred message IDs
+      _starredSub =
+          ChatRepository.instance.subscribeToStarredMessageIds().listen((ids) {
+        if (mounted) setState(() => _starredIds = ids);
+      });
     });
   }
 
@@ -95,6 +115,15 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     final userChat = await ChatRepository.instance.getUserChat(widget.chatId);
     if (mounted && userChat != null) {
       setState(() => _isMuted = userChat.muted);
+    }
+  }
+
+  /// Pre-load peer user for fast avatar rendering
+  Future<void> _loadPeerUser() async {
+    if (widget.peerUid == null) return;
+    final user = await UserRepository.instance.getUser(widget.peerUid!);
+    if (mounted && user != null) {
+      setState(() => _peerUser = user);
     }
   }
 
@@ -176,35 +205,39 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
-        child: Column(
-          children: [
-            _buildGlassTopHeader(),
-            Expanded(
-              child: Container(
-                color: const Color(0xFFF2F2F2),
-                child: Stack(
-                  children: [
-                    Positioned.fill(child: _buildChatBackgroundPattern()),
-                    _buildMessageList(),
-                  ],
+        child: ChatIdProvider(
+          chatId: widget.chatId,
+          child: Column(
+            children: [
+              _buildGlassTopHeader(),
+              Expanded(
+                child: Container(
+                  color: const Color(0xFFF2F2F2),
+                  child: Stack(
+                    children: [
+                      Positioned.fill(child: _buildChatBackgroundPattern()),
+                      _buildMessageList(),
+                    ],
+                  ),
                 ),
               ),
-            ),
-            _buildTypingIndicator(),
-            _buildReplyBar(),
-            ChatInputBar(
-              controller: _messageController,
-              isLoading: false,
-              isRecording: _isRecording,
-              onSendText: _sendTextMessage,
-              onPickImage: _pickImage,
-              onPickGallery: _pickImagesFromGallery,
-              onPickFile: _pickFile,
+              _buildTypingIndicator(),
+              _buildReplyBar(),
+              ChatInputBar(
+                controller: _messageController,
+                isLoading: false,
+                isRecording: _isRecording,
+                onSendText: _sendTextMessage,
+                onPickImage: _pickImage,
+                onPickGallery: _pickImagesFromGallery,
+                onPickFile: _pickFile,
+                onPickSignableDoc: _pickSignableDocument,
               onStartRecording: _startRecording,
               onStopRecording: _stopRecording,
               onCancelRecording: _cancelRecording,
             ),
           ],
+        ),
         ),
       ),
     );
@@ -299,6 +332,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             : null,
         builder: (context, snapshot) {
           final isOnline = snapshot.data?.online ?? false;
+          final avatarUrl = _peerUser?.avatarUrl;
           return Stack(
             children: [
               Container(
@@ -311,13 +345,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 child: CircleAvatar(
                   radius: 22,
                   backgroundColor: const Color(0xFFECECEC),
-                  child: Text(
-                    _getInitials(widget.title),
-                    style: const TextStyle(
-                      color: Color(0xFF2E2E2E),
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
+                      ? NetworkImage(avatarUrl)
+                      : null,
+                  child: avatarUrl == null || avatarUrl.isEmpty
+                      ? Text(
+                          _getInitials(widget.title),
+                          style: const TextStyle(
+                            color: Color(0xFF2E2E2E),
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                      : null,
                 ),
               ),
               if (isOnline)
@@ -373,17 +412,45 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   Widget _buildMessageList() {
     return StreamBuilder<List<Message>>(
-      stream: ChatRepository.instance.subscribeToMessages(widget.chatId),
+      stream: _messagesStream,
       builder: (context, snapshot) {
-        // Don't show loading - show empty state immediately for better UX
-        // Errors are silently ignored - messages will appear when available
         if (snapshot.hasError) {
-          // Log error but don't show to user
           debugPrint('Chat messages error: ${snapshot.error}');
+          _streamErrored = true; // Mark for reconnect after first send
         }
 
-        final messages = snapshot.data ?? [];
+        // Still waiting for first Firestore snapshot — show subtle loading
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: Color(0xFF1D2449),
+              ),
+            ),
+          );
+        }
 
+        // Merge Firestore messages with optimistic pending messages.
+        // Remove any pending message whose text already appears in Firestore
+        // (same sender + text) so we never show duplicates.
+        final firestoreMessages = snapshot.data ?? [];
+        if (_pendingMessages.isNotEmpty) {
+          _pendingMessages.removeWhere((pending) {
+            return firestoreMessages.any((fm) =>
+                fm.senderId == pending.senderId &&
+                fm.text == pending.text &&
+                fm.type == pending.type);
+          });
+        }
+        final messages = [
+          ..._pendingMessages,
+          ...firestoreMessages,
+        ];
+
+        // Only show empty state AFTER we got real data (not while loading)
         if (messages.isEmpty) {
           return Center(
             child: Column(
@@ -497,8 +564,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   bool _shouldShowDateHeader(List<Message> messages, int index) {
     if (index == messages.length - 1) return true;
 
-    final current = messages[index].createdAt;
-    final previous = messages[index + 1].createdAt;
+    final current = messages[index].createdAt.toLocal();
+    final previous = messages[index + 1].createdAt.toLocal();
 
     return current.day != previous.day ||
         current.month != previous.month ||
@@ -506,19 +573,20 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildDateHeader(DateTime date) {
+    final local = date.toLocal();
     final now = DateTime.now();
     String text;
 
-    if (date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day) {
+    if (local.year == now.year &&
+        local.month == now.month &&
+        local.day == now.day) {
       text = 'Today';
-    } else if (date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day - 1) {
+    } else if (local.year == now.year &&
+        local.month == now.month &&
+        local.day == now.day - 1) {
       text = 'Yesterday';
     } else {
-      text = '${date.day}/${date.month}/${date.year}';
+      text = '${local.day}/${local.month}/${local.year}';
     }
 
     return Padding(
@@ -656,6 +724,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Reconnect the messages stream if it previously errored
+  /// (e.g. chat doc didn't exist yet, now created by _ensureDmChatExists).
+  void _reconnectStreamIfNeeded() {
+    if (_streamErrored && mounted) {
+      _streamErrored = false;
+      setState(() {
+        _messagesStream = ChatRepository.instance.subscribeToMessages(widget.chatId);
+      });
+    }
+  }
+
   Future<void> _sendTextMessage() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
@@ -674,13 +753,39 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     setState(() => _replyingTo = null);
     PresenceService.instance.setTyping(widget.chatId, false);
 
-    // Optimistic UI - scroll immediately, no loading
+    // Create optimistic message with 'sending' status (shows clock icon)
+    final optimistic = Message(
+      id: 'pending_${DateTime.now().millisecondsSinceEpoch}',
+      senderId: _currentUid ?? '',
+      type: MessageType.text,
+      text: text,
+      createdAt: DateTime.now(),
+      clientMsgId: '',
+      replyTo: replyTo,
+      status: MessageStatus.sending,
+    );
+
+    setState(() {
+      _pendingMessages.insert(0, optimistic);
+    });
     _scrollToBottom();
 
     try {
       await ChatRepository.instance
           .sendText(widget.chatId, text, replyTo: replyTo);
+      // Don't remove optimistic here — the StreamBuilder merge
+      // will auto-deduplicate once the Firestore snapshot arrives.
+      _reconnectStreamIfNeeded();
     } catch (e) {
+      // Mark as failed so user sees error icon
+      if (mounted) {
+        setState(() {
+          final idx = _pendingMessages.indexWhere((m) => m.id == optimistic.id);
+          if (idx >= 0) {
+            _pendingMessages[idx] = optimistic.copyWith(status: MessageStatus.failed);
+          }
+        });
+      }
       _showError('Failed to send message');
     }
   }
@@ -701,6 +806,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         widget.chatId,
         File(image.path),
       );
+      _reconnectStreamIfNeeded();
     } catch (e) {
       _showError('Failed to send image');
     }
@@ -722,6 +828,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           File(image.path),
         );
       }
+      _reconnectStreamIfNeeded();
     } catch (e) {
       _showError('Failed to send image');
     }
@@ -742,8 +849,54 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         file,
         mimeType: result.files.single.extension,
       );
+      _reconnectStreamIfNeeded();
     } catch (e) {
       _showError('Failed to send file');
+    }
+  }
+
+  Future<void> _pickSignableDocument() async {
+    try {
+      // Pick PDF file only
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+      if (result == null || result.files.isEmpty) return;
+
+      final file = File(result.files.single.path!);
+      final fileName = result.files.single.name;
+
+      // Navigate to sign zone picker
+      if (!mounted) return;
+      final pickerResult = await Navigator.push<Map<String, dynamic>>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SignZonePickerScreen(
+            pdfFile: file,
+            fileName: fileName,
+          ),
+        ),
+      );
+
+      if (pickerResult == null) return; // User cancelled
+
+      final signZones = pickerResult['signZones'] as List<SignZone>;
+      final pageCount = pickerResult['pageCount'] as int?;
+
+      // Scroll to bottom
+      _scrollToBottom();
+
+      // Send signable document
+      await ChatRepository.instance.sendSignableDocument(
+        widget.chatId,
+        file,
+        signZones: signZones,
+        pageCount: pageCount,
+      );
+      _reconnectStreamIfNeeded();
+    } catch (e) {
+      _showError('Failed to send document');
     }
   }
 
