@@ -183,6 +183,7 @@ class Message {
   final DateTime? signedAt;
   final String? signedBy; // UID of the signer
   final int? signExpiresInDays; // validity duration
+  final DateTime? expiresAt; // absolute expiry time for signable docs
   final int? pageCount; // number of pages in the PDF
   
   // Local state (not persisted)
@@ -211,6 +212,7 @@ class Message {
     this.signedAt,
     this.signedBy,
     this.signExpiresInDays,
+    this.expiresAt,
     this.pageCount,
     this.isUploading = false,
     this.uploadProgress = 0.0,
@@ -246,6 +248,7 @@ class Message {
       signedAt: (data['signed_at'] as Timestamp?)?.toDate(),
       signedBy: data['signed_by'],
       signExpiresInDays: data['sign_expires_in_days'],
+      expiresAt: (data['expires_at'] as Timestamp?)?.toDate(),
       pageCount: data['page_count'],
     );
   }
@@ -274,6 +277,7 @@ class Message {
     if (signedAt != null) map['signed_at'] = Timestamp.fromDate(signedAt!);
     if (signedBy != null) map['signed_by'] = signedBy;
     if (signExpiresInDays != null) map['sign_expires_in_days'] = signExpiresInDays;
+    if (expiresAt != null) map['expires_at'] = Timestamp.fromDate(expiresAt!);
     if (pageCount != null) map['page_count'] = pageCount;
 
     return map;
@@ -319,6 +323,7 @@ class Message {
     DateTime? signedAt,
     String? signedBy,
     int? signExpiresInDays,
+    DateTime? expiresAt,
     int? pageCount,
     bool? isUploading,
     double? uploadProgress,
@@ -345,6 +350,7 @@ class Message {
       signedAt: signedAt ?? this.signedAt,
       signedBy: signedBy ?? this.signedBy,
       signExpiresInDays: signExpiresInDays ?? this.signExpiresInDays,
+      expiresAt: expiresAt ?? this.expiresAt,
       pageCount: pageCount ?? this.pageCount,
       isUploading: isUploading ?? this.isUploading,
       uploadProgress: uploadProgress ?? this.uploadProgress,

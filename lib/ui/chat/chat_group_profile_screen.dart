@@ -4,16 +4,21 @@ import '../../chat/chat.dart';
 import '../../resources/app_colors.dart';
 import '../widgets/header_widget.dart';
 
-class ChatUserProfileScreen extends StatelessWidget {
+/// Profile screen for group / support chats.
+/// Same visual design as ChatUserProfileScreen but shows
+/// group info + member list + shared media.
+class ChatGroupProfileScreen extends StatelessWidget {
   final String chatId;
-  final String peerUid;
-  final String fallbackName;
+  final String title;
+  final ChatType chatType;
+  final String? supportGroupTitle;
 
-  const ChatUserProfileScreen({
+  const ChatGroupProfileScreen({
     super.key,
     required this.chatId,
-    required this.peerUid,
-    required this.fallbackName,
+    required this.title,
+    required this.chatType,
+    this.supportGroupTitle,
   });
 
   @override
@@ -23,21 +28,28 @@ class ChatUserProfileScreen extends StatelessWidget {
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
-        child: StreamBuilder<ChatUser?>(
-          stream: UserRepository.instance.subscribeToUser(peerUid),
-          builder: (context, userSnapshot) {
-            final user = userSnapshot.data;
-            return StreamBuilder<PresenceStatus>(
-              stream: PresenceService.instance.subscribeToUserPresence(peerUid),
-              builder: (context, presenceSnapshot) {
-                final isOnline = presenceSnapshot.data?.online ?? false;
+        child: FutureBuilder<List<ChatMember>>(
+          future: ChatRepository.instance.getChatMembers(chatId),
+          builder: (context, membersSnap) {
+            final members = membersSnap.data ?? [];
+
+            return FutureBuilder<List<ChatUser>>(
+              future: members.isNotEmpty
+                  ? UserRepository.instance
+                      .getUsersByIds(members.map((m) => m.uid).toList())
+                  : Future.value([]),
+              builder: (context, usersSnap) {
+                final users = usersSnap.data ?? [];
+                final userMap = {for (final u in users) u.uid: u};
+
                 return StreamBuilder<List<Message>>(
                   stream: ChatRepository.instance.subscribeToMessages(
                     chatId,
                     pageSize: 200,
                   ),
                   builder: (context, messageSnapshot) {
-                    final mediaItems = _extractMedia(messageSnapshot.data ?? const []);
+                    final mediaItems =
+                        _extractMedia(messageSnapshot.data ?? const []);
 
                     return SingleChildScrollView(
                       padding: const EdgeInsets.fromLTRB(14, 8, 14, 22),
@@ -50,53 +62,55 @@ class ChatUserProfileScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            _TopIdentityCard(
-                              displayName: user?.name.trim().isNotEmpty == true
-                                  ? user!.name
-                                  : fallbackName,
-                              avatarUrl: user?.avatarUrl,
-                              initials: _initials(
-                                user?.name.trim().isNotEmpty == true
-                                    ? user!.name
-                                    : fallbackName,
-                              ),
-                              isOnline: isOnline,
+                            _GroupIdentityCard(
+                              title: title,
+                              subtitle: chatType == ChatType.support
+                                  ? 'Support Group'
+                                  : 'Group Chat',
+                              memberCount: members.length,
+                              chatType: chatType,
                             ),
+                            // Group info section
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+                              padding:
+                                  const EdgeInsets.fromLTRB(18, 16, 18, 6),
                               child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   _InfoRow(
-                                    label: 'Display Name',
-                                    value: (user?.name.trim().isNotEmpty == true)
-                                        ? user!.name
-                                        : fallbackName,
+                                    label: 'Group Name',
+                                    value: title,
                                   ),
                                   _InfoRow(
-                                    label: 'Email Address',
-                                    value: _notEmptyOrDash(user?.email),
+                                    label: 'Type',
+                                    value: _chatTypeLabel(chatType),
                                   ),
                                   _InfoRow(
-                                    label: 'Jobtitle',
-                                    value: _resolveJobTitle(user),
+                                    label: 'Members',
+                                    value: '${members.length} members',
                                   ),
-                                  _InfoRow(
-                                    label: 'ID',
-                                    value: _resolveUserId(user),
-                                  ),
-                                  _InfoRow(
-                                    label: 'Phone Number',
-                                    value: _notEmptyOrDash(user?.phoneNumber),
-                                  ),
+                                  if (supportGroupTitle != null)
+                                    _InfoRow(
+                                      label: 'Department',
+                                      value: supportGroupTitle!,
+                                    ),
                                 ],
                               ),
                             ),
+                            // Members list
+                            _MembersSection(
+                              members: members,
+                              userMap: userMap,
+                            ),
+                            // Media section
                             _MediaSection(
                               items: mediaItems,
-                              onTapItem: (item) => _openMediaPreview(context, item),
+                              onTapItem: (item) =>
+                                  _openMediaPreview(context, item),
                               onViewAll: mediaItems.isEmpty
                                   ? null
-                                  : () => _showAllMediaBottomSheet(context, mediaItems),
+                                  : () => _showAllMediaBottomSheet(
+                                      context, mediaItems),
                             ),
                           ],
                         ),
@@ -112,33 +126,17 @@ class ChatUserProfileScreen extends StatelessWidget {
     );
   }
 
-  static String _resolveUserId(ChatUser? user) {
-    if (user == null) return '-';
-    if (user.employeeId != null) return user.employeeId.toString();
-    if (user.odooUserId > 0) return user.odooUserId.toString();
-    return '-';
-  }
-
-  static String _resolveJobTitle(ChatUser? user) {
-    if (user == null) return '-';
-    final fromProfile = _notEmptyOrDash(user.jobTitle);
-    if (fromProfile != '-') return fromProfile;
-    final roleName = _notEmptyOrDash(user.roleName);
-    if (roleName != '-') return roleName;
-    if (user.roleId > 0) return 'Role ${user.roleId}';
-    return '-';
-  }
-
-  static String _notEmptyOrDash(String? value) {
-    final trimmed = value?.trim() ?? '';
-    return trimmed.isEmpty ? '-' : trimmed;
-  }
-
-  static String _initials(String value) {
-    final parts = value.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
-    if (parts.isEmpty) return '?';
-    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  static String _chatTypeLabel(ChatType type) {
+    switch (type) {
+      case ChatType.dm:
+        return 'Direct Message';
+      case ChatType.role:
+        return 'Role Group';
+      case ChatType.group:
+        return 'Group Chat';
+      case ChatType.support:
+        return 'Support Group';
+    }
   }
 
   static List<_SharedMediaItem> _extractMedia(List<Message> messages) {
@@ -168,7 +166,8 @@ class ChatUserProfileScreen extends StatelessWidget {
       context: context,
       builder: (_) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 32),
+        insetPadding:
+            const EdgeInsets.symmetric(horizontal: 14, vertical: 32),
         child: Stack(
           children: [
             ClipRRect(
@@ -181,7 +180,8 @@ class ChatUserProfileScreen extends StatelessWidget {
                     item.displayUrl,
                     fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) => const Center(
-                      child: Icon(Icons.broken_image_outlined, color: Colors.white70, size: 38),
+                      child: Icon(Icons.broken_image_outlined,
+                          color: Colors.white70, size: 38),
                     ),
                   ),
                 ),
@@ -193,7 +193,8 @@ class ChatUserProfileScreen extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 26,
                     backgroundColor: Color(0x77000000),
-                    child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 34),
+                    child: Icon(Icons.play_arrow_rounded,
+                        color: Colors.white, size: 34),
                   ),
                 ),
               ),
@@ -203,7 +204,8 @@ class ChatUserProfileScreen extends StatelessWidget {
     );
   }
 
-  static void _showAllMediaBottomSheet(BuildContext context, List<_SharedMediaItem> items) {
+  static void _showAllMediaBottomSheet(
+      BuildContext context, List<_SharedMediaItem> items) {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF2A3358),
@@ -242,17 +244,19 @@ class ChatUserProfileScreen extends StatelessWidget {
   }
 }
 
-class _TopIdentityCard extends StatelessWidget {
-  final String displayName;
-  final String? avatarUrl;
-  final String initials;
-  final bool isOnline;
+// ── Identity Card ──
 
-  const _TopIdentityCard({
-    required this.displayName,
-    required this.avatarUrl,
-    required this.initials,
-    required this.isOnline,
+class _GroupIdentityCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final int memberCount;
+  final ChatType chatType;
+
+  const _GroupIdentityCard({
+    required this.title,
+    required this.subtitle,
+    required this.memberCount,
+    required this.chatType,
   });
 
   @override
@@ -265,47 +269,17 @@ class _TopIdentityCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Stack(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(1.3),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFE9B23A), width: 1.2),
-                ),
-                child: CircleAvatar(
-                  radius: 24,
-                  backgroundColor: const Color(0xFFE7E7E7),
-                  backgroundImage: (avatarUrl?.trim().isNotEmpty == true)
-                      ? NetworkImage(avatarUrl!.trim())
-                      : null,
-                  child: (avatarUrl?.trim().isNotEmpty == true)
-                      ? null
-                      : Text(
-                          initials,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Color(0xFF2D2D2D),
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                ),
-              ),
-              if (isOnline)
-                Positioned(
-                  right: 1,
-                  bottom: 1,
-                  child: Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2DD65B),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.5),
-                    ),
-                  ),
-                ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(1.3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border:
+                  Border.all(color: const Color(0xFFE9B23A), width: 1.2),
+            ),
+            child: const CircleAvatar(
+              radius: 24,
+              backgroundImage: AssetImage('assets/logo/rcc2.png'),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -313,7 +287,7 @@ class _TopIdentityCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  displayName,
+                  title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -324,9 +298,9 @@ class _TopIdentityCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  isOnline ? 'Active now' : 'Offline',
-                  style: TextStyle(
-                    color: isOnline ? const Color(0xFF6BE483) : Colors.white70,
+                  '$subtitle • $memberCount members',
+                  style: const TextStyle(
+                    color: Colors.white70,
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -339,6 +313,8 @@ class _TopIdentityCard extends StatelessWidget {
     );
   }
 }
+
+// ── Info Row ──
 
 class _InfoRow extends StatelessWidget {
   final String label;
@@ -375,6 +351,150 @@ class _InfoRow extends StatelessWidget {
     );
   }
 }
+
+// ── Members Section ──
+
+class _MembersSection extends StatelessWidget {
+  final List<ChatMember> members;
+  final Map<String, ChatUser> userMap;
+
+  const _MembersSection({
+    required this.members,
+    required this.userMap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (members.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 2, 18, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Group Members',
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...members.map((member) {
+            final user = userMap[member.uid];
+            final name = user?.name ?? 'Unknown';
+            final role = user?.jobTitle ?? user?.roleName ?? '';
+            final avatarUrl = user?.avatarUrl;
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                children: [
+                  // Avatar
+                  StreamBuilder<PresenceStatus>(
+                    stream: PresenceService.instance
+                        .subscribeToUserPresence(member.uid),
+                    builder: (context, snap) {
+                      final isOnline = snap.data?.online ?? false;
+                      return Stack(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(1),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFFE9B23A),
+                                width: 1,
+                              ),
+                            ),
+                            child: CircleAvatar(
+                              radius: 18,
+                              backgroundColor: const Color(0xFFECECEC),
+                              backgroundImage:
+                                  avatarUrl != null && avatarUrl.isNotEmpty
+                                      ? NetworkImage(avatarUrl)
+                                      : null,
+                              child:
+                                  avatarUrl == null || avatarUrl.isEmpty
+                                      ? Text(
+                                          _initials(name),
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Color(0xFF2D2D2D),
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        )
+                                      : null,
+                            ),
+                          ),
+                          if (isOnline)
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2DD65B),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: Colors.white, width: 1.5),
+                                ),
+                              ),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 10),
+                  // Name + role
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          name,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF1D2449),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (role.isNotEmpty)
+                          Text(
+                            role,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[500],
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  static String _initials(String value) {
+    final parts =
+        value.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+}
+
+// ── Media Section ──
 
 class _MediaSection extends StatelessWidget {
   final List<_SharedMediaItem> items;
@@ -472,6 +592,8 @@ class _MediaSection extends StatelessWidget {
   }
 }
 
+// ── Media Thumbnail ──
+
 class _MediaThumb extends StatelessWidget {
   final _SharedMediaItem item;
   final VoidCallback onTap;
@@ -497,7 +619,8 @@ class _MediaThumb extends StatelessWidget {
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
                   color: Colors.white.withValues(alpha: 0.08),
-                  child: const Icon(Icons.broken_image_outlined, color: Colors.white70),
+                  child: const Icon(Icons.broken_image_outlined,
+                      color: Colors.white70),
                 ),
               ),
               if (item.type == MessageType.video)
@@ -505,7 +628,8 @@ class _MediaThumb extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 15,
                     backgroundColor: Color(0x77000000),
-                    child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
+                    child: Icon(Icons.play_arrow_rounded,
+                        color: Colors.white, size: 20),
                   ),
                 ),
             ],
@@ -515,6 +639,8 @@ class _MediaThumb extends StatelessWidget {
     );
   }
 }
+
+// ── Shared Media Item model ──
 
 class _SharedMediaItem {
   final MessageType type;

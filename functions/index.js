@@ -1,12 +1,15 @@
 const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { getMessaging } = require("firebase-admin/messaging");
+const { getStorage } = require("firebase-admin/storage");
 
 initializeApp();
 
 const db = getFirestore();
 const messaging = getMessaging();
+const storage = getStorage();
 
 /**
  * Cloud Function: Send push notification when a new chat message is created.
@@ -198,5 +201,74 @@ exports.onNewChatMessage = onDocumentCreated(
     console.log(
       `Notifications sent: ${successCount} success, ${failCount} failed`
     );
+  }
+);
+
+/**
+ * Scheduled Cloud Function: Clean up expired unsigned signable documents.
+ *
+ * Runs every hour. Finds signable_doc messages where:
+ *   - expires_at < now
+ *   - sign_status != 'signed'
+ * Then deletes the message doc and its PDF from Storage.
+ */
+exports.cleanupExpiredSignableDocs = onSchedule(
+  {
+    schedule: "every 1 hours",
+    timeZone: "UTC",
+    retryCount: 1,
+  },
+  async (event) => {
+    const now = new Date();
+    console.log(`[Cleanup] Running expired signable doc cleanup at ${now.toISOString()}`);
+
+    // Query all chats
+    const chatsSnap = await db.collection("chats").get();
+    let deletedCount = 0;
+    let errorCount = 0;
+
+    for (const chatDoc of chatsSnap.docs) {
+      try {
+        // Find expired, unsigned signable docs in this chat
+        const messagesSnap = await chatDoc.ref
+          .collection("messages")
+          .where("type", "==", "signable_doc")
+          .where("expires_at", "<", now)
+          .get();
+
+        for (const msgDoc of messagesSnap.docs) {
+          const data = msgDoc.data();
+
+          // Skip if already signed — signed docs stay forever
+          if (data.sign_status === "signed") continue;
+
+          try {
+            // Delete PDF from Storage if path exists
+            if (data.media_path) {
+              try {
+                await storage.bucket().file(data.media_path).delete();
+                console.log(`[Cleanup] Deleted file: ${data.media_path}`);
+              } catch (storageErr) {
+                // File may already be gone, that's fine
+                console.log(`[Cleanup] Could not delete file ${data.media_path}: ${storageErr.message}`);
+              }
+            }
+
+            // Delete the message document
+            await msgDoc.ref.delete();
+            deletedCount++;
+            console.log(`[Cleanup] Deleted expired doc message ${msgDoc.id} from chat ${chatDoc.id}`);
+          } catch (delErr) {
+            errorCount++;
+            console.error(`[Cleanup] Error deleting message ${msgDoc.id}: ${delErr}`);
+          }
+        }
+      } catch (chatErr) {
+        errorCount++;
+        console.error(`[Cleanup] Error processing chat ${chatDoc.id}: ${chatErr}`);
+      }
+    }
+
+    console.log(`[Cleanup] Done. Deleted: ${deletedCount}, Errors: ${errorCount}`);
   }
 );

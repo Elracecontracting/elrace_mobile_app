@@ -516,7 +516,17 @@ class ChatRepository {
     }
 
     return query.snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) => Message.fromFirestore(doc)).toList();
+      final now = DateTime.now();
+      return snapshot.docs.map((doc) => Message.fromFirestore(doc)).where((msg) {
+        // Filter out expired unsigned signable docs
+        if (msg.type == MessageType.signableDoc &&
+            msg.signStatus != SignStatus.signed &&
+            msg.expiresAt != null &&
+            now.isAfter(msg.expiresAt!)) {
+          return false;
+        }
+        return true;
+      }).toList();
     });
   }
 
@@ -897,7 +907,7 @@ class ChatRepository {
       await ref.putData(fileBytes, metadata);
       final mediaUrl = await ref.getDownloadURL();
 
-      // Create message
+      // Create message with 24-hour expiry for unsigned docs
       final message = Message(
         id: messageRef.id,
         senderId: currentUid,
@@ -914,6 +924,7 @@ class ChatRepository {
         signZones: signZones,
         signStatus: SignStatus.pending,
         signExpiresInDays: expiresInDays,
+        expiresAt: DateTime.now().add(const Duration(hours: 24)),
         pageCount: pageCount,
       );
 

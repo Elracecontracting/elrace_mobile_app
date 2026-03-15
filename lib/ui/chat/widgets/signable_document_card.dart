@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -30,11 +31,80 @@ class SignableDocumentCard extends StatefulWidget {
 class _SignableDocumentCardState extends State<SignableDocumentCard> {
   Uint8List? _pdfBytes;
   bool _loadingThumb = true;
+  Timer? _countdownTimer;
+
+  bool get _isUploading =>
+      widget.message.isUploading ||
+      widget.message.status == MessageStatus.sending;
+
+  bool get _isFailed => widget.message.status == MessageStatus.failed;
 
   @override
   void initState() {
     super.initState();
-    _loadPdfThumbnail();
+    // Don't try to load thumbnail if still uploading (no URL yet)
+    if (_isUploading || _isFailed) {
+      _loadingThumb = false;
+    } else {
+      _loadPdfThumbnail();
+    }
+    // Start countdown timer for pending (unsigned) docs with expiry
+    if (_shouldShowCountdown()) {
+      _countdownTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(covariant SignableDocumentCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // When message transitions from uploading → sent, load the PDF thumbnail
+    final wasUploading = oldWidget.message.isUploading ||
+        oldWidget.message.status == MessageStatus.sending;
+    if (wasUploading && !_isUploading && !_isFailed && _pdfBytes == null) {
+      _loadPdfThumbnail();
+    }
+    // Start countdown timer if it wasn't started before
+    if (_countdownTimer == null && _shouldShowCountdown()) {
+      _countdownTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+        if (mounted) setState(() {});
+      });
+    }
+  }
+
+  bool _shouldShowCountdown() {
+    return widget.message.expiresAt != null &&
+        widget.message.signStatus != SignStatus.signed &&
+        !_isUploading &&
+        !_isFailed;
+  }
+
+  /// Format remaining time until expiry
+  String _formatTimeRemaining() {
+    final expiresAt = widget.message.expiresAt;
+    if (expiresAt == null) return '';
+    final remaining = expiresAt.difference(DateTime.now());
+    if (remaining.isNegative) return 'Expired';
+    final hours = remaining.inHours;
+    final minutes = remaining.inMinutes % 60;
+    if (hours > 0) {
+      return '${hours}h ${minutes}m remaining';
+    }
+    return '${minutes}m remaining';
+  }
+
+  /// Check if less than 2 hours remaining (for urgent styling)
+  bool get _isUrgent {
+    final expiresAt = widget.message.expiresAt;
+    if (expiresAt == null) return false;
+    return expiresAt.difference(DateTime.now()).inHours < 2;
   }
 
   Future<void> _loadPdfThumbnail() async {
@@ -138,7 +208,21 @@ class _SignableDocumentCardState extends State<SignableDocumentCard> {
                   ),
                 ),
                 // Sign status / action button
-                if (isSigned)
+                if (_isUploading)
+                  _buildSignButton(
+                    label: 'SENDING',
+                    icon: Icons.cloud_upload_outlined,
+                    color: Colors.blueGrey,
+                    onTap: null,
+                  )
+                else if (_isFailed)
+                  _buildSignButton(
+                    label: 'FAILED',
+                    icon: Icons.error_outline,
+                    color: Colors.red,
+                    onTap: null,
+                  )
+                else if (isSigned)
                   _buildSignButton(
                     label: 'VIEW',
                     icon: Icons.visibility,
@@ -168,9 +252,15 @@ class _SignableDocumentCardState extends State<SignableDocumentCard> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isSigned
-                  ? Colors.green.withValues(alpha: 0.08)
-                  : const Color(0xFFF5F5F5),
+              color: _isUploading
+                  ? const Color(0xFFF5F5F5)
+                  : _isFailed
+                      ? Colors.red.withValues(alpha: 0.06)
+                      : isSigned
+                          ? Colors.green.withValues(alpha: 0.08)
+                          : _isUrgent
+                              ? Colors.orange.withValues(alpha: 0.08)
+                              : const Color(0xFFF5F5F5),
               borderRadius:
                   const BorderRadius.vertical(bottom: Radius.circular(16)),
             ),
@@ -178,20 +268,50 @@ class _SignableDocumentCardState extends State<SignableDocumentCard> {
               children: [
                 Expanded(
                   child: Text(
-                    isSigned
-                        ? 'Signed ${_formatSignedDate(widget.message.signedAt)}'
-                        : 'Valid for a duration of $expiresIn days only',
+                    _isUploading
+                        ? 'Uploading document...'
+                        : _isFailed
+                            ? 'Failed to send'
+                            : isSigned
+                                ? 'Signed ${_formatSignedDate(widget.message.signedAt)}'
+                                : _shouldShowCountdown()
+                                    ? '⏳ ${_formatTimeRemaining()}'
+                                    : 'Expires in 24 hours after sending',
                     style: TextStyle(
                       fontSize: 11,
-                      color: isSigned ? Colors.green[700] : Colors.grey[600],
+                      color: _isUploading
+                          ? Colors.blueGrey
+                          : _isFailed
+                              ? Colors.red[400]
+                              : isSigned
+                                  ? Colors.green[700]
+                                  : _isUrgent
+                                      ? Colors.orange[800]
+                                      : Colors.grey[600],
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
                 Icon(
-                  isSigned ? Icons.verified : Icons.schedule,
+                  _isUploading
+                      ? Icons.cloud_upload_outlined
+                      : _isFailed
+                          ? Icons.error_outline
+                          : isSigned
+                              ? Icons.verified
+                              : _isUrgent
+                                  ? Icons.warning_amber_rounded
+                                  : Icons.schedule,
                   size: 16,
-                  color: isSigned ? Colors.green : Colors.grey[400],
+                  color: _isUploading
+                      ? Colors.blueGrey
+                      : _isFailed
+                          ? Colors.red[400]
+                          : isSigned
+                              ? Colors.green
+                              : _isUrgent
+                                  ? Colors.orange
+                                  : Colors.grey[400],
                 ),
               ],
             ),
@@ -207,31 +327,98 @@ class _SignableDocumentCardState extends State<SignableDocumentCard> {
       child: Container(
         height: 180,
         color: const Color(0xFFE8E8E8),
-        child: _loadingThumb
-            ? const Center(
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+        child: _isUploading
+            ? _buildUploadingOverlay()
+            : _isFailed
+                ? _buildFailedOverlay()
+                : _loadingThumb
+                    ? const Center(
+                        child: SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : _pdfBytes != null
+                        ? IgnorePointer(
+                            child: PDFView(
+                              pdfData: _pdfBytes,
+                              enableSwipe: false,
+                              pageFling: false,
+                              autoSpacing: false,
+                              backgroundColor: Colors.white,
+                            ),
+                          )
+                        : Center(
+                            child: Icon(
+                              Icons.picture_as_pdf,
+                              size: 48,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+      ),
+    );
+  }
+
+  /// Uploading overlay — shown while PDF is being uploaded
+  Widget _buildUploadingOverlay() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 56,
+                height: 56,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: AppColors.primaryColor.withValues(alpha: 0.6),
                 ),
-              )
-            : _pdfBytes != null
-                ? IgnorePointer(
-                    child: PDFView(
-                      pdfData: _pdfBytes,
-                      enableSwipe: false,
-                      pageFling: false,
-                      autoSpacing: false,
-                      backgroundColor: Colors.white,
-                    ),
-                  )
-                : Center(
-                    child: Icon(
-                      Icons.picture_as_pdf,
-                      size: 48,
-                      color: Colors.grey[400],
-                    ),
-                  ),
+              ),
+              Icon(
+                Icons.picture_as_pdf,
+                size: 28,
+                color: Colors.red.withValues(alpha: 0.5),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'Uploading document...',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Failed overlay — shown when upload failed
+  Widget _buildFailedOverlay() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.error_outline,
+            size: 44,
+            color: Colors.red.withValues(alpha: 0.6),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Upload failed',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.red[400],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -14,6 +14,7 @@ import '../../resources/app_colors.dart';
 import '../../core/utils/shared_pref.dart';
 import '../widgets/header_widget.dart';
 import 'chat_user_profile_screen.dart';
+import 'chat_group_profile_screen.dart';
 import 'screens/sign_zone_picker_screen.dart';
 import 'widgets/message_bubble.dart';
 import 'widgets/chat_input_bar.dart';
@@ -259,7 +260,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   onTap:
                       (widget.chatType == ChatType.dm && widget.peerUid != null)
                           ? _openPeerProfile
-                          : null,
+                          : _openGroupProfile,
                   behavior: HitTestBehavior.opaque,
                   child: Row(
                     children: [
@@ -415,12 +416,21 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       stream: _messagesStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          debugPrint('Chat messages error: ${snapshot.error}');
-          _streamErrored = true; // Mark for reconnect after first send
+          debugPrint('📨 StreamBuilder: ERROR — ${snapshot.error}');
+          _streamErrored = true;
         }
 
-        // Still waiting for first Firestore snapshot — show subtle loading
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        final bool isWaiting = snapshot.connectionState == ConnectionState.waiting;
+        final bool hasPending = _pendingMessages.isNotEmpty;
+
+        // Log every rebuild so we can trace
+        debugPrint('📨 StreamBuilder rebuild: state=${snapshot.connectionState}, '
+            'firestoreCount=${snapshot.data?.length ?? 0}, '
+            'pendingCount=${_pendingMessages.length}, '
+            'hasError=${snapshot.hasError}');
+
+        // Show loading ONLY if no Firestore data yet AND no pending messages
+        if (isWaiting && !hasPending) {
           return const Center(
             child: SizedBox(
               width: 28,
@@ -434,24 +444,18 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         }
 
         // Merge Firestore messages with optimistic pending messages.
-        // Remove any pending message whose text already appears in Firestore
-        // (same sender + text) so we never show duplicates.
         final firestoreMessages = snapshot.data ?? [];
-        if (_pendingMessages.isNotEmpty) {
-          _pendingMessages.removeWhere((pending) {
-            return firestoreMessages.any((fm) =>
-                fm.senderId == pending.senderId &&
-                fm.text == pending.text &&
-                fm.type == pending.type);
-          });
-        }
+        _deduplicatePendingMessages(firestoreMessages);
         final messages = [
           ..._pendingMessages,
           ...firestoreMessages,
         ];
 
+        debugPrint('📨 StreamBuilder: merged total=${messages.length} '
+            '(${_pendingMessages.length} pending + ${firestoreMessages.length} firestore)');
+
         // Only show empty state AFTER we got real data (not while loading)
-        if (messages.isEmpty) {
+        if (messages.isEmpty && !isWaiting) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -469,6 +473,19 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                   style: TextStyle(color: Colors.grey[500], fontSize: 14),
                 ),
               ],
+            ),
+          );
+        }
+
+        if (messages.isEmpty) {
+          return const Center(
+            child: SizedBox(
+              width: 28,
+              height: 28,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: Color(0xFF1D2449),
+              ),
             ),
           );
         }
@@ -724,6 +741,22 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     }
   }
 
+  /// Remove pending messages that already appeared in Firestore (dedup).
+  /// Called from the StreamBuilder builder so duplicates are never shown.
+  void _deduplicatePendingMessages(List<Message> firestoreMessages) {
+    if (_pendingMessages.isEmpty || firestoreMessages.isEmpty) return;
+    _pendingMessages.removeWhere((pending) {
+      return firestoreMessages.any((fm) {
+        if (fm.senderId != pending.senderId || fm.type != pending.type) return false;
+        // For signable docs, match on fileName since text is null
+        if (pending.type == MessageType.signableDoc) {
+          return fm.fileName == pending.fileName;
+        }
+        return fm.text == pending.text;
+      });
+    });
+  }
+
   /// Reconnect the messages stream if it previously errored
   /// (e.g. chat doc didn't exist yet, now created by _ensureDmChatExists).
   void _reconnectStreamIfNeeded() {
@@ -879,24 +912,75 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         ),
       );
 
-      if (pickerResult == null) return; // User cancelled
+      if (pickerResult == null) {
+        debugPrint('📝 SignableDoc: User cancelled sign zone picker');
+        return;
+      }
 
+      debugPrint('📝 SignableDoc: Got picker result, creating optimistic message...');
       final signZones = pickerResult['signZones'] as List<SignZone>;
       final pageCount = pickerResult['pageCount'] as int?;
+      final fileSize = await file.length();
 
-      // Scroll to bottom
-      _scrollToBottom();
-
-      // Send signable document
-      await ChatRepository.instance.sendSignableDocument(
-        widget.chatId,
-        file,
+      // Create optimistic message with 'sending' status (shows upload indicator)
+      final optimistic = Message(
+        id: 'pending_${DateTime.now().millisecondsSinceEpoch}',
+        senderId: _currentUid ?? '',
+        type: MessageType.signableDoc,
+        text: null,
+        fileName: fileName,
+        fileSize: fileSize,
         signZones: signZones,
+        signStatus: SignStatus.pending,
+        signExpiresInDays: 2,
         pageCount: pageCount,
+        createdAt: DateTime.now(),
+        clientMsgId: '',
+        status: MessageStatus.sending,
+        isUploading: true,
       );
-      _reconnectStreamIfNeeded();
+
+      setState(() {
+        _pendingMessages.insert(0, optimistic);
+      });
+      debugPrint('📝 SignableDoc: ✅ Optimistic message added! '
+          'pendingMessages=${_pendingMessages.length}, '
+          'fileName=$fileName, senderId=${_currentUid}');
+
+      // Use post-frame callback to ensure scroll happens after layout
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
+
+      try {
+        debugPrint('📝 SignableDoc: Starting upload...');
+        // Send signable document (uploads PDF + writes to Firestore)
+        await ChatRepository.instance.sendSignableDocument(
+          widget.chatId,
+          file,
+          signZones: signZones,
+          pageCount: pageCount,
+        );
+        debugPrint('📝 SignableDoc: ✅ Upload + Firestore write complete!');
+        _reconnectStreamIfNeeded();
+      } catch (e) {
+        debugPrint('📝 SignableDoc: ❌ Upload failed: $e');
+        // Mark as failed so user sees error icon
+        if (mounted) {
+          setState(() {
+            final idx = _pendingMessages.indexWhere((m) => m.id == optimistic.id);
+            if (idx >= 0) {
+              _pendingMessages[idx] = optimistic.copyWith(
+                status: MessageStatus.failed,
+                isUploading: false,
+              );
+            }
+          });
+        }
+        _showError('Failed to send document');
+      }
     } catch (e) {
-      _showError('Failed to send document');
+      _showError('Failed to pick document');
     }
   }
 
@@ -1116,6 +1200,19 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           chatId: widget.chatId,
           peerUid: peerUid,
           fallbackName: widget.title,
+        ),
+      ),
+    );
+  }
+
+  void _openGroupProfile() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => ChatGroupProfileScreen(
+          chatId: widget.chatId,
+          title: widget.title,
+          chatType: widget.chatType,
+          supportGroupTitle: widget.supportGroupTitle,
         ),
       ),
     );

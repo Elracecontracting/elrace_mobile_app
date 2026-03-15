@@ -1477,13 +1477,15 @@ class _SupportGroupQuickItem extends StatelessWidget {
                   border:
                       Border.all(color: const Color(0xFFE9B23A), width: 1.2),
                 ),
-                child: const CircleAvatar(
+                child: CircleAvatar(
                   radius: 24,
-                  backgroundColor: Color(0xFF1D2449),
-                  child: Icon(
-                    Icons.support_agent_rounded,
-                    color: Color(0xFFE9B23A),
-                    size: 26,
+                  backgroundColor: Colors.white,
+                  child: Padding(
+                    padding: const EdgeInsets.all(6),
+                    child: Image.asset(
+                      'assets/logo/rcc2.png',
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
               ),
