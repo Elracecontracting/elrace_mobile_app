@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/data/services/attendance_sync_service.dart';
 import 'package:el_race/data/services/auto_checkout_service.dart';
 import 'package:el_race/data/services/checkin_reminder_notification_service.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/project_list_dialog.dart';
@@ -45,6 +46,9 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   // Timer للعداد التصاعدي
   Timer? _liveTimer;
 
+  // Subscription for push-notification-triggered attendance refresh
+  StreamSubscription<AttendanceStatus>? _attendanceSyncSub;
+
   final double buttonWidth = 300.w;
   final double buttonHeight = 48.w; // Reduced from 56.w to 48.w for shorter bar
   final double knobSize =
@@ -85,6 +89,43 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
       if (mounted) {
         _bounceController.repeat(reverse: true);
       }
+    }
+
+    // Listen for attendance refresh triggered by push notifications
+    _attendanceSyncSub =
+        AttendanceSyncService.stream.listen(_onAttendanceSyncUpdate);
+  }
+
+  /// Called when a push notification triggers an attendance status refresh.
+  void _onAttendanceSyncUpdate(AttendanceStatus status) {
+    if (!mounted) return;
+    debugPrint('🔄 CustomSwipeButton: attendance sync update received');
+
+    if (!status.isToday) return;
+
+    final nowCheckedIn = status.checkedIn && !status.checkedOut;
+
+    setState(() {
+      isCheckedIn = nowCheckedIn;
+      _isVisualCheckedIn = nowCheckedIn;
+      dragOffset = nowCheckedIn ? (buttonWidth - knobSize) : 0;
+
+      _checkInDisplayTime = status.checkInTime.isNotEmpty
+          ? status.checkInTime
+          : '00:00:00';
+      _checkOutDisplayTime =
+          (status.checkedOut && status.checkOutTime.isNotEmpty)
+              ? status.checkOutTime
+              : '00:00:00';
+
+      _calculateTotalHours();
+    });
+
+    // Manage live timer
+    if (nowCheckedIn && _checkOutDisplayTime == '00:00:00') {
+      _startLiveTimer();
+    } else {
+      _stopLiveTimer();
     }
   }
 
@@ -222,6 +263,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   @override
   void dispose() {
     _liveTimer?.cancel();
+    _attendanceSyncSub?.cancel();
     _arrowController.dispose();
     _checkmarkController.dispose();
     _bounceController.dispose();

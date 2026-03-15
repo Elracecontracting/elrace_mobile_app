@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
+import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -748,9 +749,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     _pendingMessages.removeWhere((pending) {
       return firestoreMessages.any((fm) {
         if (fm.senderId != pending.senderId || fm.type != pending.type) return false;
-        // For signable docs, match on fileName since text is null
+        // For signable docs, match on clientMsgId (shared between optimistic + real msg)
         if (pending.type == MessageType.signableDoc) {
-          return fm.fileName == pending.fileName;
+          if (pending.clientMsgId.isNotEmpty && fm.clientMsgId.isNotEmpty) {
+            return fm.clientMsgId == pending.clientMsgId;
+          }
+          return false; // Don't dedup if no clientMsgId
         }
         return fm.text == pending.text;
       });
@@ -922,6 +926,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       final pageCount = pickerResult['pageCount'] as int?;
       final fileSize = await file.length();
 
+      // Generate a shared clientMsgId for both optimistic + real message (used for dedup)
+      final sharedClientMsgId = 'sig_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(99999)}';
+
       // Create optimistic message with 'sending' status (shows upload indicator)
       final optimistic = Message(
         id: 'pending_${DateTime.now().millisecondsSinceEpoch}',
@@ -935,7 +942,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         signExpiresInDays: 2,
         pageCount: pageCount,
         createdAt: DateTime.now(),
-        clientMsgId: '',
+        clientMsgId: sharedClientMsgId,
         status: MessageStatus.sending,
         isUploading: true,
       );
@@ -960,6 +967,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           file,
           signZones: signZones,
           pageCount: pageCount,
+          clientMsgId: sharedClientMsgId,
         );
         debugPrint('📝 SignableDoc: ✅ Upload + Firestore write complete!');
         _reconnectStreamIfNeeded();

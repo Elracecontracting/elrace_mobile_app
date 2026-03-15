@@ -378,7 +378,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
       final data = jsonDecode(response.body);
 
       // 📥 Log Response
-      ApiLogger.logResponse(
+      ApiLogger.logResponse( 
         endpoint: url.toString(),
         statusCode: response.statusCode,
         responseBody: data,
@@ -1461,18 +1461,82 @@ class _DocumentDialogState extends State<DocumentDialog> {
   final TextEditingController _idController = TextEditingController();
   DateTime? _expiryDate;
   String? _selectedType;
-  final List<String> _types = [
-    'Passport',
-    'Labor Card',
-    'Medical Insurance',
-    'Emirates ID',
-    'photo',
-    'CV',
-    'Certifications',
-  ]; // adjust
+  List<String> _types = [];
+  Map<String, int> _typeIdMap = {};
+  bool _typesLoading = false;
   String? _attachedFileName;
   String? _attachedFilePath;
   bool _isUploading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDocumentTypes();
+  }
+
+  Future<void> _fetchDocumentTypes() async {
+    if (!mounted) return;
+    setState(() {
+      _typesLoading = true;
+    });
+
+    try {
+      final token = SharedPref.getLoginData().result?.token ?? '';
+      final familyOnly = widget.type == DocumentDialogType.family;
+      final url = Uri.parse('https://erp.elrace.com/api/document_types');
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+      final body = jsonEncode({
+        'jsonrpc': '2.0',
+        'params': {'family_only': familyOnly},
+      });
+
+      final response = await http.post(url, headers: headers, body: body);
+      final data = jsonDecode(response.body);
+
+      if (response.statusCode == 200 &&
+          data['result'] != null &&
+          data['result']['status'] == 'success') {
+        final List list = (data['result']['data'] ?? []) as List;
+        final names = <String>[];
+        final idMap = <String, int>{};
+        for (final item in list) {
+          if (item is! Map) continue;
+          final name = (item['name'] ?? item['document_type'] ?? '').toString();
+          final id = int.tryParse((item['id'] ?? item['document_type_id'] ?? '').toString());
+          if (name.trim().isNotEmpty) {
+            names.add(name);
+            if (id != null) idMap[name] = id;
+          }
+        }
+        if (mounted) {
+          setState(() {
+            _types = names;
+            _typeIdMap = idMap;
+            _typesLoading = false;
+          });
+        }
+      } else {
+        // Fallback to default types on error
+        if (mounted) {
+          setState(() {
+            _types = ['Passport', 'Labor Card', 'Medical Insurance', 'Emirates ID', 'Photo', 'CV', 'Certifications'];
+            _typesLoading = false;
+          });
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _types = ['Passport', 'Labor Card', 'Medical Insurance', 'Emirates ID', 'Photo', 'CV', 'Certifications'];
+          _typesLoading = false;
+        });
+      }
+    }
+  }
 
   bool get _showIdAndExpiry => widget.type != DocumentDialogType.company;
 
@@ -1910,18 +1974,8 @@ class _DocumentDialogState extends State<DocumentDialog> {
         return;
       }
 
-      // Map document type to document_type_id
-      final Map<String, int> documentTypeIds = {
-        'Passport': 1,
-        'Labor Card': 2,
-        'Medical Insurance': 3,
-        'Emirates ID': 4,
-        'photo': 5,
-        'CV': 6,
-        'Certifications': 7,
-      };
-
-      final documentTypeId = documentTypeIds[selectedType] ?? 1;
+      // Use API-fetched type IDs; fallback to 1 if not found
+      final documentTypeId = _typeIdMap[selectedType] ?? 1;
 
       // Read file and convert to base64
       final file = File(_attachedFilePath!);
@@ -2124,7 +2178,31 @@ class _DocumentDialogState extends State<DocumentDialog> {
 
               // Document type dropdown
               _buildPillField(
-                child: DropdownButtonHideUnderline(
+                child: _typesLoading
+                    ? Center(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(
+                              width: 14.w,
+                              height: 14.w,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            SizedBox(width: 8.w),
+                            Text(
+                              'Loading types...',
+                              style: GoogleFonts.aBeeZee(
+                                color: Colors.grey,
+                                fontSize: 12.sp,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : DropdownButtonHideUnderline(
                   child: DropdownButton2<String>(
                     value: _selectedType,
                     isExpanded: true,

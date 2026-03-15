@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:el_race/data/services/attendance_sync_service.dart';
 import 'package:el_race/chat/models/models.dart';
 import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
@@ -91,6 +92,12 @@ class FirebaseService {
         return;
       }
 
+      // Attendance sync notification — refresh the attendance widget
+      if (msgType == 'attendance' || msgType == 'attendance_sync') {
+        print('   - 🔄 Attendance notification — refreshing widget');
+        AttendanceSyncService.fetchAndBroadcast();
+      }
+
       _showNotification(message);
       // Save notification to storage
       _saveNotificationToStorage(message);
@@ -113,6 +120,14 @@ class FirebaseService {
       _processedMessageIds.add(messageId);
       print(
           '   - ✅ Processing message (${_processedMessageIds.length} total processed)');
+
+      // Attendance sync notification — refresh the attendance widget
+      final bgMsgType = message.data['type']?.toString().toLowerCase() ??
+          message.data['category']?.toString().toLowerCase() ?? '';
+      if (bgMsgType == 'attendance' || bgMsgType == 'attendance_sync') {
+        print('   - 🔄 Attendance notification (bg tap) — refreshing widget');
+        AttendanceSyncService.fetchAndBroadcast();
+      }
 
       // Save notification to storage if not already saved
       _saveNotificationToStorage(message);
@@ -139,6 +154,17 @@ class FirebaseService {
         _processedMessageIds.add(messageId);
         print(
             '   - ✅ Processing message (${_processedMessageIds.length} total processed)');
+
+        // Attendance sync notification — refresh the attendance widget
+        final termMsgType =
+            message.data['type']?.toString().toLowerCase() ??
+                message.data['category']?.toString().toLowerCase() ?? '';
+        if (termMsgType == 'attendance' ||
+            termMsgType == 'attendance_sync') {
+          print(
+              '   - 🔄 Attendance notification (terminated) — refreshing widget');
+          AttendanceSyncService.fetchAndBroadcast();
+        }
 
         _saveNotificationToStorage(message);
         _handleNotificationTap(message.data.toString());

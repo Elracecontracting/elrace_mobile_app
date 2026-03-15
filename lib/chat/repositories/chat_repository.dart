@@ -878,6 +878,7 @@ class ChatRepository {
     String? caption,
     int expiresInDays = 2,
     int? pageCount,
+    String? clientMsgId,
   }) async {
     final currentUid = _currentUid;
     if (currentUid == null) throw Exception('Not authenticated');
@@ -890,7 +891,7 @@ class ChatRepository {
       throw Exception('File does not exist: ${pdfFile.path}');
     }
 
-    final clientMsgId = _uuid.v4();
+    clientMsgId ??= _uuid.v4();
     final messageRef = _chatsCollection.doc(chatId).collection('messages').doc();
     final fileName = p.basename(pdfFile.path);
     final fileSize = await pdfFile.length();
