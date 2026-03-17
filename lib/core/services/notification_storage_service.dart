@@ -1,145 +1,158 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:el_race/core/services/notification_api_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationStorageService {
   static const String _notificationsKey = 'stored_notifications';
   static const String _unreadCountKey = 'unread_notification_count';
   static const String _muteSettingsKey = 'notification_mute_settings_v1';
+  static const String _muteSettingsFetchedAtKey =
+      'notification_mute_settings_v1_fetched_at';
 
-  static const Map<String, bool> _defaultMuteSettings = {
-    'global': false,
-    'notification': false,
-    'announcement': false,
-    'circular': false,
-    'hr': false,
-    'rfq': false,
-    'invoice': false,
-    'pettycash': false,
-    'lpo': false,
-    'chat': false,
-  };
+  static const Duration _muteSettingsCacheTtl = Duration(minutes: 5);
 
-  /// Callback to notify when notification count changes
+  static Map<String, bool>? _memoryMuteSettings;
+  static DateTime? _memoryMuteSettingsFetchedAt;
+
+  /// Callback to notify when notification count changes.
   static void Function()? onCountChanged;
 
-  static String _normalizeChannelToken(String value) {
-    return value.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
-  }
-
-  static String _resolveChannel({
-    String? category,
-    Map<String, dynamic>? data,
-  }) {
-    final candidates = <dynamic>[
-      category,
-      data?['category'],
-      data?['type'],
-      data?['record_type'],
-      data?['target_type'],
-      data?['module'],
-      data?['entity'],
-      data?['resource_type'],
-      data?['model_name'],
-      data?['model'],
-      data?['screen'],
-    ];
-
-    for (final candidate in candidates) {
-      final normalized = _normalizeChannelToken(candidate?.toString() ?? '');
-      if (normalized.isEmpty) continue;
-
-      if (normalized.contains('announcement')) return 'announcement';
-      if (normalized.contains('circular')) return 'circular';
-      if (normalized.contains('chat') || normalized.contains('message')) {
-        return 'chat';
-      }
-      if (normalized.contains('rfq') || normalized == 'purchasequotation') {
-        return 'rfq';
-      }
-      if (normalized.contains('invoice') ||
-          normalized.contains('accountmove') ||
-          normalized == 'bill') {
-        return 'invoice';
-      }
-      if (normalized.contains('pettycash') ||
-          normalized.contains('hrexpensesheet') ||
-          normalized.contains('expense')) {
-        return 'pettycash';
-      }
-      if (normalized == 'po' ||
-          normalized == 'lpo' ||
-          normalized.contains('purchaseorder')) {
-        return 'lpo';
-      }
-      if (normalized == 'hr' ||
-          normalized.contains('hrrequest') ||
-          normalized.contains('leaverequest') ||
-          normalized.contains('employeerequest')) {
-        return 'hr';
-      }
-      if (normalized.contains('notification')) return 'notification';
-    }
-
-    return 'notification';
+  static String _normalizeKey(String value) {
+    return value.trim().toLowerCase();
   }
 
   static bool _asBool(dynamic value) {
     if (value is bool) return value;
     if (value is num) return value != 0;
-    return value.toString().toLowerCase() == 'true';
+    return value.toString().trim().toLowerCase() == 'true';
   }
 
-  static bool _hasAnyMuteEnabled(Map<String, bool> settings) {
-    return settings.entries.any((entry) => entry.value);
+  static DateTime? _readFetchedAt(SharedPreferences prefs) {
+    final millis = prefs.getInt(_muteSettingsFetchedAtKey);
+    if (millis == null || millis <= 0) return null;
+    return DateTime.fromMillisecondsSinceEpoch(millis);
   }
 
-  static Future<Map<String, bool>> getMuteSettings() async {
-    final prefs = await SharedPreferences.getInstance();
+  static bool _isFresh(DateTime? fetchedAt, DateTime now) {
+    if (fetchedAt == null) return false;
+    return now.difference(fetchedAt) <= _muteSettingsCacheTtl;
+  }
+
+  static Map<String, bool> _readCachedMuteSettings(SharedPreferences prefs) {
     final raw = prefs.getString(_muteSettingsKey);
-
-    final merged = Map<String, bool>.from(_defaultMuteSettings);
     if (raw == null || raw.trim().isEmpty) {
-      return merged;
+      return <String, bool>{};
     }
 
     try {
       final decoded = jsonDecode(raw);
-      if (decoded is Map) {
-        for (final entry in decoded.entries) {
-          final key = entry.key.toString().toLowerCase();
-          if (merged.containsKey(key)) {
-            merged[key] = _asBool(entry.value);
-          }
-        }
+      if (decoded is! Map) {
+        return <String, bool>{};
       }
-    } catch (e) {
-      print('⚠️ Error parsing mute settings, using defaults: $e');
+
+      final result = <String, bool>{};
+      for (final entry in decoded.entries) {
+        final key = _normalizeKey(entry.key.toString());
+        if (key.isEmpty) continue;
+        result[key] = _asBool(entry.value);
+      }
+      return result;
+    } catch (_) {
+      return <String, bool>{};
+    }
+  }
+
+  static Future<void> _writeCachedMuteSettings(
+    SharedPreferences prefs,
+    Map<String, bool> settings,
+  ) async {
+    final normalized = <String, bool>{};
+    for (final entry in settings.entries) {
+      final key = _normalizeKey(entry.key);
+      if (key.isEmpty) continue;
+      normalized[key] = entry.value;
     }
 
-    return merged;
+    final now = DateTime.now();
+    await prefs.setString(_muteSettingsKey, jsonEncode(normalized));
+    await prefs.setInt(_muteSettingsFetchedAtKey, now.millisecondsSinceEpoch);
+
+    _memoryMuteSettings = Map<String, bool>.from(normalized);
+    _memoryMuteSettingsFetchedAt = now;
+  }
+
+  static Future<Map<String, bool>> getMuteSettings({
+    bool forceRefresh = false,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+
+    if (!forceRefresh &&
+        _memoryMuteSettings != null &&
+        _isFresh(_memoryMuteSettingsFetchedAt, now)) {
+      return Map<String, bool>.from(_memoryMuteSettings!);
+    }
+
+    final cachedSettings = _readCachedMuteSettings(prefs);
+    final cachedFetchedAt = _readFetchedAt(prefs);
+
+    if (!forceRefresh &&
+        cachedSettings.isNotEmpty &&
+        _isFresh(cachedFetchedAt, now)) {
+      _memoryMuteSettings = Map<String, bool>.from(cachedSettings);
+      _memoryMuteSettingsFetchedAt = cachedFetchedAt;
+      return cachedSettings;
+    }
+
+    try {
+      final remoteSettings =
+          await NotificationApiService.getNotificationPreferences();
+      await _writeCachedMuteSettings(prefs, remoteSettings);
+      return Map<String, bool>.from(remoteSettings);
+    } catch (e) {
+      if (cachedSettings.isNotEmpty) {
+        _memoryMuteSettings = Map<String, bool>.from(cachedSettings);
+        _memoryMuteSettingsFetchedAt = cachedFetchedAt;
+        return cachedSettings;
+      }
+      if (forceRefresh) {
+        throw Exception('Unable to fetch notification preferences: $e');
+      }
+      return <String, bool>{};
+    }
   }
 
   static Future<void> setMuteSetting(String channel, bool muted) async {
-    final key = channel.trim().toLowerCase();
-    if (key.isEmpty || !_defaultMuteSettings.containsKey(key)) return;
+    final key = _normalizeKey(channel);
+    if (key.isEmpty) return;
 
     final prefs = await SharedPreferences.getInstance();
-    final settings = await getMuteSettings();
-    settings[key] = muted;
-    await prefs.setString(_muteSettingsKey, jsonEncode(settings));
+    final previous = await getMuteSettings();
+    final currentValue = previous[key] == true;
+    if (currentValue == muted) return;
 
-    await _updateUnreadCount();
-    onCountChanged?.call();
+    final optimistic = Map<String, bool>.from(previous)..[key] = muted;
+    await _writeCachedMuteSettings(prefs, optimistic);
 
-    print('🔕 Notification mute changed: $key -> $muted');
+    try {
+      await NotificationApiService.updateNotificationPreference(
+        model: key,
+        muted: muted,
+      );
+      await _updateUnreadCount();
+      onCountChanged?.call();
+    } catch (e) {
+      await _writeCachedMuteSettings(prefs, previous);
+      throw Exception('Unable to update notification preference: $e');
+    }
   }
 
   static Future<bool> isChannelMuted(String channel) async {
+    final key = _normalizeKey(channel);
+    if (key.isEmpty) return false;
     final settings = await getMuteSettings();
-    final globalMuted = settings['global'] == true;
-    if (globalMuted) return true;
-    return settings[channel.trim().toLowerCase()] == true;
+    return settings[key] == true;
   }
 
   static Future<bool> shouldMuteNotification({
@@ -147,123 +160,82 @@ class NotificationStorageService {
     Map<String, dynamic>? data,
   }) async {
     final settings = await getMuteSettings();
-    if (settings['global'] == true) {
-      return true;
+    if (settings.isEmpty) return false;
+
+    final candidates = <String>[
+      if (category != null) category,
+      if (data != null) ...[
+        '${data['category'] ?? ''}',
+        '${data['type'] ?? ''}',
+        '${data['model'] ?? ''}',
+        '${data['model_name'] ?? ''}',
+        '${data['record_type'] ?? ''}',
+        '${data['target_type'] ?? ''}',
+      ],
+    ];
+
+    for (final candidate in candidates) {
+      final key = _normalizeKey(candidate);
+      if (key.isEmpty) continue;
+      if (settings[key] == true) {
+        return true;
+      }
     }
 
-    final channel = _resolveChannel(category: category, data: data);
-    return settings[channel] == true;
+    return false;
   }
 
-  static Future<List<Map<String, dynamic>>> _applyMuteFilter(
-    List<Map<String, dynamic>> items,
-  ) async {
-    if (items.isEmpty) return items;
-
-    final settings = await getMuteSettings();
-    if (!_hasAnyMuteEnabled(settings)) {
-      return items;
-    }
-
-    final globalMuted = settings['global'] == true;
-    if (globalMuted) {
-      print('🔇 Global notifications mute is ON; hiding all notifications.');
-      return [];
-    }
-
-    final filtered = <Map<String, dynamic>>[];
-    for (final item in items) {
-      Map<String, dynamic>? data;
-      final rawData = item['data'];
-      if (rawData is Map<String, dynamic>) {
-        data = rawData;
-      } else if (rawData is Map) {
-        data = Map<String, dynamic>.from(rawData);
-      }
-
-      final channel = _resolveChannel(
-        category: item['category']?.toString(),
-        data: data,
-      );
-
-      if (settings[channel] == true) {
-        print(
-            '🔇 Notification hidden by mute setting: channel=$channel, id=${item['id']}');
-        continue;
-      }
-      filtered.add(item);
-    }
-
-    return filtered;
-  }
-
-  /// Save a new notification
+  /// Save a new notification locally.
   static Future<void> saveNotification({
     required String title,
     required String body,
     String? imageUrl,
     Map<String, dynamic>? data,
-    String? category, // 'notification', 'announcement', 'circular'
+    String? category,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Get existing notifications
-      List<Map<String, dynamic>> notifications =
-          await _getStoredNotifications();
-
-      // Determine category from data or default to 'notification'
-      String notificationCategory =
-          category ?? data?['category'] ?? data?['type'] ?? 'notification';
+      final notificationCategory = _normalizeKey(category ??
+          '${data?['category'] ?? data?['type'] ?? 'notification'}');
 
       final shouldMute = await shouldMuteNotification(
         category: notificationCategory,
         data: data,
       );
       if (shouldMute) {
-        print(
-            '🔇 Notification skipped (muted): title="$title", category=$notificationCategory');
         return;
       }
 
-      // Create new notification
-      final newNotification = {
+      final prefs = await SharedPreferences.getInstance();
+      var notifications = await _getStoredNotifications();
+
+      notifications.insert(0, {
         'id': DateTime.now().millisecondsSinceEpoch.toString(),
         'title': title,
         'body': body,
         'imageUrl': imageUrl,
         'data': data,
-        'category': notificationCategory.toLowerCase(),
+        'category': notificationCategory.isEmpty
+            ? 'notification'
+            : notificationCategory,
         'timestamp': DateTime.now().toIso8601String(),
         'isRead': false,
-      }; // Add to beginning of list
-      notifications.insert(0, newNotification);
+      });
 
-      // Keep only last 100 notifications
       if (notifications.length > 100) {
         notifications = notifications.sublist(0, 100);
       }
 
-      // Save to preferences
       await _saveStoredNotifications(notifications, prefs);
-
-      // Update unread count
       await _updateUnreadCount();
-
-      print('✅ Notification saved: $title');
-
-      // Notify listeners that count changed
       onCountChanged?.call();
-    } catch (e) {
-      print('❌ Error saving notification: $e');
+    } catch (_) {
+      // Keep silent to avoid crashing push pipeline.
     }
   }
 
-  /// Get all notifications
+  /// Get all notifications. API data is preferred, local cache is fallback.
   static Future<List<Map<String, dynamic>>> getNotifications() async {
     try {
-      final localNotifications = await _getStoredNotifications();
-
       final apiResult = await NotificationApiService.getNotifications(
         page: 1,
         perPage: 100,
@@ -275,31 +247,26 @@ class NotificationStorageService {
           .map(_normalizeApiNotification)
           .toList(growable: false);
 
-      final muteSettings = await getMuteSettings();
-      final hasMute = _hasAnyMuteEnabled(muteSettings);
-      final filtered = await _applyMuteFilter(normalized);
-
       final prefs = await SharedPreferences.getInstance();
-      await _saveStoredNotifications(filtered, prefs);
+      await _saveStoredNotifications(normalized, prefs);
 
-      if (apiResult.unreadCount != null && !hasMute) {
+      if (apiResult.unreadCount != null) {
         await prefs.setInt(_unreadCountKey, apiResult.unreadCount!);
       } else {
         final unreadVisibleCount =
-            filtered.where((n) => n['isRead'] != true).length;
+            normalized.where((n) => n['isRead'] != true).length;
         await prefs.setInt(_unreadCountKey, unreadVisibleCount);
       }
 
-      return filtered;
-    } catch (e) {
-      print('⚠️ Notification API unavailable, using local cache: $e');
-      final localOnly = await _getStoredNotifications();
-      return _applyMuteFilter(localOnly);
+      return normalized;
+    } catch (_) {
+      return _getStoredNotifications();
     }
   }
 
   static Map<String, dynamic> _normalizeApiNotification(
-      Map<String, dynamic> raw) {
+    Map<String, dynamic> raw,
+  ) {
     final normalized = Map<String, dynamic>.from(raw);
 
     dynamic notificationData = raw['data'];
@@ -307,7 +274,7 @@ class NotificationStorageService {
       try {
         notificationData = jsonDecode(notificationData);
       } catch (_) {
-        // Keep original string when backend sends non-JSON content.
+        // Keep original value.
       }
     }
 
@@ -323,9 +290,8 @@ class NotificationStorageService {
     normalized['body'] = (raw['body'] ?? raw['message'] ?? '').toString();
     normalized['imageUrl'] = raw['image_url'] ?? raw['imageUrl'];
     normalized['data'] = notificationData;
-    normalized['category'] = (raw['category'] ?? raw['type'] ?? 'notification')
-        .toString()
-        .toLowerCase();
+    normalized['category'] =
+        _normalizeKey('${raw['category'] ?? raw['type'] ?? 'notification'}');
     normalized['timestamp'] = (raw['created_at'] ??
             raw['timestamp'] ??
             DateTime.now().toIso8601String())
@@ -347,8 +313,7 @@ class NotificationStorageService {
 
       final List<dynamic> decoded = jsonDecode(jsonString);
       return decoded.cast<Map<String, dynamic>>();
-    } catch (e) {
-      print('❌ Error getting notifications: $e');
+    } catch (_) {
       return [];
     }
   }
@@ -361,208 +326,165 @@ class NotificationStorageService {
     await prefs.setString(_notificationsKey, jsonString);
   }
 
-  /// Mark a notification as read
+  /// Mark a single notification as read.
   static Future<void> markAsRead(String notificationId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      List<Map<String, dynamic>> notifications =
-          await _getStoredNotifications();
+      final notifications = await _getStoredNotifications();
 
-      // Find and update the notification
       final index = notifications.indexWhere((n) => n['id'] == notificationId);
       if (index != -1) {
         notifications[index]['isRead'] = true;
         notifications[index]['readAt'] = DateTime.now().toIso8601String();
-
-        // Save updated list
         await _saveStoredNotifications(notifications, prefs);
-
-        // Update unread count
         await _updateUnreadCount();
-
-        // Notify listeners that count changed
         onCountChanged?.call();
       }
 
-      final remoteOk = await NotificationApiService.markAsRead(notificationId);
-      if (!remoteOk) {
-        print('⚠️ Notification marked read locally, remote API call failed.');
-      }
-    } catch (e) {
-      print('❌ Error marking notification as read: $e');
+      await NotificationApiService.markAsRead(notificationId);
+    } catch (_) {
+      // Local state has already been updated when possible.
     }
   }
 
-  /// Mark all notifications as read
+  /// Mark all notifications as read.
   static Future<void> markAllAsRead() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      List<Map<String, dynamic>> notifications =
-          await _getStoredNotifications();
+      final notifications = await _getStoredNotifications();
 
-      // Mark all as read
-      for (var notification in notifications) {
+      for (final notification in notifications) {
         notification['isRead'] = true;
       }
 
-      // Save updated list
       await _saveStoredNotifications(notifications, prefs);
-
-      // Update unread count
       await prefs.setInt(_unreadCountKey, 0);
-
-      // Notify listeners that count changed
       onCountChanged?.call();
 
-      final remoteOk = await NotificationApiService.markAllAsRead();
-      if (!remoteOk) {
-        print('⚠️ Notifications marked read locally, remote API call failed.');
-      }
-    } catch (e) {
-      print('❌ Error marking all as read: $e');
+      await NotificationApiService.markAllAsRead();
+    } catch (_) {
+      // Ignore to keep UI stable.
     }
   }
 
-  /// Get unread notification count
+  /// Get unread notification count.
   static Future<int> getUnreadCount() async {
-    final settings = await getMuteSettings();
-    final hasMute = _hasAnyMuteEnabled(settings);
-
     try {
       final apiUnreadCount = await NotificationApiService.getUnreadCount();
-      if (apiUnreadCount != null && !hasMute) {
+      if (apiUnreadCount != null) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setInt(_unreadCountKey, apiUnreadCount);
         return apiUnreadCount;
       }
-    } catch (e) {
-      print('⚠️ Error getting unread count from API, fallback to local: $e');
+    } catch (_) {
+      // Fallback to local cache below.
     }
 
     try {
-      final notifications =
-          await _applyMuteFilter(await _getStoredNotifications());
+      final notifications = await _getStoredNotifications();
       return notifications.where((n) => n['isRead'] == false).length;
-    } catch (e) {
-      print('❌ Error getting unread count: $e');
+    } catch (_) {
       return 0;
     }
   }
 
-  /// Update unread count in preferences
   static Future<void> _updateUnreadCount() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final notifications =
-          await _applyMuteFilter(await _getStoredNotifications());
+      final notifications = await _getStoredNotifications();
       final count = notifications.where((n) => n['isRead'] == false).length;
       await prefs.setInt(_unreadCountKey, count);
-    } catch (e) {
-      print('❌ Error updating unread count: $e');
+    } catch (_) {
+      // Ignore cache update failures.
     }
   }
 
-  /// Delete a notification
+  /// Delete a notification from local cache.
   static Future<void> deleteNotification(String notificationId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      List<Map<String, dynamic>> notifications =
-          await _getStoredNotifications();
+      final notifications = await _getStoredNotifications();
 
-      // Remove the notification
       notifications.removeWhere((n) => n['id'] == notificationId);
 
-      // Save updated list
       await _saveStoredNotifications(notifications, prefs);
-
-      // Update unread count
       await _updateUnreadCount();
-    } catch (e) {
-      print('❌ Error deleting notification: $e');
+      onCountChanged?.call();
+    } catch (_) {
+      // Ignore failures.
     }
   }
 
-  /// Get notifications by category
+  /// Get notifications by category.
   static Future<List<Map<String, dynamic>>> getNotificationsByCategory(
-      String category) async {
+    String category,
+  ) async {
     try {
       final allNotifications = await getNotifications();
-      if (category.toLowerCase() == 'all') {
+      final selected = _normalizeKey(category);
+      if (selected == 'all') {
         return allNotifications;
       }
-      return allNotifications
-          .where((notification) =>
-              (notification['category'] ?? 'notification')
-                  .toString()
-                  .toLowerCase() ==
-              category.toLowerCase())
-          .toList();
-    } catch (e) {
-      print('❌ Error getting notifications by category: $e');
+
+      return allNotifications.where((notification) {
+        final itemCategory = _normalizeKey('${notification['category'] ?? ''}');
+        return itemCategory == selected;
+      }).toList(growable: false);
+    } catch (_) {
       return [];
     }
   }
 
-  /// Clear all notifications
+  /// Clear all local notifications.
   static Future<void> clearAll() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_notificationsKey);
       await prefs.setInt(_unreadCountKey, 0);
-      print('✅ All notifications cleared');
-    } catch (e) {
-      print('❌ Error clearing notifications: $e');
+      onCountChanged?.call();
+    } catch (_) {
+      // Ignore failures.
     }
   }
 
-  /// Add sample notifications for testing (different categories)
+  /// Add sample notifications for testing.
   static Future<void> addSampleNotifications() async {
-    try {
-      // Sample notification
-      await saveNotification(
-        title: 'Leave Approved',
-        body: 'Your leave request from Jan 15 to Jan 20 has been approved.',
-        category: 'notification',
-      );
+    await saveNotification(
+      title: 'Leave Approved',
+      body: 'Your leave request from Jan 15 to Jan 20 has been approved.',
+      category: 'notification',
+    );
 
-      await saveNotification(
-        title: 'Attendance Reminder',
-        body: 'Please ensure to check in before 9:00 AM.',
-        category: 'notification',
-      );
+    await saveNotification(
+      title: 'Attendance Reminder',
+      body: 'Please ensure to check in before 9:00 AM.',
+      category: 'notification',
+    );
 
-      // Sample announcement
-      await saveNotification(
-        title: 'New Project Launch',
-        body:
-            'We are excited to announce the launch of Abu Dhabi Dialysis Center project.',
-        category: 'announcement',
-      );
+    await saveNotification(
+      title: 'New Project Launch',
+      body:
+          'We are excited to announce the launch of Abu Dhabi Dialysis Center project.',
+      category: 'announcement',
+    );
 
-      await saveNotification(
-        title: 'Company Meeting',
-        body: 'All staff meeting scheduled for tomorrow at 10:00 AM.',
-        category: 'announcement',
-      );
+    await saveNotification(
+      title: 'Company Meeting',
+      body: 'All staff meeting scheduled for tomorrow at 10:00 AM.',
+      category: 'announcement',
+    );
 
-      // Sample circular
-      await saveNotification(
-        title: 'Safety Guidelines',
-        body:
-            'Please review the updated safety guidelines for construction sites.',
-        category: 'circular',
-      );
+    await saveNotification(
+      title: 'Safety Guidelines',
+      body:
+          'Please review the updated safety guidelines for construction sites.',
+      category: 'circular',
+    );
 
-      await saveNotification(
-        title: 'Policy Update',
-        body:
-            'New HR policies effective from next month. Please read carefully.',
-        category: 'circular',
-      );
-
-      print('✅ Sample notifications added successfully');
-    } catch (e) {
-      print('❌ Error adding sample notifications: $e');
-    }
+    await saveNotification(
+      title: 'Policy Update',
+      body: 'New HR policies effective from next month. Please read carefully.',
+      category: 'circular',
+    );
   }
 }

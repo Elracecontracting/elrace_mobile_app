@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:el_race/core/services/attendance_status_sync_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/auto_checkout_service.dart';
 import 'package:el_race/data/services/checkin_reminder_notification_service.dart';
@@ -44,6 +45,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
 
   // Timer للعداد التصاعدي
   Timer? _liveTimer;
+  StreamSubscription<AttendanceStatusSnapshot>? _attendanceSyncSubscription;
 
   final double buttonWidth = 300.w;
   final double buttonHeight = 48.w; // Reduced from 56.w to 48.w for shorter bar
@@ -65,6 +67,16 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
     super.initState();
     _loadCheckInState();
     _loadDisplayTimes(); // Load saved times on init
+    _attendanceSyncSubscription = AttendanceStatusSyncService.updates.listen(
+      (_) {
+        if (!mounted) {
+          return;
+        }
+
+        _loadDisplayTimes();
+        _loadCheckInState();
+      },
+    );
     _arrowController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
@@ -222,6 +234,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   @override
   void dispose() {
     _liveTimer?.cancel();
+    _attendanceSyncSubscription?.cancel();
     _arrowController.dispose();
     _checkmarkController.dispose();
     _bounceController.dispose();

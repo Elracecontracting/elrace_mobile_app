@@ -66,6 +66,7 @@ class MyDocumentsScreen extends StatefulWidget {
 class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
   /// 0 = My Documents, 1 = Family Documents, 2 = Company Documents, 3 = Share Documents
   int currentIndex = 0;
+  int _companyTabVersion = 0;
   List<Map<String, dynamic>> documents = [];
   bool _loading = false;
   String? _error;
@@ -690,6 +691,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
               itemBuilder: (context, index) {
                 final isSelected = index == currentIndex;
                 final item = notificationType[index];
+                final shouldTintIcon = index == 2 || index == 3;
 
                 final String displayIcon = isSelected
                     ? item['icon'] as String
@@ -698,10 +700,23 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                 return InkWell(
                   onTap: () {
                     if (currentIndex == index) return;
-                    setState(() => currentIndex = index);
+                    final shouldFetchDocs = index == 0 || index == 1;
+
+                    setState(() {
+                      currentIndex = index;
+                      if (shouldFetchDocs) {
+                        _loading = true;
+                        _error = null;
+                        if (index == 1) {
+                          // Prevent temporary old/fallback folder flash
+                          // while family documents are loading.
+                          documents = [];
+                        }
+                      }
+                    });
 
                     // Keep My/Family lists in sync with selected tab source.
-                    if (index == 0 || index == 1) {
+                    if (shouldFetchDocs) {
                       final keyword = _searchController.text.trim();
                       unawaited(
                         _fetchMyDocuments(
@@ -732,6 +747,11 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                         Image.asset(
                           displayIcon,
                           height: 25.w,
+                          color: shouldTintIcon
+                              ? (isSelected ? Colors.white : Colors.black)
+                              : null,
+                          colorBlendMode:
+                              shouldTintIcon ? BlendMode.srcIn : null,
                         ),
                         const SizedBox(width: 5),
                         Text(
@@ -764,6 +784,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                     children: [
                       FamilyDocumentsTab(
                         isActive: currentIndex == 1,
+                        isLoading: currentIndex == 1 && _loading,
                         documents: documents,
                         onOpenDocument: _openDocumentAttachment,
                         onAddDocument: () {
@@ -771,11 +792,15 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                         },
                       ),
                       CompanyDocumentsTab(
+                        key: ValueKey('company_docs_$_companyTabVersion'),
                         onAddDocument: () {
                           _showDocumentDialogByType(DocumentDialogType.company);
                         },
+                        onOpenDocument: _openDocumentAttachment,
                       ),
-                      const ShareDocumentsTab(),
+                      ShareDocumentsTab(
+                        onOpenDocument: _openDocumentAttachment,
+                      ),
                     ],
                   ),
           ),
@@ -1037,7 +1062,13 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     // If document was added successfully, refresh the list
     if (result == true) {
       print('🔄 Refreshing documents list...');
-      await _fetchMyDocuments();
+      if (type == DocumentDialogType.company) {
+        setState(() {
+          _companyTabVersion++;
+        });
+      } else {
+        await _fetchMyDocuments();
+      }
     }
   }
 
@@ -1458,10 +1489,7 @@ class DocumentDialog extends StatefulWidget {
 }
 
 class _DocumentDialogState extends State<DocumentDialog> {
-  final TextEditingController _idController = TextEditingController();
-  DateTime? _expiryDate;
-  String? _selectedType;
-  final List<String> _types = [
+  static const List<String> _fallbackTypes = [
     'Passport',
     'Labor Card',
     'Medical Insurance',
@@ -1469,12 +1497,30 @@ class _DocumentDialogState extends State<DocumentDialog> {
     'photo',
     'CV',
     'Certifications',
-  ]; // adjust
+  ];
+
+  static const Map<String, int> _fallbackTypeIds = {
+    'Passport': 1,
+    'Labor Card': 2,
+    'Medical Insurance': 3,
+    'Emirates ID': 4,
+    'photo': 5,
+    'CV': 6,
+    'Certifications': 7,
+  };
+
+  final TextEditingController _idController = TextEditingController();
+  DateTime? _expiryDate;
+  String? _selectedType;
+  final List<String> _types = <String>[];
+  final Map<String, int> _documentTypeIds = <String, int>{};
   String? _attachedFileName;
   String? _attachedFilePath;
   bool _isUploading = false;
+  bool _isLoadingTypes = false;
 
   bool get _showIdAndExpiry => widget.type != DocumentDialogType.company;
+  bool get _familyOnly => widget.type == DocumentDialogType.family;
 
   String get _dialogTitle {
     switch (widget.type) {
@@ -1485,6 +1531,164 @@ class _DocumentDialogState extends State<DocumentDialog> {
       case DocumentDialogType.my:
       default:
         return 'My Documents';
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.type == DocumentDialogType.company) {
+      _types.addAll(_fallbackTypes);
+      _selectedType = _types.isNotEmpty ? _types.first : null;
+    } else {
+      unawaited(_loadDocumentTypes());
+    }
+  }
+
+  void _addDocumentTypeFromRaw(
+    dynamic raw,
+    List<String> names,
+    Map<String, int> idsByName,
+  ) {
+    if (raw is String) {
+      final name = raw.trim();
+      if (name.isNotEmpty && !names.contains(name)) {
+        names.add(name);
+      }
+      return;
+    }
+
+    if (raw is! Map) return;
+
+    final map = Map<String, dynamic>.from(raw as Map);
+    final name = (map['name'] ??
+            map['document_type'] ??
+            map['type'] ??
+            map['label'] ??
+            '')
+        .toString()
+        .trim();
+    if (name.isEmpty) return;
+
+    if (!names.contains(name)) {
+      names.add(name);
+    }
+
+    final idRaw = map['id'] ?? map['document_type_id'] ?? map['type_id'];
+    final id = int.tryParse((idRaw ?? '').toString());
+    if (id != null) {
+      idsByName[name] = id;
+    }
+  }
+
+  Future<void> _loadDocumentTypes() async {
+    if (_isLoadingTypes) return;
+    if (mounted) {
+      setState(() => _isLoadingTypes = true);
+    }
+
+    try {
+      final token = SharedPref.getLoginData().result?.token ?? '';
+      if (token.isEmpty) return;
+
+      final url = Uri.parse('https://erp.elrace.com/api/document_types');
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final request = http.Request('GET', url)
+        ..headers.addAll(headers)
+        ..body = jsonEncode({
+          'jsonrpc': '2.0',
+          'params': {
+            'family_only': _familyOnly,
+          },
+        });
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      if (response.statusCode != 200) return;
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) return;
+
+      final result = decoded['result'];
+      if (result is! Map || _normalizeToken(result['status']) != 'success') {
+        return;
+      }
+
+      final names = <String>[];
+      final idsByName = <String, int>{};
+      final data = result['data'];
+
+      if (data is List) {
+        for (final item in data) {
+          _addDocumentTypeFromRaw(item, names, idsByName);
+        }
+      } else if (data is Map) {
+        for (final entry in data.entries) {
+          final key = entry.key.toString().trim();
+          final value = entry.value;
+
+          if (value is Map || value is String) {
+            _addDocumentTypeFromRaw(value, names, idsByName);
+            continue;
+          }
+
+          final keyAsId = int.tryParse(key);
+          final valueText = (value ?? '').toString().trim();
+          final valueAsId = int.tryParse(valueText);
+
+          if (keyAsId != null && valueText.isNotEmpty) {
+            if (!names.contains(valueText)) {
+              names.add(valueText);
+            }
+            idsByName[valueText] = keyAsId;
+            continue;
+          }
+
+          if (valueAsId != null && key.isNotEmpty) {
+            if (!names.contains(key)) {
+              names.add(key);
+            }
+            idsByName[key] = valueAsId;
+          }
+        }
+      }
+
+      if (!mounted || names.isEmpty) return;
+      setState(() {
+        _types
+          ..clear()
+          ..addAll(names);
+        _documentTypeIds
+          ..clear()
+          ..addAll(idsByName);
+
+        if (_selectedType == null || !_types.contains(_selectedType)) {
+          _selectedType = _types.first;
+        }
+      });
+    } catch (e) {
+      debugPrint('Failed to load document types: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingTypes = false;
+          if (_types.isEmpty) {
+            _types.addAll(_fallbackTypes);
+          }
+          if (_selectedType == null && _types.isNotEmpty) {
+            _selectedType = _types.first;
+          } else if (_selectedType != null &&
+              _types.isNotEmpty &&
+              !_types.contains(_selectedType)) {
+            _selectedType = _types.first;
+          }
+        });
+      }
     }
   }
 
@@ -1806,7 +2010,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
     };
 
     final bool familyOnly = widget.type == DocumentDialogType.family;
-    final scopesToCheck = familyOnly ? <bool>[true, false] : <bool>[familyOnly];
+    final scopesToCheck = <bool>[familyOnly];
 
     for (var attempt = 0; attempt < 3; attempt++) {
       for (final scope in scopesToCheck) {
@@ -1910,18 +2114,17 @@ class _DocumentDialogState extends State<DocumentDialog> {
         return;
       }
 
-      // Map document type to document_type_id
-      final Map<String, int> documentTypeIds = {
-        'Passport': 1,
-        'Labor Card': 2,
-        'Medical Insurance': 3,
-        'Emirates ID': 4,
-        'photo': 5,
-        'CV': 6,
-        'Certifications': 7,
-      };
-
-      final documentTypeId = documentTypeIds[selectedType] ?? 1;
+      int? documentTypeId =
+          _documentTypeIds[selectedType] ?? _fallbackTypeIds[selectedType];
+      if (documentTypeId == null) {
+        final selectedTypeToken = _normalizeToken(selectedType);
+        for (final entry in _documentTypeIds.entries) {
+          if (_normalizeToken(entry.key) == selectedTypeToken) {
+            documentTypeId = entry.value;
+            break;
+          }
+        }
+      }
 
       // Read file and convert to base64
       final file = File(_attachedFilePath!);
@@ -1938,13 +2141,16 @@ class _DocumentDialogState extends State<DocumentDialog> {
         // Use human-readable name for better grouping/display in fetched list.
         'name': selectedType,
         'document_type': selectedType,
-        'document_type_id': documentTypeId,
         'description': 'Document uploaded via mobile app',
         'attachment': base64File,
         'attachment_filename': _attachedFileName,
         // Keep upload scope explicit for backend routing.
-        'family_only': widget.type == DocumentDialogType.family,
+        'family_only': _familyOnly,
       };
+
+      if (documentTypeId != null) {
+        params['document_type_id'] = documentTypeId;
+      }
 
       if (widget.type == DocumentDialogType.family) {
         params['document_scope'] = 'family';
@@ -2130,7 +2336,9 @@ class _DocumentDialogState extends State<DocumentDialog> {
                     isExpanded: true,
                     hint: Center(
                       child: Text(
-                        'document type',
+                        _isLoadingTypes && _types.isEmpty
+                            ? 'Loading document types...'
+                            : 'document type',
                         style: GoogleFonts.aBeeZee(
                           color: Colors.grey,
                           fontSize: 12.sp,
@@ -2157,7 +2365,9 @@ class _DocumentDialogState extends State<DocumentDialog> {
                           ),
                         )
                         .toList(),
-                    onChanged: (v) => setState(() => _selectedType = v),
+                    onChanged: _isLoadingTypes && _types.isEmpty
+                        ? null
+                        : (v) => setState(() => _selectedType = v),
                     // Keep the pill container as the button background.
                     buttonStyleData: ButtonStyleData(
                       height: 30.h,

@@ -69,11 +69,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  bool _isCategoryMuted(String category) {
-    if (_muteSettings['global'] == true) return true;
-    return _muteSettings[category.toLowerCase()] == true;
-  }
-
   Future<void> _openMuteSettings() async {
     await Navigator.push(
       context,
@@ -88,31 +83,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
     await _loadCircularAnnouncements();
   }
 
-  String _displayCategoryName(String category) {
-    switch (category.toLowerCase()) {
-      case 'announcement':
-        return 'Announcements';
-      case 'circular':
-        return 'Circulars';
-      case 'notification':
-      default:
-        return 'Notifications';
-    }
-  }
-
   Widget _buildMuteSettingsEntryCard() {
-    final globalMuted = _muteSettings['global'] == true;
-    final mutedCount = _muteSettings.entries
-        .where((entry) => entry.key != 'global' && entry.value)
-        .length;
+    final mutedCount =
+        _muteSettings.entries.where((entry) => entry.value).length;
 
     final subtitle = _isMuteSettingsLoading
-        ? 'Loading mute channels...'
-        : globalMuted
-            ? 'All channels are currently muted.'
-            : mutedCount == 0
-                ? 'All channels are active.'
-                : '$mutedCount channels are muted.';
+        ? 'Loading notification preferences...'
+        : mutedCount == 0
+            ? 'All categories are active.'
+            : '$mutedCount categories are muted.';
 
     return InkWell(
       borderRadius: BorderRadius.circular(20.r),
@@ -141,9 +120,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 color: appFontColor.withValues(alpha: 0.12),
               ),
               child: Icon(
-                globalMuted
-                    ? Icons.notifications_off_rounded
-                    : Icons.tune_rounded,
+                Icons.tune_rounded,
                 color: appFontColor,
                 size: 22.sp,
               ),
@@ -154,7 +131,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Mute Notification Channels',
+                    'Notification Preferences',
                     style: GoogleFonts.inter(
                       color: const Color(0xFF0D1F47),
                       fontWeight: FontWeight.w800,
@@ -180,68 +157,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildMutedState(String category) {
-    final name = _displayCategoryName(category);
-    return Container(
-      width: double.infinity,
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
-      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 24.h),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFF),
-        borderRadius: BorderRadius.circular(20.r),
-        border: Border.all(color: const Color(0xFFD7DEED)),
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 58.w,
-            height: 58.w,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF273E7B).withValues(alpha: 0.12),
-            ),
-            child: Icon(
-              Icons.volume_off_rounded,
-              color: const Color(0xFF273E7B),
-              size: 30.sp,
-            ),
-          ),
-          SizedBox(height: 10.h),
-          Text(
-            '$name is muted',
-            style: GoogleFonts.koulen(
-              color: const Color(0xFF132B64),
-              fontSize: 25.sp,
-            ),
-          ),
-          SizedBox(height: 6.h),
-          Text(
-            'Open mute settings to enable this channel again.',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
-              color: const Color(0xFF60708D),
-              fontWeight: FontWeight.w500,
-              fontSize: 11.5.sp,
-            ),
-          ),
-          SizedBox(height: 12.h),
-          ElevatedButton.icon(
-            onPressed: _openMuteSettings,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1B3E86),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12.r),
-              ),
-            ),
-            icon: const Icon(Icons.settings_rounded),
-            label: const Text('Open Mute Settings'),
-          ),
-        ],
       ),
     );
   }
@@ -857,19 +772,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
   Widget _buildContentForTab() {
     final selectedCategory = notificationType[currentIndex]['category'];
 
-    if (_isMuteSettingsLoading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (_isCategoryMuted(selectedCategory)) {
-      return _buildMutedState(selectedCategory);
-    }
-
     // For Notifications tab (index 0) - use local storage
     if (selectedCategory == 'notification') {
       return _buildLocalNotificationsList();
@@ -1177,9 +1079,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Show description as main text (as per requirement)
+                      // Primary title from API payload
                       Text(
-                        item.description,
+                        item.displayTitle,
                         style: TextStyle(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
@@ -1188,6 +1090,21 @@ class _NotificationScreenState extends State<NotificationScreen> {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
+
+                      if (item.displayBody.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          item.displayBody,
+                          style: TextStyle(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black54,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+
                       if (item.date != null) ...[
                         const SizedBox(height: 4),
                         Text(

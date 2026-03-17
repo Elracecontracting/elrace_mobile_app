@@ -61,8 +61,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
     setState(() => _isLoading = true);
     try {
       final provider = Provider.of<ReportProvider>(context, listen: false);
-      final detail =
-          await provider.fetchReportDetailFromApi(widget.report.id);
+      final detail = await provider.fetchReportDetailFromApi(widget.report.id);
       if (detail != null && detail.reportItems.isNotEmpty) {
         _photoItems = detail.reportItems.map((item) {
           final p = _PhotoItem();
@@ -111,8 +110,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
   Future<void> _saveItemsAndReload() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
-    final provider =
-        Provider.of<ReportProvider>(context, listen: false);
+    final provider = Provider.of<ReportProvider>(context, listen: false);
     for (int i = 0; i < _photoItems.length; i++) {
       final item = _photoItems[i];
       if (item.imagePath == null || item.imagePath!.isEmpty) continue;
@@ -131,7 +129,8 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
           File? imageFile;
           if (hasEdited) {
             final dir = await getTemporaryDirectory();
-            final uploadPath = '${dir.path}/upload_${item.itemId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+            final uploadPath =
+                '${dir.path}/upload_${item.itemId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
             await File(uploadPath).writeAsBytes(item.editedBytes!);
             imageFile = File(uploadPath);
             debugPrint('📤 Item[$i] uploading edited bytes as $uploadPath');
@@ -152,7 +151,8 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
           // Update image URL from server response (important for newly uploaded images)
           if (result != null && result.image.isNotEmpty) {
             item.imagePath = result.image;
-            item.editedBytes = null; // Clear local bytes, server URL is now canonical
+            item.editedBytes =
+                null; // Clear local bytes, server URL is now canonical
             debugPrint('📤 Item[$i] updated imagePath to ${result.image}');
           }
         } catch (e) {
@@ -180,79 +180,79 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
         child: SizedBox(
           width: 200.w,
           child: Container(
-          padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 16.w),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF1B1F26), Color(0xFF1A1A53)],
-              stops: [0.72, 1.0],
+            padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 16.w),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1B1F26), Color(0xFF1A1A53)],
+                stops: [0.72, 1.0],
+              ),
+              borderRadius: BorderRadius.circular(16.r),
             ),
-            borderRadius: BorderRadius.circular(16.r),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _pickImage(ImageSource.camera);
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/svg/camera_svgrepo.svg',
-                        width: 36.sp,
-                        height: 36.sp,
-                        colorFilter: const ColorFilter.mode(
-                            Colors.white, BlendMode.srcIn),
-                      ),
-                      SizedBox(height: 8.h),
-                      Text(
-                        'Camera',
-                        style: GoogleFonts.inter(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickImage(ImageSource.camera);
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/svg/camera_svgrepo.svg',
+                          width: 36.sp,
+                          height: 36.sp,
+                          colorFilter: const ColorFilter.mode(
+                              Colors.white, BlendMode.srcIn),
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 8.h),
+                        Text(
+                          'Camera',
+                          style: GoogleFonts.inter(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _pickImage(ImageSource.gallery);
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/svg/gallery_svgrepo.svg',
-                        width: 36.sp,
-                        height: 36.sp,
-                        colorFilter: const ColorFilter.mode(
-                            Colors.white, BlendMode.srcIn),
-                      ),
-                      SizedBox(height: 8.h),
-                      Text(
-                        'Gallery',
-                        style: GoogleFonts.inter(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickImage(ImageSource.gallery);
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/svg/gallery_svgrepo.svg',
+                          width: 36.sp,
+                          height: 36.sp,
+                          colorFilter: const ColorFilter.mode(
+                              Colors.white, BlendMode.srcIn),
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 8.h),
+                        Text(
+                          'Gallery',
+                          style: GoogleFonts.inter(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );
@@ -281,15 +281,19 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
       );
 
       await Future.wait(
-        savedPaths.asMap().entries
+        savedPaths
+            .asMap()
+            .entries
             .where((e) => e.value.isNotEmpty)
-            .map((e) => provider.addReportItem(
+            .map((e) => provider
+                .addReportItem(
                   reportId: widget.report.id,
                   imageFile: File(e.value),
                   location: '',
                   description: '',
                   index: _photoItems.length + e.key,
-                ).catchError((_) => null)),
+                )
+                .catchError((_) => null)),
       );
 
       if (mounted) await _loadPhotos();
@@ -404,7 +408,8 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
                           GestureDetector(
                             onTap: () {
                               WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (mounted) setState(() => _isButtonExpanded = true);
+                                if (mounted)
+                                  setState(() => _isButtonExpanded = true);
                               });
                             },
                             child: Container(
@@ -418,7 +423,8 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
                                 ),
                               ),
                               alignment: Alignment.center,
-                              child: Icon(Icons.add, size: 22.w, color: Colors.white),
+                              child: Icon(Icons.add,
+                                  size: 22.w, color: Colors.white),
                             ),
                           )
                         else
@@ -436,8 +442,11 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
                                     ),
                                   ),
                                   child: _menuButton('Add Photos', () {
-                                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                                      if (mounted) setState(() => _isButtonExpanded = false);
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                      if (mounted)
+                                        setState(
+                                            () => _isButtonExpanded = false);
                                       _showImageSourceDialog();
                                     });
                                   }),
@@ -452,8 +461,11 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
                                     ),
                                   ),
                                   child: _menuButton('Generate Report', () {
-                                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                                      if (mounted) setState(() => _isButtonExpanded = false);
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                      if (mounted)
+                                        setState(
+                                            () => _isButtonExpanded = false);
                                       _openPdfGenerationPage();
                                     });
                                   }),
@@ -475,7 +487,6 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
                         ? _buildEmptyState()
                         : _buildPhotoGrid(),
               ),
-
             ],
           ),
         ),
@@ -532,7 +543,8 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
     // Filter out items with no image for display, but keep original indices for reorder
     final validIndices = <int>[];
     for (int i = 0; i < _photoItems.length; i++) {
-      if (_photoItems[i].imagePath != null && _photoItems[i].imagePath!.isNotEmpty) {
+      if (_photoItems[i].imagePath != null &&
+          _photoItems[i].imagePath!.isNotEmpty) {
         validIndices.add(i);
       }
     }
@@ -585,21 +597,21 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
                             child: Icon(Icons.broken_image, size: 40)),
                       )
                     : isNetwork
-                    ? Image.network(
-                        item.imagePath!,
-                        fit: BoxFit.cover,
-                        gaplessPlayback: true,
-                        cacheWidth: 600,
-                        errorBuilder: (_, __, ___) => const Center(
-                            child: Icon(Icons.broken_image, size: 40)),
-                      )
-                    : Image.file(
-                        File(item.imagePath!),
-                        key: ValueKey(item.imagePath),
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Center(
-                            child: Icon(Icons.broken_image, size: 40)),
-                      ),
+                        ? Image.network(
+                            item.imagePath!,
+                            fit: BoxFit.cover,
+                            gaplessPlayback: true,
+                            cacheWidth: 600,
+                            errorBuilder: (_, __, ___) => const Center(
+                                child: Icon(Icons.broken_image, size: 40)),
+                          )
+                        : Image.file(
+                            File(item.imagePath!),
+                            key: ValueKey(item.imagePath),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Center(
+                                child: Icon(Icons.broken_image, size: 40)),
+                          ),
                 // Drag handle — top-right corner
                 Positioned(
                   top: 6.h,
@@ -627,7 +639,6 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
       },
     );
   }
-
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -655,6 +666,8 @@ class PdfGenerationPage extends StatefulWidget {
 class _PdfGenerationPageState extends State<PdfGenerationPage> {
   late TextEditingController _nameController;
   bool _isGenerating = false;
+  double _generationProgress = 0;
+  String _generationStatus = '';
   bool _isLoadingPdfs = false;
   List<ReportPdfModel> _pdfs = [];
 
@@ -693,7 +706,8 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Maximum 3 PDF files allowed. Please delete one first.')),
+              content: Text(
+                  'Maximum 3 PDF files allowed. Please delete one first.')),
         );
       }
       return;
@@ -703,22 +717,44 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content:
-                  Text('A report with the same name already exists.')),
+              content: Text('A report with the same name already exists.')),
         );
       }
       return;
     }
 
-    setState(() => _isGenerating = true);
+    setState(() {
+      _isGenerating = true;
+      _generationProgress = 10;
+      _generationStatus = 'Preparing report...';
+    });
+
     try {
-      final provider =
-          Provider.of<ReportProvider>(context, listen: false);
-      final detail =
-          await provider.fetchReportDetailFromApi(widget.reportId);
+      final provider = Provider.of<ReportProvider>(context, listen: false);
+
+      if (mounted) {
+        setState(() {
+          _generationProgress = 20;
+          _generationStatus = 'Loading report data...';
+        });
+      }
+
+      final detail = await provider.fetchReportDetailFromApi(widget.reportId);
       if (detail == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Unable to load report details.')),
+          );
+        }
         if (mounted) setState(() => _isGenerating = false);
         return;
+      }
+
+      if (mounted) {
+        setState(() {
+          _generationProgress = 45;
+          _generationStatus = 'Generating PDF...';
+        });
       }
 
       final pdfBytes = await PdfService().generateReportPdf(
@@ -726,17 +762,53 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
         projectName: widget.folderName,
       );
 
+      if (mounted) {
+        setState(() {
+          _generationProgress = 70;
+          _generationStatus = 'Uploading PDF...';
+        });
+      }
+
       final uploaded = await reportProvider.uploadReportPdf(
         empId: ReportProvider.empID,
         reportId: widget.reportId,
         folderId: widget.folderId,
         fileName: fileName,
         pdfBytes: pdfBytes,
+        onProgress: (uploadProgress) {
+          if (!mounted) return;
+          final mapped = (70 + (uploadProgress * 30)).clamp(70.0, 100.0);
+          setState(() {
+            _generationProgress = mapped;
+            _generationStatus = 'Uploading PDF...';
+          });
+        },
       );
 
-      if (uploaded) await _loadPdfHistory();
-    } catch (_) {} finally {
-      if (mounted) setState(() => _isGenerating = false);
+      if (uploaded) {
+        if (mounted) {
+          setState(() {
+            _generationProgress = 100;
+            _generationStatus = 'Completed';
+          });
+        }
+        await _loadPdfHistory();
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to upload PDF report.')),
+          );
+        }
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+          _generationProgress = 0;
+          _generationStatus = '';
+        });
+      }
     }
   }
 
@@ -745,33 +817,30 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
   }
 
   Future<void> _renamePdf(ReportPdfModel pdf) async {
-    final controller = TextEditingController(
-        text: pdf.fileName.replaceAll('.pdf', ''));
+    final controller =
+        TextEditingController(text: pdf.fileName.replaceAll('.pdf', ''));
     final newName = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.r)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
         title: Text('Rename File',
             style: GoogleFonts.inter(
-                fontWeight: FontWeight.w700,
-                color: const Color(0xFF27304E))),
+                fontWeight: FontWeight.w700, color: const Color(0xFF27304E))),
         content: TextField(
           controller: controller,
           autofocus: true,
           decoration: InputDecoration(
             hintText: 'File name',
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10.r)),
+            border:
+                OutlineInputBorder(borderRadius: BorderRadius.circular(10.r)),
           ),
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           TextButton(
-              onPressed: () =>
-                  Navigator.pop(ctx, controller.text.trim()),
+              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
               child: const Text('Rename')),
         ],
       ),
@@ -800,7 +869,8 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
       });
     }
     if (!success) {
-      debugPrint('renameReportPdf: server did not confirm, change is local only');
+      debugPrint(
+          'renameReportPdf: server did not confirm, change is local only');
     }
   }
 
@@ -894,8 +964,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                             border: Border.all(
                                 color: const Color(0xFFD0D0D0), width: .9),
                           ),
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 16.w),
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
                           child: TextField(
                             controller: _nameController,
                             style: GoogleFonts.inter(
@@ -923,8 +992,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                           child: _isGenerating
                               ? Padding(
                                   padding: EdgeInsets.all(8.w),
-                                  child:
-                                      const CircularProgressIndicator(
+                                  child: const CircularProgressIndicator(
                                     strokeWidth: 2,
                                     color: Color(0xFF27304E),
                                   ),
@@ -935,6 +1003,27 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                       ),
                     ],
                   ),
+                  if (_isGenerating) ...[
+                    SizedBox(height: 10.h),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(8.r),
+                      child: LinearProgressIndicator(
+                        value: (_generationProgress.clamp(0, 100)) / 100,
+                        minHeight: 6.h,
+                        color: const Color(0xFF27304E),
+                        backgroundColor: const Color(0xFFD9D9D9),
+                      ),
+                    ),
+                    SizedBox(height: 6.h),
+                    Text(
+                      '${_generationStatus.isEmpty ? 'Processing...' : _generationStatus} ${_generationProgress.round()}%',
+                      style: GoogleFonts.inter(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF6A6D78),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -954,8 +1043,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding:
-                          EdgeInsets.fromLTRB(20.w, 18.h, 20.w, 10.h),
+                      padding: EdgeInsets.fromLTRB(20.w, 18.h, 20.w, 10.h),
                       child: Text(
                         'Recent Files',
                         style: GoogleFonts.inter(
@@ -974,24 +1062,25 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                               ),
                             )
                           : _pdfs.isEmpty
-                          ? Center(
-                              child: Text(
-                                'No generated PDFs yet',
-                                style: GoogleFonts.inter(
-                                  fontSize: 13.sp,
-                                  color: Colors.white54,
+                              ? Center(
+                                  child: Text(
+                                    'No generated PDFs yet',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 13.sp,
+                                      color: Colors.white54,
+                                    ),
+                                  ),
+                                )
+                              : ListView.builder(
+                                  padding:
+                                      EdgeInsets.symmetric(horizontal: 16.w),
+                                  itemCount:
+                                      _pdfs.length > 3 ? 3 : _pdfs.length,
+                                  itemBuilder: (context, index) {
+                                    final pdf = _pdfs[index];
+                                    return _buildPdfTile(pdf);
+                                  },
                                 ),
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 16.w),
-                              itemCount: _pdfs.length > 3 ? 3 : _pdfs.length,
-                              itemBuilder: (context, index) {
-                                final pdf = _pdfs[index];
-                                return _buildPdfTile(pdf);
-                              },
-                            ),
                     ),
                   ],
                 ),
@@ -1009,7 +1098,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => PdfDisplayScreen(link: pdf.reportLink, fileName: pdf.fileName),
+            builder: (_) => PdfDisplayScreen(link: pdf.reportLink),
           ),
         );
       },
@@ -1077,7 +1166,8 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                   try {
                     final response = await http.get(Uri.parse(pdf.reportLink));
                     if (response.statusCode == 200) {
-                      final name = pdf.fileName.isEmpty ? 'report.pdf' : pdf.fileName;
+                      final name =
+                          pdf.fileName.isEmpty ? 'report.pdf' : pdf.fileName;
                       await Share.shareXFiles([
                         XFile.fromData(response.bodyBytes,
                             name: name.endsWith('.pdf') ? name : '$name.pdf',
@@ -1098,7 +1188,8 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                     fileId: fresh.id.isNotEmpty ? fresh.id : fresh.fileId,
                   );
                   if (success && mounted) {
-                    setState(() => _pdfs.removeWhere((p) => p.fileId == pdf.fileId));
+                    setState(
+                        () => _pdfs.removeWhere((p) => p.fileId == pdf.fileId));
                   }
                 }
               },
@@ -1112,8 +1203,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                       SizedBox(width: 10.w),
                       Text('Share',
                           style: GoogleFonts.inter(
-                              fontSize: 14.sp,
-                              color: const Color(0xFF27304E))),
+                              fontSize: 14.sp, color: const Color(0xFF27304E))),
                     ],
                   ),
                 ),
@@ -1126,8 +1216,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                       SizedBox(width: 10.w),
                       Text('Rename',
                           style: GoogleFonts.inter(
-                              fontSize: 14.sp,
-                              color: const Color(0xFF27304E))),
+                              fontSize: 14.sp, color: const Color(0xFF27304E))),
                     ],
                   ),
                 ),
@@ -1243,79 +1332,79 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
         child: SizedBox(
           width: 200.w,
           child: Container(
-          padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 16.w),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF1B1F26), Color(0xFF1A1A53)],
-              stops: [0.72, 1.0],
+            padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 16.w),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1B1F26), Color(0xFF1A1A53)],
+                stops: [0.72, 1.0],
+              ),
+              borderRadius: BorderRadius.circular(16.r),
             ),
-            borderRadius: BorderRadius.circular(16.r),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _replaceImage(ImageSource.camera);
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/svg/camera_svgrepo.svg',
-                        width: 36.sp,
-                        height: 36.sp,
-                        colorFilter: const ColorFilter.mode(
-                            Colors.white, BlendMode.srcIn),
-                      ),
-                      SizedBox(height: 8.h),
-                      Text(
-                        'Camera',
-                        style: GoogleFonts.inter(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _replaceImage(ImageSource.camera);
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/svg/camera_svgrepo.svg',
+                          width: 36.sp,
+                          height: 36.sp,
+                          colorFilter: const ColorFilter.mode(
+                              Colors.white, BlendMode.srcIn),
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 8.h),
+                        Text(
+                          'Camera',
+                          style: GoogleFonts.inter(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _replaceImage(ImageSource.gallery);
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/svg/gallery_svgrepo.svg',
-                        width: 36.sp,
-                        height: 36.sp,
-                        colorFilter: const ColorFilter.mode(
-                            Colors.white, BlendMode.srcIn),
-                      ),
-                      SizedBox(height: 8.h),
-                      Text(
-                        'Gallery',
-                        style: GoogleFonts.inter(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _replaceImage(ImageSource.gallery);
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/svg/gallery_svgrepo.svg',
+                          width: 36.sp,
+                          height: 36.sp,
+                          colorFilter: const ColorFilter.mode(
+                              Colors.white, BlendMode.srcIn),
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 8.h),
+                        Text(
+                          'Gallery',
+                          style: GoogleFonts.inter(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );
@@ -1377,8 +1466,8 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
       // evict old image from Flutter's file cache
       await FileImage(File(item.imagePath ?? newPath)).evict();
       setState(() {
-        item.editedBytes = result;  // show immediately via Image.memory
-        item.imagePath = newPath;   // used for upload
+        item.editedBytes = result; // show immediately via Image.memory
+        item.imagePath = newPath; // used for upload
       });
     }
   }
@@ -1425,8 +1514,7 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
                       color: Color(0xFFE81E25),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.close,
-                        color: Colors.white, size: 18.w),
+                    child: Icon(Icons.close, color: Colors.white, size: 18.w),
                   ),
                 ),
               ),
@@ -1466,8 +1554,7 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
                       child: item.imagePath == null
                           ? Center(
                               child: Icon(Icons.photo,
-                                  size: 50.w,
-                                  color: const Color(0xFFB0B0B0)),
+                                  size: 50.w, color: const Color(0xFFB0B0B0)),
                             )
                           : ClipRRect(
                               borderRadius: BorderRadius.circular(16.r),
@@ -1512,9 +1599,11 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
                         children: [
                           IconButton(
                             onPressed: _currentIndex > 0
-                                ? () => WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    if (mounted) setState(() => _currentIndex--);
-                                  })
+                                ? () => WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                      if (mounted)
+                                        setState(() => _currentIndex--);
+                                    })
                                 : null,
                             icon: Icon(
                               Icons.keyboard_double_arrow_left,
@@ -1537,17 +1626,19 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
                           IconButton(
                             onPressed:
                                 _currentIndex < widget.photoItems.length - 1
-                                    ? () => WidgetsBinding.instance.addPostFrameCallback((_) {
-                                        if (mounted) setState(() => _currentIndex++);
-                                      })
+                                    ? () => WidgetsBinding.instance
+                                            .addPostFrameCallback((_) {
+                                          if (mounted)
+                                            setState(() => _currentIndex++);
+                                        })
                                     : null,
                             icon: Icon(
                               Icons.keyboard_double_arrow_right,
                               size: 28.w,
-                              color: _currentIndex <
-                                      widget.photoItems.length - 1
-                                  ? const Color(0xFF27304E)
-                                  : const Color(0xFFD0D0D0),
+                              color:
+                                  _currentIndex < widget.photoItems.length - 1
+                                      ? const Color(0xFF27304E)
+                                      : const Color(0xFFD0D0D0),
                             ),
                           ),
                         ],
@@ -1712,17 +1803,14 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
     final text = item.descriptionController.text;
     if (text.isEmpty) return;
     final lines = text.split('\n');
-    final formatted = lines
-        .where((l) => l.trim().isNotEmpty)
-        .map((l) {
-          final t = l.trim();
-          if (t.startsWith('• ')) return t;
-          if (RegExp(r'^\d+\.\s').hasMatch(t)) {
-            return '• ${t.replaceFirst(RegExp(r'^\d+\.\s'), '')}';
-          }
-          return '• $t';
-        })
-        .join('\n');
+    final formatted = lines.where((l) => l.trim().isNotEmpty).map((l) {
+      final t = l.trim();
+      if (t.startsWith('• ')) return t;
+      if (RegExp(r'^\d+\.\s').hasMatch(t)) {
+        return '• ${t.replaceFirst(RegExp(r'^\d+\.\s'), '')}';
+      }
+      return '• $t';
+    }).join('\n');
     item.descriptionController.text = formatted;
     item.descriptionController.selection =
         TextSelection.fromPosition(TextPosition(offset: formatted.length));
@@ -1734,17 +1822,14 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
     if (text.isEmpty) return;
     final lines = text.split('\n');
     int n = 1;
-    final formatted = lines
-        .where((l) => l.trim().isNotEmpty)
-        .map((l) {
-          final t = l.trim();
-          if (t.startsWith('• ')) return '${n++}. ${t.substring(2)}';
-          if (RegExp(r'^\d+\.\s').hasMatch(t)) {
-            return '${n++}. ${t.replaceFirst(RegExp(r'^\d+\.\s'), '')}';
-          }
-          return '${n++}. $t';
-        })
-        .join('\n');
+    final formatted = lines.where((l) => l.trim().isNotEmpty).map((l) {
+      final t = l.trim();
+      if (t.startsWith('• ')) return '${n++}. ${t.substring(2)}';
+      if (RegExp(r'^\d+\.\s').hasMatch(t)) {
+        return '${n++}. ${t.replaceFirst(RegExp(r'^\d+\.\s'), '')}';
+      }
+      return '${n++}. $t';
+    }).join('\n');
     item.descriptionController.text = formatted;
     item.descriptionController.selection =
         TextSelection.fromPosition(TextPosition(offset: formatted.length));

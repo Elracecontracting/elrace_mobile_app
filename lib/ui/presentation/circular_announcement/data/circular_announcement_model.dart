@@ -19,14 +19,15 @@ class CircularAnnouncementItem {
   /// Factory constructor to parse from JSON response
   factory CircularAnnouncementItem.fromJson(Map<String, dynamic> json) {
     DateTime? parsedDate;
-    final dateStr = json['date'] as String?;
+    final dateStr =
+        (json['date'] ?? json['created_at'] ?? json['create_date']) as String?;
     if (dateStr != null && dateStr.isNotEmpty) {
       parsedDate = DateTime.tryParse(dateStr);
     }
 
     // Build full file URL
     String? fullFileUrl;
-    final fileUrlPath = json['file_url'] as String?;
+    final fileUrlPath = (json['file_url'] ?? json['attachment_url']) as String?;
     if (fileUrlPath != null && fileUrlPath.isNotEmpty) {
       if (fileUrlPath.startsWith('http')) {
         fullFileUrl = fileUrlPath;
@@ -37,12 +38,19 @@ class CircularAnnouncementItem {
 
     return CircularAnnouncementItem(
       id: (json['id'] as num?)?.toInt() ?? 0,
-      title: json['title']?.toString() ?? '',
-      description: json['description']?.toString() ?? '',
+      title: _firstNonEmptyString(json['title'], json['name']),
+      description:
+          _firstNonEmptyString(json['description'], json['announcement_text']),
       category: json['category']?.toString() ?? '',
       fileUrl: fullFileUrl,
       date: parsedDate,
     );
+  }
+
+  static String _firstNonEmptyString(dynamic first, dynamic second) {
+    final firstValue = first?.toString().trim() ?? '';
+    if (firstValue.isNotEmpty) return firstValue;
+    return second?.toString().trim() ?? '';
   }
 
   /// Convert model to JSON
@@ -65,6 +73,19 @@ class CircularAnnouncementItem {
 
   /// Check if this is an announcement
   bool get isAnnouncement => category.toLowerCase() == 'announcement';
+
+  /// Display-friendly primary title for UI cards and headers
+  String get displayTitle {
+    if (title.trim().isNotEmpty) return title.trim();
+    return description.trim();
+  }
+
+  /// Display-friendly body text for UI cards (can be empty)
+  String get displayBody {
+    final body = description.trim();
+    if (body.isEmpty || body == displayTitle) return '';
+    return body;
+  }
 
   @override
   String toString() {

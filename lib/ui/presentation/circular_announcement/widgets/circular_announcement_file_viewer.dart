@@ -186,13 +186,21 @@ class _CircularAnnouncementFileViewerState
           extension = '.pdf';
       }
 
-      final fileName = '${widget.item.description}$extension';
+      final baseName = widget.item.displayTitle.trim().isNotEmpty
+          ? widget.item.displayTitle.trim()
+          : 'announcement_${widget.item.id}';
+      final safeName = baseName.replaceAll(RegExp(r'[\\/:*?"<>|]'), '_');
+      final fileName = '$safeName$extension';
       final file = File('${tempDir.path}/$fileName');
       await file.writeAsBytes(_fileBytes!);
 
+      final shareText = widget.item.displayBody.isNotEmpty
+          ? widget.item.displayBody
+          : widget.item.displayTitle;
+
       await Share.shareXFiles(
         [XFile(file.path)],
-        text: widget.item.description,
+        text: shareText,
       );
     } catch (e) {
       if (mounted) {
@@ -231,7 +239,7 @@ class _CircularAnnouncementFileViewerState
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.item.description,
+              widget.item.displayTitle,
               style: GoogleFonts.inter(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,

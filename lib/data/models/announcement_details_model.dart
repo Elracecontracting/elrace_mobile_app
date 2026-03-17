@@ -17,16 +17,44 @@ class AnnouncementDetailsModel {
 
   /// Factory constructor to parse from JSON response
   factory AnnouncementDetailsModel.fromJson(Map<String, dynamic> json) {
+    final rawAttachmentUrl = json['attachment_url'] ?? json['file_url'];
+
     return AnnouncementDetailsModel(
       id: json['id'] is int
           ? json['id']
           : int.tryParse(json['id'].toString()) ?? 0,
-      title: json['title']?.toString() ?? '',
-      announcementText: json['announcement_text']?.toString() ?? '',
+      title: _firstNonEmptyString(json['title'], json['name']),
+      announcementText:
+          _firstNonEmptyString(json['announcement_text'], json['description']),
       hasAttachment:
-          json['has_attachment'] == true || json['has_attachment'] == 1,
-      attachmentUrl: json['attachment_url']?.toString(),
+          _toBool(json['has_attachment']) || _toBool(json['has_file']),
+      attachmentUrl: _normalizeAttachmentUrl(rawAttachmentUrl),
     );
+  }
+
+  static String _firstNonEmptyString(dynamic first, dynamic second) {
+    final firstValue = first?.toString().trim() ?? '';
+    if (firstValue.isNotEmpty) return firstValue;
+    return second?.toString().trim() ?? '';
+  }
+
+  static bool _toBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+    final normalized = value?.toString().trim().toLowerCase();
+    return normalized == 'true' || normalized == '1' || normalized == 'yes';
+  }
+
+  static String? _normalizeAttachmentUrl(dynamic value) {
+    final raw = value?.toString().trim() ?? '';
+    if (raw.isEmpty) return null;
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      return raw;
+    }
+    if (raw.startsWith('/')) {
+      return 'https://erp.elrace.com$raw';
+    }
+    return raw;
   }
 
   /// Convert model to JSON

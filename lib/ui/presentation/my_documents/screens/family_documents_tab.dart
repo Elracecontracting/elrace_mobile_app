@@ -14,12 +14,14 @@ class FamilyDocumentsTab extends StatefulWidget {
     super.key,
     required this.isActive,
     required this.documents,
+    this.isLoading = false,
     this.onOpenDocument,
     this.onAddDocument,
   });
 
   final bool isActive;
   final List<Map<String, dynamic>> documents;
+  final bool isLoading;
   final Future<void> Function(Map<String, dynamic> document)? onOpenDocument;
   final VoidCallback? onAddDocument;
 
@@ -28,11 +30,10 @@ class FamilyDocumentsTab extends StatefulWidget {
 }
 
 class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
-  bool _loading = false;
-  String? _error;
-
   // Currently selected folder (null = show folders list)
   String? _selectedFolder;
+  bool _folderSelectedByUser = false;
+  DateTime _lastActivatedAt = DateTime.fromMillisecondsSinceEpoch(0);
 
   List<Map<String, dynamic>> _liveFamilyDocuments() {
     final docs = widget.documents;
@@ -51,6 +52,65 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
     }).toList();
 
     return familyDocs;
+  }
+
+  String _normalizeFolderName(String value) {
+    return value.trim().toLowerCase();
+  }
+
+  String _folderNameFromLiveDoc(Map<String, dynamic> doc) {
+    for (final candidate in [
+      doc['title'],
+      doc['document_type'],
+      doc['type'],
+      doc['name']
+    ]) {
+      final value = (candidate ?? '').toString().trim();
+      if (value.isNotEmpty) return value;
+    }
+    return 'Family Documents';
+  }
+
+  List<Map<String, dynamic>> _effectiveFolders(
+      List<Map<String, dynamic>> liveDocs) {
+    if (liveDocs.isEmpty) return _folders;
+
+    final grouped = <String, Map<String, dynamic>>{};
+    for (final doc in liveDocs) {
+      final folderName = _folderNameFromLiveDoc(doc);
+      final key = _normalizeFolderName(folderName);
+      final entry = grouped[key];
+      if (entry == null) {
+        grouped[key] = {
+          'name': folderName,
+          '_count': 1,
+        };
+      } else {
+        entry['_count'] = ((entry['_count'] as int?) ?? 0) + 1;
+      }
+    }
+
+    final result = grouped.values.toList(growable: false);
+    result.sort((a, b) => (a['name'] as String)
+        .toLowerCase()
+        .compareTo((b['name'] as String).toLowerCase()));
+    return result;
+  }
+
+  List<Map<String, dynamic>> _documentsForSelectedFolder(
+      List<Map<String, dynamic>> liveDocs) {
+    final selectedFolder = _selectedFolder;
+    if (selectedFolder == null) return const [];
+
+    if (liveDocs.isEmpty) {
+      return _folderDocuments[selectedFolder] ?? const <Map<String, dynamic>>[];
+    }
+
+    final selectedKey = _normalizeFolderName(selectedFolder);
+    return liveDocs
+        .where((doc) =>
+            _normalizeFolderName(_folderNameFromLiveDoc(doc)) == selectedKey)
+        .toList(growable: false);
   }
 
   // ── Fake data for folders ──
@@ -202,8 +262,17 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
   }
 
   void _openFolder(String folderName) {
+    if (!widget.isActive) return;
+
+    // Prevent accidental immediate open right after switching to Family tab.
+    if (DateTime.now().difference(_lastActivatedAt) <
+        const Duration(milliseconds: 300)) {
+      return;
+    }
+
     setState(() {
       _selectedFolder = folderName;
+      _folderSelectedByUser = true;
     });
     // TODO: Fetch real folder documents from API
     // _fetchFolderDocuments(folderName);
@@ -212,25 +281,58 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
   void _goBackToFolders() {
     setState(() {
       _selectedFolder = null;
+      _folderSelectedByUser = false;
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isActive) {
+      _lastActivatedAt = DateTime.now();
+    }
   }
 
   @override
   void didUpdateWidget(covariant FamilyDocumentsTab oldWidget) {
     super.didUpdateWidget(oldWidget);
+    // Always reset to folders when Family tab becomes active.
+    if (!oldWidget.isActive && widget.isActive) {
+      _selectedFolder = null;
+      _folderSelectedByUser = false;
+      _lastActivatedAt = DateTime.now();
+      return;
+    }
+
     // Reset to folders view whenever user leaves Family tab.
     if (oldWidget.isActive && !widget.isActive) {
       _selectedFolder = null;
+      _folderSelectedByUser = false;
+      return;
+    }
+
+    // If data changed and selected folder no longer exists, go back to folders.
+    final selectedFolder = _selectedFolder;
+    if (selectedFolder != null) {
+      final currentFolders = _effectiveFolders(_liveFamilyDocuments())
+          .map((folder) => _normalizeFolderName(folder['name'].toString()))
+          .toSet();
+      if (!currentFolders.contains(_normalizeFolderName(selectedFolder))) {
+        _selectedFolder = null;
+        _folderSelectedByUser = false;
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final liveDocs = _liveFamilyDocuments();
-
-    if (liveDocs.isNotEmpty) {
-      return _buildLiveDocumentsList(liveDocs);
+    if (widget.isActive && widget.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
     }
+
+    final liveDocs = _liveFamilyDocuments();
 
     return WillPopScope(
       onWillPop: () async {
@@ -240,8 +342,9 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
         }
         return true;
       },
-      child:
-          _selectedFolder != null ? _buildDocumentsList() : _buildFoldersList(),
+      child: (_selectedFolder != null && _folderSelectedByUser)
+          ? _buildDocumentsList(liveDocs)
+          : _buildFoldersList(liveDocs),
     );
   }
 
@@ -416,15 +519,17 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
   }
 
   // ── Folders Grid (Main view) ──
-  Widget _buildFoldersList() {
+  Widget _buildFoldersList(List<Map<String, dynamic>> liveDocs) {
+    final folders = _effectiveFolders(liveDocs);
+
     return ListView.separated(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-      itemCount: _folders.length,
+      itemCount: folders.length,
       separatorBuilder: (context, index) => SizedBox(height: 15.h),
       itemBuilder: (context, index) {
-        final folder = _folders[index];
+        final folder = folders[index];
         return GestureDetector(
-          onTap: () => _openFolder(folder['name']),
+          onTap: () => _openFolder(folder['name'].toString()),
           child: _buildFolderCard(folder),
         );
       },
@@ -465,8 +570,12 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
   }
 
   // ── Documents Grid (Inside folder view) ──
-  Widget _buildDocumentsList() {
-    final docs = _folderDocuments[_selectedFolder] ?? [];
+  Widget _buildDocumentsList(List<Map<String, dynamic>> liveDocs) {
+    final docs = _documentsForSelectedFolder(liveDocs);
+    if (liveDocs.isNotEmpty) {
+      return _buildLiveDocumentsList(docs);
+    }
+
     return Column(
       children: [
         // Files count

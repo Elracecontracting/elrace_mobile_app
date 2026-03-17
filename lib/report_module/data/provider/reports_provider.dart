@@ -8,6 +8,7 @@ import 'package:flutter/foundation.dart';
 import 'package:el_race/main.dart';
 import 'package:el_race/report_module/core/utils/flush_bar.dart';
 import 'package:el_race/report_module/data/models/report_detail_model.dart';
+import 'package:dio/dio.dart' as dio;
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
@@ -16,6 +17,8 @@ import 'dart:io';
 
 ReportProvider reportProvider =
     Provider.of<ReportProvider>(navKey.currentContext!, listen: false);
+
+typedef UploadProgressCallback = void Function(double progress);
 
 class ReportProvider extends ChangeNotifier {
   static String baseUrl = "";
@@ -26,6 +29,26 @@ class ReportProvider extends ChangeNotifier {
   List<ReportModel> _reports = [];
 
   bool _isLoading = false;
+
+  int _compareReportsNewestFirst(ReportModel a, ReportModel b) {
+    final createdAtOrder = b.createdAt.compareTo(a.createdAt);
+    if (createdAtOrder != 0) return createdAtOrder;
+
+    final updatedAtOrder = b.updatedAt.compareTo(a.updatedAt);
+    if (updatedAtOrder != 0) return updatedAtOrder;
+
+    final aId = int.tryParse(a.id);
+    final bId = int.tryParse(b.id);
+    if (aId != null && bId != null) {
+      return bId.compareTo(aId);
+    }
+
+    return b.id.compareTo(a.id);
+  }
+
+  void _sortReportsNewestFirst() {
+    _reports.sort(_compareReportsNewestFirst);
+  }
 
   List<ReportModel> get reports => _reports;
   List<FolderModel> get folders => _folders;
@@ -50,7 +73,8 @@ class ReportProvider extends ChangeNotifier {
     final jsonData = json.decode(res);
 
     if (jsonData is Map && jsonData['status'] == "upcoming") {
-      debugPrint('⚠️ API returned "upcoming" — feature not enabled on backend yet. Message: ${jsonData['message']}');
+      debugPrint(
+          '⚠️ API returned "upcoming" — feature not enabled on backend yet. Message: ${jsonData['message']}');
       if (!neverShowMessage) {
         showFlushBar(navKey.currentContext!, message: jsonData['message']);
       }
@@ -125,6 +149,7 @@ class ReportProvider extends ChangeNotifier {
       );
     }
     _reports.insert(0, createdReport);
+    _sortReportsNewestFirst();
     notifyListeners();
   }
 
@@ -229,7 +254,8 @@ class ReportProvider extends ChangeNotifier {
         (jsonData['data'] as List).map((e) => ReportModel.fromJson(e)).toList();
     // Re-apply preserved reportTypes if API didn't return them
     for (int i = 0; i < _reports.length; i++) {
-      if (_reports[i].reportType == null && oldTypes.containsKey(_reports[i].id)) {
+      if (_reports[i].reportType == null &&
+          oldTypes.containsKey(_reports[i].id)) {
         _reports[i] = ReportModel(
           id: _reports[i].id,
           name: _reports[i].name,
@@ -241,7 +267,12 @@ class ReportProvider extends ChangeNotifier {
         );
       }
     }
-    debugPrint('🔍 Loaded ${_reports.length} reports. Types: ${_reports.map((r) => '${r.name}:${r.reportType}').join(', ')}');
+
+    // Always show newest reports first in My Report screens.
+    _sortReportsNewestFirst();
+
+    debugPrint(
+        '🔍 Loaded ${_reports.length} reports. Types: ${_reports.map((r) => '${r.name}:${r.reportType}').join(', ')}');
     notifyListeners();
   }
 
@@ -352,41 +383,60 @@ class ReportProvider extends ChangeNotifier {
     required String reportId,
     required String folderId,
     required String fileName,
+    UploadProgressCallback? onProgress,
   }) async {
-    final url = Uri.parse(
-        '$baseUrl/api/upload_site_report?folder_id=$folderId&file_name=$fileName');
-    // print('folderId: $folderId,  file_name:$fileName, ');
-
     try {
-      var request = http.MultipartRequest('POST', url)
-        ..fields['emp_id'] = empId
-        ..fields['report_id'] = reportId
-        ..fields['folder_id'] = folderId
-        ..fields['file_name'] = fileName
-        ..files.add(
-          http.MultipartFile.fromBytes(
-            'file', // field name on backend
-            pdfBytes,
-            filename: fileName,
-          ),
-        );
-      print(request.fields);
-      print("Sending request to $url");
-      final streamedResponse = await request.send();
+      final client = dio.Dio(
+        dio.BaseOptions(
+          connectTimeout: const Duration(seconds: 45),
+          receiveTimeout: const Duration(seconds: 90),
+          sendTimeout: const Duration(seconds: 90),
+        ),
+      );
 
-      print("Streamed response status: ${streamedResponse.statusCode}");
+      final formData = dio.FormData.fromMap({
+        'emp_id': empId,
+        'report_id': reportId,
+        'folder_id': folderId,
+        'file_name': fileName,
+        'file': dio.MultipartFile.fromBytes(pdfBytes, filename: fileName),
+      });
 
-      final response = await http.Response.fromStream(streamedResponse);
-
-      print("Final response body: ${response.body}");
+      final response = await client.post(
+        '$baseUrl/api/upload_site_report',
+        queryParameters: {
+          'folder_id': folderId,
+          'file_name': fileName,
+        },
+        data: formData,
+        onSendProgress: (sent, total) {
+          if (onProgress == null || total <= 0) return;
+          final progress = (sent / total).clamp(0.0, 1.0);
+          onProgress(progress.toDouble());
+        },
+      );
 
       if (response.statusCode == 200) {
-        final body = jsonDecode(response.body);
-        return body['status'] == 'success';
-      } else {
-        print("Upload failed with status: ${response.statusCode}");
-        return false;
+        final data = response.data;
+        Map<String, dynamic>? body;
+        if (data is Map<String, dynamic>) {
+          body = data;
+        } else if (data is String) {
+          final decoded = jsonDecode(data);
+          if (decoded is Map<String, dynamic>) {
+            body = decoded;
+          }
+        }
+        return body?['status'] == 'success';
       }
+
+      print('Upload failed with status: ${response.statusCode}');
+      return false;
+    } on dio.DioException catch (e) {
+      print('Dio exception during PDF upload: ${e.message}');
+      print('Dio response status: ${e.response?.statusCode}');
+      print('Dio response data: ${e.response?.data}');
+      return false;
     } catch (e) {
       print("Exception caught during PDF upload: $e");
       return false;
@@ -402,9 +452,9 @@ class ReportProvider extends ChangeNotifier {
         'report_id': fileId,
       };
       print('🗑️ deleteReportPdf REQUEST fields: $fields');
-      var request = http.MultipartRequest(
-          'POST', Uri.parse('$baseUrl/reports/delete'))
-        ..fields.addAll(fields);
+      var request =
+          http.MultipartRequest('POST', Uri.parse('$baseUrl/reports/delete'))
+            ..fields.addAll(fields);
       final response = await request.send();
       final res = await response.stream.bytesToString();
       print('🗑️ deleteReportPdf STATUS: ${response.statusCode}');
@@ -430,9 +480,9 @@ class ReportProvider extends ChangeNotifier {
         'name': newFileName,
       };
       print('✏️ renameReportPdf REQUEST fields: $fields');
-      var request = http.MultipartRequest(
-          'POST', Uri.parse('$baseUrl/reports/update'))
-        ..fields.addAll(fields);
+      var request =
+          http.MultipartRequest('POST', Uri.parse('$baseUrl/reports/update'))
+            ..fields.addAll(fields);
       final response = await request.send();
       final res = await response.stream.bytesToString();
       print('✏️ renameReportPdf STATUS: ${response.statusCode}');
@@ -459,7 +509,8 @@ class ReportProvider extends ChangeNotifier {
     int index = 0,
   }) async {
     try {
-      debugPrint('📤 addReportItem: reportId=$reportId, location=$location, image=${imageFile.path}');
+      debugPrint(
+          '📤 addReportItem: reportId=$reportId, location=$location, image=${imageFile.path}');
       var request = http.MultipartRequest(
           'POST', Uri.parse('$baseUrl/api/upload_report_item'))
         ..fields.addAll({
@@ -477,11 +528,14 @@ class ReportProvider extends ChangeNotifier {
       final res = await response.stream.bytesToString();
       debugPrint('📤 upload_report_item response: $res');
       final jsonData = json.decode(res);
-      
-      if (jsonData is Map<String, dynamic> && jsonData.containsKey('data') && jsonData['data'] != null) {
+
+      if (jsonData is Map<String, dynamic> &&
+          jsonData.containsKey('data') &&
+          jsonData['data'] != null) {
         final data = jsonData['data'];
         if (data is List && data.isNotEmpty) {
-          return ReportItemModel.fromJson(data[0] as Map<String, dynamic>, reportId);
+          return ReportItemModel.fromJson(
+              data[0] as Map<String, dynamic>, reportId);
         } else if (data is Map<String, dynamic>) {
           return ReportItemModel.fromJson(data, reportId);
         }
@@ -520,8 +574,10 @@ class ReportProvider extends ChangeNotifier {
             .add(await http.MultipartFile.fromPath('image', imageFile.path));
       }
 
-      debugPrint('📤 updateReportItem: url=${request.url} fields=${request.fields}');
-      final jsonData = await _handleResponse(await request.send(), neverShowMessage: true);
+      debugPrint(
+          '📤 updateReportItem: url=${request.url} fields=${request.fields}');
+      final jsonData =
+          await _handleResponse(await request.send(), neverShowMessage: true);
       debugPrint('📤 updateReportItem response: $jsonData');
       if (jsonData.containsKey('data') && jsonData['data'] != null) {
         return ReportItemModel.fromJson(jsonData['data'], reportId);
@@ -558,20 +614,23 @@ class ReportProvider extends ChangeNotifier {
   /// Fetch full report detail (with items) from the server
   Future<ReportDetailModel?> fetchReportDetailFromApi(String reportId) async {
     try {
-      debugPrint('🔍 fetchReportDetailFromApi: reportId=$reportId, baseUrl=$baseUrl');
-      var request = http.MultipartRequest(
-          'POST', Uri.parse('$baseUrl/reports/detail'))
-        ..fields.addAll({
-          'emp_id': empID,
-          'report_id': reportId,
-        });
+      debugPrint(
+          '🔍 fetchReportDetailFromApi: reportId=$reportId, baseUrl=$baseUrl');
+      var request =
+          http.MultipartRequest('POST', Uri.parse('$baseUrl/reports/detail'))
+            ..fields.addAll({
+              'emp_id': empID,
+              'report_id': reportId,
+            });
 
       final response = await request.send();
       final res = await response.stream.bytesToString();
       debugPrint('🔍 reports/detail raw response: $res');
       final jsonData = json.decode(res);
-      
-      if (jsonData is Map<String, dynamic> && jsonData.containsKey('data') && jsonData['data'] != null) {
+
+      if (jsonData is Map<String, dynamic> &&
+          jsonData.containsKey('data') &&
+          jsonData['data'] != null) {
         return ReportDetailModel.fromJson(jsonData['data']);
       }
       debugPrint('🔍 reports/detail: no data in response');

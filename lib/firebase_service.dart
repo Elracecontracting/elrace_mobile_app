@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:el_race/chat/models/models.dart';
+import 'package:el_race/core/services/attendance_status_sync_service.dart';
 import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/main.dart';
@@ -76,7 +77,7 @@ class FirebaseService {
     );
 
     // Handle foreground messages
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
       print('📬 [FOREGROUND] Received message!');
       print('   - Title: ${message.notification?.title}');
       print('   - Body: ${message.notification?.body}');
@@ -85,7 +86,8 @@ class FirebaseService {
       // Skip chat push notifications in foreground — ChatNotificationService
       // handles them via Firestore stream to avoid duplicates
       final msgType = message.data['type']?.toString().toLowerCase() ??
-          message.data['category']?.toString().toLowerCase() ?? '';
+          message.data['category']?.toString().toLowerCase() ??
+          '';
       if (msgType == 'chat_message' || msgType == 'chat') {
         print('   - ⏭️ Chat message — handled by ChatNotificationService');
         return;
@@ -94,10 +96,15 @@ class FirebaseService {
       _showNotification(message);
       // Save notification to storage
       _saveNotificationToStorage(message);
+
+      await _refreshAttendanceFromPushIfNeeded(
+        message,
+        source: 'foreground',
+      );
     });
 
     // Handle background-tap messages (when app is resumed from notification)
-    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) async {
       final messageId = message.messageId ?? message.data.toString();
       print('📲 [BACKGROUND TAP] App opened from notification!');
       print('   - Message ID: $messageId');
@@ -116,13 +123,17 @@ class FirebaseService {
 
       // Save notification to storage if not already saved
       _saveNotificationToStorage(message);
+      await _refreshAttendanceFromPushIfNeeded(
+        message,
+        source: 'background_tap',
+      );
       _handleNotificationTap(message.data.toString());
     });
 
     // Check for initial message (when app is opened from terminated state)
     FirebaseMessaging.instance
         .getInitialMessage()
-        .then((RemoteMessage? message) {
+        .then((RemoteMessage? message) async {
       if (message != null) {
         final messageId = message.messageId ?? message.data.toString();
         print('📲 [TERMINATED TAP] App opened from notification!');
@@ -141,6 +152,10 @@ class FirebaseService {
             '   - ✅ Processing message (${_processedMessageIds.length} total processed)');
 
         _saveNotificationToStorage(message);
+        await _refreshAttendanceFromPushIfNeeded(
+          message,
+          source: 'terminated_tap',
+        );
         _handleNotificationTap(message.data.toString());
       } else {
         print('ℹ️ [TERMINATED] No initial message found');
@@ -352,6 +367,66 @@ class FirebaseService {
     }
   }
 
+  static Future<void> _refreshAttendanceFromPushIfNeeded(
+    RemoteMessage message, {
+    required String source,
+  }) async {
+    if (!_isAttendancePush(message)) {
+      return;
+    }
+
+    print(
+      '🕒 Attendance push trigger detected from $source. Refreshing /api/attendance/today_status',
+    );
+
+    await AttendanceStatusSyncService.refreshFromServer(
+      reason: 'push_$source',
+    );
+  }
+
+  static bool _isAttendancePush(RemoteMessage message) {
+    final data = message.data;
+
+    final searchSpace = <String>[
+      data['category']?.toString() ?? '',
+      data['type']?.toString() ?? '',
+      data['model']?.toString() ?? '',
+      data['model_name']?.toString() ?? '',
+      data['event']?.toString() ?? '',
+      data['action']?.toString() ?? '',
+      data['topic']?.toString() ?? '',
+      message.notification?.title ?? '',
+      message.notification?.body ?? '',
+    ].join(' ').toLowerCase();
+
+    final hasAttendanceKeyword = searchSpace.contains('hr.attendance') ||
+        searchSpace.contains('attendance') ||
+        searchSpace.contains('biotime') ||
+        searchSpace.contains('check_in') ||
+        searchSpace.contains('check_out') ||
+        searchSpace.contains('check in') ||
+        searchSpace.contains('check out') ||
+        searchSpace.contains('checkout');
+
+    if (hasAttendanceKeyword) {
+      return true;
+    }
+
+    final refreshFlag = data['refresh_attendance'] ??
+        data['attendance_refresh'] ??
+        data['refresh_today_status'];
+
+    if (refreshFlag == null) {
+      return false;
+    }
+
+    final normalizedFlag = refreshFlag.toString().trim().toLowerCase();
+    return normalizedFlag == '1' ||
+        normalizedFlag == 'true' ||
+        normalizedFlag == 'yes' ||
+        normalizedFlag == 'y';
+  }
+
   static void _handleNotificationTap(String? payload) {
     print('\n🔔 [HANDLE TAP] Starting to handle notification tap');
     print('   - Payload: $payload');
@@ -491,8 +566,8 @@ class FirebaseService {
           if (allParts.startsWith('${currentUid}_')) {
             peerUid = allParts.substring(currentUid.length + 1);
           } else if (allParts.endsWith('_$currentUid')) {
-            peerUid = allParts.substring(
-                0, allParts.length - currentUid.length - 1);
+            peerUid =
+                allParts.substring(0, allParts.length - currentUid.length - 1);
           }
         }
       }

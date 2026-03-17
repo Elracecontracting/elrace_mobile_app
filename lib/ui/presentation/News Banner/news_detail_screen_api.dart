@@ -1,4 +1,6 @@
 import 'package:el_race/data/models/announcement_model.dart';
+import 'package:el_race/data/models/announcement_details_model.dart';
+import 'package:el_race/data/services/announcements_api_service.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
@@ -6,13 +8,76 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// News detail screen that displays full announcement details from API
-class NewsDetailScreenAPI extends StatelessWidget {
+class NewsDetailScreenAPI extends StatefulWidget {
   final AnnouncementModel newsItem;
 
   const NewsDetailScreenAPI({
     super.key,
     required this.newsItem,
   });
+
+  @override
+  State<NewsDetailScreenAPI> createState() => _NewsDetailScreenAPIState();
+}
+
+class _NewsDetailScreenAPIState extends State<NewsDetailScreenAPI> {
+  final AnnouncementsApiService _apiService = AnnouncementsApiService();
+
+  AnnouncementDetailsModel? _details;
+  bool _isLoadingDetails = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDetails();
+  }
+
+  Future<void> _fetchDetails() async {
+    setState(() {
+      _isLoadingDetails = true;
+    });
+
+    try {
+      final details = await _apiService.fetchAnnouncementDetails(
+        announcementId: widget.newsItem.id,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _details = details;
+      });
+    } catch (_) {
+      // Fallback to list item data if details endpoint fails.
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingDetails = false;
+      });
+    }
+  }
+
+  String get _title {
+    final detailsTitle = _details?.title.trim() ?? '';
+    if (detailsTitle.isNotEmpty) return detailsTitle;
+    return widget.newsItem.name;
+  }
+
+  String get _content {
+    final detailsText = _details?.announcementText.trim() ?? '';
+    if (detailsText.isNotEmpty) return detailsText;
+    return widget.newsItem.description;
+  }
+
+  String? get _imageUrl {
+    final detailsAttachment = _details?.attachmentUrl?.trim() ?? '';
+    if (detailsAttachment.isNotEmpty) return detailsAttachment;
+    return widget.newsItem.attachmentUrl;
+  }
+
+  bool get _hasAttachment {
+    if (_details != null) return _details!.hasAttachment;
+    return widget.newsItem.hasAttachment;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,15 +89,17 @@ class NewsDetailScreenAPI extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (_isLoadingDetails) const LinearProgressIndicator(minHeight: 2),
+
             // News image if available
-            if (newsItem.hasAttachment && newsItem.attachmentUrl != null) ...[
+            if (_hasAttachment && _imageUrl != null) ...[
               const SizedBox(height: 20),
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24.w),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8.r),
                   child: Image.network(
-                    newsItem.attachmentUrl!,
+                    _imageUrl!,
                     width: double.infinity,
                     height: 250.h,
                     fit: BoxFit.cover,
@@ -72,7 +139,7 @@ class NewsDetailScreenAPI extends StatelessWidget {
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 24.w),
               child: Text(
-                newsItem.name,
+                _title,
                 textAlign: TextAlign.left,
                 style: GoogleFonts.koulen(
                   fontSize: 26.sp,
@@ -93,7 +160,7 @@ class NewsDetailScreenAPI extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    newsItem.description,
+                    _content,
                     style: GoogleFonts.inter(
                       fontSize: 15.sp,
                       color: const Color(0xFF374151),
