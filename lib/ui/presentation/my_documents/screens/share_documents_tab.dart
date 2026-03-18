@@ -6,28 +6,69 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 
+import 'attachment_viewer_screen.dart';
+
 /// Share Documents Tab
-/// Fetches shared folders from GET /api/cloud/shared_folders
-/// Opens folder via POST /api/cloud/folder/details
-/// Adds user via POST /api/cloud/folder/add_user
 class ShareDocumentsTab extends StatefulWidget {
-  const ShareDocumentsTab({super.key});
+  const ShareDocumentsTab({
+    super.key,
+    this.onOpenDocument,
+  });
+
+  final Future<void> Function(Map<String, dynamic> document)? onOpenDocument;
 
   @override
   State<ShareDocumentsTab> createState() => _ShareDocumentsTabState();
 }
 
 class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
-  bool _loading = false;
+  bool _isLoadingFolders = false;
+  bool _isLoadingDetails = false;
+  bool _isAddingUser = false;
   String? _error;
-  List<Map<String, dynamic>> _folders = [];
 
-  // Folder detail state
+  List<Map<String, dynamic>> _folders = <Map<String, dynamic>>[];
   Map<String, dynamic>? _selectedFolder;
-  bool _detailLoading = false;
-  String? _detailError;
-  List<Map<String, dynamic>> _folderFiles = [];
-  List<Map<String, dynamic>> _sharedUsers = [];
+  List<Map<String, dynamic>> _folderFiles = <Map<String, dynamic>>[];
+  List<Map<String, dynamic>> _sharedUsers = <Map<String, dynamic>>[];
+
+  void _debugPrintLong(String message) {
+    const chunkSize = 800;
+    for (var i = 0; i < message.length; i += chunkSize) {
+      final end =
+          (i + chunkSize < message.length) ? i + chunkSize : message.length;
+      debugPrint(message.substring(i, end));
+    }
+  }
+
+  void _logSharedRequest({
+    required String label,
+    required Uri url,
+    required String method,
+    required Map<String, String> headers,
+    String? body,
+  }) {
+    debugPrint(
+        '============= SHARED DOCS REQUEST [$label] START =============');
+    debugPrint('URL: $url');
+    debugPrint('Method: $method');
+    _debugPrintLong('Headers: ${jsonEncode(headers)}');
+    if (body != null && body.isNotEmpty) {
+      _debugPrintLong('Body: $body');
+    }
+    debugPrint(
+        '============== SHARED DOCS REQUEST [$label] END ==============');
+  }
+
+  void _logSharedResponse(String label, http.Response response) {
+    debugPrint(
+        '============= SHARED DOCS RESPONSE [$label] START ============');
+    debugPrint('Status: ${response.statusCode}');
+    _debugPrintLong('Headers: ${jsonEncode(response.headers)}');
+    _debugPrintLong('Body: ${response.body}');
+    debugPrint(
+        '============== SHARED DOCS RESPONSE [$label] END =============');
+  }
 
   @override
   void initState() {
@@ -35,286 +76,663 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
     _fetchSharedFolders();
   }
 
-  String get _token => SharedPref.getLoginData().result?.token ?? '';
+  String _normalizeToken(dynamic value) {
+    return (value ?? '').toString().trim().toLowerCase();
+  }
 
-  Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': 'Bearer $_token',
-      };
+  bool _isSuccessResult(dynamic decoded) {
+    if (decoded is! Map) return false;
+    final result = decoded['result'];
+    if (result is! Map) return false;
+    final status = _normalizeToken(result['status']);
+    return status == 'success' || status == 'ok' || status == 'true';
+  }
+
+  String _extractMessage(dynamic decoded, String fallback) {
+    if (decoded is! Map) return fallback;
+    final result = decoded['result'];
+    if (result is Map) {
+      final message = result['message']?.toString();
+      if (message != null && message.trim().isNotEmpty) {
+        return message;
+      }
+    }
+    final error = decoded['error']?.toString();
+    if (error != null && error.trim().isNotEmpty) {
+      return error;
+    }
+    return fallback;
+  }
+
+  dynamic _extractResultData(dynamic decoded) {
+    if (decoded is! Map) return null;
+    final result = decoded['result'];
+    if (result is! Map) return null;
+    return result['data'];
+  }
+
+  dynamic _decodeJsonResponse(http.Response response,
+      {required String fallbackError}) {
+    final body = response.body.trim();
+    if (body.isEmpty) {
+      throw Exception('$fallbackError (empty response)');
+    }
+
+    try {
+      return jsonDecode(body);
+    } catch (_) {
+      final preview = body.length > 120 ? '${body.substring(0, 120)}...' : body;
+      throw Exception('$fallbackError (invalid response: $preview)');
+    }
+  }
+
+  List<Map<String, dynamic>> _toMapList(dynamic value) {
+    if (value is List) {
+      return value
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList(growable: false);
+    }
+    if (value is Map) {
+      return <Map<String, dynamic>>[Map<String, dynamic>.from(value)];
+    }
+    return const <Map<String, dynamic>>[];
+  }
+
+  dynamic _folderIdFrom(Map<String, dynamic> folder) {
+    final raw = folder['id'] ?? folder['folder_id'] ?? folder['folderId'];
+    if (raw == null) return null;
+    final parsed = int.tryParse(raw.toString());
+    return parsed ?? raw;
+  }
+
+  String _folderNameFrom(Map<String, dynamic> folder) {
+    final raw = folder['name'] ?? folder['folder_name'] ?? folder['title'];
+    final name = raw?.toString().trim() ?? '';
+    return name.isEmpty ? 'Folder' : name;
+  }
+
+  List<Map<String, dynamic>> _extractFolders(dynamic data) {
+    List<Map<String, dynamic>> base;
+    if (data is Map) {
+      final candidate =
+          data['folders'] ?? data['data'] ?? data['items'] ?? data['list'];
+      base = _toMapList(candidate);
+      if (base.isEmpty) {
+        base = _toMapList(data);
+      }
+    } else {
+      base = _toMapList(data);
+    }
+
+    return base
+        .map((folder) {
+          final mapped = Map<String, dynamic>.from(folder);
+          mapped['id'] = _folderIdFrom(folder);
+          mapped['name'] = _folderNameFrom(folder);
+          return mapped;
+        })
+        .where((folder) => folder['id'] != null)
+        .toList(growable: false);
+  }
+
+  Map<String, dynamic> _normalizeFile(Map<String, dynamic> file) {
+    final mapped = Map<String, dynamic>.from(file);
+    final fileName = (mapped['name'] ??
+            mapped['file_name'] ??
+            mapped['attachment_name'] ??
+            mapped['attachment_filename'] ??
+            mapped['title'] ??
+            'Attachment')
+        .toString();
+
+    dynamic attachmentIds = mapped['attachment_ids'];
+    final rawAttachmentId = mapped['attachment_id'] ?? mapped['attachmentId'];
+    if ((attachmentIds == null ||
+            (attachmentIds is List && attachmentIds.isEmpty)) &&
+        rawAttachmentId != null &&
+        rawAttachmentId.toString().isNotEmpty) {
+      attachmentIds = <dynamic>[rawAttachmentId];
+    }
+
+    mapped['name'] = fileName;
+    mapped['attachment_ids'] = attachmentIds ?? const <dynamic>[];
+    return mapped;
+  }
+
+  List<Map<String, dynamic>> _extractFiles(dynamic data) {
+    List<Map<String, dynamic>> files;
+    if (data is Map) {
+      final candidate = data['attachments'] ??
+          data['files'] ??
+          data['documents'] ??
+          data['items'];
+      files = _toMapList(candidate);
+    } else {
+      files = _toMapList(data);
+    }
+    return files.map(_normalizeFile).toList(growable: false);
+  }
+
+  List<Map<String, dynamic>> _extractUsers(dynamic data) {
+    List<Map<String, dynamic>> users;
+    if (data is Map) {
+      final candidate =
+          data['shared_users'] ?? data['users'] ?? data['members'] ?? [];
+      users = _toMapList(candidate);
+    } else {
+      users = const <Map<String, dynamic>>[];
+    }
+
+    return users.map((user) {
+      final mapped = Map<String, dynamic>.from(user);
+      mapped['employee_id'] = mapped['employee_id'] ?? mapped['id'];
+      mapped['name'] = (mapped['name'] ??
+              mapped['employee_name'] ??
+              mapped['display_name'] ??
+              'User')
+          .toString();
+      return mapped;
+    }).toList(growable: false);
+  }
 
   Future<void> _fetchSharedFolders() async {
     if (!mounted) return;
     setState(() {
-      _loading = true;
+      _isLoadingFolders = true;
       _error = null;
     });
 
     try {
-      final url = Uri.parse('https://erp.elrace.com/api/cloud/shared_folders');
-      final body = jsonEncode({'jsonrpc': '2.0', 'params': {}});
-      final response = await http.post(url, headers: _headers, body: body);
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 &&
-          data['result'] != null &&
-          data['result']['status'] == 'success') {
-        final List list = (data['result']['data'] ?? []) as List;
-        if (mounted) {
-          setState(() {
-            _folders = list
-                .whereType<Map>()
-                .map((e) => Map<String, dynamic>.from(e))
-                .toList();
-            _loading = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _error = data['result']?['message']?.toString() ??
-                data['error']?.toString() ??
-                'Failed to load shared folders';
-            _loading = false;
-          });
-        }
+      final token = SharedPref.getLoginData().result?.token ?? '';
+      if (token.isEmpty) {
+        throw Exception('Session expired. Please login again.');
       }
+
+      final url = Uri.parse('https://erp.elrace.com/api/cloud/shared_folders');
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+      final body = jsonEncode({
+        'jsonrpc': '2.0',
+        'params': <String, dynamic>{},
+      });
+
+      _logSharedRequest(
+        label: 'shared_folders',
+        url: url,
+        method: 'GET',
+        headers: headers,
+        body: body,
+      );
+
+      final request = http.Request('GET', url)
+        ..headers.addAll(headers)
+        ..body = body;
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      _logSharedResponse('shared_folders', response);
+      final decoded = _decodeJsonResponse(response,
+          fallbackError: 'Failed to load shared folders');
+
+      if (response.statusCode != 200 || !_isSuccessResult(decoded)) {
+        throw Exception(
+            _extractMessage(decoded, 'Failed to load shared folders'));
+      }
+
+      final data = _extractResultData(decoded);
+      final folders = _extractFolders(data);
+
+      if (!mounted) return;
+      setState(() {
+        _folders = folders;
+      });
     } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
       if (mounted) {
         setState(() {
-          _error = e.toString();
-          _loading = false;
+          _isLoadingFolders = false;
         });
       }
     }
   }
 
   Future<void> _openFolder(Map<String, dynamic> folder) async {
+    final folderId = _folderIdFrom(folder);
+    if (folderId == null) return;
+
+    if (!mounted) return;
     setState(() {
       _selectedFolder = folder;
-      _detailLoading = true;
-      _detailError = null;
-      _folderFiles = [];
-      _sharedUsers = [];
+      _isLoadingDetails = true;
+      _error = null;
+      _folderFiles = <Map<String, dynamic>>[];
+      _sharedUsers = <Map<String, dynamic>>[];
     });
 
     try {
-      final folderId = folder['id'] ?? folder['folder_id'];
-      final url = Uri.parse('https://erp.elrace.com/api/cloud/folder/details');
-      final body = jsonEncode({'jsonrpc': '2.0', 'params': {'folder_id': folderId}});
-      final response = await http.post(url, headers: _headers, body: body);
-      final data = jsonDecode(response.body);
-
-      if (response.statusCode == 200 &&
-          data['result'] != null &&
-          data['result']['status'] == 'success') {
-        final result = data['result']['data'] ?? data['result'];
-        final attachments =
-            result['attachments'] ?? result['files'] ?? result['data'] ?? [];
-        final users = result['shared_users'] ??
-            result['users'] ??
-            result['members'] ??
-            [];
-        if (mounted) {
-          setState(() {
-            _folderFiles = (attachments as List)
-                .whereType<Map>()
-                .map((e) => Map<String, dynamic>.from(e))
-                .toList();
-            _sharedUsers = (users as List)
-                .whereType<Map>()
-                .map((e) => Map<String, dynamic>.from(e))
-                .toList();
-            _detailLoading = false;
-          });
-        }
-      } else {
-        if (mounted) {
-          setState(() {
-            _detailError = data['result']?['message']?.toString() ??
-                data['error']?.toString() ??
-                'Failed to load folder details';
-            _detailLoading = false;
-          });
-        }
+      final token = SharedPref.getLoginData().result?.token ?? '';
+      if (token.isEmpty) {
+        throw Exception('Session expired. Please login again.');
       }
+
+      final url = Uri.parse('https://erp.elrace.com/api/cloud/folder/details');
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+      final body = jsonEncode({
+        'jsonrpc': '2.0',
+        'params': {
+          'folder_id': folderId,
+        },
+      });
+
+      _logSharedRequest(
+        label: 'folder_details',
+        url: url,
+        method: 'GET',
+        headers: headers,
+        body: body,
+      );
+
+      final request = http.Request('GET', url)
+        ..headers.addAll(headers)
+        ..body = body;
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      _logSharedResponse('folder_details', response);
+      final decoded = _decodeJsonResponse(response,
+          fallbackError: 'Failed to load folder details');
+
+      if (response.statusCode != 200 || !_isSuccessResult(decoded)) {
+        throw Exception(
+            _extractMessage(decoded, 'Failed to load folder details'));
+      }
+
+      final data = _extractResultData(decoded);
+      final files = _extractFiles(data);
+      final users = _extractUsers(data);
+
+      if (!mounted) return;
+      setState(() {
+        _folderFiles = files;
+        _sharedUsers = users;
+      });
     } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
       if (mounted) {
         setState(() {
-          _detailError = e.toString();
-          _detailLoading = false;
+          _isLoadingDetails = false;
         });
       }
     }
   }
 
-  Future<void> _addUserToFolder({
-    required int folderId,
-    required int employeeId,
-  }) async {
+  Future<void> _showAddUserDialog() async {
+    final folder = _selectedFolder;
+    if (folder == null) return;
+
+    final controller = TextEditingController();
+    final employeeId = await showDialog<int>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: const Text('Add User to Folder'),
+          content: TextField(
+            controller: controller,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(
+              hintText: 'Employee ID',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final value = int.tryParse(controller.text.trim());
+                if (value == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content: Text('Please enter a valid employee ID')),
+                  );
+                  return;
+                }
+                Navigator.pop(ctx, value);
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+
+    if (employeeId == null) return;
+    await _addUserToFolder(folder, employeeId);
+  }
+
+  Future<void> _addUserToFolder(
+    Map<String, dynamic> folder,
+    int employeeId,
+  ) async {
+    final folderId = _folderIdFrom(folder);
+    if (folderId == null) return;
+
+    if (!mounted) return;
+    setState(() {
+      _isAddingUser = true;
+    });
+
     try {
-      final url =
-          Uri.parse('https://erp.elrace.com/api/cloud/folder/add_user');
+      final token = SharedPref.getLoginData().result?.token ?? '';
+      if (token.isEmpty) {
+        throw Exception('Session expired. Please login again.');
+      }
+
+      final url = Uri.parse('https://erp.elrace.com/api/cloud/folder/add_user');
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
       final body = jsonEncode({
         'jsonrpc': '2.0',
-        'params': {'folder_id': folderId, 'employee_id': employeeId},
+        'params': {
+          'folder_id': folderId,
+          'employee_id': employeeId,
+        },
       });
-      final response = await http.post(url, headers: _headers, body: body);
-      final data = jsonDecode(response.body);
 
-      final success = response.statusCode == 200 &&
-          data['result'] != null &&
-          data['result']['status'] == 'success';
+      _logSharedRequest(
+        label: 'folder_add_user',
+        url: url,
+        method: 'GET',
+        headers: headers,
+        body: body,
+      );
+
+      final request = http.Request('GET', url)
+        ..headers.addAll(headers)
+        ..body = body;
+
+      final streamed = await request.send();
+      final response = await http.Response.fromStream(streamed);
+      _logSharedResponse('folder_add_user', response);
+      final decoded =
+          _decodeJsonResponse(response, fallbackError: 'Failed to add user');
+
+      if (response.statusCode != 200 || !_isSuccessResult(decoded)) {
+        throw Exception(_extractMessage(decoded, 'Failed to add user'));
+      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            success
-                ? 'User added to folder successfully'
-                : (data['result']?['message']?.toString() ??
-                    data['error']?.toString() ??
-                    'Failed to add user'),
-          ),
-          backgroundColor: success ? Colors.green : Colors.red,
-        ),
+        const SnackBar(content: Text('User added successfully')),
       );
-
-      if (success && _selectedFolder != null) {
-        await _openFolder(_selectedFolder!);
-      }
+      await _openFolder(folder);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString()),
-          backgroundColor: Colors.red,
-        ),
+        SnackBar(content: Text(e.toString())),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAddingUser = false;
+        });
+      }
     }
   }
 
-  void _showAddUserDialog() {
-    final folderId = _selectedFolder?['id'] ?? _selectedFolder?['folder_id'];
-    if (folderId == null) return;
+  Future<void> _openAttachment(Map<String, dynamic> file) async {
+    final callback = widget.onOpenDocument;
+    final attachmentIds = file['attachment_ids'];
+    final hasAttachmentIds =
+        (attachmentIds is List && attachmentIds.isNotEmpty) ||
+            attachmentIds is Map;
 
-    final employeeIdController = TextEditingController();
+    if (callback != null && hasAttachmentIds) {
+      await callback(file);
+      return;
+    }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'Add User to Folder',
-          style: GoogleFonts.aBeeZee(
-            fontWeight: FontWeight.w700,
-            fontSize: 16.sp,
-          ),
+    final rawUrl = (file['public_url'] ?? file['download_url'] ?? file['url'])
+        ?.toString()
+        .trim();
+    if (rawUrl == null || rawUrl.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No attachment URL available')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AttachmentViewerScreen(
+          publicUrl: rawUrl,
+          title: (file['name'] ?? 'Attachment').toString(),
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Enter the employee ID to share this folder with:',
-              style: GoogleFonts.aBeeZee(fontSize: 13.sp),
-            ),
-            SizedBox(height: 12.h),
-            TextField(
-              controller: employeeIdController,
-              keyboardType: TextInputType.number,
-              decoration: InputDecoration(
-                hintText: 'Employee ID',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF090A38),
-            ),
-            onPressed: () {
-              final empId =
-                  int.tryParse(employeeIdController.text.trim());
-              if (empId == null) return;
-              Navigator.of(ctx).pop();
-              _addUserToFolder(
-                folderId: int.tryParse(folderId.toString()) ?? 0,
-                employeeId: empId,
-              );
-            },
-            child: Text(
-              'Add',
-              style: GoogleFonts.aBeeZee(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
 
-  void _goBackToFolderList() {
-    setState(() {
-      _selectedFolder = null;
-      _folderFiles = [];
-      _sharedUsers = [];
-      _detailError = null;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_selectedFolder != null) {
-      return _buildFolderDetail();
-    }
-    return _buildFolderList();
-  }
-
-  Widget _buildFolderList() {
-    if (_loading) {
+  Widget _buildFolderListView() {
+    if (_isLoadingFolders) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_error != null && _folders.isEmpty) {
+    if (_error != null) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              _error!,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.aBeeZee(fontSize: 13.sp, color: Colors.grey),
-            ),
-            SizedBox(height: 12.h),
-            TextButton(
-              onPressed: _fetchSharedFolders,
-              child:
-                  Text('Retry', style: GoogleFonts.aBeeZee(fontSize: 13.sp)),
-            ),
-          ],
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20.w),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: GoogleFonts.aBeeZee(
+                  color: const Color(0xFFBA1719),
+                  fontSize: 12.sp,
+                ),
+              ),
+              SizedBox(height: 12.h),
+              OutlinedButton(
+                onPressed: _fetchSharedFolders,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return RefreshIndicator(
-      onRefresh: _fetchSharedFolders,
-      child: Column(
-        children: [
-          Padding(
-            padding: EdgeInsets.only(
-                left: 20.w, right: 20.w, top: 8.h, bottom: 8.h),
-            child: Row(
-              children: [
-                Container(
+    if (_folders.isEmpty) {
+      return Center(
+        child: Text(
+          'No shared folders found',
+          style: GoogleFonts.aBeeZee(
+            fontSize: 13.sp,
+            color: const Color(0xff949494),
+          ),
+        ),
+      );
+    }
+
+    return ListView.separated(
+      physics: const BouncingScrollPhysics(),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+      itemCount: _folders.length,
+      separatorBuilder: (_, __) => SizedBox(height: 12.h),
+      itemBuilder: (context, index) {
+        final folder = _folders[index];
+        return _ShareFolderCard(
+          title: _folderNameFrom(folder),
+          onTap: () => _openFolder(folder),
+        );
+      },
+    );
+  }
+
+  Widget _buildFolderDetailsView() {
+    if (_isLoadingDetails) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20.w),
+          child: Text(
+            _error!,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.aBeeZee(
+              color: const Color(0xFFBA1719),
+              fontSize: 12.sp,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return ListView(
+      physics: const BouncingScrollPhysics(),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Shared Users (${_sharedUsers.length})',
+                style: GoogleFonts.aBeeZee(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF27304E),
+                ),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: _isAddingUser ? null : _showAddUserDialog,
+              style: ElevatedButton.styleFrom(
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                backgroundColor: const Color(0xFF090A38),
+              ),
+              child: _isAddingUser
+                  ? SizedBox(
+                      width: 14.w,
+                      height: 14.w,
+                      child: const CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Text(
+                      'Add User',
+                      style: GoogleFonts.aBeeZee(
+                        color: Colors.white,
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+            ),
+          ],
+        ),
+        SizedBox(height: 8.h),
+        if (_sharedUsers.isEmpty)
+          Text(
+            'No shared users',
+            style: GoogleFonts.aBeeZee(
+              fontSize: 11.sp,
+              color: const Color(0xff949494),
+            ),
+          )
+        else
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 8.h,
+            children: _sharedUsers.map((user) {
+              return Chip(
+                label: Text(
+                  '${user['name']} (${user['employee_id'] ?? '-'})',
+                  style: GoogleFonts.aBeeZee(fontSize: 10.sp),
+                ),
+              );
+            }).toList(growable: false),
+          ),
+        SizedBox(height: 14.h),
+        Text(
+          'Attachments (${_folderFiles.length})',
+          style: GoogleFonts.aBeeZee(
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF27304E),
+          ),
+        ),
+        SizedBox(height: 8.h),
+        if (_folderFiles.isEmpty)
+          Text(
+            'No files in this folder',
+            style: GoogleFonts.aBeeZee(
+              fontSize: 11.sp,
+              color: const Color(0xff949494),
+            ),
+          )
+        else
+          ..._folderFiles.map((file) {
+            return _SharedFileCard(
+              fileName: (file['name'] ?? 'Attachment').toString(),
+              onTap: () => _openAttachment(file),
+            );
+          }),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isFolderView = _selectedFolder != null;
+    final count = isFolderView ? _folderFiles.length : _folders.length;
+
+    return Column(
+      children: [
+        Padding(
+          padding:
+              EdgeInsets.only(left: 20.w, right: 20.w, top: 8.h, bottom: 8.h),
+          child: Row(
+            children: [
+              if (isFolderView)
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedFolder = null;
+                      _error = null;
+                    });
+                  },
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                  color: const Color(0xFF27304E),
+                  tooltip: 'Back to folders',
+                ),
+              Expanded(
+                child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(30.18.r),
                     border: Border.all(color: const Color(0xffD9D9D9)),
@@ -323,7 +741,11 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
                     padding: EdgeInsets.symmetric(
                         horizontal: 13.5.w, vertical: 8.5.h),
                     child: Text(
-                      'Folders  |  ${_folders.length}',
+                      isFolderView
+                          ? '${_folderNameFrom(_selectedFolder!)}  |  $count'
+                          : 'Folders No.  |  $count',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.aBeeZee(
                         fontSize: 11.sp,
                         fontWeight: FontWeight.w400,
@@ -334,200 +756,23 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
                     ),
                   ),
                 ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: _folders.isEmpty
-                ? Center(
-                    child: Text(
-                      'No shared folders found',
-                      style: GoogleFonts.aBeeZee(
-                          fontSize: 14.sp, color: Colors.grey),
-                    ),
-                  )
-                : ListView.separated(
-                    physics: const BouncingScrollPhysics(),
-                    padding: EdgeInsets.symmetric(
-                        horizontal: 16.w, vertical: 4.h),
-                    itemCount: _folders.length,
-                    separatorBuilder: (_, __) => SizedBox(height: 12.h),
-                    itemBuilder: (context, index) {
-                      final folder = _folders[index];
-                      final name = (folder['name'] ??
-                              folder['folder_name'] ??
-                              'Folder')
-                          .toString();
-                      final fileCount = (folder['file_count'] ??
-                              folder['attachments_count'] ??
-                              folder['count'] ??
-                              0)
-                          .toString();
-                      return _ShareFolderCard(
-                        name: name,
-                        fileCount: fileCount,
-                        onTap: () => _openFolder(folder),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFolderDetail() {
-    final folderName =
-        (_selectedFolder?['name'] ?? _selectedFolder?['folder_name'] ?? 'Folder')
-            .toString();
-
-    return Column(
-      children: [
-        // Header row
-        Padding(
-          padding:
-              EdgeInsets.only(left: 8.w, right: 16.w, top: 8.h, bottom: 8.h),
-          child: Row(
-            children: [
+              ),
+              SizedBox(width: 8.w),
               IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
-                onPressed: _goBackToFolderList,
-              ),
-              Expanded(
-                child: Text(
-                  folderName,
-                  style: GoogleFonts.aBeeZee(
-                    fontSize: 15.sp,
-                    fontWeight: FontWeight.w700,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              InkWell(
-                onTap: _showAddUserDialog,
-                borderRadius: BorderRadius.circular(20.r),
-                child: Container(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 14.w, vertical: 7.h),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF090A38),
-                    borderRadius: BorderRadius.circular(20.r),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.person_add_outlined,
-                          color: Colors.white, size: 16),
-                      SizedBox(width: 6.w),
-                      Text(
-                        'Add User',
-                        style: GoogleFonts.aBeeZee(
-                          color: Colors.white,
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                onPressed: isFolderView
+                    ? () => _openFolder(_selectedFolder!)
+                    : _fetchSharedFolders,
+                icon: const Icon(Icons.refresh_rounded),
+                color: const Color(0xFF27304E),
+                tooltip: 'Refresh',
               ),
             ],
           ),
         ),
-
-        if (_detailLoading)
-          const Expanded(child: Center(child: CircularProgressIndicator()))
-        else if (_detailError != null)
-          Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    _detailError!,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.aBeeZee(
-                        fontSize: 13.sp, color: Colors.grey),
-                  ),
-                  SizedBox(height: 12.h),
-                  TextButton(
-                    onPressed: () => _openFolder(_selectedFolder!),
-                    child: Text('Retry',
-                        style: GoogleFonts.aBeeZee(fontSize: 13.sp)),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          Expanded(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding:
-                  EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Files section
-                  Text(
-                    'Files (${_folderFiles.length})',
-                    style: GoogleFonts.aBeeZee(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF090A38),
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  if (_folderFiles.isEmpty)
-                    Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8.h),
-                      child: Text(
-                        'No files in this folder',
-                        style: GoogleFonts.aBeeZee(
-                            fontSize: 13.sp, color: Colors.grey),
-                      ),
-                    )
-                  else
-                    ..._folderFiles.map((file) {
-                      final name = (file['name'] ??
-                              file['attachment_name'] ??
-                              file['filename'] ??
-                              'File')
-                          .toString();
-                      return _FileListTile(name: name);
-                    }),
-
-                  SizedBox(height: 20.h),
-
-                  // Shared users section
-                  Text(
-                    'Shared Users (${_sharedUsers.length})',
-                    style: GoogleFonts.aBeeZee(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF090A38),
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-                  if (_sharedUsers.isEmpty)
-                    Text(
-                      'No users have been shared yet',
-                      style: GoogleFonts.aBeeZee(
-                          fontSize: 13.sp, color: Colors.grey),
-                    )
-                  else
-                    ..._sharedUsers.map((user) {
-                      final name = (user['name'] ??
-                              user['employee_name'] ??
-                              user['display_name'] ??
-                              'User')
-                          .toString();
-                      return _SharedUserTile(name: name);
-                    }),
-                ],
-              ),
-            ),
-          ),
+        Expanded(
+          child:
+              isFolderView ? _buildFolderDetailsView() : _buildFolderListView(),
+        ),
       ],
     );
   }
@@ -535,158 +780,99 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
 
 class _ShareFolderCard extends StatelessWidget {
   const _ShareFolderCard({
-    required this.name,
-    required this.fileCount,
-    this.onTap,
+    required this.title,
+    required this.onTap,
   });
 
-  final String name;
-  final String fileCount;
-  final VoidCallback? onTap;
+  final String title;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      child: Container(
-        height: 80.h,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: const Color(0xffD9D9D9)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha((0.04 * 255).toInt()),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+      borderRadius: BorderRadius.circular(16.r),
+      child: SizedBox(
+        height: 260.h,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16.r),
+                child: Image.asset(
+                  'assets/newapp/shared_documents_folder.png',
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            Positioned(
+              top: 8.h,
+              right: 20.w,
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.aBeeZee(
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87,
+                ),
+              ),
             ),
           ],
         ),
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-          child: Row(
-            children: [
-              Icon(Icons.folder_rounded,
-                  size: 40.sp, color: const Color(0xFFFFBC3B)),
-              SizedBox(width: 14.w),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name,
-                      style: GoogleFonts.aBeeZee(
-                        fontSize: 13.sp,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    SizedBox(height: 4.h),
-                    Text(
-                      '$fileCount files',
-                      style: GoogleFonts.aBeeZee(
-                        fontSize: 11.sp,
-                        fontWeight: FontWeight.w400,
-                        color: const Color(0xff949494),
-                      ),
-                    ),
-                  ],
+      ),
+    );
+  }
+}
+
+class _SharedFileCard extends StatelessWidget {
+  const _SharedFileCard({
+    required this.fileName,
+    required this.onTap,
+  });
+
+  final String fileName;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12.r),
+      child: Container(
+        margin: EdgeInsets.only(bottom: 8.h),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: const Color(0xffD9D9D9)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.picture_as_pdf_outlined,
+              color: const Color(0xFFBA1719),
+              size: 18.sp,
+            ),
+            SizedBox(width: 8.w),
+            Expanded(
+              child: Text(
+                fileName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.aBeeZee(
+                  fontSize: 11.sp,
+                  color: const Color(0xFF27304E),
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded,
-                  color: Color(0xff949494)),
-            ],
-          ),
+            ),
+            Icon(
+              Icons.open_in_new_rounded,
+              color: const Color(0xFF27304E),
+              size: 16.sp,
+            ),
+          ],
         ),
-      ),
-    );
-  }
-}
-
-class _FileListTile extends StatelessWidget {
-  const _FileListTile({required this.name});
-
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 8.h),
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: const Color(0xffE5E5E5)),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.insert_drive_file_outlined,
-              size: 20, color: Color(0xffBA1719)),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: Text(
-              name,
-              style: GoogleFonts.aBeeZee(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w400,
-                color: Colors.black87,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SharedUserTile extends StatelessWidget {
-  const _SharedUserTile({required this.name});
-
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 8.h),
-      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F9FA),
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: const Color(0xffE5E5E5)),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 16.r,
-            backgroundColor: const Color(0xFF090A38),
-            child: Text(
-              name.isNotEmpty ? name[0].toUpperCase() : '?',
-              style: GoogleFonts.aBeeZee(
-                color: Colors.white,
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          SizedBox(width: 10.w),
-          Expanded(
-            child: Text(
-              name,
-              style: GoogleFonts.aBeeZee(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -33,6 +33,17 @@ subprojects {
                     jvmTarget = '17'
                 }
             }
+
+            // flutter_inappwebview_android can fail R8 minification with missing
+            // internal classes in release; disable minify for that module.
+            if (project.name == 'flutter_inappwebview_android') {
+                project.android.buildTypes {
+                    release {
+                        minifyEnabled false
+                        shrinkResources false
+                    }
+                }
+            }
         }
     }
 }

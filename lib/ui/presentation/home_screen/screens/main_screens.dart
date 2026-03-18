@@ -201,7 +201,8 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
     _authSub = null;
     _retryTimer?.cancel();
     _retryTimer = null;
-    ChatModuleHelper.instance.chatEnabledNotifier.removeListener(_onChatEnabled);
+    ChatModuleHelper.instance.chatEnabledNotifier
+        .removeListener(_onChatEnabled);
   }
 
   @override
@@ -302,24 +303,30 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
           }
           bloc.add(ChangeCurrentIndex(index: index));
         } else {
-          // Check if already on MainScreen/HomeScreen
-          final currentRoute = ModalRoute.of(context);
-          final isOnMainScreen = currentRoute?.settings.name == '/' ||
-              currentRoute?.settings.arguments is MainScreen;
-
-          if (!isOnMainScreen) {
-            bloc.add(ChangeCurrentIndex(index: index));
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const MainScreen(),
-              ),
-              (route) => false, // Remove all previous routes
-            );
-          } else {
-            // Already on main screen, just change index
-            bloc.add(ChangeCurrentIndex(index: index));
+          if (index == 2) {
+            // Keep secondary-screen behavior consistent with main nav.
+            await _openCamera(context);
+            return;
           }
+
+          if (index == 3) {
+            // Open chat directly from secondary screens as well.
+            setState(() => _totalUnread = 0);
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ChatListScreen()),
+            );
+            return;
+          }
+
+          bloc.add(ChangeCurrentIndex(index: index));
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const MainScreen(),
+            ),
+            (route) => false,
+          );
         }
       },
       icon: SizedBox(
@@ -329,7 +336,10 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
               ? Badge(
                   label: Text(
                     badgeCount > 99 ? '99+' : '$badgeCount',
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white),
+                    style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white),
                   ),
                   backgroundColor: const Color(0xFFF04D57),
                   child: isIconData

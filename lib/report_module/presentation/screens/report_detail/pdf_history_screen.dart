@@ -34,6 +34,8 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
   // TextEditingController subject = TextEditingController();
   TextEditingController projectName = TextEditingController();
   bool _generating = false;
+  double _generationProgress = 0;
+  String _generationStatus = '';
 
   List<ReportPdfModel> _pdfs = [];
 
@@ -111,7 +113,7 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
           ),
           Center(
             child: MaterialButton(
-              onPressed: _generateReport,
+              onPressed: _generating ? null : _generateReport,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
@@ -132,6 +134,26 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
                     ),
             ),
           ),
+          if (_generating)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LinearProgressIndicator(
+                    value: (_generationProgress.clamp(0, 100)) / 100,
+                    color: CustomColors.maroon,
+                    backgroundColor: Colors.black12,
+                    minHeight: 6,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${_generationStatus.isEmpty ? 'Processing...' : _generationStatus} ${_generationProgress.round()}%',
+                    style: CustomTextStyle.reportTitle,
+                  ),
+                ],
+              ),
+            ),
           const Divider(height: 25),
           Expanded(
             child: ListView(
@@ -142,8 +164,9 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
                         await Navigator.push(
                             context,
                             MaterialPageRoute(
-                                builder: (context) =>
-                                    PdfDisplayScreen(link: pdf.reportLink, fileName: pdf.fileName)));
+                                builder: (context) => PdfDisplayScreen(
+                                    link: pdf.reportLink,
+                                    fileName: pdf.fileName)));
                       },
                       onMoreClicked: () async {
                         int status = await showEditOptions(context,
@@ -155,19 +178,25 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
                           await Navigator.push(
                               context,
                               MaterialPageRoute(
-                                  builder: (context) =>
-                                      PdfDisplayScreen(link: pdf.reportLink, fileName: pdf.fileName)));
+                                  builder: (context) => PdfDisplayScreen(
+                                      link: pdf.reportLink,
+                                      fileName: pdf.fileName)));
                           return;
                         }
 
                         if (status == 1) {
                           try {
-                            final response = await http.get(Uri.parse(pdf.reportLink));
+                            final response =
+                                await http.get(Uri.parse(pdf.reportLink));
                             if (response.statusCode == 200) {
-                              final name = pdf.fileName.isEmpty ? 'report.pdf' : pdf.fileName;
+                              final name = pdf.fileName.isEmpty
+                                  ? 'report.pdf'
+                                  : pdf.fileName;
                               await Share.shareXFiles([
                                 XFile.fromData(response.bodyBytes,
-                                    name: name.endsWith('.pdf') ? name : '$name.pdf',
+                                    name: name.endsWith('.pdf')
+                                        ? name
+                                        : '$name.pdf',
                                     mimeType: 'application/pdf'),
                               ]);
                             }
@@ -202,42 +231,72 @@ class _PdfCreationScreenState extends State<PdfCreationScreen> {
   _generateReport() async {
     // Hide keyboard if open
     FocusScope.of(context).unfocus();
-    
-    // if (_generating) return;
-    _generating = true;
-    setState(() {});
+
+    if (_generating) return;
 
     if (_pdfs
         .where((p) => p.fileName == ("${nameController.text}.pdf"))
         .isNotEmpty) {
-      _generating = false;
-      setState(() {});
       showFlushBar(context,
           message:
               "A report with the same name already exists. Please change the name and try again.");
       return;
     }
 
-    Uint8List pdfBytes = await PdfService().generateReportPdf(
-      report: widget.reportDetailModel,
-      projectName: projectName.text,
-    );
+    _generating = true;
+    _generationProgress = 10;
+    _generationStatus = 'Preparing report...';
+    if (mounted) setState(() {});
 
-    print('file_by: $pdfBytes');
+    try {
+      _generationProgress = 45;
+      _generationStatus = 'Generating PDF...';
+      if (mounted) setState(() {});
 
-    bool status = await reportProvider.uploadReportPdf(
+      Uint8List pdfBytes = await PdfService().generateReportPdf(
+        report: widget.reportDetailModel,
+        projectName: projectName.text,
+      );
+
+      print('file_by: $pdfBytes');
+
+      _generationProgress = 70;
+      _generationStatus = 'Uploading PDF...';
+      if (mounted) setState(() {});
+
+      bool status = await reportProvider.uploadReportPdf(
         empId: ReportProvider.empID,
         reportId: widget.reportDetailModel.report.id,
         folderId: widget.reportDetailModel.report.folderId,
         fileName: nameController.text,
-        pdfBytes: pdfBytes);
-    if (status) {
-      _pdfs = await reportProvider.fetchReports(
-          empId: ReportProvider.empID,
-          reportId: widget.reportDetailModel.report.id,
-          folderId: widget.reportDetailModel.report.folderId);
+        pdfBytes: pdfBytes,
+        onProgress: (uploadProgress) {
+          if (!mounted) return;
+          setState(() {
+            _generationProgress =
+                (70 + (uploadProgress * 30)).clamp(70.0, 100.0);
+            _generationStatus = 'Uploading PDF...';
+          });
+        },
+      );
+
+      if (status) {
+        _generationProgress = 100;
+        _generationStatus = 'Completed';
+        if (mounted) setState(() {});
+
+        _pdfs = await reportProvider.fetchReports(
+            empId: ReportProvider.empID,
+            reportId: widget.reportDetailModel.report.id,
+            folderId: widget.reportDetailModel.report.folderId);
+      } else {
+        showFlushBar(context, message: 'Failed to upload generated report.');
+      }
+    } finally {
+      _generating = false;
+      _generationProgress = 0;
+      _generationStatus = '';
+      if (mounted) setState(() {});
     }
-    _generating = false;
-    if (mounted) setState(() {});
   }
 }

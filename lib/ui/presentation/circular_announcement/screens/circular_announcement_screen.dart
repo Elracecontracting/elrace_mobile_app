@@ -452,9 +452,9 @@ class _CircularAnnouncementScreenState extends State<CircularAnnouncementScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Description (main text as per requirement)
+                  // Primary title
                   Text(
-                    item.description,
+                    item.displayTitle,
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
@@ -463,7 +463,20 @@ class _CircularAnnouncementScreenState extends State<CircularAnnouncementScreen>
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 4),
+
+                  if (item.displayBody.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      item.displayBody,
+                      style: TextStyle(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black54,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
 
                   // Date
                   if (item.date != null)

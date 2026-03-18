@@ -14,6 +14,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 
 import '../../widgets/header_widget.dart';
 
@@ -397,6 +398,35 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
     );
   }
 
+  String _formatRequestDate(dynamic raw) {
+    final input = (raw ?? '').toString().trim();
+    if (input.isEmpty) return input;
+
+    try {
+      return DateFormat('dd/MM/yyyy').format(DateTime.parse(input));
+    } catch (_) {
+      // Try common API date formats before falling back to raw value.
+      const patterns = <String>[
+        'yyyy-MM-dd HH:mm:ss',
+        'yyyy-MM-dd HH:mm',
+        'yyyy-MM-dd',
+        'MM/dd/yyyy',
+        'MM/dd/yyyy HH:mm:ss',
+        'dd-MM-yyyy',
+        'dd-MM-yyyy HH:mm:ss',
+      ];
+
+      for (final pattern in patterns) {
+        try {
+          final parsed = DateFormat(pattern).parseStrict(input);
+          return DateFormat('dd/MM/yyyy').format(parsed);
+        } catch (_) {}
+      }
+    }
+
+    return input;
+  }
+
   Widget _buildRequestItem(Map item, int index) {
     final bool isExpanded = expandedItems.contains(index);
     final String status = (item['status'] ?? '').toString().toLowerCase();
@@ -471,7 +501,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                     SizedBox(
                       width: 80.w,
                       child: Text(
-                        item['create_date'] ?? '',
+                        _formatRequestDate(item['create_date']),
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           fontSize: 13.sp,
@@ -591,7 +621,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
               buildStatusPill(item['status'] ?? 'unknown'),
               const SizedBox(height: 20),
               Text(
-                "Date: ${item['create_date']}",
+                "Date: ${_formatRequestDate(item['create_date'])}",
                 style:
                     const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               ),

@@ -206,21 +206,26 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                 top: SizeConfig().getHeight(40.w),
                 start: SizeConfig().getWidth(10),
                 //left: SizeConfig().getWidth(15),
-                child: GestureDetector(
-                  onTap: () {
-                    // Navigate to home screen from anywhere
-                    // First pop all pushed routes back to the home screen
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                    // Then reset to the main home tab
-                    final bloc = HomeBloc.get(context);
-                    bloc.add(ChangeCurrentIndex(index: 1));
-                  },
-                  child: Image.asset(
-                    'assets/gif/el-race-logo.gif',
-                    fit: BoxFit.cover,
-                    height: SizeConfig().getHeight(55),
-                    width: SizeConfig().getWidth(110),
-                  ),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () {
+                        // Navigate to home screen from anywhere
+                        // First pop all pushed routes back to the home screen
+                        Navigator.of(context)
+                            .popUntil((route) => route.isFirst);
+                        // Then reset to the main home tab
+                        final bloc = HomeBloc.get(context);
+                        bloc.add(ChangeCurrentIndex(index: 1));
+                      },
+                      child: Image.asset(
+                        'assets/gif/el-race-logo.gif',
+                        fit: BoxFit.cover,
+                        height: SizeConfig().getHeight(55),
+                        width: SizeConfig().getWidth(110),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               SafeArea(

@@ -53,6 +53,151 @@ class NotificationApiService {
     }
   }
 
+  static bool _isSuccessStatus(dynamic status) {
+    final normalized = (status ?? '').toString().trim().toLowerCase();
+    return normalized == 'success' ||
+        normalized == 'ok' ||
+        normalized == 'true';
+  }
+
+  static String _extractMessage(dynamic decoded, String fallback) {
+    if (decoded is! Map<String, dynamic>) return fallback;
+
+    final result = decoded['result'];
+    if (result is Map<String, dynamic>) {
+      final message = result['message']?.toString();
+      if (message != null && message.trim().isNotEmpty) {
+        return message;
+      }
+    }
+
+    final error = decoded['error'];
+    if (error is Map<String, dynamic>) {
+      final message = error['message']?.toString();
+      if (message != null && message.trim().isNotEmpty) {
+        return message;
+      }
+    }
+
+    return fallback;
+  }
+
+  static Future<Map<String, bool>> getNotificationPreferences() async {
+    final uri = Uri.parse('$_baseUrl/mobile/notification/preferences');
+    final response = await http.post(
+      uri,
+      headers: _headers(),
+      body: jsonEncode({
+        'jsonrpc': '2.0',
+      }),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+          'Failed to fetch notification preferences: ${response.statusCode}');
+    }
+
+    if (response.body.trim().isEmpty) {
+      return <String, bool>{};
+    }
+
+    final dynamic decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Invalid notification preferences response');
+    }
+
+    final result = decoded['result'];
+    if (result is! Map<String, dynamic> ||
+        !_isSuccessStatus(result['status'])) {
+      throw Exception(_extractMessage(
+        decoded,
+        'Failed to fetch notification preferences',
+      ));
+    }
+
+    final data = result['data'];
+    if (data is! Map) {
+      return <String, bool>{};
+    }
+
+    final preferences = <String, bool>{};
+    for (final entry in data.entries) {
+      final key = entry.key.toString().trim().toLowerCase();
+      if (key.isEmpty) continue;
+      final value = entry.value;
+      final muted = value is bool
+          ? value
+          : value is num
+              ? value != 0
+              : value.toString().trim().toLowerCase() == 'true';
+      preferences[key] = muted;
+    }
+
+    return preferences;
+  }
+
+  static Future<Map<String, dynamic>> updateNotificationPreference({
+    required String model,
+    required bool muted,
+  }) async {
+    final normalizedModel = model.trim().toLowerCase();
+    if (normalizedModel.isEmpty) {
+      throw Exception('Notification model cannot be empty');
+    }
+
+    final uri = Uri.parse('$_baseUrl/mobile/notification/update');
+    final response = await http.post(
+      uri,
+      headers: _headers(),
+      body: jsonEncode({
+        'jsonrpc': '2.0',
+        'params': {
+          'model': normalizedModel,
+          'muted': muted,
+        },
+      }),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+          'Failed to update notification preference: ${response.statusCode}');
+    }
+
+    if (response.body.trim().isEmpty) {
+      return <String, dynamic>{
+        'category': normalizedModel,
+        'muted': muted,
+      };
+    }
+
+    final dynamic decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Invalid notification update response');
+    }
+
+    final result = decoded['result'];
+    if (result is! Map<String, dynamic> ||
+        !_isSuccessStatus(result['status'])) {
+      throw Exception(_extractMessage(
+        decoded,
+        'Failed to update notification preference',
+      ));
+    }
+
+    final data = result['data'];
+    if (data is Map<String, dynamic>) {
+      return data;
+    }
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+
+    return <String, dynamic>{
+      'category': normalizedModel,
+      'muted': muted,
+    };
+  }
+
   static Future<NotificationApiResult> getNotifications({
     int page = 1,
     int perPage = 50,

@@ -1,120 +1,159 @@
 import 'package:flutter/material.dart';
 
-class CustomPageRoute extends PageRouteBuilder {
+class CustomPageRoute<T> extends MaterialPageRoute<T> {
   final Widget child;
 
-  CustomPageRoute({required this.child})
-      : super(
-          transitionDuration: const Duration(milliseconds: 650),
-          reverseTransitionDuration: const Duration(milliseconds: 500),
-          pageBuilder: (context, animation, secondaryAnimation) => child,
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            // كيرف واحد نستخدمه للحركتين (forward & reverse)
-            final curved = CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-              reverseCurve: Curves.easeOut, // الخروج (pop)
-            );
+  CustomPageRoute({required this.child, super.settings})
+      : super(builder: (_) => child);
 
-            // دخول: من تحت لفوق – خروج: من موضعه لأسفل شوي (ما رح تلاحظها كثير)
-            final slide = Tween<Offset>(
-              begin: const Offset(0, 1),
-              end: Offset.zero,
-            ).animate(curved);
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 650);
 
-            // دخول: تكبير بسيط – خروج: يبقى 1 (ما بيتأثر لأننا نثبّته)
-            final scaleIn = Tween<double>(
-              begin: 0.90,
-              end: 1.0,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutBack,
-            ));
+  @override
+  Duration get reverseTransitionDuration => const Duration(milliseconds: 500);
 
-            // fade: 0→1 في push, و 1→0 في pop بشكل طبيعي
-            final fade = Tween<double>(
-              begin: 0.0,
-              end: 1.0,
-            ).animate(curved);
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final platform = Theme.of(context).platform;
+    final isApple =
+        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
 
-            // لما نكون في حالة pop ما بدنا الـ scale يشتغل، نخليه ثابت على 1
-            final isPopping = animation.status == AnimationStatus.reverse;
+    // Keep native iOS route transition to preserve interactive swipe-back.
+    if (isApple) {
+      return super.buildTransitions(
+        context,
+        animation,
+        secondaryAnimation,
+        child,
+      );
+    }
 
-            return SlideTransition(
-              position: slide,
-              child: ScaleTransition(
-                scale: isPopping ? const AlwaysStoppedAnimation(1.0) : scaleIn,
-                child: FadeTransition(
-                  opacity: fade,
-                  child: child,
-                ),
-              ),
-            );
-          },
-        );
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeOut,
+    );
+
+    final slide = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(curved);
+
+    final scaleIn = Tween<double>(
+      begin: 0.90,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutBack,
+    ));
+
+    final fade = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(curved);
+
+    final isPopping = animation.status == AnimationStatus.reverse;
+
+    return SlideTransition(
+      position: slide,
+      child: ScaleTransition(
+        scale: isPopping ? const AlwaysStoppedAnimation(1.0) : scaleIn,
+        child: FadeTransition(
+          opacity: fade,
+          child: child,
+        ),
+      ),
+    );
+  }
 }
 
 // Animation خاصة للصفحات الجانبية (Notifications, My Notes)
-class SlideRightPageRoute extends PageRouteBuilder {
+class SlideRightPageRoute<T> extends MaterialPageRoute<T> {
   final Widget child;
 
   SlideRightPageRoute({required this.child, super.settings})
-      : super(
-          transitionDuration: const Duration(milliseconds: 400),
-          reverseTransitionDuration: const Duration(milliseconds: 500),
-          pageBuilder: (context, animation, secondaryAnimation) => child,
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final isPopping = animation.status == AnimationStatus.reverse;
+      : super(builder: (_) => child);
 
-            if (isPopping) {
-              // خروج: نفس animation الـ CustomPageRoute
-              final curved = CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOut,
-              );
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 400);
 
-              final slide = Tween<Offset>(
-                begin: const Offset(0, 1),
-                end: Offset.zero,
-              ).animate(curved);
+  @override
+  Duration get reverseTransitionDuration => const Duration(milliseconds: 500);
 
-              final fade = Tween<double>(
-                begin: 0.0,
-                end: 1.0,
-              ).animate(curved);
+  @override
+  Widget buildTransitions(
+    BuildContext context,
+    Animation<double> animation,
+    Animation<double> secondaryAnimation,
+    Widget child,
+  ) {
+    final platform = Theme.of(context).platform;
+    final isApple =
+        platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
 
-              return SlideTransition(
-                position: slide,
-                child: FadeTransition(
-                  opacity: fade,
-                  child: child,
-                ),
-              );
-            } else {
-              // دخول: من اليمين
-              final curved = CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              );
+    // Preserve iOS interactive back gesture.
+    if (isApple) {
+      return super.buildTransitions(
+        context,
+        animation,
+        secondaryAnimation,
+        child,
+      );
+    }
 
-              final slideIn = Tween<Offset>(
-                begin: const Offset(1.0, 0.0),
-                end: Offset.zero,
-              ).animate(curved);
+    final isPopping = animation.status == AnimationStatus.reverse;
 
-              final fade = Tween<double>(
-                begin: 0.85,
-                end: 1.0,
-              ).animate(curved);
+    if (isPopping) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: Curves.easeOut,
+      );
 
-              return SlideTransition(
-                position: slideIn,
-                child: FadeTransition(
-                  opacity: fade,
-                  child: child,
-                ),
-              );
-            }
-          },
-        );
+      final slide = Tween<Offset>(
+        begin: const Offset(0, 1),
+        end: Offset.zero,
+      ).animate(curved);
+
+      final fade = Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(curved);
+
+      return SlideTransition(
+        position: slide,
+        child: FadeTransition(
+          opacity: fade,
+          child: child,
+        ),
+      );
+    }
+
+    final curved = CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOutCubic,
+    );
+
+    final slideIn = Tween<Offset>(
+      begin: const Offset(1.0, 0.0),
+      end: Offset.zero,
+    ).animate(curved);
+
+    final fade = Tween<double>(
+      begin: 0.85,
+      end: 1.0,
+    ).animate(curved);
+
+    return SlideTransition(
+      position: slideIn,
+      child: FadeTransition(
+        opacity: fade,
+        child: child,
+      ),
+    );
+  }
 }

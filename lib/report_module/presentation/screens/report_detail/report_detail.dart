@@ -62,6 +62,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
   bool _loading = true;
   String loadingText = "";
+  double _loadingProgress = 0;
 
   Future<void> _loadLinkedTasks() async {
     if (reportDetail == null) return;
@@ -99,6 +100,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
   Future<void> _loadUpdatedRecord() async {
     loadingText = "";
+    _loadingProgress = 0;
     _loading = true;
     setState(() {});
     reportDetail = ReportDetailModel(
@@ -320,6 +322,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
                           LinearProgressIndicator(
+                            value: _loadingProgress > 0
+                                ? (_loadingProgress.clamp(0, 100)) / 100
+                                : null,
                             color: CustomColors.blue,
                           ),
                           Text(
@@ -327,6 +332,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                             style: CustomTextStyle.reportHeader,
                           ),
                           LinearProgressIndicator(
+                            value: _loadingProgress > 0
+                                ? (_loadingProgress.clamp(0, 100)) / 100
+                                : null,
                             color: CustomColors.blue,
                           ),
                         ],
@@ -556,13 +564,28 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
 
       setState(() {
         _loading = true;
-        loadingText = 'Generating updated report...';
+        _loadingProgress = 20;
+        loadingText = 'Preparing updated report... 20%';
       });
+
+      if (mounted) {
+        setState(() {
+          _loadingProgress = 45;
+          loadingText = 'Generating updated report... 45%';
+        });
+      }
 
       final pdfBytes = await PdfService().generateReportPdf(
         report: reportDetail!,
         projectName: task.projectId ?? widget.folderName,
       );
+
+      if (mounted) {
+        setState(() {
+          _loadingProgress = 70;
+          loadingText = 'Uploading updated report... 70%';
+        });
+      }
 
       final fileName =
           '${reportDetail!.report.name}-${DateFormat('yyyyMMdd_HHmmss').format(DateTime.now())}';
@@ -573,7 +596,23 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         folderId: reportDetail!.report.folderId,
         fileName: fileName,
         pdfBytes: pdfBytes,
+        onProgress: (uploadProgress) {
+          if (!mounted) return;
+          final progress = (70 + (uploadProgress * 30)).clamp(70.0, 100.0);
+          setState(() {
+            _loadingProgress = progress;
+            loadingText =
+                'Uploading updated report... ${_loadingProgress.round()}%';
+          });
+        },
       );
+
+      if (mounted && success) {
+        setState(() {
+          _loadingProgress = 100;
+          loadingText = 'Updated report ready 100%';
+        });
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -596,6 +635,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       if (mounted) {
         setState(() {
           _loading = false;
+          _loadingProgress = 0;
           loadingText = "";
         });
       }

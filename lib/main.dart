@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/chat/chat.dart';
@@ -289,7 +292,26 @@ void main() async {
   // Request essential permissions at app start
   await _requestEssentialPermissions();
 
-  // شريط التنقل السفلي أسود وتحت التطبيق (لا يتداخل مع المحتوى)
+  // Configure system UI globally. On Android we use immersive mode and
+  // show bars temporarily on user interaction.
+  await _configureAppSystemUi();
+
+  runApp(
+    BlocProvider(
+      create: (_) => ApprovalBloc(),
+      child: LocalizedApp(delegate, const MyApp()),
+    ),
+  );
+}
+
+Timer? _androidSystemBarsTimer;
+
+Future<void> _configureAppSystemUi() async {
+  if (Platform.isAndroid) {
+    await _enableAndroidImmersiveMode();
+    return;
+  }
+
   await SystemChrome.setEnabledSystemUIMode(
     SystemUiMode.manual,
     overlays: SystemUiOverlay.values,
@@ -300,13 +322,33 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
+}
 
-  runApp(
-    BlocProvider(
-      create: (_) => ApprovalBloc(),
-      child: LocalizedApp(delegate, const MyApp()),
+Future<void> _enableAndroidImmersiveMode() async {
+  if (!Platform.isAndroid) return;
+
+  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      systemNavigationBarColor: Colors.black,
+      systemNavigationBarIconBrightness: Brightness.light,
+      statusBarColor: Colors.transparent,
     ),
   );
+}
+
+Future<void> _showAndroidSystemBarsTemporarily() async {
+  if (!Platform.isAndroid) return;
+
+  await SystemChrome.setEnabledSystemUIMode(
+    SystemUiMode.manual,
+    overlays: SystemUiOverlay.values,
+  );
+
+  _androidSystemBarsTimer?.cancel();
+  _androidSystemBarsTimer = Timer(const Duration(seconds: 2), () {
+    _enableAndroidImmersiveMode();
+  });
 }
 
 /// Request Camera and Location permissions at app start
@@ -350,8 +392,33 @@ Future<void> _initializeChatIfLoggedIn() async {
   }
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _enableAndroidImmersiveMode();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _enableAndroidImmersiveMode();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -398,48 +465,69 @@ class MyApp extends StatelessWidget {
               debugShowCheckedModeBanner: false,
               builder: (context, child) {
                 ScreenSizeUtil.context = context;
-                return Stack(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        final profileBoxProvider =
-                            Provider.of<ProfileBoxProvider>(context,
-                                listen: false);
-                        if (profileBoxProvider.isProfileVisible) {
-                          profileBoxProvider.hideProfileBox();
+                return NotificationListener<ScrollUpdateNotification>(
+                  onNotification: (notification) {
+                    if (notification.scrollDelta != null &&
+                        notification.scrollDelta! < -1) {
+                      _showAndroidSystemBarsTemporarily();
+                    }
+                    return false;
+                  },
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.translucent,
+                    onVerticalDragUpdate: (details) {
+                      if (details.delta.dy < -4) {
+                        _showAndroidSystemBarsTemporarily();
+                      }
+                    },
+                    child: Stack(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            final profileBoxProvider =
+                                Provider.of<ProfileBoxProvider>(context,
+                                    listen: false);
+                            if (profileBoxProvider.isProfileVisible) {
+                              profileBoxProvider.hideProfileBox();
 
-                          /// Close the profile box
-                        }
-                      },
-                      child: child!,
+                              /// Close the profile box
+                            }
+                          },
+                          child: child!,
+                        ),
+                        Theme(
+                          data: ThemeData(
+                            colorScheme: ColorScheme.fromSeed(
+                                seedColor: Colors.deepPurple),
+                            useMaterial3: true,
+                            fontFamily: GoogleFonts.poppins().fontFamily,
+                            textTheme:
+                                GoogleFonts.poppinsTextTheme(const TextTheme(
+                              displayLarge: TextStyle(
+                                  fontSize: 28, fontWeight: FontWeight.w700),
+                              titleMedium: TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.w600),
+                              bodyMedium: TextStyle(fontSize: 14),
+                            )),
+                          ),
+                          child: const ProfileBoxWithSlideAnimation(),
+                        ),
+                      ],
                     ),
-                    Theme(
-                      data: ThemeData(
-                        colorScheme: ColorScheme.fromSeed(
-                            seedColor: Colors.deepPurple),
-                        useMaterial3: true,
-                        fontFamily: GoogleFonts.poppins().fontFamily,
-                        textTheme: GoogleFonts.poppinsTextTheme(const TextTheme(
-                          displayLarge: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-                          titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                          bodyMedium: TextStyle(fontSize: 14),
-                        )),
-                      ),
-                      child: const ProfileBoxWithSlideAnimation(),
-                    ),
-                  ],
+                  ),
                 );
               },
               navigatorKey: navKey,
               title: 'El Race',
               theme: ThemeData(
-                colorScheme:
-                    ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+                colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
                 useMaterial3: true,
                 fontFamily: GoogleFonts.poppins().fontFamily,
                 textTheme: GoogleFonts.poppinsTextTheme(const TextTheme(
-                  displayLarge: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-                  titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  displayLarge:
+                      TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+                  titleMedium:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   bodyMedium: TextStyle(fontSize: 14),
                 )),
               ),
