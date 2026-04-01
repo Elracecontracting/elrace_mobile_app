@@ -13,6 +13,30 @@ class NotificationApiResult {
   });
 }
 
+class NotificationCategoryApiModel {
+  final String model;
+  final String title;
+
+  const NotificationCategoryApiModel({
+    required this.model,
+    required this.title,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'model': model,
+      'title': title,
+    };
+  }
+
+  factory NotificationCategoryApiModel.fromMap(Map<String, dynamic> map) {
+    return NotificationCategoryApiModel(
+      model: (map['model'] ?? '').toString(),
+      title: (map['title'] ?? '').toString(),
+    );
+  }
+}
+
 class NotificationApiService {
   static const String _baseUrl = 'https://erp.elrace.com/api';
 
@@ -51,6 +75,98 @@ class NotificationApiService {
     } catch (_) {
       return true;
     }
+  }
+
+  static String _normalizeCategoryKey(dynamic value) {
+    return (value ?? '').toString().trim().toLowerCase();
+  }
+
+  static String _humanizeCategory(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return 'Notification';
+
+    final words = trimmed
+        .split(RegExp(r'[._-]+'))
+        .where((part) => part.trim().isNotEmpty)
+        .map((part) {
+      final p = part.trim();
+      return '${p[0].toUpperCase()}${p.substring(1)}';
+    }).toList(growable: false);
+
+    if (words.isEmpty) return 'Notification';
+    return words.join(' ');
+  }
+
+  static List<NotificationCategoryApiModel> _parseCategoryItems(dynamic data) {
+    final items = <NotificationCategoryApiModel>[];
+
+    void addItem(String model, String? title) {
+      final normalizedModel = _normalizeCategoryKey(model);
+      if (normalizedModel.isEmpty) return;
+      final resolvedTitle = (title ?? '').trim().isEmpty
+          ? _humanizeCategory(normalizedModel)
+          : title!.trim();
+      items.add(
+        NotificationCategoryApiModel(
+          model: normalizedModel,
+          title: resolvedTitle,
+        ),
+      );
+    }
+
+    if (data is List) {
+      for (final item in data) {
+        if (item is String) {
+          addItem(item, null);
+          continue;
+        }
+
+        if (item is Map) {
+          final map = Map<String, dynamic>.from(item.cast<String, dynamic>());
+          final model = map['model'] ??
+              map['code'] ??
+              map['category'] ??
+              map['key'] ??
+              map['id'] ??
+              map['name'];
+          if (model == null) continue;
+
+          final title = map['title'] ??
+              map['label'] ??
+              map['display_name'] ??
+              map['displayName'] ??
+              map['name'];
+          addItem(model.toString(), title?.toString());
+        }
+      }
+    } else if (data is Map) {
+      for (final entry in data.entries) {
+        final key = entry.key.toString();
+        final value = entry.value;
+
+        if (value is Map) {
+          final map = Map<String, dynamic>.from(value.cast<String, dynamic>());
+          final model = map['model'] ?? key;
+          final title = map['title'] ??
+              map['label'] ??
+              map['display_name'] ??
+              map['displayName'] ??
+              map['name'];
+          addItem(model.toString(), title?.toString());
+          continue;
+        }
+
+        addItem(key, value?.toString());
+      }
+    }
+
+    final deduped = <String, NotificationCategoryApiModel>{};
+    for (final item in items) {
+      deduped[item.model] = item;
+    }
+
+    return deduped.values.toList(growable: false)
+      ..sort((a, b) => a.title.compareTo(b.title));
   }
 
   static bool _isSuccessStatus(dynamic status) {
@@ -134,6 +250,53 @@ class NotificationApiService {
     }
 
     return preferences;
+  }
+
+  static Future<List<NotificationCategoryApiModel>>
+      getNotificationCategories() async {
+    final uri = Uri.parse('$_baseUrl/mobile/notification/categories');
+    final response = await http.post(
+      uri,
+      headers: _headers(),
+      body: jsonEncode({
+        'jsonrpc': '2.0',
+      }),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'Failed to fetch notification categories: ${response.statusCode}',
+      );
+    }
+
+    if (response.body.trim().isEmpty) {
+      return const <NotificationCategoryApiModel>[];
+    }
+
+    final dynamic decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Invalid notification categories response');
+    }
+
+    dynamic result = decoded['result'];
+    if (result == null) {
+      result = decoded;
+    }
+
+    if (result is Map<String, dynamic>) {
+      final status = result['status'];
+      if (status != null && !_isSuccessStatus(status)) {
+        throw Exception(_extractMessage(
+          decoded,
+          'Failed to fetch notification categories',
+        ));
+      }
+
+      final data = result['data'] ?? result['categories'] ?? result['items'];
+      return _parseCategoryItems(data);
+    }
+
+    return _parseCategoryItems(result);
   }
 
   static Future<Map<String, dynamic>> updateNotificationPreference({
@@ -239,6 +402,8 @@ class NotificationApiService {
         rawNotifications = notificationsValue;
       }
       unreadCount = _toIntOrNull(data['unread_count']);
+    } else if (data is List) {
+      rawNotifications = data;
     } else if (decoded['notifications'] is List) {
       rawNotifications = decoded['notifications'] as List<dynamic>;
     }

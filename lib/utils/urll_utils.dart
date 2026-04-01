@@ -10,5 +10,6 @@ class UrlUtil {
   static const String qrCodeApi = 'qr_code/';
   static const String myActionsApi = 'my_actions';
   static const String getContentsApi = 'get_contents';
+  static const String getContentsGroupedApi = 'get_contents/grouped';
   static const String firebaseRefreshToken = 'firebase/refresh_token';
 }

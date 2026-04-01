@@ -107,9 +107,16 @@ class MediaRepository implements IMediaRepository {
         "Authorization": "Bearer $token"
       };
 
+      final parsedAttachmentId = int.tryParse(mediaId);
+
       final body = jsonEncode({
         "jsonrpc": "2.0",
-        "params": {"media_id": int.tryParse(mediaId) ?? mediaId}
+        "params": {
+          // Backend currently expects attachment_id for simplified share URL.
+          "attachment_id": parsedAttachmentId ?? mediaId,
+          // Keep media_id for backward compatibility with older API behavior.
+          "media_id": parsedAttachmentId ?? mediaId,
+        }
       });
 
       final url = Uri.parse("${UrlUtil.baseUrl}${UrlUtil.prepareShareApi}");
@@ -182,7 +189,7 @@ class MediaRepository implements IMediaRepository {
 
       final body = jsonEncode({"jsonrpc": "2.0", "params": {}});
       final url = Uri.parse("${UrlUtil.baseUrl}${UrlUtil.getContentsApi}");
-      
+
       log('📡 Calling get_contents API: $url');
       log('📤 Request body: $body');
 
@@ -199,7 +206,7 @@ class MediaRepository implements IMediaRepository {
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
-        
+
         if (json['result'] != null && json['result']['status'] == 'success') {
           log('✅ get_contents: Successfully parsed response');
           return ContentsResponse.fromJson(json);

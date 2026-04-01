@@ -73,7 +73,7 @@ class _HrScreenState extends State<HrScreen> {
               children: [
                 _ActionsHeader(
                   iconAsset: 'assets/png/my-req-frame.png',
-                  title: 'MY REQUESTS',
+                  title: 'HR',
                 ),
                 SizedBox(height: 12.h),
                 if (items.isEmpty)

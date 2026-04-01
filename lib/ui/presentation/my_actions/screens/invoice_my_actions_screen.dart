@@ -39,7 +39,7 @@ class _InvoiceMyActionsScreenState extends State<InvoiceMyActionsScreen> {
 
   String _formatAmount(double? amount) {
     if (amount == null) return '';
-    return '${NumberFormat.decimalPattern().format(amount)} M';
+    return '${NumberFormat.decimalPattern().format(amount)} AED';
   }
 
   DateTime? _parseDate(String? rawDate) {
@@ -174,7 +174,8 @@ class _InvoiceMyActionsScreenState extends State<InvoiceMyActionsScreen> {
                 else
                   ...cards.map(
                     (item) => Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
                       child: _InvoiceRequestCard(item: item),
                     ),
                   ),

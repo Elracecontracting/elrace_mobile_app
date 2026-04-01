@@ -9,6 +9,7 @@ import 'package:el_race/utils/orientation_helper.dart';
 import 'package:el_race/utils/safe_insets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 import '../provider/slider_provider.dart';
@@ -35,7 +36,8 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
   @override
   Widget build(BuildContext context) {
     final sliderProvider = Provider.of<SliderProvider>(context);
-    final bottomPadding = kBottomNavigationBarHeight + context.systemBottomInset + 75.h;
+    final bottomPadding =
+        kBottomNavigationBarHeight + context.systemBottomInset + 75.h;
 
     return RefreshIndicator(
       onRefresh: () async {
@@ -179,10 +181,13 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
                                         right: 0,
                                         child: Container(
                                           decoration: BoxDecoration(
-                                            image: const DecorationImage(
-                                              image: AssetImage(
-                                                  'assets/png/news-liner-bg.png'),
-                                              fit: BoxFit.fitWidth,
+                                            gradient: const LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                Color(0xB81B1F26),
+                                                Color(0xFF717171),
+                                              ],
                                             ),
                                             borderRadius:
                                                 BorderRadius.circular(2.r),
@@ -191,11 +196,9 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
                                               vertical: 8.h, horizontal: 12.w),
                                           child: Text(
                                             sliderProvider.titles[itemIndex %
-                                                    sliderProvider
-                                                        .titles.length]
-                                                .toUpperCase(),
-                                            style: TextStyle(
-                                              color: appFontColor,
+                                                sliderProvider.titles.length],
+                                            style: GoogleFonts.poppins(
+                                              color: Colors.white,
                                               fontSize: 9.sp,
                                               fontWeight: FontWeight.w600,
                                               letterSpacing: 0.5,
@@ -256,10 +259,10 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
                                     color: isActive
-                                        ? const Color(0xFF1A1A53)
+                                        ? const Color(0xFF717171)
                                         : Colors.transparent,
                                     border: Border.all(
-                                      color: const Color(0xFF1A1A53),
+                                      color: const Color(0xFF717171),
                                       width: 1,
                                     ),
                                   ),

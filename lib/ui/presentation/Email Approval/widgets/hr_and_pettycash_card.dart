@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:el_race/core/constants/app_images.dart';
-import 'package:el_race/core/services/approval_viewed_service.dart';
 import 'package:el_race/core/services/approval_count_service.dart';
+import 'package:el_race/core/services/approval_viewed_service.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/Approval_confirmation.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/screens/hr_details_screen.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/screens/pettycash_details_screen.dart';
@@ -15,8 +15,12 @@ import 'package:intl/intl.dart';
 class HrAndPettycashCard extends StatelessWidget {
   final List<dynamic> approvalItems;
   final VoidCallback? onRefresh;
-  const HrAndPettycashCard(
-      {super.key, required this.approvalItems, this.onRefresh});
+
+  const HrAndPettycashCard({
+    super.key,
+    required this.approvalItems,
+    this.onRefresh,
+  });
 
   String _formatAmountForCard(String raw) {
     final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
@@ -34,128 +38,131 @@ class HrAndPettycashCard extends StatelessWidget {
     required String requestType,
     required String employeeName,
     required String empCode,
+    required String date,
   }) {
     return Container(
-      height: 112.w,
+      height: 150.w,
       width: 350.w,
-      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 1.w),
+      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.w),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
-            Color(0xFFE1E4E8),
-            Color(0xFFB9C0CB),
+            Color(0xFFDDE1E6),
+            Color(0xFFBDC4CD),
           ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(22.r),
-        border: Border.all(color: const Color(0xFF5F666F), width: 1),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFF8F969F), width: 0.8),
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.w),
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 9.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                SizedBox(width: 50.w + 12.w + 2.w + 14.w),
-                Expanded(
-                  child: Align(
+            SizedBox(
+              height: 34.w,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(
                     alignment: Alignment.centerLeft,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        reqNo.toUpperCase(),
-                        style: GoogleFonts.nunito(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0B2D5E),
-                          letterSpacing: 0.5,
-                          height: 1.0,
+                    child: Container(
+                      width: 34.w,
+                      height: 34.w,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.95),
+                          width: 1.5,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.start,
+                      ),
+                      child: ClipOval(
+                        child: _buildEmployeeImage(
+                          item['requester_image'] ??
+                              item['employee_image'] ??
+                              item['emp_image'] ??
+                              item['image_emp'],
+                          34.w,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: 6.w),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 50.w,
-                    height: 50.w,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.9), width: 2),
-                    ),
-                    child: ClipOval(
-                      child: _buildEmployeeImage(
-                          item["requester_image"] ??
-                              item["employee_image"] ??
-                              item["emp_image"] ??
-                              item["image_emp"],
-                          50.w),
-                    ),
-                  ),
-                  SizedBox(width: 12.w),
-                  Container(
-                    width: 2.w,
-                    height: 54.w,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(2.r),
-                    ),
-                  ),
-                  SizedBox(width: 14.w),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          requestType.toUpperCase(),
+                  Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 38.w),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          reqNo.toUpperCase(),
                           style: GoogleFonts.nunito(
-                            fontSize: 17.sp,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF0E0E10),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: 1.5.w),
-                        Text(
-                          employeeName.toUpperCase(),
-                          style: GoogleFonts.nunito(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 13.2.sp,
+                            fontWeight: FontWeight.w800,
                             color: const Color(0xFF0B2D5E),
-                            letterSpacing: 0.3,
+                            letterSpacing: 0.25,
+                            height: 1.0,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                         ),
-                        SizedBox(height: 1.5.w),
-                        Text(
-                          empCode,
-                          style: GoogleFonts.nunito(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF6B717B),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                      ),
                     ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 8.w),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    requestType.toUpperCase(),
+                    style: GoogleFonts.nunito(
+                      fontSize: 12.4.sp,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF0E0E10),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 1.8.w),
+                  Text(
+                    employeeName,
+                    style: GoogleFonts.nunito(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF4A5564),
+                      letterSpacing: 0.1,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 1.8.w),
+                  Text(
+                    empCode,
+                    style: GoogleFonts.nunito(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF6B717B),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: 10.h),
+                  Text(
+                    date,
+                    style: GoogleFonts.nunito(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF8C939C),
+                      letterSpacing: 0.1,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
@@ -171,152 +178,136 @@ class HrAndPettycashCard extends StatelessWidget {
     required String refNo,
     required String employeeName,
     required String subtitle,
+    required String date,
     required String amount,
   }) {
     final amountText = _formatAmountForCard(amount);
 
     return Container(
-      height: 125.w,
+      height: 150.w,
       width: 350.w,
-      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 1.w),
+      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.w),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
             Color(0xFFE1E4E8),
             Color(0xFFB9C0CB),
           ],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(22.r),
-        border: Border.all(color: const Color(0xFF5F666F), width: 1),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFF8F969F), width: 0.8),
       ),
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.w),
+        padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                SizedBox(width: 54.w + 12.w + 2.w + 14.w),
-                Expanded(
-                  child: Align(
+            SizedBox(
+              height: 34.w,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Align(
                     alignment: Alignment.centerLeft,
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        refNo.toUpperCase(),
-                        style: GoogleFonts.nunito(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF0B2D5E),
-                          letterSpacing: 0.4,
-                          height: 1.0,
+                    child: Container(
+                      width: 38.w,
+                      height: 38.w,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 1),
+                      ),
+                      child: ClipOval(
+                        child: _buildEmployeeImage(
+                          item['requester_image'] ??
+                              item['employee_image'] ??
+                              item['emp_image'] ??
+                              item['image_emp'],
+                          38.w,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.start,
                       ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: 6.w),
-            SizedBox(
-              height: 54.w,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 54.w,
-                    height: 54.w,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.95), width: 2),
-                    ),
-                    child: ClipOval(
-                      child: _buildEmployeeImage(
-                          item["requester_image"] ??
-                              item["employee_image"] ??
-                              item["emp_image"] ??
-                              item["image_emp"],
-                          54.w),
-                    ),
-                  ),
-                  SizedBox(width: 12.w),
-                  Container(
-                    width: 2.w,
-                    height: 54.w,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.95),
-                      borderRadius: BorderRadius.circular(2.r),
-                    ),
-                  ),
-                  SizedBox(width: 14.w),
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          employeeName.toUpperCase(),
+                  Center(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 38.w),
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          refNo.toUpperCase(),
                           style: GoogleFonts.nunito(
-                            fontSize: 17.sp,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF0E0E10),
-                            letterSpacing: 0.2,
-                            height: 1.0,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        SizedBox(height: 2.w),
-                        Text(
-                          subtitle.toUpperCase(),
-                          style: GoogleFonts.nunito(
-                            fontSize: 13.sp,
+                            fontSize: 16.sp,
                             fontWeight: FontWeight.w800,
-                            color: const Color(0xFF6B717B),
-                            letterSpacing: 0.2,
+                            color: const Color(0xFF0B2D5E),
+                            letterSpacing: 0.25,
                             height: 1.0,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
+            SizedBox(height: 10.w),
+            Text(
+              employeeName.toUpperCase(),
+              style: GoogleFonts.nunito(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF0F1114),
+                height: 1.1,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
             SizedBox(height: 4.w),
-            Center(
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
+            Text(
+              subtitle,
+              style: GoogleFonts.nunito(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w800,
+                color: const Color(0xFF737A83),
+                letterSpacing: 0.2,
+                height: 1.0,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const Spacer(),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: Text(
+                    date,
+                    style: GoogleFonts.nunito(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF8C939C),
+                      letterSpacing: 0.1,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Text(
                   amountText,
                   style: GoogleFonts.nunito(
-                    fontSize: 22.sp,
+                    fontSize: 26.sp,
                     fontWeight: FontWeight.w900,
-                    color: const Color(0xFF0B2D5E),
-                    letterSpacing: 0.3,
+                    color: const Color(0xFF0B387A),
+                    letterSpacing: 0.2,
                     height: 1.0,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -324,10 +315,9 @@ class HrAndPettycashCard extends StatelessWidget {
     );
   }
 
-  // Helper method to safely extract string values and handle false/true values
   String _getSafeString(dynamic value, String fallback) {
     if (value == null || value == false || value == true) return fallback;
-    String strValue = value.toString().trim();
+    final strValue = value.toString().trim();
     if (strValue.isEmpty ||
         strValue.toLowerCase() == 'false' ||
         strValue.toLowerCase() == 'true' ||
@@ -337,19 +327,16 @@ class HrAndPettycashCard extends StatelessWidget {
     return strValue;
   }
 
-  // Helper method to check if image_emp is a URL or base64 data
   bool _isImageUrl(String imageData) {
     return imageData.startsWith('http://') || imageData.startsWith('https://');
   }
 
-  // Helper widget to display employee image (URL or base64)
   Widget _buildEmployeeImage(dynamic imageEmp, double size) {
     if (imageEmp != null &&
         imageEmp is String &&
         imageEmp.isNotEmpty &&
-        imageEmp.toLowerCase() != "false") {
+        imageEmp.toLowerCase() != 'false') {
       if (_isImageUrl(imageEmp)) {
-        // It's a URL, use Image.network
         return Image.network(
           imageEmp,
           fit: BoxFit.cover,
@@ -364,34 +351,33 @@ class HrAndPettycashCard extends StatelessWidget {
             );
           },
         );
-      } else {
-        // It's base64 data, decode it
-        try {
-          return Image.memory(
-            base64Decode(imageEmp),
-            fit: BoxFit.cover,
-            height: size,
-            width: size,
-            errorBuilder: (context, error, stackTrace) {
-              return Image.asset(
-                AppImages.personImage,
-                fit: BoxFit.cover,
-                height: size,
-                width: size,
-              );
-            },
-          );
-        } catch (e) {
-          return Image.asset(
-            AppImages.personImage,
-            fit: BoxFit.cover,
-            height: size,
-            width: size,
-          );
-        }
+      }
+
+      try {
+        return Image.memory(
+          base64Decode(imageEmp),
+          fit: BoxFit.cover,
+          height: size,
+          width: size,
+          errorBuilder: (context, error, stackTrace) {
+            return Image.asset(
+              AppImages.personImage,
+              fit: BoxFit.cover,
+              height: size,
+              width: size,
+            );
+          },
+        );
+      } catch (_) {
+        return Image.asset(
+          AppImages.personImage,
+          fit: BoxFit.cover,
+          height: size,
+          width: size,
+        );
       }
     }
-    // Fallback to default image
+
     return Image.asset(
       AppImages.personImage,
       fit: BoxFit.cover,
@@ -412,7 +398,6 @@ class HrAndPettycashCard extends StatelessWidget {
       );
     }
 
-    // Calculate safe bottom padding for devices with navigation bars
     final totalBottomPadding =
         kBottomNavigationBarHeight + context.systemBottomInset + 100.h;
 
@@ -425,122 +410,127 @@ class HrAndPettycashCard extends StatelessWidget {
         separatorBuilder: (context, index) => const SizedBox(height: 1),
         itemBuilder: (context, index) {
           final item = displayItems[index];
-          String category = item["category"] ?? item["type"] ?? "";
-          String type = item["type"] ?? "";
-          String id = item["id"]?.toString() ?? "";
+          final category = item['category'] ?? item['type'] ?? '';
+          final id = item['id']?.toString() ?? '';
           final isHr = category.toString().toUpperCase() == 'HR';
 
-          // Debug: Print all available fields for HR items
           if (kDebugMode && isHr && index == 0) {
-            print('🔍 HR Item Fields: ${item.keys.toList()}');
-            print('📋 HR Item Data: $item');
+            debugPrint('🔍 HR Item Fields: ${item.keys.toList()}');
+            debugPrint('📋 HR Item Data: $item');
           }
 
-          // Use _getSafeString to handle false/true values properly
-          String employeeName = _getSafeString(
-              item["employee_name"] ??
-                  item["requester_name"] ??
-                  item["emp_name"],
-              "N/A");
+          final employeeName = _getSafeString(
+            item['employee_name'] ?? item['requester_name'] ?? item['emp_name'],
+            'N/A',
+          );
 
-          String empCode = _getSafeString(
-              item["emp_code"] ??
-                  item["employee_code"] ??
-                  item["requester_code"] ??
-                  item["emp_id"]?.toString() ??
-                  item["employee_id"]?.toString() ??
-                  item["requester_id"]?.toString() ??
-                  item["requester_emp_id"]?.toString() ??
-                  item["code"],
-              "");
+          final empCode = _getSafeString(
+            item['emp_code'] ??
+                item['employee_code'] ??
+                item['requester_code'] ??
+                item['emp_id']?.toString() ??
+                item['employee_id']?.toString() ??
+                item['requester_id']?.toString() ??
+                item['requester_emp_id']?.toString() ??
+                item['code'],
+            '',
+          );
 
-          String reqNo = _getSafeString(
-              item["name"] ??
-                  item["request_no"] ??
-                  item["ref_no"] ??
-                  item["reference_no"] ??
-                  item["req_no"],
-              "N/A");
+          final reqNo = _getSafeString(
+            item['name'] ??
+                item['request_no'] ??
+                item['ref_no'] ??
+                item['reference_no'] ??
+                item['req_no'],
+            'N/A',
+          );
 
-          String amount = _getSafeString(
-              item["amount_total"] ??
-                  item["amount"] ??
-                  item["total_amount"] ??
-                  item["total"],
-              "0");
+          final amount = _getSafeString(
+            item['amount_total'] ??
+                item['amount'] ??
+                item['total_amount'] ??
+                item['total'],
+            '0',
+          );
 
-          String requestType = _getSafeString(
-              item["type"] ??
-                  item["request_type"] ??
-                  item["holiday_status_name"] ??
-                  item["request_type_name"] ??
-                  item["holiday_status_id"] ??
-                  item["leave_type"] ??
-                  item["subject"] ??
-                  item["title"],
-              "HR Request");
+          final requestType = _getSafeString(
+            item['type'] ??
+                item['request_type'] ??
+                item['holiday_status_name'] ??
+                item['request_type_name'] ??
+                item['holiday_status_id'] ??
+                item['leave_type'] ??
+                item['subject'] ??
+                item['title'],
+            'HR Request',
+          );
 
-          String date = _getSafeString(
-              item["date"] ??
-                  item["request_date"] ??
-                  item["created_date"] ??
-                  item["submission_date"],
-              "");
+          final date = _getSafeString(
+            item['date'] ??
+                item['request_date'] ??
+                item['created_date'] ??
+                item['submission_date'],
+            '',
+          );
+
+          final pettySubtitle = _getSafeString(
+            item['client_name'] ??
+                item['client'] ??
+                item['vendor'] ??
+                item['partner_name'] ??
+                item['beneficiary_name'] ??
+                item['holder_name'] ??
+                item['requester_name'] ??
+                item['employee_name'],
+            'N/A',
+          );
 
           return GestureDetector(
             onTap: () async {
               debugPrint(
-                  '👆 [MyApproval][HR/PettyCash] Tap -> category=$category, id=$id');
-              // Mark item as viewed
-              print('🔵 Marking as viewed - Category: $category, ID: $id');
-              await ApprovalViewedService.markAsViewed(
-                category,
-                id,
+                '👆 [MyApproval][HR/PettyCash] Tap -> category=$category, id=$id',
               );
 
-              if (context.mounted) {
-                final upperCategory = category.toString().toUpperCase();
-                final result = upperCategory == 'HR'
-                    ? await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => HrDetailsScreen(
-                            requestId: id,
-                            type: category,
-                          ),
+              await ApprovalViewedService.markAsViewed(category, id);
+              if (!context.mounted) return;
+
+              final upperCategory = category.toString().toUpperCase();
+              final result = upperCategory == 'HR'
+                  ? await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => HrDetailsScreen(
+                          requestId: id,
+                          type: category,
                         ),
-                      )
-                    : upperCategory == 'PETTY CASH'
-                        ? await Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => PettyCashDetailsScreen(
-                                requestId: id,
-                                type: category,
-                              ),
+                      ),
+                    )
+                  : upperCategory == 'PETTY CASH'
+                      ? await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => PettyCashDetailsScreen(
+                              requestId: id,
+                              type: category,
                             ),
-                          )
-                        : await showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return ApprovalConfirmationScreen(
-                                requestId: id,
-                                type: category,
-                              );
-                            },
-                          );
-                // Trigger a rebuild to update the list after dialog closes
-                debugPrint(
-                  '↩️ [MyApproval][HR/PettyCash] Back from details -> category=$category, id=$id, result=$result',
-                );
-                if (result == true) {
-                  // Invalidate cache so header re-fetches fresh count from API
-                  ApprovalCountService.invalidateCache();
-                  // Update approval count badge
-                  ApprovalCountService.onCountChanged?.call();
-                  // Refresh the list
-                  debugPrint(
-                      '🔁 [MyApproval][HR/PettyCash] Triggering onRefresh callback');
-                  onRefresh?.call();
-                }
+                          ),
+                        )
+                      : await showDialog(
+                          context: context,
+                          builder: (dialogContext) {
+                            return ApprovalConfirmationScreen(
+                              requestId: id,
+                              type: category,
+                            );
+                          },
+                        );
+
+              debugPrint(
+                '↩️ [MyApproval][HR/PettyCash] Back -> category=$category, id=$id, result=$result',
+              );
+
+              if (result == true) {
+                ApprovalCountService.invalidateCache();
+                ApprovalCountService.onCountChanged?.call();
+                onRefresh?.call();
               }
             },
             child: isHr
@@ -550,12 +540,14 @@ class HrAndPettycashCard extends StatelessWidget {
                     requestType: requestType,
                     employeeName: employeeName,
                     empCode: empCode,
+                    date: date,
                   )
                 : _buildPettyCashCard(
                     item: item,
                     refNo: reqNo,
                     employeeName: employeeName,
-                    subtitle: date.isNotEmpty ? date : 'N/A',
+                    subtitle: pettySubtitle,
+                    date: date.isNotEmpty ? date : 'N/A',
                     amount: amount,
                   ),
           );

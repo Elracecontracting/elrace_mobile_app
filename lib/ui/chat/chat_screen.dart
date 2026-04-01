@@ -27,7 +27,14 @@ class ChatScreen extends StatefulWidget {
   final ChatType chatType;
   final String? peerUid;
   final String? supportUserUid; // For support chats: the external user's UID
-  final String? supportGroupTitle; // For support chats: the group title (e.g. "HR")
+  final String?
+      supportGroupTitle; // For support chats: the group title (e.g. "HR")
+  final String? initialMessageId;
+  final DateTime? initialMessageCreatedAt;
+  final String? initialMessageSenderId;
+  final String? initialMessageType;
+  final String? initialMessageText;
+  final String? initialMessageFileName;
 
   const ChatScreen({
     super.key,
@@ -37,6 +44,12 @@ class ChatScreen extends StatefulWidget {
     this.peerUid,
     this.supportUserUid,
     this.supportGroupTitle,
+    this.initialMessageId,
+    this.initialMessageCreatedAt,
+    this.initialMessageSenderId,
+    this.initialMessageType,
+    this.initialMessageText,
+    this.initialMessageFileName,
   });
 
   @override
@@ -64,8 +77,9 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   /// Support chat state
   bool get _isSupportChat => widget.chatType == ChatType.support;
-  bool get _isExternalUser => _isSupportChat && widget.supportUserUid == _currentUid;
-  
+  bool get _isExternalUser =>
+      _isSupportChat && widget.supportUserUid == _currentUid;
+
   /// Cache of member names for support chat (uid -> name)
   final Map<String, String> _memberNames = {};
 
@@ -79,12 +93,29 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   /// Optimistic (pending) messages — shown with clock icon until Firestore confirms
   final List<Message> _pendingMessages = [];
 
+  /// Jump/highlight target when opened from starred messages.
+  String? _targetMessageId;
+  String? _highlightedMessageId;
+  final Map<String, GlobalKey> _messageKeys = {};
+  int _jumpRetryCount = 0;
+  static const int _maxJumpRetries = 24;
+  bool _isJumpInProgress = false;
+  bool _isResolvingTargetMessage = false;
+  Message? _resolvedTargetMessage;
+  List<Message> _latestFirestoreMessages = const [];
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _currentUid = FirebaseAuth.instance.currentUser?.uid;
-    _messagesStream = ChatRepository.instance.subscribeToMessages(widget.chatId);
+    _messagesStream = ChatRepository.instance.subscribeToMessages(
+      widget.chatId,
+      pageSize: widget.initialMessageId != null
+          ? 1000
+          : ChatRepository.defaultPageSize,
+    );
+    _targetMessageId = widget.initialMessageId;
     _markAsRead();
     _loadPeerUser();
     _messageController.addListener(_onTextChanged);
@@ -131,7 +162,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
   /// Load member names for support chat so group members see who sent what
   Future<void> _loadSupportChatMemberNames() async {
     try {
-      final members = await ChatRepository.instance.getChatMembers(widget.chatId);
+      final members =
+          await ChatRepository.instance.getChatMembers(widget.chatId);
       final uids = members.map((m) => m.uid).toList();
       final users = await UserRepository.instance.getUsersByIds(uids);
       if (mounted) {
@@ -233,12 +265,12 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                 onPickGallery: _pickImagesFromGallery,
                 onPickFile: _pickFile,
                 onPickSignableDoc: _pickSignableDocument,
-              onStartRecording: _startRecording,
-              onStopRecording: _stopRecording,
-              onCancelRecording: _cancelRecording,
-            ),
-          ],
-        ),
+                onStartRecording: _startRecording,
+                onStopRecording: _stopRecording,
+                onCancelRecording: _cancelRecording,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -420,11 +452,13 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           _streamErrored = true;
         }
 
-        final bool isWaiting = snapshot.connectionState == ConnectionState.waiting;
+        final bool isWaiting =
+            snapshot.connectionState == ConnectionState.waiting;
         final bool hasPending = _pendingMessages.isNotEmpty;
 
         // Log every rebuild so we can trace
-        debugPrint('📨 StreamBuilder rebuild: state=${snapshot.connectionState}, '
+        debugPrint(
+            '📨 StreamBuilder rebuild: state=${snapshot.connectionState}, '
             'firestoreCount=${snapshot.data?.length ?? 0}, '
             'pendingCount=${_pendingMessages.length}, '
             'hasError=${snapshot.hasError}');
@@ -445,11 +479,17 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
         // Merge Firestore messages with optimistic pending messages.
         final firestoreMessages = snapshot.data ?? [];
+        _latestFirestoreMessages = firestoreMessages;
         _deduplicatePendingMessages(firestoreMessages);
+        final bool hasResolvedTarget = _resolvedTargetMessage != null &&
+            !_pendingMessages.any((m) => m.id == _resolvedTargetMessage!.id) &&
+            !firestoreMessages.any((m) => m.id == _resolvedTargetMessage!.id);
+
         final messages = [
+          if (hasResolvedTarget) _resolvedTargetMessage!,
           ..._pendingMessages,
           ...firestoreMessages,
-        ];
+        ]..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
         debugPrint('📨 StreamBuilder: merged total=${messages.length} '
             '(${_pendingMessages.length} pending + ${firestoreMessages.length} firestore)');
@@ -490,43 +530,214 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
           );
         }
 
-        return ListView.builder(
+        final children = List.generate(messages.length, (index) {
+          final message = messages[index];
+          final isMe = message.senderId == _currentUid;
+          final key = _messageKeys.putIfAbsent(message.id, () => GlobalKey());
+
+          // Check if we should show date header
+          final showDateHeader = _shouldShowDateHeader(messages, index);
+
+          // For support chats, determine sender display name
+          String? senderDisplayName;
+          if (_isSupportChat && !isMe) {
+            senderDisplayName = _getSupportSenderName(message.senderId);
+          }
+
+          return Column(
+            key: key,
+            children: [
+              if (showDateHeader) _buildDateHeader(message.createdAt),
+              MessageBubble(
+                message: message,
+                isMe: isMe,
+                isStarred: _starredIds.contains(message.id),
+                isHighlighted: _highlightedMessageId == message.id,
+                senderName: senderDisplayName,
+                showSenderName: _isSupportChat && !isMe,
+                onStar: _onStarMessage,
+                onReply: _onReplyMessage,
+                onForward: _onForwardMessage,
+              ),
+            ],
+          );
+        });
+
+        _attemptInitialJumpAndHighlight(messages);
+
+        return ListView(
           controller: _scrollController,
           reverse: true,
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
-          itemCount: messages.length,
-          itemBuilder: (context, index) {
-            final message = messages[index];
-            final isMe = message.senderId == _currentUid;
-
-            // Check if we should show date header
-            final showDateHeader = _shouldShowDateHeader(messages, index);
-
-            // For support chats, determine sender display name
-            String? senderDisplayName;
-            if (_isSupportChat && !isMe) {
-              senderDisplayName = _getSupportSenderName(message.senderId);
-            }
-
-            return Column(
-              children: [
-                if (showDateHeader) _buildDateHeader(message.createdAt),
-                MessageBubble(
-                  message: message,
-                  isMe: isMe,
-                  isStarred: _starredIds.contains(message.id),
-                  senderName: senderDisplayName,
-                  showSenderName: _isSupportChat && !isMe,
-                  onStar: _onStarMessage,
-                  onReply: _onReplyMessage,
-                  onForward: _onForwardMessage,
-                ),
-              ],
-            );
-          },
+          children: children,
         );
       },
     );
+  }
+
+  void _attemptInitialJumpAndHighlight(List<Message> messages) {
+    final target = _targetMessageId;
+    if (target == null ||
+        _isJumpInProgress ||
+        _jumpRetryCount >= _maxJumpRetries) {
+      return;
+    }
+
+    print('🔎 STAR_JUMP[chat]: attempt initial jump '
+        'chatId=${widget.chatId} target=$target '
+        'messages=${messages.length} keys=${_messageKeys.length} '
+        'resolved=${_resolvedTargetMessage?.id} retry=$_jumpRetryCount');
+
+    final found = messages.any((m) => m.id == target);
+    if (!found) {
+      print('🔎 STAR_JUMP[chat]: target not in rendered list, resolving... '
+          'target=$target chatId=${widget.chatId}');
+      _resolveMissingTargetMessage(target);
+      return;
+    }
+
+    _isJumpInProgress = true;
+    _jumpRetryCount = 0;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _jumpToTargetWithRetry(target);
+    });
+  }
+
+  Future<void> _resolveMissingTargetMessage(String target) async {
+    if (_isResolvingTargetMessage || !mounted || _targetMessageId != target) {
+      return;
+    }
+
+    print('🔎 STAR_JUMP[chat]: resolve missing target start '
+        'chatId=${widget.chatId} target=$target '
+        'createdAt=${widget.initialMessageCreatedAt} '
+        'sender=${widget.initialMessageSenderId} '
+        'type=${widget.initialMessageType} '
+        'file=${widget.initialMessageFileName} '
+        'textLen=${widget.initialMessageText?.length ?? 0}');
+
+    _isResolvingTargetMessage = true;
+    try {
+      final message =
+          await ChatRepository.instance.findMessageForStarredNavigation(
+        widget.chatId,
+        messageId: target,
+        createdAt: widget.initialMessageCreatedAt,
+        senderId: widget.initialMessageSenderId,
+        type: widget.initialMessageType,
+        text: widget.initialMessageText,
+        fileName: widget.initialMessageFileName,
+      );
+      if (!mounted || _targetMessageId != target) return;
+
+      if (message == null) {
+        print('❌ STAR_JUMP[chat]: resolve failed, no target found '
+            'chatId=${widget.chatId} target=$target');
+        setState(() {
+          _targetMessageId = null;
+          _resolvedTargetMessage = null;
+        });
+        return;
+      }
+
+      print('✅ STAR_JUMP[chat]: resolve success '
+          'chatId=${widget.chatId} target=$target resolvedId=${message.id} '
+          'resolvedType=${message.type.toJson()} resolvedAt=${message.createdAt}');
+
+      setState(() {
+        _resolvedTargetMessage = message;
+        _targetMessageId = message.id;
+      });
+    } finally {
+      _isResolvingTargetMessage = false;
+    }
+  }
+
+  Future<void> _jumpToTargetWithRetry(String target) async {
+    if (!mounted) return;
+
+    final key = _messageKeys[target];
+    final ctx = key?.currentContext;
+    if (ctx == null) {
+      print('⚠️ STAR_JUMP[chat]: target widget context missing '
+          'chatId=${widget.chatId} target=$target retry=$_jumpRetryCount');
+      await _scheduleJumpRetry(target);
+      return;
+    }
+
+    print('🔎 STAR_JUMP[chat]: ensureVisible '
+        'chatId=${widget.chatId} target=$target retry=$_jumpRetryCount');
+
+    await Scrollable.ensureVisible(
+      ctx,
+      duration: const Duration(milliseconds: 320),
+      alignment: 0.5,
+      curve: Curves.easeOutCubic,
+    );
+
+    print('✅ STAR_JUMP[chat]: jump completed '
+        'chatId=${widget.chatId} target=$target');
+
+    setState(() {
+      _highlightedMessageId = target;
+      _targetMessageId = null;
+      _isJumpInProgress = false;
+    });
+
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      if (_highlightedMessageId == target) {
+        setState(() => _highlightedMessageId = null);
+      }
+    });
+  }
+
+  Future<void> _scheduleJumpRetry(String target) async {
+    _jumpRetryCount += 1;
+    if (_jumpRetryCount >= _maxJumpRetries) {
+      print('❌ STAR_JUMP[chat]: retries exhausted '
+          'chatId=${widget.chatId} target=$target max=$_maxJumpRetries');
+      if (mounted) {
+        setState(() {
+          _isJumpInProgress = false;
+          _targetMessageId = null;
+          _resolvedTargetMessage = null;
+        });
+      }
+      return;
+    }
+
+    // If the target widget is off-screen it may not be built yet.
+    // Progressively scroll toward older messages (reverse list => larger pixels)
+    // so Flutter builds more children, then retry ensureVisible.
+    if (_scrollController.hasClients) {
+      final position = _scrollController.position;
+      final current = position.pixels;
+      final max = position.maxScrollExtent;
+      final step = (position.viewportDimension * 0.9).clamp(280.0, 1200.0);
+      final next = (current + step).clamp(0.0, max);
+
+      if (next > current) {
+        print('🔎 STAR_JUMP[chat]: prebuild scroll '
+            'chatId=${widget.chatId} target=$target '
+            'from=${current.toStringAsFixed(1)} to=${next.toStringAsFixed(1)} '
+            'max=${max.toStringAsFixed(1)}');
+        await _scrollController.animateTo(
+          next,
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeOut,
+        );
+      }
+    }
+
+    print('⚠️ STAR_JUMP[chat]: scheduling retry '
+        'chatId=${widget.chatId} target=$target retry=$_jumpRetryCount/$_maxJumpRetries');
+
+    await Future.delayed(const Duration(milliseconds: 100));
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _jumpToTargetWithRetry(target);
+    });
   }
 
   Widget _buildChatBackgroundPattern() {
@@ -747,7 +958,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (_pendingMessages.isEmpty || firestoreMessages.isEmpty) return;
     _pendingMessages.removeWhere((pending) {
       return firestoreMessages.any((fm) {
-        if (fm.senderId != pending.senderId || fm.type != pending.type) return false;
+        if (fm.senderId != pending.senderId || fm.type != pending.type)
+          return false;
         // For signable docs, match on fileName since text is null
         if (pending.type == MessageType.signableDoc) {
           return fm.fileName == pending.fileName;
@@ -763,7 +975,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
     if (_streamErrored && mounted) {
       _streamErrored = false;
       setState(() {
-        _messagesStream = ChatRepository.instance.subscribeToMessages(widget.chatId);
+        _messagesStream =
+            ChatRepository.instance.subscribeToMessages(widget.chatId);
       });
     }
   }
@@ -815,7 +1028,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         setState(() {
           final idx = _pendingMessages.indexWhere((m) => m.id == optimistic.id);
           if (idx >= 0) {
-            _pendingMessages[idx] = optimistic.copyWith(status: MessageStatus.failed);
+            _pendingMessages[idx] =
+                optimistic.copyWith(status: MessageStatus.failed);
           }
         });
       }
@@ -917,7 +1131,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         return;
       }
 
-      debugPrint('📝 SignableDoc: Got picker result, creating optimistic message...');
+      debugPrint(
+          '📝 SignableDoc: Got picker result, creating optimistic message...');
       final signZones = pickerResult['signZones'] as List<SignZone>;
       final pageCount = pickerResult['pageCount'] as int?;
       final fileSize = await file.length();
@@ -968,7 +1183,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         // Mark as failed so user sees error icon
         if (mounted) {
           setState(() {
-            final idx = _pendingMessages.indexWhere((m) => m.id == optimistic.id);
+            final idx =
+                _pendingMessages.indexWhere((m) => m.id == optimistic.id);
             if (idx >= 0) {
               _pendingMessages[idx] = optimistic.copyWith(
                 status: MessageStatus.failed,
@@ -1062,10 +1278,53 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
 
   // ── Message long-press actions ──
 
-  void _onStarMessage(Message message) {
-    final isCurrentlyStarred = _starredIds.contains(message.id);
+  void _onStarMessage(Message message) async {
+    if (_highlightedMessageId != null) {
+      setState(() => _highlightedMessageId = null);
+    }
+
+    // Pending messages don't exist in Firestore yet, so starring them stores
+    // a non-canonical ID and breaks future jump-to-star behavior.
+    Message canonical = message;
+    if (message.id.startsWith('pending_')) {
+      final createdAt = message.createdAt;
+      final matches = _latestFirestoreMessages.where((m) {
+        if (m.senderId != message.senderId || m.type != message.type) {
+          return false;
+        }
+        if (message.type == MessageType.text &&
+            (m.text ?? '') != (message.text ?? '')) {
+          return false;
+        }
+        if ((message.type == MessageType.file ||
+                message.type == MessageType.signableDoc) &&
+            (m.fileName ?? '') != (message.fileName ?? '')) {
+          return false;
+        }
+        final delta = m.createdAt.difference(createdAt).inSeconds.abs();
+        return delta <= 20;
+      }).toList()
+        ..sort((a, b) =>
+            a.createdAt.difference(createdAt).inMilliseconds.abs().compareTo(
+                  b.createdAt.difference(createdAt).inMilliseconds.abs(),
+                ));
+
+      if (matches.isNotEmpty) {
+        canonical = matches.first;
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please wait a moment, then star this message again'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+    }
+
+    final isCurrentlyStarred = _starredIds.contains(canonical.id);
     if (isCurrentlyStarred) {
-      ChatRepository.instance.unstarMessage(message.id);
+      ChatRepository.instance.unstarMessage(canonical.id);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Message unstarred'),
@@ -1073,7 +1332,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
         ),
       );
     } else {
-      ChatRepository.instance.starMessage(widget.chatId, message);
+      ChatRepository.instance.starMessage(widget.chatId, canonical);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Message starred'),

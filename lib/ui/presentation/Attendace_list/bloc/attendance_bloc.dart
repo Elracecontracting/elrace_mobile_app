@@ -65,6 +65,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       }
 
       if (response.statusCode == 200) {
+        _logFirstRecordStatusFields(response.body);
         final attendanceModel = attendanceModelFromJson(response.body);
         log(
           'AttendanceBloc parsed -> requestId=${event.requestId}, status=${attendanceModel.result.status}, mode=${attendanceModel.result.mode}, flatCount=${attendanceModel.result.data?.length ?? 0}, recordCount=${attendanceModel.result.records?.length ?? 0}',
@@ -79,6 +80,76 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
     } catch (e) {
       if (event.requestId != _latestRequestId) return;
       emit(AttendanceErrorState(message: 'Error: ${e.toString()}'));
+    }
+  }
+
+  void _logFirstRecordStatusFields(String responseBody) {
+    try {
+      final decoded = jsonDecode(responseBody);
+      if (decoded is! Map<String, dynamic>) {
+        log('🧪 [ATTENDANCE_STATUS_DEBUG] Unexpected root type');
+        return;
+      }
+
+      final result = decoded['result'];
+      if (result is! Map<String, dynamic>) {
+        log('🧪 [ATTENDANCE_STATUS_DEBUG] Missing result map');
+        return;
+      }
+
+      Map<String, dynamic>? firstRecord;
+
+      final directRecords = result['records'];
+      if (directRecords is List && directRecords.isNotEmpty) {
+        final first = directRecords.first;
+        if (first is Map) {
+          firstRecord = Map<String, dynamic>.from(first);
+        }
+      }
+
+      final data = result['data'];
+      if (firstRecord == null && data is List && data.isNotEmpty) {
+        final first = data.first;
+        if (first is Map) {
+          firstRecord = Map<String, dynamic>.from(first);
+        }
+      }
+
+      if (firstRecord == null && data is Map<String, dynamic>) {
+        for (final key in const ['records', 'data', 'items']) {
+          final list = data[key];
+          if (list is List && list.isNotEmpty) {
+            final first = list.first;
+            if (first is Map) {
+              firstRecord = Map<String, dynamic>.from(first);
+              break;
+            }
+          }
+        }
+      }
+
+      if (firstRecord == null) {
+        log('🧪 [ATTENDANCE_STATUS_DEBUG] No first record found');
+        return;
+      }
+
+      final statusEntries = firstRecord.entries.where((entry) {
+        final key = entry.key.toLowerCase();
+        return key.contains('status') || key.contains('state');
+      }).toList();
+
+      log('🧪 [ATTENDANCE_STATUS_DEBUG] First record keys: ${firstRecord.keys.toList()}');
+
+      if (statusEntries.isEmpty) {
+        log('🧪 [ATTENDANCE_STATUS_DEBUG] No status-like keys in first record');
+        return;
+      }
+
+      for (final entry in statusEntries) {
+        log('🧪 [ATTENDANCE_STATUS_DEBUG] ${entry.key} = ${entry.value}');
+      }
+    } catch (e) {
+      log('🧪 [ATTENDANCE_STATUS_DEBUG] Parse error: $e');
     }
   }
 }

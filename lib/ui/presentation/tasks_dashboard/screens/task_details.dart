@@ -22,11 +22,12 @@ import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:el_race/report_module/data/provider/reports_provider.dart';
 import 'package:el_race/report_module/data/models/report_model.dart';
-import 'package:el_race/report_module/presentation/screens/report_detail/report_detail.dart' as report_detail;
+import 'package:el_race/report_module/presentation/screens/report_detail/report_detail.dart'
+    as report_detail;
 
 class TaskDetailsScreen extends StatefulWidget {
   static const routeName = '/task-details';
-  
+
   final TodoModel? task;
   final String? taskId;
 
@@ -46,12 +47,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   final TextEditingController _commentController = TextEditingController();
 
   Map<int, String> _memberPhotoById = {};
-  
+
   // Audio recording
   final AudioRecorder _audioRecorder = AudioRecorder();
   String? _recordingPath;
   Duration _recordingDuration = Duration.zero;
-  
+
   // Audio playback
   final AudioPlayer _audioPlayer = AudioPlayer();
   String? _playingCommentId;
@@ -73,7 +74,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   String _initialsForDisplayName(String name) {
     final cleaned = name.replaceFirst(RegExp(r'^\s*\d+\s*'), '').trim();
-    final parts = cleaned.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts =
+        cleaned.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.isEmpty) return 'U';
     if (parts.length == 1) return parts.first[0].toUpperCase();
     return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
@@ -136,7 +138,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   /// Build avatar for comment with direct photo URL
-  Widget _buildCommentAvatar(String name, String? photoUrl, {double size = 40}) {
+  Widget _buildCommentAvatar(String name, String? photoUrl,
+      {double size = 40}) {
     final initials = _initialsForDisplayName(name);
 
     // First try the direct photo URL from comment
@@ -198,7 +201,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   }
 
   // ==================== AUDIO RECORDING ====================
-  
+
   Future<void> _startRecording() async {
     try {
       // Request microphone permission explicitly
@@ -206,7 +209,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       if (status != PermissionStatus.granted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Microphone permission is required for voice comments'),
+            content:
+                Text('Microphone permission is required for voice comments'),
             backgroundColor: Colors.red,
             action: SnackBarAction(
               label: 'Settings',
@@ -219,8 +223,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       }
 
       final directory = await getTemporaryDirectory();
-      final path = '${directory.path}/voice_comment_${DateTime.now().millisecondsSinceEpoch}.m4a';
-      
+      final path =
+          '${directory.path}/voice_comment_${DateTime.now().millisecondsSinceEpoch}.m4a';
+
       await _audioRecorder.start(
         const RecordConfig(
           encoder: AudioEncoder.aacLc,
@@ -229,21 +234,23 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         ),
         path: path,
       );
-      
+
       setState(() {
         _isRecording = true;
         _recordingPath = path;
         _recordingDuration = Duration.zero;
       });
-      
+
       // Update duration every second
       _updateRecordingDuration();
-      
+
       print('✅ Started recording: $path');
     } catch (e) {
       print('❌ Error starting recording: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to start recording: $e'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Failed to start recording: $e'),
+            backgroundColor: Colors.red),
       );
     }
   }
@@ -263,7 +270,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     try {
       final path = await _audioRecorder.stop();
       setState(() => _isRecording = false);
-      
+
       if (path != null) {
         print('✅ Recording saved: $path');
         // Show confirmation dialog
@@ -293,7 +300,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Voice Comment', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
+        title: Text('Voice Comment',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -317,7 +325,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               File(audioPath).deleteSync();
               Navigator.pop(context);
             },
-            child: Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
+            child:
+                Text('Cancel', style: GoogleFonts.poppins(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -325,7 +334,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               await _sendVoiceComment(audioPath);
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: Text('Send', style: GoogleFonts.poppins(color: Colors.white)),
+            child:
+                Text('Send', style: GoogleFonts.poppins(color: Colors.white)),
           ),
         ],
       ),
@@ -334,7 +344,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   Future<void> _sendVoiceComment(String audioPath) async {
     if (_task?.firebaseId == null) return;
-    
+
     setState(() => _isSendingComment = true);
     try {
       // Upload audio to Firebase Storage
@@ -345,7 +355,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           .child('voice_comments')
           .child(_task!.firebaseId!)
           .child(fileName);
-      
+
       // Set metadata to ensure content type is audio
       final metadata = SettableMetadata(
         contentType: 'audio/mp4',
@@ -354,29 +364,34 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           'task_id': _task!.firebaseId!,
         },
       );
-      
+
       await storageRef.putFile(file, metadata);
       final audioUrl = await storageRef.getDownloadURL();
-      
+
       // Add comment with audio URL
       await TodoFirebaseService.instance.addVoiceComment(
         _task!.firebaseId!,
         audioUrl,
         _formatDuration(_recordingDuration),
+        ownerUid: _task!.ownerUid,
       );
-      
+
       // Delete local file
       file.deleteSync();
-      
+
       await _loadComments();
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Voice comment sent!'), backgroundColor: Colors.green),
+        SnackBar(
+            content: Text('Voice comment sent!'),
+            backgroundColor: Colors.green),
       );
     } catch (e) {
       print('❌ Error sending voice comment: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send voice comment'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Failed to send voice comment'),
+            backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) {
@@ -402,7 +417,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     } catch (e) {
       print('❌ Error playing voice comment: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to play audio'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Failed to play audio'), backgroundColor: Colors.red),
       );
     }
   }
@@ -431,7 +447,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       _loadComments();
     } else if (widget.taskId != null) {
       try {
-        final task = await TodoFirebaseService.instance.getTodoById(widget.taskId!);
+        final task =
+            await TodoFirebaseService.instance.getTodoById(widget.taskId!);
         if (mounted) {
           setState(() {
             _task = task;
@@ -453,7 +470,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
   Future<void> _loadComments() async {
     if (_task?.firebaseId == null) return;
     try {
-      final comments = await TodoFirebaseService.instance.getComments(_task!.firebaseId!);
+      final comments = await TodoFirebaseService.instance.getComments(
+        _task!.firebaseId!,
+        ownerUid: _task!.ownerUid,
+      );
       if (mounted) {
         setState(() => _comments = comments);
       }
@@ -468,41 +488,49 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
     setState(() => _isSendingComment = true);
     try {
-      await TodoFirebaseService.instance.addComment(_task!.firebaseId!, content);
+      await TodoFirebaseService.instance.addComment(
+        _task!.firebaseId!,
+        content,
+        ownerUid: _task!.ownerUid,
+      );
       _commentController.clear();
       await _loadComments();
     } catch (e) {
       print('❌ Error sending comment: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to send comment'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Failed to send comment'),
+            backgroundColor: Colors.red),
       );
     } finally {
       if (mounted) setState(() => _isSendingComment = false);
     }
   }
 
-  Future<void> _toggleMemberCompletion(TaskMember member, bool isAssigned) async {
+  Future<void> _toggleMemberCompletion(
+      TaskMember member, bool isAssigned) async {
     if (_task?.firebaseId == null) return;
-    
+
     final newStatus = !member.isCompleted;
-    
+
     try {
       await TodoFirebaseService.instance.updateMemberStatus(
         _task!.firebaseId!,
         member.name,
         newStatus,
         isAssigned: isAssigned,
+        ownerUid: _task!.ownerUid,
       );
-      
+
       // Reload task to get updated data
       await _loadTask();
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            newStatus 
-              ? '${member.firstName} marked as complete' 
-              : '${member.firstName} marked as incomplete',
+            newStatus
+                ? '${member.firstName} marked as complete'
+                : '${member.firstName} marked as incomplete',
           ),
           backgroundColor: newStatus ? Colors.green : Colors.orange,
           duration: Duration(seconds: 2),
@@ -511,7 +539,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     } catch (e) {
       print('❌ Error updating member status: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update status'), backgroundColor: Colors.red),
+        SnackBar(
+            content: Text('Failed to update status'),
+            backgroundColor: Colors.red),
       );
     }
   }
@@ -579,7 +609,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     }
 
     final task = _task!;
-    
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
@@ -612,7 +642,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 ),
                 const SizedBox(height: 20),
                 const SizedBox(height: 20),
-                
+
                 // Task Title
                 Text(
                   task.title.toUpperCase(),
@@ -623,228 +653,232 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Description Section
                 if (task.description != null && task.description!.isNotEmpty)
-                _buildBorderedFieldWithLabel(
-                  label: 'Description',
-                  child: Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: Text(
-                      task.description ?? '',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                        height: 1.5,
+                  _buildBorderedFieldWithLabel(
+                    label: 'Description',
+                    child: Container(
+                      padding: EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: Text(
+                        task.description ?? '',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                          height: 1.5,
+                        ),
                       ),
                     ),
                   ),
-                ),
                 if (task.description != null && task.description!.isNotEmpty)
-                const SizedBox(height: 20),
-                
+                  const SizedBox(height: 20),
+
                 // Dates Section
                 _buildDatesSection(task),
                 const SizedBox(height: 20),
-                
+
                 // Task Department
                 if (task.department != null)
-                _buildBorderedFieldWithLabel(
-                  label: 'Task\nDepartment',
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey[300]!),
-                    ),
-                    child: Text(
-                      task.department ?? '-',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                  _buildBorderedFieldWithLabel(
+                    label: 'Task\nDepartment',
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: Text(
+                        task.department ?? '-',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                if (task.department != null)
-                const SizedBox(height: 20),
-                
+                if (task.department != null) const SizedBox(height: 20),
+
                 // Linked Report Section
                 if (task.reportId != null && task.reportId!.isNotEmpty)
                   _buildLinkedReportSection(task.reportId!),
                 if (task.reportId != null && task.reportId!.isNotEmpty)
                   const SizedBox(height: 20),
-                  
-                  // Task Progress Section
-                  Container(
-                    padding: EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(30),
-                      border: Border.all(color: Colors.grey[300]!, width: 2),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          task.title.toUpperCase(),
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
-                          ),
+
+                // Task Progress Section
+                Container(
+                  padding: EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: Colors.grey[300]!, width: 2),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        task.title.toUpperCase(),
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
                         ),
-                        SizedBox(height: 12),
-                        
-                        // Progress Bar
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Stack(
-                              children: [
-                                Container(
+                      ),
+                      SizedBox(height: 12),
+
+                      // Progress Bar
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Stack(
+                            children: [
+                              Container(
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[300],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                              FractionallySizedBox(
+                                widthFactor: task.progress,
+                                child: Container(
                                   height: 8,
                                   decoration: BoxDecoration(
-                                    color: Colors.grey[300],
+                                    color: Color(0xFF4CAF50),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                 ),
-                                FractionallySizedBox(
-                                  widthFactor: task.progress,
-                                  child: Container(
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      color: Color(0xFF4CAF50),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 8),
-                            Text(
-                              '${task.progressText} complete',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
                               ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            '${task.progressText} complete',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.black87,
                             ),
-                          ],
-                        ),
-                        SizedBox(height: 20),
-                        
-                        // Last Updated Info
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Builder(
-                              builder: (context) {
-                                final raw = task.assignedToName ?? '';
-                                final names = raw
-                                    .split(',')
-                                    .map((e) => e.trim())
-                                    .where((e) => e.isNotEmpty)
-                                    .toList();
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 20),
 
-                                final displayNames =
-                                    names.isNotEmpty ? names : <String>['Unassigned'];
+                      // Last Updated Info
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Builder(
+                            builder: (context) {
+                              final raw = task.assignedToName ?? '';
+                              final names = raw
+                                  .split(',')
+                                  .map((e) => e.trim())
+                                  .where((e) => e.isNotEmpty)
+                                  .toList();
 
-                                return Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: displayNames
-                                      .map(
-                                        (name) => Padding(
-                                          padding: const EdgeInsets.only(bottom: 8),
-                                          child: Row(
-                                            children: [
-                                              _buildAvatarForName(name, size: 36),
-                                              const SizedBox(width: 10),
-                                              Expanded(
-                                                child: Text(
-                                                  name,
-                                                  maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
-                                                  style: GoogleFonts.poppins(
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: Colors.black,
-                                                  ),
+                              final displayNames = names.isNotEmpty
+                                  ? names
+                                  : <String>['Unassigned'];
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: displayNames
+                                    .map(
+                                      (name) => Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 8),
+                                        child: Row(
+                                          children: [
+                                            _buildAvatarForName(name, size: 36),
+                                            const SizedBox(width: 10),
+                                            Expanded(
+                                              child: Text(
+                                                name,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.black,
                                                 ),
                                               ),
-                                            ],
-                                          ),
+                                            ),
+                                          ],
                                         ),
-                                      )
-                                      .toList(),
-                                );
-                              },
-                            ),
-                            SizedBox(height: 8),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    'Last updated at',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 11,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                                ),
-                                Text(
-                                  _formatTime(task.updatedAt),
+                                      ),
+                                    )
+                                    .toList(),
+                              );
+                            },
+                          ),
+                          SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Last updated at',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: GoogleFonts.poppins(
                                     fontSize: 11,
                                     color: Colors.grey[600],
                                   ),
                                 ),
-                              ],
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              _formatDate(task.updatedAt),
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                color: Colors.grey[600],
                               ),
+                              Text(
+                                _formatTime(task.updatedAt),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            _formatDate(task.updatedAt),
+                            style: GoogleFonts.poppins(
+                              fontSize: 11,
+                              color: Colors.grey[600],
                             ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 20),
+
+                // Attachments Section
+                _buildSectionLabel('Attachments'),
+                SizedBox(height: 12),
+                if (task.attachments != null && task.attachments!.isNotEmpty)
+                  _buildAttachmentsList(task.attachments!)
+                else
+                  Text(
+                    'No attachments',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.grey[500],
                     ),
                   ),
-                  SizedBox(height: 20),
-                  
-                  // Attachments Section
-                  _buildSectionLabel('Attachments'),
-                  SizedBox(height: 12),
-                  if (task.attachments != null && task.attachments!.isNotEmpty)
-                    _buildAttachmentsList(task.attachments!)
-                  else
-                    Text(
-                      'No attachments',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Colors.grey[500],
-                      ),
-                    ),
                 const SizedBox(height: 20),
-                
+
                 // Assigned Members
                 _buildSectionLabel('Assigned Members'),
                 const SizedBox(height: 12),
-                if (task.assignedMembers != null && task.assignedMembers!.isNotEmpty)
+                if (task.assignedMembers != null &&
+                    task.assignedMembers!.isNotEmpty)
                   _buildTaskMembersList(task.assignedMembers!, isAssigned: true)
-                else if (task.assignedToName != null && task.assignedToName!.isNotEmpty)
+                else if (task.assignedToName != null &&
+                    task.assignedToName!.isNotEmpty)
                   _buildMembersList(task.assignedToName!.split(', '))
                 else
                   Text(
@@ -855,7 +889,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     ),
                   ),
                 const SizedBox(height: 20),
-                  
+
                 // Following By
                 _buildSectionLabel('Followed UP'),
                 const SizedBox(height: 12),
@@ -872,15 +906,17 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     ),
                   ),
                 const SizedBox(height: 20),
-                
+
                 // Comments Section
                 _buildSectionLabel('Comments'),
                 const SizedBox(height: 12),
                 if (_comments.isNotEmpty)
-                  ..._comments.map((comment) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _buildCommentItem(comment),
-                  )).toList()
+                  ..._comments
+                      .map((comment) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _buildCommentItem(comment),
+                          ))
+                      .toList()
                 else
                   Text(
                     'No comments yet',
@@ -890,150 +926,157 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     ),
                   ),
                 const SizedBox(height: 50),
-                  
-                  // Write Comment Field
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _commentController,
-                            decoration: InputDecoration(
-                              hintText: 'Write a comment',
-                              hintStyle: GoogleFonts.poppins(
-                                color: Colors.grey[500],
-                                fontSize: 14,
-                              ),
-                              border: InputBorder.none,
-                            ),
-                            style: GoogleFonts.poppins(
-                              color: Colors.black87,
+
+                // Write Comment Field
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(25),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _commentController,
+                          decoration: InputDecoration(
+                            hintText: 'Write a comment',
+                            hintStyle: GoogleFonts.poppins(
+                              color: Colors.grey[500],
                               fontSize: 14,
                             ),
-                            onSubmitted: (_) => _sendComment(),
+                            border: InputBorder.none,
                           ),
-                        ),
-                        // Recording indicator or mic button
-                        if (_isRecording)
-                          Row(
-                            children: [
-                              // Recording duration
-                              Container(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.circle, size: 8, color: Colors.red),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      _formatDuration(_recordingDuration),
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color: Colors.red,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(width: 4),
-                              // Cancel button
-                              GestureDetector(
-                                onTap: _cancelRecording,
-                                child: Container(
-                                  padding: EdgeInsets.all(8),
-                                  child: Icon(Icons.close, size: 24, color: Colors.grey[600]),
-                                ),
-                              ),
-                              // Stop & Send button
-                              GestureDetector(
-                                onTap: _stopRecording,
-                                child: Container(
-                                  padding: EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(Icons.stop, size: 20, color: Colors.white),
-                                ),
-                              ),
-                            ],
-                          )
-                        else
-                          GestureDetector(
-                            onTap: _startRecording,
-                            child: Container(
-                              padding: EdgeInsets.all(8),
-                              child: Icon(
-                                Icons.mic_none_rounded,
-                                size: 26,
-                                color: Colors.grey[600],
-                              ),
-                            ),
-                          ),
-                        SizedBox(width: 4),
-                        if (!_isRecording)
-                          GestureDetector(
-                            onTap: _isSendingComment ? null : _sendComment,
-                            child: Container(
-                              padding: EdgeInsets.all(8),
-                              child: _isSendingComment
-                                  ? SizedBox(
-                                      width: 24,
-                                      height: 24,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    )
-                                  : SvgPicture.asset(
-                                      'assets/png/send.svg',
-                                      width: 24,
-                                      height: 24,
-                                      color: Colors.grey[600],
-                                    ),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 20),
-                  
-                  // Completed Button
-                  Center(
-                    child: SizedBox(
-                      width: 180,
-                      height: 45,
-                      child: ElevatedButton(
-                        onPressed: task.isCompleted ? null : () => _toggleComplete(task),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: task.isCompleted ? Colors.grey : Color(0xFF4CAF50),
-                          disabledBackgroundColor: Colors.grey,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(22),
-                          ),
-                          elevation: 2,
-                        ),
-                        child: Text(
-                          task.isCompleted ? 'COMPLETED ✓' : 'MARK COMPLETE',
                           style: GoogleFonts.poppins(
+                            color: Colors.black87,
                             fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                            letterSpacing: 0.5,
                           ),
+                          onSubmitted: (_) => _sendComment(),
+                        ),
+                      ),
+                      // Recording indicator or mic button
+                      if (_isRecording)
+                        Row(
+                          children: [
+                            // Recording duration
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.circle,
+                                      size: 8, color: Colors.red),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    _formatDuration(_recordingDuration),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: 4),
+                            // Cancel button
+                            GestureDetector(
+                              onTap: _cancelRecording,
+                              child: Container(
+                                padding: EdgeInsets.all(8),
+                                child: Icon(Icons.close,
+                                    size: 24, color: Colors.grey[600]),
+                              ),
+                            ),
+                            // Stop & Send button
+                            GestureDetector(
+                              onTap: _stopRecording,
+                              child: Container(
+                                padding: EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(Icons.stop,
+                                    size: 20, color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        GestureDetector(
+                          onTap: _startRecording,
+                          child: Container(
+                            padding: EdgeInsets.all(8),
+                            child: Icon(
+                              Icons.mic_none_rounded,
+                              size: 26,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ),
+                      SizedBox(width: 4),
+                      if (!_isRecording)
+                        GestureDetector(
+                          onTap: _isSendingComment ? null : _sendComment,
+                          child: Container(
+                            padding: EdgeInsets.all(8),
+                            child: _isSendingComment
+                                ? SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  )
+                                : SvgPicture.asset(
+                                    'assets/png/send.svg',
+                                    width: 24,
+                                    height: 24,
+                                    color: Colors.grey[600],
+                                  ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 20),
+
+                // Completed Button
+                Center(
+                  child: SizedBox(
+                    width: 180,
+                    height: 45,
+                    child: ElevatedButton(
+                      onPressed:
+                          task.isCompleted ? null : () => _toggleComplete(task),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            task.isCompleted ? Colors.grey : Color(0xFF4CAF50),
+                        disabledBackgroundColor: Colors.grey,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(22),
+                        ),
+                        elevation: 2,
+                      ),
+                      child: Text(
+                        task.isCompleted ? 'COMPLETED ✓' : 'MARK COMPLETE',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
                   ),
-                  SizedBox(height: 30),
-                ]),
+                ),
+                SizedBox(height: 30),
+              ]),
             ),
           ),
         ],
@@ -1046,7 +1089,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     if (task.isCompleted) {
       return;
     }
-    
+
     try {
       final updatedTask = task.copyWith(
         isCompleted: true,
@@ -1162,7 +1205,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     );
   }
 
-  Widget _buildTaskMembersList(List<TaskMember> members, {required bool isAssigned}) {
+  Widget _buildTaskMembersList(List<TaskMember> members,
+      {required bool isAssigned}) {
     if (members.isEmpty) return const SizedBox.shrink();
 
     return SingleChildScrollView(
@@ -1238,7 +1282,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: member.isCompleted ? Colors.green : Colors.grey[300]!,
+                      color:
+                          member.isCompleted ? Colors.green : Colors.grey[300]!,
                       width: 2,
                     ),
                     color: Colors.grey[200],
@@ -1264,7 +1309,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                         color: Colors.green,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.check, size: 12, color: Colors.white),
+                      child: const Icon(Icons.check,
+                          size: 12, color: Colors.white),
                     ),
                   ),
               ],
@@ -1289,7 +1335,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     member.isCompleted ? 'Completed' : 'Pending',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
-                      color: member.isCompleted ? Colors.green : Colors.grey[600],
+                      color:
+                          member.isCompleted ? Colors.green : Colors.grey[600],
                     ),
                   ),
                 ],
@@ -1297,7 +1344,9 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             ),
             const SizedBox(width: 8),
             Icon(
-              member.isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
+              member.isCompleted
+                  ? Icons.check_circle
+                  : Icons.radio_button_unchecked,
               color: member.isCompleted ? Colors.green : Colors.grey[400],
               size: 20,
             ),
@@ -1375,30 +1424,34 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     return Wrap(
       spacing: 8,
       runSpacing: 8,
-      children: attachments.map((attachment) => InkWell(
-        onTap: () => _openAttachment(attachment),
-        borderRadius: BorderRadius.circular(20),
-        child: Chip(
-          label: Text(
-            attachment,
-            style: GoogleFonts.poppins(fontSize: 12),
-            overflow: TextOverflow.ellipsis,
-          ),
-          avatar: Icon(Icons.attach_file, size: 16, color: Colors.blue),
-          backgroundColor: Colors.blue.withOpacity(0.1),
-          deleteIcon: Icon(Icons.open_in_new, size: 16, color: Colors.blue),
-          onDeleted: () => _openAttachment(attachment),
-        ),
-      )).toList(),
+      children: attachments
+          .map((attachment) => InkWell(
+                onTap: () => _openAttachment(attachment),
+                borderRadius: BorderRadius.circular(20),
+                child: Chip(
+                  label: Text(
+                    attachment,
+                    style: GoogleFonts.poppins(fontSize: 12),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  avatar: Icon(Icons.attach_file, size: 16, color: Colors.blue),
+                  backgroundColor: Colors.blue.withOpacity(0.1),
+                  deleteIcon:
+                      Icon(Icons.open_in_new, size: 16, color: Colors.blue),
+                  onDeleted: () => _openAttachment(attachment),
+                ),
+              ))
+          .toList(),
     );
   }
 
   Future<void> _openAttachment(String attachment) async {
     try {
       Uri? uri;
-      
+
       // Check if it's already a URL
-      if (attachment.startsWith('http://') || attachment.startsWith('https://')) {
+      if (attachment.startsWith('http://') ||
+          attachment.startsWith('https://')) {
         uri = Uri.parse(attachment);
       } else {
         // Try to get download URL from Firebase Storage
@@ -1424,7 +1477,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               ),
             );
           }
-          
+
           try {
             final storageRef = FirebaseStorage.instance
                 .ref()
@@ -1455,7 +1508,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
           return;
         }
       }
-      
+
       // Try to launch the URL
       if (uri != null && await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -1478,7 +1531,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   Widget _buildSectionLabel(String label) {
     final parts = label.split('\n');
-    
+
     if (parts.length > 1) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1513,9 +1566,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     }
   }
 
-  Widget _buildBorderedFieldWithLabel({required String label, required Widget child}) {
+  Widget _buildBorderedFieldWithLabel(
+      {required String label, required Widget child}) {
     final parts = label.split('\n');
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1570,7 +1624,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.blue.withOpacity(0.3), width: 1.5),
+              border:
+                  Border.all(color: Colors.blue.withOpacity(0.3), width: 1.5),
             ),
             child: Row(
               children: [
@@ -1596,7 +1651,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
         }
 
         final report = snapshot.data;
-        
+
         return Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -1634,7 +1689,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 onTap: report != null ? () => _openLinkedReport(report) : null,
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                   decoration: BoxDecoration(
                     color: Colors.blue.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(12),
@@ -1698,7 +1754,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
 
   Future<ReportModel?> _fetchReportById(String reportId) async {
     try {
-      final reportsProvider = Provider.of<ReportProvider>(context, listen: false);
+      final reportsProvider =
+          Provider.of<ReportProvider>(context, listen: false);
       // Search in cached reports first
       for (var report in reportsProvider.reports) {
         if (report.id == reportId) {
@@ -1800,10 +1857,10 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     final firstName = name.split(' ').first;
     // Get initials (first letters of first and last name)
     final parts = name.trim().split(' ');
-    final initials = parts.length >= 2 
+    final initials = parts.length >= 2
         ? '${parts.first[0]}${parts.last[0]}'.toUpperCase()
         : (name.isNotEmpty ? name[0].toUpperCase() : '');
-    
+
     return Column(
       children: [
         Container(
@@ -1852,11 +1909,11 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
     final commentId = commentData['id'] as String? ?? '';
     final duration = commentData['duration'] as String? ?? '00:00';
     final authorPhoto = commentData['author_photo'] as String?;
-    
+
     final displayName = name.isNotEmpty ? name : 'Unknown';
     final isVoice = type == 'voice' && audioUrl != null;
     final isCurrentlyPlaying = _playingCommentId == commentId && _isPlaying;
-    
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1898,19 +1955,27 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   child: Container(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     decoration: BoxDecoration(
-                      color: isCurrentlyPlaying ? Colors.green.withOpacity(0.1) : Colors.grey[100],
+                      color: isCurrentlyPlaying
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.grey[100],
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: isCurrentlyPlaying ? Colors.green : Colors.grey[300]!,
+                        color: isCurrentlyPlaying
+                            ? Colors.green
+                            : Colors.grey[300]!,
                       ),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isCurrentlyPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
+                          isCurrentlyPlaying
+                              ? Icons.pause_circle_filled
+                              : Icons.play_circle_filled,
                           size: 28,
-                          color: isCurrentlyPlaying ? Colors.green : Colors.grey[600],
+                          color: isCurrentlyPlaying
+                              ? Colors.green
+                              : Colors.grey[600],
                         ),
                         SizedBox(width: 8),
                         Column(
@@ -1939,7 +2004,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                             width: 60,
                             child: LinearProgressIndicator(
                               backgroundColor: Colors.grey[300],
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Colors.green),
                             ),
                           ),
                         ],

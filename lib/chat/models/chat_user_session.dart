@@ -1,47 +1,53 @@
 /// Chat user session model that captures backend login response
 /// for Firebase chat setup.
-/// 
+///
 /// This model extracts and normalizes the fields needed for chat initialization
 /// from the existing backend login response.
 class ChatUserSession {
   /// Backend JWT token (for other API calls, not Firebase)
   final String backendJwt;
-  
+
   /// Odoo user ID - MUST NOT be null
   final int odooUserId;
-  
+
   /// Employee ID (optional)
   final int? employeeId;
-  
+
   /// User's display name
   final String name;
-  
+
   /// User's email (optional but desirable)
   final String? email;
-  
+
   /// Role ID for role-based chat groups
   final int roleId;
-  
+
   /// Branch ID (optional)
   final int? branchId;
-  
+
   /// Company ID
   final int companyId;
-  
+
   /// Firebase UID - expected format: "odoo_{odoo_user_id}"
   final String firebaseUid;
-  
+
   /// Firebase custom token for signInWithCustomToken
   final String? firebaseCustomToken;
-  
+
   /// Role chat ID (optional, backend may provide specific ID)
   final String? roleChatId;
-  
+
   /// Role name (e.g., "IT Admin", "Engineer")
   final String? roleName;
-  
+
   /// Avatar URL (must be URL, NOT base64)
   final String? avatarUrl;
+
+  /// Job title (optional)
+  final String? jobTitle;
+
+  /// Phone number (optional)
+  final String? phoneNumber;
 
   ChatUserSession({
     required this.backendJwt,
@@ -57,6 +63,8 @@ class ChatUserSession {
     this.firebaseCustomToken,
     this.roleChatId,
     this.avatarUrl,
+    this.jobTitle,
+    this.phoneNumber,
   });
 
   /// Create session from backend login response JSON.
@@ -65,65 +73,70 @@ class ChatUserSession {
     // DEBUG: Print the full structure to find firebase_custom_token
     print('🔍 ChatUserSession: Parsing login response...');
     print('🔍 Top-level keys: ${json.keys.toList()}');
-    
+
     final result = json['result'];
     if (result != null && result is Map) {
       print('🔍 result keys: ${(result as Map).keys.toList()}');
     }
-    
+
     final data = json['result']?['data'] ?? json['data'] ?? json;
-    print('🔍 data keys: ${data is Map ? (data as Map).keys.toList() : "not a map"}');
-    
+    print(
+        '🔍 data keys: ${data is Map ? (data as Map).keys.toList() : "not a map"}');
+
     // Check for firebase_custom_token at different levels
     final tokenFromData = data['firebase_custom_token'];
     final tokenFromResult = json['result']?['firebase_custom_token'];
     final tokenFromRoot = json['firebase_custom_token'];
-    
+
     print('🔍 firebase_custom_token locations:');
-    print('   - In data: ${tokenFromData != null ? "FOUND (${tokenFromData.toString().length} chars)" : "NOT FOUND"}');
-    print('   - In result: ${tokenFromResult != null ? "FOUND (${tokenFromResult.toString().length} chars)" : "NOT FOUND"}');
-    print('   - In root: ${tokenFromRoot != null ? "FOUND (${tokenFromRoot.toString().length} chars)" : "NOT FOUND"}');
-    
+    print(
+        '   - In data: ${tokenFromData != null ? "FOUND (${tokenFromData.toString().length} chars)" : "NOT FOUND"}');
+    print(
+        '   - In result: ${tokenFromResult != null ? "FOUND (${tokenFromResult.toString().length} chars)" : "NOT FOUND"}');
+    print(
+        '   - In root: ${tokenFromRoot != null ? "FOUND (${tokenFromRoot.toString().length} chars)" : "NOT FOUND"}');
+
     // Use token from wherever it's found
-    final String? firebaseToken = tokenFromData?.toString() ?? 
-                                   tokenFromResult?.toString() ?? 
-                                   tokenFromRoot?.toString();
-    
-    print('🔍 Final firebase_custom_token: ${firebaseToken != null ? "FOUND (${firebaseToken.length} chars)" : "NOT FOUND ❌"}');
-    
+    final String? firebaseToken = tokenFromData?.toString() ??
+        tokenFromResult?.toString() ??
+        tokenFromRoot?.toString();
+
+    print(
+        '🔍 Final firebase_custom_token: ${firebaseToken != null ? "FOUND (${firebaseToken.length} chars)" : "NOT FOUND ❌"}');
+
     // Check for firebase_uid at different levels
     final uidFromData = data['firebase_uid'];
     final uidFromResult = json['result']?['firebase_uid'];
     final uidFromRoot = json['firebase_uid'];
-    
+
     print('🔍 firebase_uid locations:');
     print('   - In data: ${uidFromData ?? "NOT FOUND"}');
     print('   - In result: ${uidFromResult ?? "NOT FOUND"}');
     print('   - In root: ${uidFromRoot ?? "NOT FOUND"}');
-    
+
     final token = json['result']?['token'] ?? json['token'] ?? '';
-    
+
     // odoo_user_id: prefer explicit field, fallback to uid or user_id
-    final int odooUserId = _extractInt(data['odoo_user_id']) ?? 
-                           _extractInt(data['user_id']) ??
-                           _extractInt(data['uid']) ?? 
-                           0;
-    
+    final int odooUserId = _extractInt(data['odoo_user_id']) ??
+        _extractInt(data['user_id']) ??
+        _extractInt(data['uid']) ??
+        0;
+
     print('🔍 odoo_user_id: $odooUserId');
-    
+
     // Firebase UID: use provided or generate from odoo_user_id
-    final String firebaseUid = uidFromData?.toString() ?? 
-                               uidFromResult?.toString() ??
-                               uidFromRoot?.toString() ??
-                               'odoo_$odooUserId';
-    
+    final String firebaseUid = uidFromData?.toString() ??
+        uidFromResult?.toString() ??
+        uidFromRoot?.toString() ??
+        'odoo_$odooUserId';
+
     print('🔍 Final firebase_uid: $firebaseUid');
-    
+
     // Role ID extraction - try multiple possible field names
-    final int roleId = _extractInt(data['role_id']) ?? 
-                       _extractInt(data['default_role_id']) ?? 
-                       0;
-    
+    final int roleId = _extractInt(data['role_id']) ??
+        _extractInt(data['default_role_id']) ??
+        0;
+
     // Role name extraction from roles list
     final roles = data['roles'];
     String? roleName;
@@ -131,45 +144,91 @@ class ChatUserSession {
       roleName = roles.first?.toString();
       print('🔍 Role name from roles list: $roleName');
     }
-    
+
     // Avatar URL extraction - check multiple locations
     final avatarFromData = data['image_url'] ?? data['avatar_url'];
-    final avatarFromResult = json['result']?['image_url'] ?? json['result']?['avatar_url'];
+    final avatarFromResult =
+        json['result']?['image_url'] ?? json['result']?['avatar_url'];
     final avatarFromRoot = json['image_url'] ?? json['avatar_url'];
-    
+
     print('🖼️ Avatar URL locations:');
     print('   - In data: ${avatarFromData ?? "NOT FOUND"}');
     print('   - In result: ${avatarFromResult ?? "NOT FOUND"}');
     print('   - In root: ${avatarFromRoot ?? "NOT FOUND"}');
-    
+
     final rawAvatarUrl = avatarFromData ?? avatarFromResult ?? avatarFromRoot;
     final String? avatarUrl = _extractAvatarUrl(rawAvatarUrl);
     print('🖼️ Final avatar URL: ${avatarUrl ?? "NONE"}');
-    
+
     // Branch ID: prefer default_operating_unit_id as per backend update
     final int? branchId = _extractInt(data['default_operating_unit_id']) ??
-                          _extractInt(data['branch_id']);
-    
+        _extractInt(data['branch_id']);
+
     return ChatUserSession(
       backendJwt: token,
       odooUserId: odooUserId,
-      employeeId: _extractInt(data['employee_id']) ?? 
-                  _extractInt(data['emp_id']),
-      name: data['name']?.toString() ?? 
-            data['emp_name']?.toString() ?? 
-            data['username']?.toString() ?? 
-            '',
-      email: data['email']?.toString() ?? 
-             data['username']?.toString(),
+      employeeId:
+          _extractInt(data['employee_id']) ?? _extractInt(data['emp_id']),
+      name: data['name']?.toString() ??
+          data['emp_name']?.toString() ??
+          data['username']?.toString() ??
+          '',
+      email: _extractEmail(data),
       roleId: roleId,
       roleName: roleName,
       branchId: branchId,
-      companyId: _extractInt(data['company_id']) ?? 1, // Always 1 as per backend
+      companyId:
+          _extractInt(data['company_id']) ?? 1, // Always 1 as per backend
       firebaseUid: firebaseUid,
       firebaseCustomToken: firebaseToken, // Use the token found at any level
       roleChatId: data['role_chat_id']?.toString(),
       avatarUrl: avatarUrl,
+      jobTitle: _extractString(data, const [
+        'job_title',
+        'job_position',
+        'designation',
+        'position',
+        'title',
+      ]),
+      phoneNumber: _extractString(data, const [
+        'phone',
+        'phone_number',
+        'mobile_phone',
+        'mobile',
+        'mobile_number',
+        'work_phone',
+        'emp_phone',
+        'telephone',
+      ]),
     );
+  }
+
+  static String? _extractEmail(Map<String, dynamic> data) {
+    final raw = _extractString(data, const [
+      'email',
+      'work_email',
+      'official_email',
+      'personal_email',
+      'email_address',
+      'mail',
+      'username',
+    ]);
+    if (raw == null) return null;
+    // Keep only realistic email values.
+    if (!raw.contains('@')) return null;
+    return raw;
+  }
+
+  static String? _extractString(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value == null || value == false) continue;
+      final text = value.toString().trim();
+      if (text.isNotEmpty && text.toLowerCase() != 'null') {
+        return text;
+      }
+    }
+    return null;
   }
 
   /// Extract int from various possible types (int, String, etc.)
@@ -194,8 +253,8 @@ class ChatUserSession {
   }
 
   /// Check if Firebase chat is available (has custom token)
-  bool get isChatAvailable => firebaseCustomToken != null && 
-                              firebaseCustomToken!.isNotEmpty;
+  bool get isChatAvailable =>
+      firebaseCustomToken != null && firebaseCustomToken!.isNotEmpty;
 
   /// Computed role chat ID based on configuration
   String getRoleChatId({bool groupByBranch = false}) {
@@ -216,39 +275,45 @@ class ChatUserSession {
   }
 
   @override
-  String toString() => 'ChatUserSession(uid: $firebaseUid, name: $name, roleId: $roleId)';
+  String toString() =>
+      'ChatUserSession(uid: $firebaseUid, name: $name, roleId: $roleId)';
 
   Map<String, dynamic> toJson() => {
-    'backend_jwt': backendJwt,
-    'odoo_user_id': odooUserId,
-    'employee_id': employeeId,
-    'name': name,
-    'email': email,
-    'role_id': roleId,
-    'role_name': roleName,
-    'branch_id': branchId,
-    'company_id': companyId,
-    'firebase_uid': firebaseUid,
-    'firebase_custom_token': firebaseCustomToken != null ? '***' : null,
-    'role_chat_id': roleChatId,
-    'avatar_url': avatarUrl,
-  };
+        'backend_jwt': backendJwt,
+        'odoo_user_id': odooUserId,
+        'employee_id': employeeId,
+        'name': name,
+        'email': email,
+        'role_id': roleId,
+        'role_name': roleName,
+        'branch_id': branchId,
+        'company_id': companyId,
+        'firebase_uid': firebaseUid,
+        'firebase_custom_token': firebaseCustomToken != null ? '***' : null,
+        'role_chat_id': roleChatId,
+        'avatar_url': avatarUrl,
+        'job_title': jobTitle,
+        'phone': phoneNumber,
+      };
 
-  factory ChatUserSession.fromJson(Map<String, dynamic> json) => ChatUserSession(
-    backendJwt: json['backend_jwt'] ?? '',
-    odooUserId: json['odoo_user_id'] ?? 0,
-    employeeId: json['employee_id'],
-    name: json['name'] ?? '',
-    email: json['email'],
-    roleId: json['role_id'] ?? 0,
-    roleName: json['role_name'],
-    branchId: json['branch_id'],
-    companyId: json['company_id'] ?? 1,
-    firebaseUid: json['firebase_uid'] ?? '',
-    firebaseCustomToken: json['firebase_custom_token'],
-    roleChatId: json['role_chat_id'],
-    avatarUrl: json['avatar_url'],
-  );
+  factory ChatUserSession.fromJson(Map<String, dynamic> json) =>
+      ChatUserSession(
+        backendJwt: json['backend_jwt'] ?? '',
+        odooUserId: json['odoo_user_id'] ?? 0,
+        employeeId: json['employee_id'],
+        name: json['name'] ?? '',
+        email: json['email'],
+        roleId: json['role_id'] ?? 0,
+        roleName: json['role_name'],
+        branchId: json['branch_id'],
+        companyId: json['company_id'] ?? 1,
+        firebaseUid: json['firebase_uid'] ?? '',
+        firebaseCustomToken: json['firebase_custom_token'],
+        roleChatId: json['role_chat_id'],
+        avatarUrl: json['avatar_url'],
+        jobTitle: json['job_title'],
+        phoneNumber: json['phone'],
+      );
 }
 
 /// Result of chat setup after backend login
@@ -270,25 +335,27 @@ class ChatSetupResult {
   factory ChatSetupResult.success({
     required String firebaseUid,
     required String roleChatId,
-  }) => ChatSetupResult(
-    success: true,
-    firebaseUid: firebaseUid,
-    chatEnabled: true,
-    roleChatId: roleChatId,
-  );
+  }) =>
+      ChatSetupResult(
+        success: true,
+        firebaseUid: firebaseUid,
+        chatEnabled: true,
+        roleChatId: roleChatId,
+      );
 
   factory ChatSetupResult.failed(String error) => ChatSetupResult(
-    success: false,
-    error: error,
-    chatEnabled: false,
-  );
+        success: false,
+        error: error,
+        chatEnabled: false,
+      );
 
   factory ChatSetupResult.disabled(String reason) => ChatSetupResult(
-    success: true, // Not a failure, just not available
-    error: reason,
-    chatEnabled: false,
-  );
+        success: true, // Not a failure, just not available
+        error: reason,
+        chatEnabled: false,
+      );
 
   @override
-  String toString() => 'ChatSetupResult(success: $success, chatEnabled: $chatEnabled, uid: $firebaseUid)';
+  String toString() =>
+      'ChatSetupResult(success: $success, chatEnabled: $chatEnabled, uid: $firebaseUid)';
 }

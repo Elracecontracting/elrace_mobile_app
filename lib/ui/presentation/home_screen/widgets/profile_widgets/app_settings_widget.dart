@@ -1,7 +1,9 @@
 import 'package:el_race/chat/chat.dart';
+import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/auth/uaepass_auth_cubit.dart';
+import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:el_race/ui/presentation/qr_code/qr_scanner_screen.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
@@ -12,8 +14,179 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart';
 
 class AppSettingsWidget extends StatelessWidget {
-  final navKey;
-  const AppSettingsWidget({super.key, required this.navKey});
+  final GlobalKey<NavigatorState> navKey;
+  final VoidCallback? onMuteControlTap;
+  const AppSettingsWidget({
+    super.key,
+    required this.navKey,
+    this.onMuteControlTap,
+  });
+
+  String _pickExistingKey(
+    Map<String, bool> settings,
+    List<String> candidates,
+  ) {
+    for (final candidate in candidates) {
+      final key = candidate.trim().toLowerCase();
+      if (settings.containsKey(key)) {
+        return key;
+      }
+    }
+    return candidates.first.trim().toLowerCase();
+  }
+
+  Future<void> _showMuteControlPopup(BuildContext context) async {
+    final settings = await NotificationStorageService.getMuteSettings();
+    final dialogHostContext =
+        navKey.currentState?.overlay?.context ?? navKey.currentContext;
+    if (dialogHostContext == null) return;
+
+    final channels = <_MuteChannelItem>[
+      _MuteChannelItem(
+        label: 'Announcement',
+        key:
+            _pickExistingKey(settings, const ['announcement', 'announcements']),
+      ),
+      _MuteChannelItem(
+        label: 'Circular',
+        key: _pickExistingKey(settings, const ['circular', 'circulars']),
+      ),
+      _MuteChannelItem(
+        label: 'Notifications',
+        key: _pickExistingKey(settings, const ['notification', 'alert']),
+      ),
+      _MuteChannelItem(
+        label: 'Azan',
+        key: _pickExistingKey(settings, const ['prayer', 'azan']),
+      ),
+    ];
+
+    final valueByKey = <String, bool>{
+      for (final channel in channels)
+        channel.key: settings[channel.key] == true,
+    };
+
+    await showDialog<void>(
+      context: dialogHostContext,
+      useRootNavigator: true,
+      barrierColor: Colors.black54,
+      builder: (dialogContext) {
+        var isSaving = false;
+
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) {
+            Future<void> updateChannel(
+                _MuteChannelItem item, bool value) async {
+              final previous = valueByKey[item.key] ?? false;
+
+              setDialogState(() {
+                valueByKey[item.key] = value;
+                isSaving = true;
+              });
+
+              try {
+                await NotificationStorageService.setMuteSetting(
+                    item.key, value);
+              } catch (_) {
+                setDialogState(() {
+                  valueByKey[item.key] = previous;
+                });
+
+                final messenger = ScaffoldMessenger.maybeOf(dialogHostContext);
+                messenger?.showSnackBar(
+                  const SnackBar(
+                    content: Text('Failed to update mute setting'),
+                    backgroundColor: Color(0xffBA1719),
+                  ),
+                );
+              } finally {
+                setDialogState(() {
+                  isSaving = false;
+                });
+              }
+            }
+
+            return Dialog(
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              insetPadding: const EdgeInsets.symmetric(horizontal: 34),
+              child: Container(
+                padding: EdgeInsets.fromLTRB(18.w, 18.h, 18.w, 14.h),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F7F8),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final item in channels)
+                      Padding(
+                        padding: EdgeInsets.only(bottom: 10.h),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                item.label,
+                                style: const TextStyle(
+                                  color: Color(0xFF1D1F5A),
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Transform.scale(
+                              scale: 0.9,
+                              child: Switch(
+                                value: valueByKey[item.key] ?? false,
+                                onChanged: isSaving
+                                    ? null
+                                    : (value) => updateChannel(item, value),
+                                activeThumbColor: const Color(0xFF454545),
+                                activeTrackColor: const Color(0xFFD1D2D4),
+                                inactiveThumbColor: const Color(0xFF454545),
+                                inactiveTrackColor: const Color(0xFFD1D2D4),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    SizedBox(height: 2.h),
+                    SizedBox(
+                      height: 32.h,
+                      child: ElevatedButton.icon(
+                        onPressed: isSaving
+                            ? null
+                            : () =>
+                                Navigator.of(dialogContext, rootNavigator: true)
+                                    .pop(),
+                        style: ElevatedButton.styleFrom(
+                          elevation: 0,
+                          backgroundColor: const Color(0xFF0FA25E),
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: EdgeInsets.symmetric(horizontal: 20.w),
+                        ),
+                        icon: const Icon(Icons.check_circle_outline, size: 18),
+                        label: const Text(
+                          'DONE',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -224,6 +397,46 @@ class AppSettingsWidget extends StatelessWidget {
         */
         SizedBox(height: 40.h),
         Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 10.h),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withAlpha((0.08 * 255).toInt()),
+                offset: const Offset(0, -2),
+                blurRadius: 3,
+              ),
+              BoxShadow(
+                color: Colors.black.withAlpha((0.12 * 255).toInt()),
+                offset: const Offset(0, 2),
+                blurRadius: 4,
+              ),
+            ],
+          ),
+          child: InkWell(
+            onTap: onMuteControlTap ?? () => _showMuteControlPopup(context),
+            child: Row(
+              children: [
+                Image.asset(
+                  'assets/newapp/newicon/mute_notification.png',
+                  width: 20,
+                  height: 20,
+                ),
+                SizedBox(width: 10.w),
+                Text(
+                  'Mute Control',
+                  style: TextStyle(
+                    color: const Color(0xffBA1719),
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: 8.h),
+        Container(
           padding: EdgeInsets.symmetric(
             horizontal: 12.w,
           ),
@@ -254,20 +467,20 @@ class AppSettingsWidget extends StatelessWidget {
               TextButton(
                 onPressed: () async {
                   print('🚪 Logout button pressed');
-                  
+
                   // Hide profile box first (before showing dialog)
                   final provider =
                       Provider.of<ProfileBoxProvider>(context, listen: false);
                   if (provider.isProfileVisible) {
                     provider.hideProfileBox();
                   }
-                  
+
                   // Wait a bit for the animation to complete
                   await Future.delayed(const Duration(milliseconds: 300));
-                  
+
                   // Use navKey.currentContext if available, otherwise fallback to context
                   final dialogContext = navKey.currentContext ?? context;
-                  
+
                   // Show confirmation dialog
                   final shouldLogout = await showDialog<bool>(
                     context: dialogContext,
@@ -277,7 +490,8 @@ class AppSettingsWidget extends StatelessWidget {
                         translate('profile.logout_confirmation_title'),
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      content: Text(translate('profile.logout_confirmation_message')),
+                      content: Text(
+                          translate('profile.logout_confirmation_message')),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
@@ -328,8 +542,8 @@ class AppSettingsWidget extends StatelessWidget {
                       print('🧹 Cleaning up chat module...');
                       try {
                         await ChatModuleHelper.instance.cleanup().timeout(
-                          const Duration(seconds: 5),
-                        );
+                              const Duration(seconds: 5),
+                            );
                         print('✅ Chat module cleaned up');
                       } catch (e) {
                         print('⚠️ Chat cleanup failed (continuing): $e');
@@ -338,8 +552,8 @@ class AppSettingsWidget extends StatelessWidget {
                       // Clear UAE PASS session
                       try {
                         await context.read<UaepassAuthCubit>().logout().timeout(
-                          const Duration(seconds: 5),
-                        );
+                              const Duration(seconds: 5),
+                            );
                       } catch (e) {
                         print('⚠️ UAE Pass logout failed (continuing): $e');
                       }
@@ -353,6 +567,16 @@ class AppSettingsWidget extends StatelessWidget {
                     } catch (e) {
                       print('❌ Logout error: $e');
                     } finally {
+                      // Reset bottom navigation to Home for the next session.
+                      try {
+                        context
+                            .read<HomeBloc>()
+                            .add(const ChangeCurrentIndex(index: 1));
+                      } catch (e) {
+                        print(
+                            '⚠️ Failed to reset HomeBloc index on logout: $e');
+                      }
+
                       // Always navigate to sign in, even if some cleanup failed
                       print('🧭 Navigating to sign in...');
                       final navContext = navKey.currentContext ?? context;
@@ -376,4 +600,14 @@ class AppSettingsWidget extends StatelessWidget {
       ],
     );
   }
+}
+
+class _MuteChannelItem {
+  final String label;
+  final String key;
+
+  const _MuteChannelItem({
+    required this.label,
+    required this.key,
+  });
 }

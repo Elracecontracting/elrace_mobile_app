@@ -1,10 +1,10 @@
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_models.dart';
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_repository.dart';
+import 'package:el_race/ui/presentation/my_documents/screens/attachment_viewer_screen.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -23,31 +23,46 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _future = _repo.fetchByType(MyActionsType.reports);
   }
 
-  /// Map status strings to badge assets.
-  String _statusBadgeAsset(String status) {
-    switch (status.trim().toLowerCase()) {
-      case 'approved':
-      case 'approve':
-      case 'done':
-      case 'paid':
-        return 'assets/newapp/approvedBadge.png';
-      case 'pending':
-      case 'submit':
-      case 'draft':
-        return 'assets/newapp/warningBadge.png';
-      case 'rejected':
-      case 'cancel':
-        return 'assets/newapp/rejectBadge.png';
-      default:
-        return 'assets/newapp/warningBadge.png';
-    }
+  String _formatDisplayDate(String? rawDate) {
+    final input = (rawDate ?? '').trim();
+    if (input.isEmpty) return '';
+
+    final parsed = DateTime.tryParse(input);
+    if (parsed == null) return input;
+
+    final day = parsed.day.toString().padLeft(2, '0');
+    final month = parsed.month.toString().padLeft(2, '0');
+    final year = parsed.year.toString();
+    final hour24 = parsed.hour;
+    final minute = parsed.minute.toString().padLeft(2, '0');
+    final isPm = hour24 >= 12;
+    final hour12 = hour24 % 12 == 0 ? 12 : hour24 % 12;
+    final period = isPm ? 'Pm' : 'Am';
+
+    return '$day/$month/$year  At $hour12:$minute $period';
   }
 
-  Future<void> _openReportLink(String url) async {
-    final uri = Uri.tryParse(url);
-    if (uri != null && await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+  Future<void> _openReportLink(
+    BuildContext context,
+    _ReportRequestItem item,
+  ) async {
+    final uri = Uri.tryParse(item.reportLink);
+    if (uri == null || item.reportLink.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No file URL available')),
+      );
+      return;
     }
+
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AttachmentViewerScreen(
+          publicUrl: item.reportLink,
+          title:
+              item.reportName.trim().isEmpty ? 'Attachment' : item.reportName,
+        ),
+      ),
+    );
   }
 
   @override
@@ -106,19 +121,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 reportName: item.name.trim().isNotEmpty
                     ? item.name
                     : 'Report #${item.id}',
-                project: item.project?.trim().isNotEmpty == true
-                    ? item.project!
-                    : '',
-                statusBadgeAsset: _statusBadgeAsset(item.status),
-                statusText: item.status.trim().isNotEmpty
-                    ? item.status[0].toUpperCase() +
-                        item.status.substring(1).toLowerCase()
-                    : '',
+                displayDate: _formatDisplayDate(item.date),
                 reportLink: item.reportLink?.trim().isNotEmpty == true
                     ? item.reportLink!
-                    : '',
-                clientImage: item.clientImage?.trim().isNotEmpty == true
-                    ? item.clientImage!
                     : '',
               );
             }).toList();
@@ -173,12 +178,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 else
                   ...reportItems.map(
                     (item) => Padding(
-                      padding: EdgeInsets.symmetric(
-                          horizontal: 16.w, vertical: 7.h),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
                       child: _ReportRequestCard(
                         item: item,
-                        onOpenLink: item.reportLink.isNotEmpty
-                            ? () => _openReportLink(item.reportLink)
+                        onTap: item.reportLink.isNotEmpty
+                            ? () => _openReportLink(context, item)
                             : null,
                       ),
                     ),
@@ -196,186 +201,68 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
 class _ReportRequestCard extends StatelessWidget {
   final _ReportRequestItem item;
-  final VoidCallback? onOpenLink;
+  final VoidCallback? onTap;
 
-  const _ReportRequestCard({required this.item, this.onOpenLink});
+  const _ReportRequestCard({required this.item, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 152.h,
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9F9F9),
-        borderRadius: BorderRadius.circular(30.r),
-        border: Border.all(color: const Color(0xFF9F9F9F), width: 1),
-      ),
-      child: Stack(
-        children: [
-          // Status ribbon (top-left corner)
-          Positioned(
-            top: 0,
-            left: 0,
-            child: ClipRRect(
-              borderRadius:
-                  BorderRadius.only(topLeft: Radius.circular(30.r)),
-              child: Image.asset(
-                item.statusBadgeAsset,
-                width: 73.w,
-                height: 41.h,
-                fit: BoxFit.contain,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(28.r),
+      child: Container(
+        height: 102.h,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF3F3F3),
+          borderRadius: BorderRadius.circular(28.r),
+          border: Border.all(color: const Color(0xFFA9A9A9), width: 1),
+        ),
+        padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/newapp/pdf.png',
+              width: 70.w,
+              height: 70.w,
+              fit: BoxFit.contain,
+            ),
+            SizedBox(width: 14.w),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.reportName.trim().isEmpty
+                        ? 'File Name'
+                        : item.reportName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF111111),
+                      height: 1.1,
+                    ),
+                  ),
+                  SizedBox(height: 6.h),
+                  Text(
+                    item.displayDate.isEmpty ? '-' : item.displayDate,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF232323),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-
-          // Content
-          Padding(
-            padding: EdgeInsets.fromLTRB(16.w, 18.h, 16.w, 12.h),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Report ID (centered, blue)
-                Center(
-                  child: Text(
-                    'Report #${item.reportId}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: 13.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF0A3887),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 6.h),
-
-                // Report name (left-aligned, bold)
-                Text(
-                  item.reportName.toUpperCase(),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF111111),
-                    height: 1.15,
-                  ),
-                ),
-                SizedBox(height: 2.h),
-
-                // Project name (if available)
-                if (item.project.isNotEmpty)
-                  Text(
-                    item.project,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
-                      fontSize: 10.sp,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF777777),
-                    ),
-                  ),
-
-                const Spacer(),
-
-                // Bottom row: status left + report link icon right
-                Row(
-                  children: [
-                    // Status text
-                    if (item.statusText.isNotEmpty)
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                            horizontal: 10.w, vertical: 3.h),
-                        decoration: BoxDecoration(
-                          color: _statusBgColor(item.statusText),
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                        child: Text(
-                          item.statusText,
-                          style: GoogleFonts.inter(
-                            fontSize: 10.sp,
-                            fontWeight: FontWeight.w700,
-                            color: _statusTextColor(item.statusText),
-                          ),
-                        ),
-                      ),
-                    const Spacer(),
-                    // Download / view link button
-                    if (onOpenLink != null)
-                      GestureDetector(
-                        onTap: onOpenLink,
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 10.w, vertical: 4.h),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF0A3887),
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                Icons.picture_as_pdf_rounded,
-                                size: 14.w,
-                                color: Colors.white,
-                              ),
-                              SizedBox(width: 4.w),
-                              Text(
-                                'View PDF',
-                                style: GoogleFonts.inter(
-                                  fontSize: 10.sp,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    else
-                      Text(
-                        'No file',
-                        style: GoogleFonts.inter(
-                          fontSize: 9.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFFB8B8B8),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
-  }
-
-  Color _statusBgColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'approved':
-        return const Color(0xFFE8F5E9);
-      case 'pending':
-      case 'draft':
-        return const Color(0xFFFFF3E0);
-      case 'rejected':
-        return const Color(0xFFFFEBEE);
-      default:
-        return const Color(0xFFF5F5F5);
-    }
-  }
-
-  Color _statusTextColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'approved':
-        return const Color(0xFF2E7D32);
-      case 'pending':
-      case 'draft':
-        return const Color(0xFFE65100);
-      case 'rejected':
-        return const Color(0xFFC62828);
-      default:
-        return const Color(0xFF616161);
-    }
   }
 }
 
@@ -384,19 +271,13 @@ class _ReportRequestCard extends StatelessWidget {
 class _ReportRequestItem {
   final int reportId;
   final String reportName;
-  final String project;
-  final String statusBadgeAsset;
-  final String statusText;
+  final String displayDate;
   final String reportLink;
-  final String clientImage;
 
   const _ReportRequestItem({
     required this.reportId,
     required this.reportName,
-    required this.project,
-    required this.statusBadgeAsset,
-    required this.statusText,
+    required this.displayDate,
     required this.reportLink,
-    required this.clientImage,
   });
 }

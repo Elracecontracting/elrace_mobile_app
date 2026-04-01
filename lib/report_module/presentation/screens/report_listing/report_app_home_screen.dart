@@ -7,7 +7,6 @@ import 'package:el_race/report_module/core/utils/flush_bar.dart';
 import 'package:el_race/report_module/data/models/folder_model.dart';
 import 'package:el_race/report_module/data/provider/reports_provider.dart';
 import 'package:el_race/report_module/data/repositories/company_repository.dart';
-import 'package:el_race/report_module/presentation/bottom_sheets/show_option_sheet.dart';
 import 'package:el_race/report_module/presentation/dialogs/add_report.dart';
 import 'package:el_race/report_module/presentation/screens/company/company_screen.dart';
 import 'package:el_race/report_module/presentation/widgets/bottom_appbar.dart';
@@ -232,13 +231,8 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                             final folder = filteredFolders[index];
                             return FolderTile(
                               folder: folder,
-                              onMoreClicked: () async {
-                                int selectedOptionStatus =
-                                    await showEditOptions(
-                                  context,
-                                  options: ['rename', 'delete'],
-                                );
-                                if (selectedOptionStatus == 0) {
+                              onMenuSelected: (value) async {
+                                if (value == 'rename') {
                                   if (!context.mounted) return;
                                   showFlushBar(
                                     context,
@@ -247,19 +241,66 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                                   );
                                   return;
                                 }
-                                if (selectedOptionStatus == 1) {
+
+                                if (value == 'delete') {
                                   if (!context.mounted) return;
-                                  int deleteCodeStatus = await showEditOptions(
-                                    context,
-                                    options: ['Confirm Delete', 'Cancel'],
+                                  final confirmed = await showDialog<bool>(
+                                    context: context,
+                                    builder: (ctx) => AlertDialog(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(16.r),
+                                      ),
+                                      title: Text(
+                                        'Delete Project Report',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 18.sp,
+                                          fontWeight: FontWeight.w600,
+                                          color: const Color(0xFF27304E),
+                                        ),
+                                      ),
+                                      content: Text(
+                                        'Are you sure you want to delete this project report?',
+                                        style: GoogleFonts.inter(
+                                          fontSize: 14.sp,
+                                          color: const Color(0xFF27304E),
+                                        ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(ctx, false),
+                                          child: Text(
+                                            'Cancel',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFF27304E),
+                                            ),
+                                          ),
+                                        ),
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(ctx, true),
+                                          child: Text(
+                                            'Delete',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.w600,
+                                              color: const Color(0xFFE81E25),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   );
-                                  if (deleteCodeStatus == 0) {
+
+                                  if (confirmed == true) {
                                     showFlushBar(
                                       context,
                                       message:
                                           'Delete function for folder is not available at the moment.',
                                     );
-                                    return;
                                   }
                                 }
                               },
@@ -393,7 +434,7 @@ Skeletonizer showFolderOrReportLoader() {
         updatedAt: DateTime.now(),
         id: "1",
       ),
-      onMoreClicked: () async {},
+      onMenuSelected: (_) {},
     ),
   );
 }

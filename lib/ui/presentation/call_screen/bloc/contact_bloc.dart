@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:developer';
 
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:http/http.dart' as http;
@@ -15,6 +16,8 @@ part 'contact_state.dart';
 final _contactRepo = sl.get<ContactRepo>();
 
 class ContactBloc extends Bloc<ContactEvent, ContactState> {
+  String? _cachedUserKey;
+
   ContactBloc() : super(ContactInitial()) {
     on<GetEmployeeLisET>(getEmpMethod);
     on<SearchContactsEvent>(searchContactsMethod);
@@ -24,11 +27,21 @@ class ContactBloc extends Bloc<ContactEvent, ContactState> {
   List<Employee> filteredEmpList = [];
   FutureOr<void> getEmpMethod(
       GetEmployeeLisET event, Emitter<ContactState> emit) async {
+    final currentUserKey = _resolveCurrentUserKey();
+    if (_cachedUserKey != null && _cachedUserKey != currentUserKey) {
+      print('🔄 User changed in ContactBloc, clearing cached contacts');
+      empList.clear();
+      filteredEmpList.clear();
+    }
+
     print('\n🟢 ========== FETCHING CONTACTS ==========');
     print('📊 Current empList size: ${empList.length}');
+    print('👤 Current user key: $currentUserKey');
 
     if (empList.isNotEmpty) {
       print('✅ Using cached data');
+      filteredEmpList = List<Employee>.from(empList);
+      emit(EmployeeListLoaded(List<Employee>.from(filteredEmpList)));
       print('🟢 ========== END FETCHING CONTACTS ==========\n');
       return;
     }
@@ -53,6 +66,7 @@ class ContactBloc extends Bloc<ContactEvent, ContactState> {
       if (employees.isNotEmpty) {
         empList = employees;
         filteredEmpList = employees;
+        _cachedUserKey = currentUserKey;
 
         // Print first 3 employees for verification
         print('\n📋 First 3 Employees:');
@@ -109,5 +123,26 @@ class ContactBloc extends Bloc<ContactEvent, ContactState> {
     }
 
     emit(EmployeeListLoaded(List<Employee>.from(filteredEmpList)));
+  }
+
+  String _resolveCurrentUserKey() {
+    final login = SharedPref.getLoginDataOrNull();
+    final data = login?.result?.data;
+
+    final byUid = data?.uid?.toString();
+    if (byUid != null && byUid.isNotEmpty) return 'uid:$byUid';
+
+    final byUser = data?.odoo_user_id?.toString();
+    if (byUser != null && byUser.isNotEmpty) return 'odoo:$byUser';
+
+    final byEmp = data?.employee_id?.toString();
+    if (byEmp != null && byEmp.isNotEmpty) return 'emp:$byEmp';
+
+    final byUsername = data?.username?.trim();
+    if (byUsername != null && byUsername.isNotEmpty) {
+      return 'username:$byUsername';
+    }
+
+    return 'guest';
   }
 }

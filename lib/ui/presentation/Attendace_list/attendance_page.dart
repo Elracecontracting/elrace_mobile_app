@@ -150,7 +150,30 @@ class _AttendancePageState extends State<AttendancePage> {
     });
   }
 
+  String _normalizeBackendStatus(String? value) {
+    final raw = (value ?? '').trim();
+    if (raw.isEmpty) return '';
+    return raw.replaceAll('_', ' ').toUpperCase();
+  }
+
   String _actionTitleForRecord(AttendanceRecord record) {
+    final inStatus = _normalizeBackendStatus(record.checkInStatus);
+    final outStatus = _normalizeBackendStatus(record.checkOutStatus);
+    final overallStatus = _normalizeBackendStatus(record.status);
+
+    if (inStatus.isNotEmpty && outStatus.isNotEmpty) {
+      return '$inStatus • $outStatus';
+    }
+    if (overallStatus.isNotEmpty) {
+      return overallStatus;
+    }
+    if (inStatus.isNotEmpty) {
+      return inStatus;
+    }
+    if (outStatus.isNotEmpty) {
+      return outStatus;
+    }
+
     final hasCheckOut = record.checkOut != null &&
         record.checkOut != false &&
         record.checkOut.toString().trim().isNotEmpty;

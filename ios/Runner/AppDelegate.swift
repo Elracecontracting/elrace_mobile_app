@@ -1,5 +1,6 @@
 import Firebase
 import FirebaseCore
+import FirebaseMessaging
 import Flutter
 import UIKit
 import UserNotifications
@@ -41,8 +42,19 @@ import UserNotifications
     _ application: UIApplication,
     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
   ) {
+    Messaging.messaging().apnsToken = deviceToken
     print("✅ Successfully registered for remote notifications")
     print("📱 Device Token: \(deviceToken.map { String(format: "%02.2hhx", $0) }.joined())")
+
+    Messaging.messaging().token { token, error in
+      if let error = error {
+        print("❌ Failed to fetch FCM token after APNS registration: \(error.localizedDescription)")
+      } else if let token = token {
+        print("✅ iOS FCM token (native callback): \(token)")
+      } else {
+        print("⚠️ iOS FCM token is nil after APNS registration")
+      }
+    }
   }
 
   // Handle failure to register for remote notifications
@@ -80,5 +92,14 @@ import UserNotifications
     print("📲 Notification tapped: \(userInfo)")
 
     completionHandler()
+  }
+
+  override func application(
+    _ application: UIApplication,
+    didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+    fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+  ) {
+    print("📩 iOS remote notification received (bg/silent): \(userInfo)")
+    completionHandler(.newData)
   }
 }

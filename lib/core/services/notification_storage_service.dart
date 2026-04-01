@@ -9,11 +9,17 @@ class NotificationStorageService {
   static const String _muteSettingsKey = 'notification_mute_settings_v1';
   static const String _muteSettingsFetchedAtKey =
       'notification_mute_settings_v1_fetched_at';
+  static const String _categoriesKey = 'notification_categories_v1';
+  static const String _categoriesFetchedAtKey =
+      'notification_categories_v1_fetched_at';
 
   static const Duration _muteSettingsCacheTtl = Duration(minutes: 5);
+  static const Duration _categoriesCacheTtl = Duration(minutes: 5);
 
   static Map<String, bool>? _memoryMuteSettings;
   static DateTime? _memoryMuteSettingsFetchedAt;
+  static List<NotificationCategoryApiModel>? _memoryCategories;
+  static DateTime? _memoryCategoriesFetchedAt;
 
   /// Callback to notify when notification count changes.
   static void Function()? onCountChanged;
@@ -61,6 +67,91 @@ class NotificationStorageService {
     } catch (_) {
       return <String, bool>{};
     }
+  }
+
+  static String _humanizeCategory(String value) {
+    final text = value.trim();
+    if (text.isEmpty) return 'Notification';
+
+    final parts = text
+        .split(RegExp(r'[._-]+'))
+        .where((part) => part.trim().isNotEmpty)
+        .map((part) {
+      final p = part.trim();
+      return '${p[0].toUpperCase()}${p.substring(1)}';
+    }).toList(growable: false);
+
+    if (parts.isEmpty) return 'Notification';
+    return parts.join(' ');
+  }
+
+  static List<NotificationCategoryApiModel> _readCachedCategories(
+    SharedPreferences prefs,
+  ) {
+    final raw = prefs.getString(_categoriesKey);
+    if (raw == null || raw.trim().isEmpty) {
+      return const <NotificationCategoryApiModel>[];
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) {
+        return const <NotificationCategoryApiModel>[];
+      }
+
+      final items = <NotificationCategoryApiModel>[];
+      for (final item in decoded) {
+        if (item is! Map) continue;
+        final map = Map<String, dynamic>.from(item.cast<String, dynamic>());
+        final model = _normalizeKey('${map['model'] ?? ''}');
+        if (model.isEmpty) continue;
+
+        items.add(
+          NotificationCategoryApiModel(
+            model: model,
+            title: (map['title'] ?? '').toString().trim().isEmpty
+                ? _humanizeCategory(model)
+                : map['title'].toString().trim(),
+          ),
+        );
+      }
+
+      return items;
+    } catch (_) {
+      return const <NotificationCategoryApiModel>[];
+    }
+  }
+
+  static Future<void> _writeCachedCategories(
+    SharedPreferences prefs,
+    List<NotificationCategoryApiModel> categories,
+  ) async {
+    final now = DateTime.now();
+    final normalized = <NotificationCategoryApiModel>[];
+    final seen = <String>{};
+
+    for (final item in categories) {
+      final model = _normalizeKey(item.model);
+      if (model.isEmpty || seen.contains(model)) continue;
+      seen.add(model);
+      normalized.add(
+        NotificationCategoryApiModel(
+          model: model,
+          title: item.title.trim().isEmpty
+              ? _humanizeCategory(model)
+              : item.title.trim(),
+        ),
+      );
+    }
+
+    await prefs.setString(
+      _categoriesKey,
+      jsonEncode(normalized.map((e) => e.toMap()).toList(growable: false)),
+    );
+    await prefs.setInt(_categoriesFetchedAtKey, now.millisecondsSinceEpoch);
+
+    _memoryCategories = List<NotificationCategoryApiModel>.from(normalized);
+    _memoryCategoriesFetchedAt = now;
   }
 
   static Future<void> _writeCachedMuteSettings(
@@ -121,6 +212,81 @@ class NotificationStorageService {
       }
       return <String, bool>{};
     }
+  }
+
+  static Future<List<NotificationCategoryApiModel>> getNotificationCategories({
+    bool forceRefresh = false,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+
+    if (!forceRefresh &&
+        _memoryCategories != null &&
+        _isFresh(_memoryCategoriesFetchedAt, now)) {
+      return List<NotificationCategoryApiModel>.from(_memoryCategories!);
+    }
+
+    final cachedCategories = _readCachedCategories(prefs);
+    final cachedFetchedAt = _readFetchedAtCategories(prefs);
+
+    if (!forceRefresh &&
+        cachedCategories.isNotEmpty &&
+        _isFresh(cachedFetchedAt, now)) {
+      _memoryCategories = List<NotificationCategoryApiModel>.from(
+        cachedCategories,
+      );
+      _memoryCategoriesFetchedAt = cachedFetchedAt;
+      return cachedCategories;
+    }
+
+    try {
+      final remoteCategories =
+          await NotificationApiService.getNotificationCategories();
+      if (remoteCategories.isNotEmpty) {
+        await _writeCachedCategories(prefs, remoteCategories);
+        return List<NotificationCategoryApiModel>.from(remoteCategories);
+      }
+    } catch (_) {
+      // Fallback below.
+    }
+
+    if (cachedCategories.isNotEmpty) {
+      _memoryCategories = List<NotificationCategoryApiModel>.from(
+        cachedCategories,
+      );
+      _memoryCategoriesFetchedAt = cachedFetchedAt;
+      return cachedCategories;
+    }
+
+    // Last fallback: infer categories from already stored notifications.
+    final allNotifications = await _getStoredNotifications();
+    final inferred = <String, NotificationCategoryApiModel>{};
+    for (final item in allNotifications) {
+      final model = _normalizeKey('${item['category'] ?? ''}');
+      if (model.isEmpty) continue;
+      inferred[model] = NotificationCategoryApiModel(
+        model: model,
+        title: _humanizeCategory(model),
+      );
+    }
+
+    if (inferred.isEmpty) {
+      inferred['notification'] = const NotificationCategoryApiModel(
+        model: 'notification',
+        title: 'Notifications',
+      );
+    }
+
+    final fallback = inferred.values.toList(growable: false)
+      ..sort((a, b) => a.title.compareTo(b.title));
+    await _writeCachedCategories(prefs, fallback);
+    return fallback;
+  }
+
+  static DateTime? _readFetchedAtCategories(SharedPreferences prefs) {
+    final millis = prefs.getInt(_categoriesFetchedAtKey);
+    if (millis == null || millis <= 0) return null;
+    return DateTime.fromMillisecondsSinceEpoch(millis);
   }
 
   static Future<void> setMuteSetting(String channel, bool muted) async {
@@ -250,17 +416,30 @@ class NotificationStorageService {
       final prefs = await SharedPreferences.getInstance();
       await _saveStoredNotifications(normalized, prefs);
 
-      if (apiResult.unreadCount != null) {
-        await prefs.setInt(_unreadCountKey, apiResult.unreadCount!);
-      } else {
-        final unreadVisibleCount =
-            normalized.where((n) => n['isRead'] != true).length;
-        await prefs.setInt(_unreadCountKey, unreadVisibleCount);
-      }
+      // Badge count should reflect list size from /api/notifications.
+      await prefs.setInt(_unreadCountKey, normalized.length);
 
       return normalized;
     } catch (_) {
       return _getStoredNotifications();
+    }
+  }
+
+  /// Get total notification records count (from /api/notifications list).
+  static Future<int> getTotalCount() async {
+    try {
+      final notifications = await getNotifications();
+      final count = notifications.length;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_unreadCountKey, count);
+      return count;
+    } catch (_) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        return prefs.getInt(_unreadCountKey) ?? 0;
+      } catch (_) {
+        return 0;
+      }
     }
   }
 

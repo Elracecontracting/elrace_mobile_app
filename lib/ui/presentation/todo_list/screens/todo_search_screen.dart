@@ -76,10 +76,8 @@ class _TodoSearchScreenState extends State<TodoSearchScreen> {
                     final todo = provider.todos[index];
                     return TodoItemWidget(
                       todo: todo,
-                      onToggleComplete: () =>
-                          provider.toggleComplete(todo.firebaseId!),
-                      onToggleImportant: () =>
-                          provider.toggleImportant(todo.firebaseId!),
+                      onToggleComplete: () => provider.toggleComplete(todo),
+                      onToggleImportant: () => provider.toggleImportant(todo),
                       onTap: () => _showEditTodo(todo),
                     );
                   },

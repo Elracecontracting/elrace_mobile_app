@@ -5,6 +5,7 @@ import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// News detail screen that displays full announcement details from API
@@ -90,91 +91,150 @@ class _NewsDetailScreenAPIState extends State<NewsDetailScreenAPI> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (_isLoadingDetails) const LinearProgressIndicator(minHeight: 2),
-
-            // News image if available
-            if (_hasAttachment && _imageUrl != null) ...[
-              const SizedBox(height: 20),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24.w),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8.r),
-                  child: Image.network(
-                    _imageUrl!,
-                    width: double.infinity,
-                    height: 250.h,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: double.infinity,
-                      height: 250.h,
-                      color: Colors.grey[300],
-                      child: Icon(
-                        Icons.image_not_supported,
-                        size: 60.w,
-                        color: Colors.grey[600],
-                      ),
+            SizedBox(height: 8.h),
+            Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.asset(
+                    'assets/png/news_logo.png',
+                    height: 20.h,
+                    width: 20.w,
+                    errorBuilder: (_, __, ___) => Icon(
+                      Icons.article,
+                      size: 20.w,
+                      color: appFontColor,
                     ),
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        width: double.infinity,
-                        height: 250.h,
-                        color: Colors.grey[200],
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                          ),
-                        ),
-                      );
-                    },
                   ),
-                ),
+                  SizedBox(width: 6.w),
+                  Text(
+                    translate('home.news'),
+                    style: GoogleFonts.koulen(
+                      fontSize: 24.sp,
+                      fontWeight: FontWeight.w400,
+                      color: appFontColor,
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 20),
-            ],
-
-            // News title
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
-              child: Text(
-                _title,
-                textAlign: TextAlign.left,
-                style: GoogleFonts.koulen(
-                  fontSize: 26.sp,
-                  fontWeight: FontWeight.w600,
-                  color: appFontColor,
-                  letterSpacing: 1.2,
-                  height: 1.3,
+            ),
+            SizedBox(height: 10.h),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.fromLTRB(5.w, 15.h, 0, 10.h),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFFD6D6D6),
+                    Color(0xFFADB2BD),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color.fromRGBO(0, 0, 0, 0.25),
+                    offset: Offset(0, 4),
+                    blurRadius: 4,
+                    spreadRadius: 0,
+                  ),
+                  BoxShadow(
+                    color: Color.fromRGBO(0, 0, 0, 0.46),
+                    offset: Offset(0, 10),
+                    blurRadius: 9.6,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  _title.toUpperCase(),
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.koulen(
+                    color: appFontColor,
+                    fontWeight: FontWeight.w400,
+                    fontSize: 24.sp,
+                  ),
                 ),
               ),
             ),
-
-            const SizedBox(height: 20),
-
-            // Full description with padding
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _content,
-                    style: GoogleFonts.inter(
-                      fontSize: 15.sp,
-                      color: const Color(0xFF374151),
-                      height: 1.8,
-                      letterSpacing: 0.3,
-                    ),
+            Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.4),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
-                  SizedBox(height: 32.h),
                 ],
+              ),
+              child: _buildDetailImage(),
+            ),
+            Container(
+              width: double.infinity,
+              margin: EdgeInsets.fromLTRB(8.w, 0, 8.w, 16.h),
+              padding: EdgeInsets.symmetric(horizontal: 34.w, vertical: 20.h),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Text(
+                _content,
+                textAlign: TextAlign.justify,
+                style: GoogleFonts.inter(
+                  fontSize: 15.sp,
+                  color: Colors.black,
+                  height: 1.85,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDetailImage() {
+    if (_hasAttachment && _imageUrl != null && _imageUrl!.trim().isNotEmpty) {
+      return Image.network(
+        _imageUrl!,
+        width: double.infinity,
+        height: 200.w,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Image.asset(
+            'assets/jpeg/slide_1_c.jpg',
+            width: double.infinity,
+            height: 200.w,
+            fit: BoxFit.cover,
+          );
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            width: double.infinity,
+            height: 200.w,
+            color: Colors.grey[200],
+            child: const Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        },
+      );
+    }
+
+    return Image.asset(
+      'assets/jpeg/slide_1_c.jpg',
+      width: double.infinity,
+      height: 200.w,
+      fit: BoxFit.cover,
     );
   }
 }

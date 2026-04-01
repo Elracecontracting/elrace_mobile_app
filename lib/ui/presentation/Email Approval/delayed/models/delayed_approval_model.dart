@@ -7,6 +7,29 @@ String _readRequestDate(Map<String, dynamic> json) {
   return value?.toString() ?? '';
 }
 
+int _readIntFromKeys(Map<String, dynamic> source, List<String> keys) {
+  for (final key in keys) {
+    final value = source[key];
+    if (value == null) continue;
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    if (value is String) {
+      final parsed = int.tryParse(value.trim());
+      if (parsed != null) return parsed;
+    }
+  }
+  return 0;
+}
+
+List<dynamic> _readListFromKeys(
+    Map<String, dynamic> source, List<String> keys) {
+  for (final key in keys) {
+    final value = source[key];
+    if (value is List) return value;
+  }
+  return const [];
+}
+
 /// Model for a single delayed HR approval item
 class DelayedHrItem {
   final int id;
@@ -224,26 +247,23 @@ class DelayedApprovalsResponse {
   factory DelayedApprovalsResponse.fromJson(Map<String, dynamic> json) {
     final result = json['result'] ?? {};
     final data = result['data'] ?? {};
+    final mapData = data is Map<String, dynamic> ? data : <String, dynamic>{};
 
     return DelayedApprovalsResponse(
       status: result['status'] ?? '',
       message: result['message'] ?? '',
-      hrItems: (data['hr'] as List<dynamic>?)
-              ?.map((item) => DelayedHrItem.fromJson(item))
-              .toList() ??
-          [],
-      rfqItems: (data['rfq'] as List<dynamic>?)
-              ?.map((item) => DelayedRfqItem.fromJson(item))
-              .toList() ??
-          [],
-      invoiceItems: (data['invoice'] as List<dynamic>?)
-              ?.map((item) => DelayedInvoiceItem.fromJson(item))
-              .toList() ??
-          [],
-      pettyCashItems: (data['petty_cash'] as List<dynamic>?)
-              ?.map((item) => DelayedPettyCashItem.fromJson(item))
-              .toList() ??
-          [],
+      hrItems: _readListFromKeys(mapData, ['hr', 'human_resources'])
+          .map((item) => DelayedHrItem.fromJson(item))
+          .toList(),
+      rfqItems: _readListFromKeys(mapData, ['rfq', 'rfqs'])
+          .map((item) => DelayedRfqItem.fromJson(item))
+          .toList(),
+      invoiceItems: _readListFromKeys(mapData, ['invoice', 'invoices'])
+          .map((item) => DelayedInvoiceItem.fromJson(item))
+          .toList(),
+      pettyCashItems: _readListFromKeys(mapData, ['petty_cash', 'pettycash'])
+          .map((item) => DelayedPettyCashItem.fromJson(item))
+          .toList(),
     );
   }
 
@@ -339,11 +359,33 @@ class DelayedCountersResponse {
   factory DelayedCountersResponse.fromJson(Map<String, dynamic> json) {
     final result = json['result'] ?? {};
     final data = result['data'] ?? {};
+    final mapData = data is Map<String, dynamic> ? data : <String, dynamic>{};
+    final countersMap = mapData['counters'] is Map<String, dynamic>
+        ? mapData['counters'] as Map<String, dynamic>
+        : mapData;
     return DelayedCountersResponse(
-      hrCount: data['hr'] ?? 0,
-      rfqCount: data['rfq'] ?? 0,
-      invoiceCount: data['invoice'] ?? 0,
-      pettyCashCount: data['petty_cash'] ?? 0,
+      hrCount: _readIntFromKeys(countersMap, [
+        'hr',
+        'human_resources',
+        'hr_count',
+      ]),
+      rfqCount: _readIntFromKeys(countersMap, [
+        'rfq',
+        'rfqs',
+        'rfq_count',
+      ]),
+      invoiceCount: _readIntFromKeys(countersMap, [
+        'invoice',
+        'invoices',
+        'invoice_count',
+        'invoices_count',
+      ]),
+      pettyCashCount: _readIntFromKeys(countersMap, [
+        'petty_cash',
+        'pettycash',
+        'petty_cash_count',
+        'pettycash_count',
+      ]),
     );
   }
 }
@@ -375,7 +417,18 @@ class DelayedDetailsResponse {
     if (data is List) {
       rawList = data;
     } else if (data is Map) {
-      rawList = (data[type] as List<dynamic>?) ?? [];
+      final mapData = data.cast<String, dynamic>();
+      if (type.toLowerCase() == 'invoice') {
+        rawList = _readListFromKeys(mapData, ['invoice', 'invoices']);
+      } else if (type.toLowerCase() == 'hr') {
+        rawList = _readListFromKeys(mapData, ['hr', 'human_resources']);
+      } else if (type.toLowerCase() == 'rfq') {
+        rawList = _readListFromKeys(mapData, ['rfq', 'rfqs']);
+      } else if (type.toLowerCase() == 'petty_cash') {
+        rawList = _readListFromKeys(mapData, ['petty_cash', 'pettycash']);
+      } else {
+        rawList = (mapData[type] as List<dynamic>?) ?? [];
+      }
     }
 
     switch (type.toLowerCase()) {
@@ -397,8 +450,8 @@ class DelayedDetailsResponse {
         return DelayedDetailsResponse(
           type: type,
           invoiceItems: rawList
-              .map((e) =>
-                  DelayedInvoiceItem.fromJson(e as Map<String, dynamic>))
+              .map(
+                  (e) => DelayedInvoiceItem.fromJson(e as Map<String, dynamic>))
               .toList(),
         );
       case 'petty_cash':

@@ -104,108 +104,115 @@ class InvoiceAndRfqCard extends StatelessWidget {
     final amountText = _formatAmountForCard(amount);
 
     return Container(
+      height: 150.w,
       width: 350.w,
-      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.w),
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.w),
+      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.w),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.w),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
             Color(0xFFE1E4E8),
             Color(0xFFB9C0CB),
           ],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(22.r),
-        border: Border.all(color: const Color(0xFF7B828B), width: 1),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFF8F969F), width: 0.8),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 48.w,
-                height: 48.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                      color: Colors.white.withOpacity(0.95), width: 2),
-                ),
-                child: ClipOval(
-                  child: _buildEmployeeImage(
-                      item["requester_image"] ??
-                          item["employee_image"] ??
-                          item["emp_image"] ??
-                          item["image_emp"],
-                      48.w),
-                ),
-              ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: Center(
-                  child: Text(
-                    refNo.toUpperCase(),
-                    style: GoogleFonts.nunito(
-                      fontSize: 21.sp,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF0B387A),
-                      letterSpacing: 0.4,
-                      height: 1.0,
+          SizedBox(
+            height: 34.w,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    width: 38.w,
+                    height: 38.w,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
+                    child: ClipOval(
+                      child: _buildEmployeeImage(
+                          item["requester_image"] ??
+                              item["employee_image"] ??
+                              item["emp_image"] ??
+                              item["image_emp"],
+                          38.w),
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(width: 58.w),
-            ],
+                Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 38.w),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        refNo.toUpperCase(),
+                        style: GoogleFonts.nunito(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0B2D5E),
+                          letterSpacing: 0.25,
+                          height: 1.0,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           SizedBox(height: 10.w),
           Text(
             title.toUpperCase(),
             style: GoogleFonts.nunito(
-              fontSize: 16.sp,
+              fontSize: 14.sp,
               fontWeight: FontWeight.w900,
               color: const Color(0xFF0F1114),
-              letterSpacing: 0.2,
-              height: 1.1,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          SizedBox(height: 3.w),
-          Text(
-            subtitle.toUpperCase(),
-            style: GoogleFonts.nunito(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF737A83),
-              letterSpacing: 0.4,
               height: 1.1,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          SizedBox(height: 8.w),
+          SizedBox(height: 4.w),
+          Text(
+            subtitle,
+            style: GoogleFonts.nunito(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF737A83),
+              letterSpacing: 0.2,
+              height: 1.0,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const Spacer(),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
                 child: Text(
                   date,
                   style: GoogleFonts.nunito(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF707780),
-                    letterSpacing: 0.3,
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF8C939C),
+                    letterSpacing: 0.1,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              SizedBox(width: 8.w),
               Text(
                 amountText,
                 style: GoogleFonts.nunito(
@@ -236,58 +243,72 @@ class InvoiceAndRfqCard extends StatelessWidget {
     final amountText = _formatAmountForCard(amount);
 
     return Container(
+      height: 150.w,
       width: 350.w,
-      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.w),
-      padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.w),
+      margin: EdgeInsets.symmetric(horizontal: 10.w, vertical: 5.w),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 10.w),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           colors: [
             Color(0xFFE1E4E8),
             Color(0xFFB9C0CB),
           ],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(22.r),
-        border: Border.all(color: const Color(0xFF7B828B), width: 1),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: const Color(0xFF8F969F), width: 0.8),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                width: 48.w,
-                height: 48.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                      color: Colors.white.withOpacity(0.95), width: 2),
-                ),
-                child: ClipOval(
-                  child: _buildEmployeeImage(item["image_emp"], 48.w),
-                ),
-              ),
-              SizedBox(width: 10.w),
-              Expanded(
-                child: Center(
-                  child: Text(
-                    refNo.toUpperCase(),
-                    style: GoogleFonts.nunito(
-                      fontSize: 21.sp,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF0B387A),
-                      letterSpacing: 0.4,
-                      height: 1.0,
+          SizedBox(
+            height: 34.w,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    width: 38.w,
+                    height: 38.w,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
+                    child: ClipOval(
+                      child: _buildEmployeeImage(
+                          item["requester_image"] ??
+                              item["employee_image"] ??
+                              item["emp_image"] ??
+                              item["image_emp"],
+                          38.w),
+                    ),
                   ),
                 ),
-              ),
-              SizedBox(width: 58.w),
-            ],
+                Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 38.w),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        refNo.toUpperCase(),
+                        style: GoogleFonts.nunito(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0B2D5E),
+                          letterSpacing: 0.25,
+                          height: 1.0,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
           SizedBox(height: 10.w),
           Text(
@@ -296,43 +317,41 @@ class InvoiceAndRfqCard extends StatelessWidget {
               fontSize: 16.sp,
               fontWeight: FontWeight.w900,
               color: const Color(0xFF0F1114),
-              letterSpacing: 0.2,
-              height: 1.1,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-          SizedBox(height: 3.w),
-          Text(
-            client.toUpperCase(),
-            style: GoogleFonts.nunito(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w800,
-              color: const Color(0xFF737A83),
-              letterSpacing: 0.4,
               height: 1.1,
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          SizedBox(height: 8.w),
+          SizedBox(height: 4.w),
+          Text(
+            client,
+            style: GoogleFonts.nunito(
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w800,
+              color: const Color(0xFF737A83),
+              letterSpacing: 0.2,
+              height: 1.0,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const Spacer(),
           Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
                 child: Text(
                   date,
                   style: GoogleFonts.nunito(
-                    fontSize: 11.sp,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF707780),
-                    letterSpacing: 0.3,
+                    fontSize: 10.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF8C939C),
+                    letterSpacing: 0.1,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              SizedBox(width: 8.w),
               Text(
                 amountText,
                 style: GoogleFonts.nunito(
@@ -470,6 +489,7 @@ class InvoiceAndRfqCard extends StatelessWidget {
                           builder: (_) => InvoiceDetailsScreen(
                             requestId: id,
                             type: type,
+                            initialData: Map<String, dynamic>.from(item as Map),
                           ),
                         ),
                       )

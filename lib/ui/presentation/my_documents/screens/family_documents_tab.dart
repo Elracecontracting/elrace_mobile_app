@@ -73,7 +73,7 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
 
   List<Map<String, dynamic>> _effectiveFolders(
       List<Map<String, dynamic>> liveDocs) {
-    if (liveDocs.isEmpty) return _folders;
+    if (liveDocs.isEmpty) return const [];
 
     final grouped = <String, Map<String, dynamic>>{};
     for (final doc in liveDocs) {
@@ -102,9 +102,7 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
     final selectedFolder = _selectedFolder;
     if (selectedFolder == null) return const [];
 
-    if (liveDocs.isEmpty) {
-      return _folderDocuments[selectedFolder] ?? const <Map<String, dynamic>>[];
-    }
+    if (liveDocs.isEmpty) return const [];
 
     final selectedKey = _normalizeFolderName(selectedFolder);
     return liveDocs
@@ -112,144 +110,6 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
             _normalizeFolderName(_folderNameFromLiveDoc(doc)) == selectedKey)
         .toList(growable: false);
   }
-
-  // ── Fake data for folders ──
-  final List<Map<String, dynamic>> _folders = [
-    {'name': 'Emirates ID'},
-    {'name': 'Birth Certificates'},
-    {'name': 'Health Insurance'},
-    {'name': 'Passports'},
-    {'name': 'Driving License'},
-    {'name': 'Visa'},
-  ];
-
-  // ── Fake data for documents inside folders ──
-  final Map<String, List<Map<String, dynamic>>> _folderDocuments = {
-    'Emirates ID': [
-      {
-        'id': 1,
-        'name': 'Emirates ID',
-        'person_name': 'Ahmed Marwan Ahmed',
-        'expiry_date': '2026-01-02',
-        'thumbnail': 'assets/png/emitates_id.png',
-        'is_editable': true,
-      },
-      {
-        'id': 2,
-        'name': 'Emirates ID',
-        'person_name': 'Yassin Marwan Ahmed',
-        'expiry_date': '2026-01-02',
-        'thumbnail': 'assets/png/emitates_id.png',
-        'is_editable': false,
-      },
-      {
-        'id': 3,
-        'name': 'Emirates ID',
-        'person_name': 'Yassin Marwan Ahmed',
-        'expiry_date': '2026-01-02',
-        'thumbnail': 'assets/png/emitates_id.png',
-        'is_editable': false,
-      },
-      {
-        'id': 4,
-        'name': 'Emirates ID',
-        'person_name': 'Ahmed Marwan Ahmed',
-        'expiry_date': '2026-01-03',
-        'thumbnail': 'assets/png/emitates_id.png',
-        'is_editable': true,
-      },
-      {
-        'id': 5,
-        'name': 'Emirates ID',
-        'person_name': 'Yassin Marwan Ahmed',
-        'expiry_date': '2026-01-02',
-        'thumbnail': 'assets/png/emitates_id.png',
-        'is_editable': false,
-      },
-      {
-        'id': 6,
-        'name': 'Emirates ID',
-        'person_name': 'Yassin Marwan Ahmed',
-        'expiry_date': '2026-01-02',
-        'thumbnail': 'assets/png/emitates_id.png',
-        'is_editable': false,
-      },
-      {
-        'id': 7,
-        'name': 'Emirates ID',
-        'person_name': 'Yassin Marwan Ahmed',
-        'expiry_date': '2026-01-03',
-        'thumbnail': 'assets/png/emitates_id.png',
-        'is_editable': false,
-      },
-    ],
-    'Birth Certificates': [
-      {
-        'id': 10,
-        'name': 'Birth Certificate',
-        'person_name': 'Ahmed Marwan Ahmed',
-        'expiry_date': '',
-        'thumbnail': 'assets/png/other-documetns-icon.png',
-        'is_editable': true,
-      },
-      {
-        'id': 11,
-        'name': 'Birth Certificate',
-        'person_name': 'Yassin Marwan Ahmed',
-        'expiry_date': '',
-        'thumbnail': 'assets/png/other-documetns-icon.png',
-        'is_editable': false,
-      },
-    ],
-    'Health Insurance': [
-      {
-        'id': 20,
-        'name': 'Health Insurance',
-        'person_name': 'Ahmed Marwan Ahmed',
-        'expiry_date': '2026-06-15',
-        'thumbnail': 'assets/png/other-documetns-icon.png',
-        'is_editable': true,
-      },
-    ],
-    'Passports': [
-      {
-        'id': 30,
-        'name': 'Passport',
-        'person_name': 'Ahmed Marwan Ahmed',
-        'expiry_date': '2028-03-20',
-        'thumbnail': 'assets/png/passport.png',
-        'is_editable': true,
-      },
-      {
-        'id': 31,
-        'name': 'Passport',
-        'person_name': 'Yassin Marwan Ahmed',
-        'expiry_date': '2027-11-10',
-        'thumbnail': 'assets/png/passport.png',
-        'is_editable': false,
-      },
-    ],
-    'Driving License': [
-      {
-        'id': 40,
-        'name': 'Driving License',
-        'person_name': 'Ahmed Marwan Ahmed',
-        'expiry_date': '2027-08-01',
-        'thumbnail': 'assets/png/driving_license.png',
-        'is_editable': true,
-      },
-    ],
-    'Visa': [
-      {
-        'id': 50,
-        'name': 'Visa',
-        'person_name': 'Ahmed Marwan Ahmed',
-        'expiry_date': '2027-04-15',
-        'thumbnail': 'assets/png/other-documetns-icon.png',
-        'is_editable': true,
-      },
-    ],
-  };
 
   String _formatDate(dynamic raw) {
     if (raw == null || raw == false || raw.toString().trim().isEmpty) return '';
@@ -448,67 +308,98 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                     unawaited(widget.onOpenDocument!(doc));
                   }
                 },
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20.r),
-                    border: Border.all(
-                      color: isExpired
-                          ? const Color(0xFFBA1719)
-                          : const Color(0xffD9D9D9),
-                      width: isExpired ? 2 : 1,
-                    ),
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(10.w),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12.r),
-                            child: Image.asset(
-                              iconPath,
-                              fit: BoxFit.contain,
-                              width: double.infinity,
-                              errorBuilder: (_, __, ___) => Icon(
-                                Icons.insert_drive_file_outlined,
-                                size: 44.sp,
-                                color: const Color(0xff949494),
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  alignment: Alignment.topCenter,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20.r),
+                        border: Border.all(
+                          color: isExpired
+                              ? const Color(0xFFBA1719)
+                              : const Color(0xffD9D9D9),
+                          width: isExpired ? 2 : 1,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: EdgeInsets.all(10.w),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                children: [
+                                  if (isExpired)
+                                    Padding(
+                                      padding: EdgeInsets.only(top: 2.h),
+                                      child: SizedBox(
+                                        width: 22.w,
+                                        height: 22.w,
+                                        child: Image.asset(
+                                          'assets/newapp/newicon/pencil_7754138 1.png',
+                                          fit: BoxFit.contain,
+                                          errorBuilder: (_, __, ___) => Icon(
+                                            Icons.edit,
+                                            size: 18.sp,
+                                            color: const Color(0xFFBA1719),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  if (isExpired) SizedBox(height: 4.h),
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      child: Image.asset(
+                                        iconPath,
+                                        fit: BoxFit.contain,
+                                        width: double.infinity,
+                                        errorBuilder: (_, __, ___) => Icon(
+                                          Icons.insert_drive_file_outlined,
+                                          size: 44.sp,
+                                          color: const Color(0xff949494),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                        ),
-                        SizedBox(height: 6.h),
-                        Text(
-                          docName,
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.aBeeZee(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black,
-                          ),
-                        ),
-                        if (dateText.isNotEmpty) ...[
-                          SizedBox(height: 2.h),
-                          Text(
-                            dateText,
-                            textAlign: TextAlign.center,
-                            maxLines: 1,
-                            style: GoogleFonts.aBeeZee(
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w400,
-                              color: isExpired
-                                  ? const Color(0xFFBA1719)
-                                  : const Color(0xff949494),
+                            SizedBox(height: 6.h),
+                            Text(
+                              docName,
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.aBeeZee(
+                                fontSize: 12.sp,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
+                              ),
                             ),
-                          ),
-                        ],
-                      ],
+                            if (dateText.isNotEmpty) ...[
+                              SizedBox(height: 2.h),
+                              Text(
+                                dateText,
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                style: GoogleFonts.aBeeZee(
+                                  fontSize: 10.sp,
+                                  fontWeight: FontWeight.w400,
+                                  color: isExpired
+                                      ? const Color(0xFFBA1719)
+                                      : const Color(0xff949494),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               );
             },
@@ -521,6 +412,19 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
   // ── Folders Grid (Main view) ──
   Widget _buildFoldersList(List<Map<String, dynamic>> liveDocs) {
     final folders = _effectiveFolders(liveDocs);
+
+    if (folders.isEmpty) {
+      return Center(
+        child: Text(
+          'No Documents found',
+          style: GoogleFonts.inter(
+            fontSize: 14.sp,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF7A7A7A),
+          ),
+        ),
+      );
+    }
 
     return ListView.separated(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),

@@ -117,14 +117,29 @@ class _NotificationMuteSettingsScreenState
         forceRefresh: forceRefresh,
       );
 
-      final categories = settings.entries
+      final categories =
+          await NotificationStorageService.getNotificationCategories(
+        forceRefresh: forceRefresh,
+      );
+
+      final merged = <String, bool>{};
+      for (final category in categories) {
+        final key = category.model.trim().toLowerCase();
+        if (key.isEmpty) continue;
+        merged[key] = settings[key] ?? false;
+      }
+      for (final entry in settings.entries) {
+        merged[entry.key.trim().toLowerCase()] = entry.value;
+      }
+
+      final categoryModels = merged.entries
           .map((entry) => _toCategoryModel(entry.key, entry.value))
           .toList(growable: false)
         ..sort((a, b) => a.title.compareTo(b.title));
 
       if (!mounted) return;
       setState(() {
-        _categories = categories;
+        _categories = categoryModels;
         _isLoading = false;
       });
     } catch (e) {

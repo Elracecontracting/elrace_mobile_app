@@ -32,7 +32,8 @@ class HeaderWidget extends StatefulWidget implements PreferredSizeWidget {
   Size get preferredSize => Size.fromHeight(SizeConfig().getHeight(70));
 }
 
-class _HeaderWidgetState extends State<HeaderWidget> {
+class _HeaderWidgetState extends State<HeaderWidget>
+    with WidgetsBindingObserver {
   static const String _heroTag = 'global_header_widget_hero';
   static String _cachedImageBase64 = '';
   static int _cachedNotificationCount = 0;
@@ -42,9 +43,14 @@ class _HeaderWidgetState extends State<HeaderWidget> {
   int _notificationCount = 0;
   int _approvalCount = 0;
 
+  bool _isOpeningApprovals = false;
+  bool _isOpeningNotifications = false;
+
   @override
   void initState() {
     super.initState();
+
+    WidgetsBinding.instance.addObserver(this);
 
     _imageBase64 = _cachedImageBase64;
     _notificationCount = _cachedNotificationCount;
@@ -52,6 +58,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
 
     _loadUserData();
     _loadNotificationCount();
+    ApprovalCountService.invalidateCache();
     _loadApprovalCount();
 
     // Register callback to update approval count when items are viewed
@@ -78,11 +85,27 @@ class _HeaderWidgetState extends State<HeaderWidget> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     // Unregister callbacks
     ApprovalViewedService.setOnCountChangedCallback(null);
     ApprovalCountService.onCountChanged = null;
     NotificationStorageService.onCountChanged = null;
     super.dispose();
+  }
+
+  Future<void> _refreshCounters() async {
+    ApprovalCountService.invalidateCache();
+    await Future.wait([
+      _loadNotificationCount(),
+      _loadApprovalCount(),
+    ]);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refreshCounters();
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -93,7 +116,7 @@ class _HeaderWidgetState extends State<HeaderWidget> {
   }
 
   Future<void> _loadNotificationCount() async {
-    final count = await NotificationStorageService.getUnreadCount();
+    final count = await NotificationStorageService.getTotalCount();
     if (mounted) {
       setState(() {
         _notificationCount = count;
@@ -304,38 +327,46 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                           GestureDetector(
                             onTap: () async {
                               if (SharedPref.isUserAuthenticated()) {
-                                // Check current route by name
-                                final currentRoute = ModalRoute.of(context);
-                                final currentRouteName =
-                                    currentRoute?.settings.name;
+                                if (_isOpeningApprovals) return;
+                                _isOpeningApprovals = true;
 
-                                // Don't navigate if already on Approvals page
-                                if (currentRouteName == '/approvals') {
-                                  return;
-                                }
+                                try {
+                                  // Check current route by name
+                                  final currentRoute = ModalRoute.of(context);
+                                  final currentRouteName =
+                                      currentRoute?.settings.name;
 
-                                // If on Notifications, replace it; otherwise push
-                                if (currentRouteName == '/notifications') {
-                                  await Navigator.pushReplacement(
-                                    context,
-                                    SlideRightPageRoute(
-                                      child: const ApprovalsScreen(),
-                                      settings: const RouteSettings(
-                                          name: '/approvals'),
-                                    ),
-                                  );
-                                } else {
-                                  await Navigator.push(
-                                    context,
-                                    SlideRightPageRoute(
-                                      child: const ApprovalsScreen(),
-                                      settings: const RouteSettings(
-                                          name: '/approvals'),
-                                    ),
-                                  );
+                                  // Don't navigate if already on Approvals page
+                                  if (currentRouteName == '/approvals') {
+                                    return;
+                                  }
+
+                                  // If on Notifications, replace it; otherwise push
+                                  if (currentRouteName == '/notifications') {
+                                    await Navigator.pushReplacement(
+                                      context,
+                                      SlideRightPageRoute(
+                                        child: const ApprovalsScreen(),
+                                        settings: const RouteSettings(
+                                            name: '/approvals'),
+                                      ),
+                                    );
+                                  } else {
+                                    await Navigator.push(
+                                      context,
+                                      SlideRightPageRoute(
+                                        child: const ApprovalsScreen(),
+                                        settings: const RouteSettings(
+                                            name: '/approvals'),
+                                      ),
+                                    );
+                                  }
+
+                                  // Keep badge synced with real approvals after returning.
+                                  await _loadApprovalCount();
+                                } finally {
+                                  _isOpeningApprovals = false;
                                 }
-                                // Refresh approval count after returning
-                                _loadApprovalCount();
                               }
                             },
                             child: Stack(
@@ -388,45 +419,53 @@ class _HeaderWidgetState extends State<HeaderWidget> {
                                   '   - User authenticated: ${SharedPref.isUserAuthenticated()}');
 
                               if (SharedPref.isUserAuthenticated()) {
-                                // Check current route by name
-                                final currentRoute = ModalRoute.of(context);
-                                final currentRouteName =
-                                    currentRoute?.settings.name;
+                                if (_isOpeningNotifications) return;
+                                _isOpeningNotifications = true;
 
-                                // Don't navigate if already on Notifications page
-                                if (currentRouteName == '/notifications') {
+                                try {
+                                  // Check current route by name
+                                  final currentRoute = ModalRoute.of(context);
+                                  final currentRouteName =
+                                      currentRoute?.settings.name;
+
+                                  // Don't navigate if already on Notifications page
+                                  if (currentRouteName == '/notifications') {
+                                    print(
+                                        '   - ⚠️ Already on notifications screen, ignoring tap');
+                                    return;
+                                  }
+
                                   print(
-                                      '   - ⚠️ Already on notifications screen, ignoring tap');
-                                  return;
+                                      '   - ✅ Opening notification screen...');
+
+                                  // If on Approvals, replace it; otherwise push
+                                  if (currentRouteName == '/approvals') {
+                                    await Navigator.pushReplacement(
+                                      context,
+                                      SlideRightPageRoute(
+                                        child: const NotificationScreen(),
+                                        settings: const RouteSettings(
+                                            name: '/notifications'),
+                                      ),
+                                    );
+                                  } else {
+                                    await Navigator.push(
+                                      context,
+                                      SlideRightPageRoute(
+                                        child: const NotificationScreen(),
+                                        settings: const RouteSettings(
+                                            name: '/notifications'),
+                                      ),
+                                    );
+                                  }
+
+                                  print(
+                                      '   - ✅ Returned from notification screen');
+                                  // Refresh notification count after returning
+                                  _loadNotificationCount();
+                                } finally {
+                                  _isOpeningNotifications = false;
                                 }
-
-                                print('   - ✅ Opening notification screen...');
-
-                                // If on Approvals, replace it; otherwise push
-                                if (currentRouteName == '/approvals') {
-                                  await Navigator.pushReplacement(
-                                    context,
-                                    SlideRightPageRoute(
-                                      child: const NotificationScreen(),
-                                      settings: const RouteSettings(
-                                          name: '/notifications'),
-                                    ),
-                                  );
-                                } else {
-                                  await Navigator.push(
-                                    context,
-                                    SlideRightPageRoute(
-                                      child: const NotificationScreen(),
-                                      settings: const RouteSettings(
-                                          name: '/notifications'),
-                                    ),
-                                  );
-                                }
-
-                                print(
-                                    '   - ✅ Returned from notification screen');
-                                // Refresh notification count after returning
-                                _loadNotificationCount();
                               } else {
                                 print('   - ❌ User not authenticated');
                               }

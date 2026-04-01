@@ -400,11 +400,18 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  static const Duration _inactiveTimeout = Duration(minutes: 10);
+  DateTime? _backgroundedAt;
+  bool _isRestartingFromTimeout = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _enableAndroidImmersiveMode();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FirebaseService.processPendingNotificationTap();
+    });
   }
 
   @override
@@ -417,7 +424,48 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _enableAndroidImmersiveMode();
+
+      final lastBackground = _backgroundedAt;
+      if (lastBackground != null && !_isRestartingFromTimeout) {
+        final inactiveFor = DateTime.now().difference(lastBackground);
+        if (inactiveFor >= _inactiveTimeout) {
+          _restartFromSplashAfterTimeout(inactiveFor);
+        }
+      }
+
+      _backgroundedAt = null;
+      return;
     }
+
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      _backgroundedAt ??= DateTime.now();
+    }
+  }
+
+  void _restartFromSplashAfterTimeout(Duration inactiveFor) {
+    _isRestartingFromTimeout = true;
+    debugPrint(
+      '⏱️ Inactivity timeout reached (${inactiveFor.inMinutes} min). Restarting from SplashScreen...',
+    );
+
+    final navigator = navKey.currentState;
+    if (navigator == null) {
+      _isRestartingFromTimeout = false;
+      return;
+    }
+
+    navigator.pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const SplashScreen()),
+      (route) => false,
+    );
+
+    // Allow future timeout checks after navigation settles.
+    Future<void>.delayed(const Duration(milliseconds: 400), () {
+      _isRestartingFromTimeout = false;
+    });
   }
 
   @override

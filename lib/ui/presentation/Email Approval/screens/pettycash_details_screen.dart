@@ -54,11 +54,17 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     return fallback;
   }
 
+  String _displayOrNA(String value) {
+    final normalized = value.trim();
+    return normalized.isEmpty ? 'N/A' : normalized;
+  }
+
   String _formatAmount(dynamic value) {
-    final raw = _safe(value, fallback: '0');
+    final raw = _safe(value);
+    if (raw.trim().isEmpty) return '0';
     final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
     final parsed = double.tryParse(cleaned);
-    if (parsed == null) return raw;
+    if (parsed == null) return '0';
     if (parsed % 1 == 0) {
       return NumberFormat('#,##0', 'en_US').format(parsed);
     }
@@ -67,10 +73,10 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
 
   String _formatDate(dynamic value) {
     final raw = _safe(value);
-    if (raw.isEmpty) return '';
+    if (raw.trim().isEmpty) return 'N/A';
     final normalized = raw.contains(' ') ? raw.replaceFirst(' ', 'T') : raw;
     final parsed = DateTime.tryParse(normalized) ?? DateTime.tryParse(raw);
-    if (parsed == null) return raw;
+    if (parsed == null) return _displayOrNA(raw);
     return DateFormat('dd/MM/yyyy').format(parsed);
   }
 
@@ -102,7 +108,8 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     print('══════════ [PETTYCASH] API REQUEST ══════════');
     print('[PETTYCASH] URL: $url');
     print('[PETTYCASH] METHOD: GET');
-    print('[PETTYCASH] HEADERS: ${headers.map((k, v) => MapEntry(k, k == "Authorization" ? "Bearer ***" : v))}');
+    print(
+        '[PETTYCASH] HEADERS: ${headers.map((k, v) => MapEntry(k, k == "Authorization" ? "Bearer ***" : v))}');
     print('[PETTYCASH] BODY: $body');
     print('═════════════════════════════════════════════');
 
@@ -126,6 +133,8 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
         final formData = result['data'] as Map? ?? {};
         final attachmentList = result['attachment_ids'] as List? ?? [];
 
+        _logApiCompatibilityIssues(Map<String, dynamic>.from(formData));
+
         print('[PETTYCASH] PARSED formData keys: ${formData.keys.toList()}');
         print('[PETTYCASH] PARSED formData: $formData');
         print('[PETTYCASH] PARSED attachmentIds: $attachmentList');
@@ -138,7 +147,8 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
           _isLoading = false;
         });
       } else {
-        print('[PETTYCASH] ERROR: result is null. Full response: ${response.body}');
+        print(
+            '[PETTYCASH] ERROR: result is null. Full response: ${response.body}');
         setState(() {
           _isLoading = false;
           if (_formData.isEmpty) {
@@ -156,6 +166,52 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
           _error = e.toString();
         }
       });
+    }
+  }
+
+  void _logApiCompatibilityIssues(Map<String, dynamic> formData) {
+    final requiredAny = <String, List<String>>{
+      'requestNo': ['request_no', 'pettycash_no', 'name', 'ref_no'],
+      'pettycashLimit': ['pettycash_limit', 'limit', 'limit_amount'],
+      'pettycashHolder': ['pettycash_holder', 'holder_name', 'holder'],
+      'requester': ['requester_name', 'requester', 'emp_name', 'employee_name'],
+      'total': ['total', 'total_amount', 'amount_total'],
+    };
+
+    for (final entry in requiredAny.entries) {
+      final hasValue = entry.value.any((k) {
+        final v = formData[k];
+        final s = _safe(v);
+        return s.isNotEmpty;
+      });
+      if (!hasValue) {
+        debugPrint(
+          '⚠️ [PETTYCASH][API_COMPAT] Missing ${entry.key}. Expected one of: ${entry.value.join(', ')}',
+        );
+      }
+    }
+
+    final lines = formData['lines'];
+    if (lines != null && lines is List && lines.isNotEmpty) {
+      final firstLine = lines.first;
+      if (firstLine is Map) {
+        final lineMap = Map<String, dynamic>.from(firstLine);
+        final hasDescription = _safe(lineMap['description']).isNotEmpty ||
+            _safe(lineMap['name']).isNotEmpty;
+        final hasAmount = _safe(lineMap['amount']).isNotEmpty ||
+            _safe(lineMap['price']).isNotEmpty ||
+            _safe(lineMap['subtotal']).isNotEmpty;
+        if (!hasDescription) {
+          debugPrint(
+            '⚠️ [PETTYCASH][API_COMPAT] Line item description missing. Expected: description or name',
+          );
+        }
+        if (!hasAmount) {
+          debugPrint(
+            '⚠️ [PETTYCASH][API_COMPAT] Line item amount missing. Expected: amount or price or subtotal',
+          );
+        }
+      }
     }
   }
 
@@ -272,7 +328,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
   Widget _value(String text,
       {double? size, FontWeight? weight, Color? color, TextAlign? align}) {
     return Text(
-      text,
+      _displayOrNA(text),
       textAlign: align,
       style: GoogleFonts.inter(
         fontSize: size ?? 14.sp,
@@ -354,7 +410,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       _formData['pettycash_limit'],
       _formData['limit'],
       _formData['limit_amount'],
-    ], fallback: '0');
+    ]);
 
     final projectName = _pick([
       _formData['project_name'],
@@ -372,18 +428,18 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       _formData['total'],
       _formData['total_amount'],
       _formData['amount_total'],
-    ], fallback: '0');
+    ]);
 
     final lines = _formData['lines'] as List? ?? [];
     final hasMoreLines = lines.length > 4;
-    final visibleLines = (_showAllLines || !hasMoreLines)
-      ? lines
-      : lines.take(4).toList();
+    final visibleLines =
+        (_showAllLines || !hasMoreLines) ? lines : lines.take(4).toList();
 
     final userId =
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
 
-    final pillWidth = ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
+    final pillWidth =
+        ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F2),
@@ -432,7 +488,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                 ),
                               ),
                               SizedBox(height: 16.w),
-                              // Row 1: Req No | Requester
+                              // Row 1: Req No | Pettycash Limit
                               Row(
                                 children: [
                                   Expanded(
@@ -461,9 +517,9 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          _label('Requester'),
+                                          _label('Pettycash Limit'),
                                           SizedBox(height: 8.w),
-                                          _value(requester,
+                                          _value(_formatAmount(pettycashLimit),
                                               size: 11.5.sp,
                                               weight: FontWeight.w900),
                                         ],
@@ -473,45 +529,34 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                 ],
                               ),
                               SizedBox(height: 10.w),
-                              // Row 2: Pettycash Holder | Pettycash Limit
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _card(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 14.w, vertical: 12.w),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _label('Pettycash Holder'),
-                                          SizedBox(height: 8.w),
-                                          _value(pettycashHolder,
-                                              size: 11.5.sp,
-                                              weight: FontWeight.w900),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: 8.w),
-                                  Expanded(
-                                    child: _card(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 14.w, vertical: 12.w),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _label('Pettycash Limit'),
-                                          SizedBox(height: 8.w),
-                                          _value(pettycashLimit,
-                                              size: 11.5.sp,
-                                              weight: FontWeight.w900),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                              // Row 2: Pettycash Holder (full width)
+                              _card(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 14.w, vertical: 12.w),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _label('Pettycash Holder'),
+                                    SizedBox(height: 8.w),
+                                    _value(pettycashHolder,
+                                        size: 11.5.sp, weight: FontWeight.w900),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 10.w),
+                              // Row 3: Requester (full width)
+                              _card(
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 14.w, vertical: 12.w),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    _label('Requester'),
+                                    SizedBox(height: 8.w),
+                                    _value(requester,
+                                        size: 11.5.sp, weight: FontWeight.w900),
+                                  ],
+                                ),
                               ),
                               SizedBox(height: 10.w),
                               // Items card
@@ -520,7 +565,10 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     if (visibleLines.isNotEmpty)
-                                      ...visibleLines.asMap().entries.map((entry) {
+                                      ...visibleLines
+                                          .asMap()
+                                          .entries
+                                          .map((entry) {
                                         final i = entry.key;
                                         final line = entry.value;
                                         final lineMap = line as Map? ?? {};
@@ -538,13 +586,14 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                           lineMap['amount'],
                                           lineMap['price'],
                                           lineMap['subtotal'],
-                                        ], fallback: '0');
+                                        ]);
 
                                         return _lineItemTile(
                                           description: description,
                                           lineDate: lineDate,
                                           amount: amount,
-                                          showDivider: i < visibleLines.length - 1,
+                                          showDivider:
+                                              i < visibleLines.length - 1,
                                         );
                                       })
                                     else
@@ -585,7 +634,8 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                     onTap: () {
                                       Navigator.of(context).push(
                                         MaterialPageRoute(
-                                          builder: (_) => PettyCashSeeMoreScreen(
+                                          builder: (_) =>
+                                              PettyCashSeeMoreScreen(
                                             requestId: widget.requestId,
                                             type: widget.type,
                                             userId: userId,
@@ -673,8 +723,8 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                         child: SafeArea(
                           top: false,
                           child: Padding(
-                            padding:
-                                EdgeInsets.symmetric(horizontal: 38.w, vertical: 10.w),
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 38.w, vertical: 10.w),
                             child: ApprovalActionButtons(
                               requestId: widget.requestId,
                               type: widget.type,
@@ -737,11 +787,17 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
     return fallback;
   }
 
+  String _displayOrNA(String value) {
+    final normalized = value.trim();
+    return normalized.isEmpty ? 'N/A' : normalized;
+  }
+
   String _formatAmount(dynamic value) {
-    final raw = _safe(value, fallback: '0');
+    final raw = _safe(value);
+    if (raw.trim().isEmpty) return '0';
     final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
     final parsed = double.tryParse(cleaned);
-    if (parsed == null) return raw;
+    if (parsed == null) return '0';
     if (parsed % 1 == 0) {
       return NumberFormat('#,##0', 'en_US').format(parsed);
     }
@@ -750,17 +806,17 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
 
   String _formatDate(dynamic value) {
     final raw = _safe(value);
-    if (raw.isEmpty) return '';
+    if (raw.trim().isEmpty) return 'N/A';
     final normalized = raw.contains(' ') ? raw.replaceFirst(' ', 'T') : raw;
     final parsed = DateTime.tryParse(normalized) ?? DateTime.tryParse(raw);
-    if (parsed == null) return raw;
+    if (parsed == null) return _displayOrNA(raw);
     return DateFormat('dd/MM/yyyy').format(parsed);
   }
 
   Widget _value(String text,
       {double? size, FontWeight? weight, Color? color, TextAlign? align}) {
     return Text(
-      text,
+      _displayOrNA(text),
       textAlign: align,
       style: GoogleFonts.inter(
         fontSize: size ?? 14.sp,
@@ -786,7 +842,8 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final pillWidth = ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
+    final pillWidth =
+        ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F2),
@@ -813,11 +870,13 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                     SizedBox(height: 10.w),
                     Container(
                       width: double.infinity,
-                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 14.w),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 16.w, vertical: 14.w),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF4F4F4),
                         borderRadius: BorderRadius.circular(14.r),
-                        border: Border.all(color: const Color(0xFF9F9F9F), width: 1),
+                        border: Border.all(
+                            color: const Color(0xFF9F9F9F), width: 1),
                       ),
                       child: Column(
                         children: [
@@ -839,17 +898,19 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                                 lineMap['amount'],
                                 lineMap['price'],
                                 lineMap['subtotal'],
-                              ], fallback: '0');
+                              ]);
 
                               return Column(
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     crossAxisAlignment: CrossAxisAlignment.end,
                                     children: [
                                       Expanded(
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             _value(description,
                                                 size: 14.sp,
@@ -886,11 +947,11 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       _value(projectName,
-                                          size: 14.sp,
-                                          weight: FontWeight.w900),
+                                          size: 14.sp, weight: FontWeight.w900),
                                       SizedBox(height: 6.w),
                                       _label(_formatDate(date)),
                                     ],
@@ -898,7 +959,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                                 ),
                                 SizedBox(width: 12.w),
                                 _value(
-                                  _formatAmount('0'),
+                                  _formatAmount(''),
                                   size: 14.sp,
                                   weight: FontWeight.w900,
                                   color: const Color(0xFF15A98A),
@@ -922,7 +983,8 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
               child: SafeArea(
                 top: false,
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 38.w, vertical: 10.w),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 38.w, vertical: 10.w),
                   child: ApprovalActionButtons(
                     requestId: requestId,
                     type: type,

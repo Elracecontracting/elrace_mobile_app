@@ -3,7 +3,8 @@ import 'dart:convert';
 AttendanceModel attendanceModelFromJson(String str) =>
     AttendanceModel.fromJson(json.decode(str));
 
-String attendanceModelToJson(AttendanceModel data) => json.encode(data.toJson());
+String attendanceModelToJson(AttendanceModel data) =>
+    json.encode(data.toJson());
 
 class AttendanceModel {
   AttendanceModel({
@@ -12,7 +13,8 @@ class AttendanceModel {
 
   final Result result;
 
-  factory AttendanceModel.fromJson(Map<String, dynamic> json) => AttendanceModel(
+  factory AttendanceModel.fromJson(Map<String, dynamic> json) =>
+      AttendanceModel(
         result: Result.fromJson(json["result"]),
       );
 
@@ -41,7 +43,7 @@ class Result {
 
   final String status;
   final String mode;
-  
+
   // For grouped mode (employee view)
   final int? employeeId;
   final String? employeeName;
@@ -51,7 +53,7 @@ class Result {
   final int? totalWorkingDays;
   final int? totalPresentDays;
   final List<AttendanceRecord>? records;
-  
+
   // For flat mode (manager view)
   final List<FlatAttendanceData>? data;
   final int? total;
@@ -60,7 +62,7 @@ class Result {
 
   factory Result.fromJson(Map<String, dynamic> json) {
     final mode = json["mode"] ?? "grouped";
-    
+
     if (mode == "flat") {
       // Manager view - flat list
       return Result(
@@ -102,7 +104,9 @@ class Result {
         "total": total,
         "limit": limit,
         "offset": offset,
-        "data": data == null ? [] : List<dynamic>.from(data!.map((x) => x.toJson())),
+        "data": data == null
+            ? []
+            : List<dynamic>.from(data!.map((x) => x.toJson())),
       };
     } else {
       return {
@@ -115,7 +119,9 @@ class Result {
         "year": year,
         "total_working_days": totalWorkingDays,
         "total_present_days": totalPresentDays,
-        "records": records == null ? [] : List<dynamic>.from(records!.map((x) => x.toJson())),
+        "records": records == null
+            ? []
+            : List<dynamic>.from(records!.map((x) => x.toJson())),
       };
     }
   }
@@ -131,6 +137,9 @@ class FlatAttendanceData {
     required this.checkOut,
     required this.workedHours,
     required this.isOpen,
+    this.status,
+    this.checkInStatus,
+    this.checkOutStatus,
   });
 
   final String employeeName;
@@ -140,8 +149,12 @@ class FlatAttendanceData {
   final dynamic checkOut;
   final double workedHours;
   final bool isOpen;
+  final String? status;
+  final String? checkInStatus;
+  final String? checkOutStatus;
 
-  factory FlatAttendanceData.fromJson(Map<String, dynamic> json) => FlatAttendanceData(
+  factory FlatAttendanceData.fromJson(Map<String, dynamic> json) =>
+      FlatAttendanceData(
         employeeName: json["employee_name"] ?? "",
         empId: json["emp_id"] ?? "",
         employeeImageUrl: json["employee_image_url"] ?? "",
@@ -149,6 +162,21 @@ class FlatAttendanceData {
         checkOut: json["check_out"],
         workedHours: (json["worked_hours"] ?? 0.0).toDouble(),
         isOpen: json["is_open"] ?? false,
+        status: _firstNonEmptyString(const [
+          'status',
+          'attendance_status',
+          'state',
+        ], json),
+        checkInStatus: _firstNonEmptyString(const [
+          'check_in_status',
+          'checkin_status',
+          'in_status',
+        ], json),
+        checkOutStatus: _firstNonEmptyString(const [
+          'check_out_status',
+          'checkout_status',
+          'out_status',
+        ], json),
       );
 
   Map<String, dynamic> toJson() => {
@@ -159,6 +187,9 @@ class FlatAttendanceData {
         "check_out": checkOut,
         "worked_hours": workedHours,
         "is_open": isOpen,
+        "status": status,
+        "check_in_status": checkInStatus,
+        "check_out_status": checkOutStatus,
       };
 }
 
@@ -168,18 +199,40 @@ class AttendanceRecord {
     required this.checkIn,
     required this.checkOut,
     required this.workedHours,
+    this.status,
+    this.checkInStatus,
+    this.checkOutStatus,
   });
 
   final String date;
   final String checkIn;
   final dynamic checkOut;
   final double workedHours;
+  final String? status;
+  final String? checkInStatus;
+  final String? checkOutStatus;
 
-  factory AttendanceRecord.fromJson(Map<String, dynamic> json) => AttendanceRecord(
+  factory AttendanceRecord.fromJson(Map<String, dynamic> json) =>
+      AttendanceRecord(
         date: json["date"] ?? "",
         checkIn: json["check_in"] ?? "",
         checkOut: json["check_out"],
         workedHours: (json["worked_hours"] ?? 0.0).toDouble(),
+        status: _firstNonEmptyString(const [
+          'status',
+          'attendance_status',
+          'state',
+        ], json),
+        checkInStatus: _firstNonEmptyString(const [
+          'check_in_status',
+          'checkin_status',
+          'in_status',
+        ], json),
+        checkOutStatus: _firstNonEmptyString(const [
+          'check_out_status',
+          'checkout_status',
+          'out_status',
+        ], json),
       );
 
   Map<String, dynamic> toJson() => {
@@ -187,5 +240,18 @@ class AttendanceRecord {
         "check_in": checkIn,
         "check_out": checkOut,
         "worked_hours": workedHours,
+        "status": status,
+        "check_in_status": checkInStatus,
+        "check_out_status": checkOutStatus,
       };
+}
+
+String? _firstNonEmptyString(List<String> keys, Map<String, dynamic> source) {
+  for (final key in keys) {
+    final value = source[key];
+    if (value == null || value == false) continue;
+    final text = value.toString().trim();
+    if (text.isNotEmpty) return text;
+  }
+  return null;
 }

@@ -4,7 +4,7 @@ import '../../chat/chat.dart';
 import '../../resources/app_colors.dart';
 import '../widgets/header_widget.dart';
 
-class ChatUserProfileScreen extends StatelessWidget {
+class ChatUserProfileScreen extends StatefulWidget {
   final String chatId;
   final String peerUid;
   final String fallbackName;
@@ -17,6 +17,31 @@ class ChatUserProfileScreen extends StatelessWidget {
   });
 
   @override
+  State<ChatUserProfileScreen> createState() => _ChatUserProfileScreenState();
+}
+
+class _ChatUserProfileScreenState extends State<ChatUserProfileScreen> {
+  final Set<String> _hydrationInProgress = <String>{};
+
+  void _maybeHydrateMissingProfileFields(ChatUser? user) {
+    if (user == null) return;
+
+    final needsEmail = _notEmptyOrDash(user.email) == '-';
+    final needsPhone = _notEmptyOrDash(user.phoneNumber) == '-';
+    final needsJob = _notEmptyOrDash(user.jobTitle) == '-';
+    if (!needsEmail && !needsPhone && !needsJob) return;
+
+    if (_hydrationInProgress.contains(user.uid)) return;
+    _hydrationInProgress.add(user.uid);
+
+    UserRepository.instance
+        .hydrateUserProfileFromEmployeeDirectory(user)
+        .whenComplete(() {
+      _hydrationInProgress.remove(user.uid);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.primaryColor,
@@ -24,28 +49,32 @@ class ChatUserProfileScreen extends StatelessWidget {
       body: SafeArea(
         top: false,
         child: StreamBuilder<ChatUser?>(
-          stream: UserRepository.instance.subscribeToUser(peerUid),
+          stream: UserRepository.instance.subscribeToUser(widget.peerUid),
           builder: (context, userSnapshot) {
             final user = userSnapshot.data;
+            _maybeHydrateMissingProfileFields(user);
+            _debugPrintProfile(userSnapshot, user);
             return StreamBuilder<PresenceStatus>(
-              stream: PresenceService.instance.subscribeToUserPresence(peerUid),
+              stream: PresenceService.instance
+                  .subscribeToUserPresence(widget.peerUid),
               builder: (context, presenceSnapshot) {
                 final isOnline = presenceSnapshot.data?.online ?? false;
                 return StreamBuilder<List<Message>>(
                   stream: ChatRepository.instance.subscribeToMessages(
-                    chatId,
+                    widget.chatId,
                     pageSize: 200,
                   ),
                   builder: (context, messageSnapshot) {
-                    final mediaItems = _extractMedia(messageSnapshot.data ?? const []);
+                    final mediaItems =
+                        _extractMedia(messageSnapshot.data ?? const []);
 
                     return SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(14, 8, 14, 22),
+                      padding: const EdgeInsets.fromLTRB(10, 6, 10, 18),
                       child: Container(
                         clipBehavior: Clip.antiAlias,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF4F4F4),
-                          borderRadius: BorderRadius.circular(24),
+                          color: const Color(0xFFECECEE),
+                          borderRadius: BorderRadius.circular(30),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -53,28 +82,31 @@ class ChatUserProfileScreen extends StatelessWidget {
                             _TopIdentityCard(
                               displayName: user?.name.trim().isNotEmpty == true
                                   ? user!.name
-                                  : fallbackName,
+                                  : widget.fallbackName,
                               avatarUrl: user?.avatarUrl,
                               initials: _initials(
                                 user?.name.trim().isNotEmpty == true
                                     ? user!.name
-                                    : fallbackName,
+                                    : widget.fallbackName,
                               ),
                               isOnline: isOnline,
                             ),
                             Padding(
-                              padding: const EdgeInsets.fromLTRB(18, 16, 18, 14),
+                              padding:
+                                  const EdgeInsets.fromLTRB(18, 16, 18, 14),
                               child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   _InfoRow(
                                     label: 'Display Name',
-                                    value: (user?.name.trim().isNotEmpty == true)
-                                        ? user!.name
-                                        : fallbackName,
+                                    value:
+                                        (user?.name.trim().isNotEmpty == true)
+                                            ? user!.name
+                                            : widget.fallbackName,
                                   ),
                                   _InfoRow(
                                     label: 'Email Address',
-                                    value: _notEmptyOrDash(user?.email),
+                                    value: _displayEmail(user),
                                   ),
                                   _InfoRow(
                                     label: 'Jobtitle',
@@ -86,17 +118,19 @@ class ChatUserProfileScreen extends StatelessWidget {
                                   ),
                                   _InfoRow(
                                     label: 'Phone Number',
-                                    value: _notEmptyOrDash(user?.phoneNumber),
+                                    value: _displayPhone(user),
                                   ),
                                 ],
                               ),
                             ),
                             _MediaSection(
                               items: mediaItems,
-                              onTapItem: (item) => _openMediaPreview(context, item),
+                              onTapItem: (item) =>
+                                  _openMediaPreview(context, item),
                               onViewAll: mediaItems.isEmpty
                                   ? null
-                                  : () => _showAllMediaBottomSheet(context, mediaItems),
+                                  : () => _showAllMediaBottomSheet(
+                                      context, mediaItems),
                             ),
                           ],
                         ),
@@ -131,11 +165,51 @@ class ChatUserProfileScreen extends StatelessWidget {
 
   static String _notEmptyOrDash(String? value) {
     final trimmed = value?.trim() ?? '';
-    return trimmed.isEmpty ? '-' : trimmed;
+    if (trimmed.isEmpty) return '-';
+    final lower = trimmed.toLowerCase();
+    if (lower == 'null' || lower == 'false' || lower == 'n/a') return '-';
+    return trimmed;
+  }
+
+  static String _displayEmail(ChatUser? user) {
+    final email = _notEmptyOrDash(user?.email);
+    if (email == '-') return '-';
+    return email;
+  }
+
+  static String _displayPhone(ChatUser? user) {
+    final phone = _notEmptyOrDash(user?.phoneNumber);
+    if (phone == '-') return '-';
+    return phone;
+  }
+
+  static void _debugPrintProfile(
+    AsyncSnapshot<ChatUser?> snapshot,
+    ChatUser? user,
+  ) {
+    final state = snapshot.connectionState.name;
+    debugPrint(
+        '👤 ChatProfile: state=$state hasData=${snapshot.hasData} hasError=${snapshot.hasError}');
+    if (snapshot.error != null) {
+      debugPrint('👤 ChatProfile: snapshot.error=${snapshot.error}');
+    }
+    if (user == null) {
+      debugPrint('👤 ChatProfile: user=NULL');
+      return;
+    }
+    debugPrint('👤 ChatProfile: uid=${user.uid}');
+    debugPrint('👤 ChatProfile: name=${user.name}');
+    debugPrint('👤 ChatProfile: email=${user.email}');
+    debugPrint('👤 ChatProfile: phone=${user.phoneNumber}');
+    debugPrint(
+        '👤 ChatProfile: jobTitle=${user.jobTitle} roleName=${user.roleName} roleId=${user.roleId}');
+    debugPrint(
+        '👤 ChatProfile: employeeId=${user.employeeId} odooUserId=${user.odooUserId}');
   }
 
   static String _initials(String value) {
-    final parts = value.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    final parts =
+        value.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
     if (parts.isEmpty) return '?';
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
@@ -181,7 +255,8 @@ class ChatUserProfileScreen extends StatelessWidget {
                     item.displayUrl,
                     fit: BoxFit.contain,
                     errorBuilder: (_, __, ___) => const Center(
-                      child: Icon(Icons.broken_image_outlined, color: Colors.white70, size: 38),
+                      child: Icon(Icons.broken_image_outlined,
+                          color: Colors.white70, size: 38),
                     ),
                   ),
                 ),
@@ -193,7 +268,8 @@ class ChatUserProfileScreen extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 26,
                     backgroundColor: Color(0x77000000),
-                    child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 34),
+                    child: Icon(Icons.play_arrow_rounded,
+                        color: Colors.white, size: 34),
                   ),
                 ),
               ),
@@ -203,7 +279,8 @@ class ChatUserProfileScreen extends StatelessWidget {
     );
   }
 
-  static void _showAllMediaBottomSheet(BuildContext context, List<_SharedMediaItem> items) {
+  static void _showAllMediaBottomSheet(
+      BuildContext context, List<_SharedMediaItem> items) {
     showModalBottomSheet(
       context: context,
       backgroundColor: const Color(0xFF2A3358),
@@ -258,10 +335,10 @@ class _TopIdentityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       decoration: const BoxDecoration(
         color: AppColors.primaryColor,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(22)),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(26)),
       ),
       child: Row(
         children: [
@@ -271,10 +348,11 @@ class _TopIdentityCard extends StatelessWidget {
                 padding: const EdgeInsets.all(1.3),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFFE9B23A), width: 1.2),
+                  border:
+                      Border.all(color: const Color(0xFFE9B23A), width: 1.2),
                 ),
                 child: CircleAvatar(
-                  radius: 24,
+                  radius: 23,
                   backgroundColor: const Color(0xFFE7E7E7),
                   backgroundImage: (avatarUrl?.trim().isNotEmpty == true)
                       ? NetworkImage(avatarUrl!.trim())
@@ -318,7 +396,7 @@ class _TopIdentityCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 24,
+                    fontSize: 17,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -327,7 +405,7 @@ class _TopIdentityCard extends StatelessWidget {
                   isOnline ? 'Active now' : 'Offline',
                   style: TextStyle(
                     color: isOnline ? const Color(0xFF6BE483) : Colors.white70,
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -349,28 +427,35 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 13),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+      padding: const EdgeInsets.only(bottom: 11),
+      child: SizedBox(
+        width: double.infinity,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              textAlign: TextAlign.start,
+              style: const TextStyle(
+                color: Color(0xFF8A8A8A),
+                fontSize: 12,
+                height: 1,
+                fontWeight: FontWeight.w400,
+              ),
             ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFF121212),
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
+            const SizedBox(height: 10),
+            Text(
+              value,
+              textAlign: TextAlign.start,
+              style: const TextStyle(
+                color: Color(0xFF121212),
+                fontSize: 14,
+                height: 1,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -414,7 +499,7 @@ class _MediaSection extends StatelessWidget {
                 'Media Shared',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: 20,
+                  fontSize: 14,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -425,7 +510,7 @@ class _MediaSection extends StatelessWidget {
                   'View All',
                   style: TextStyle(
                     color: onViewAll == null ? Colors.white38 : Colors.white,
-                    fontSize: 17,
+                    fontSize: 14,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -497,7 +582,8 @@ class _MediaThumb extends StatelessWidget {
                 fit: BoxFit.cover,
                 errorBuilder: (_, __, ___) => Container(
                   color: Colors.white.withValues(alpha: 0.08),
-                  child: const Icon(Icons.broken_image_outlined, color: Colors.white70),
+                  child: const Icon(Icons.broken_image_outlined,
+                      color: Colors.white70),
                 ),
               ),
               if (item.type == MessageType.video)
@@ -505,7 +591,8 @@ class _MediaThumb extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 15,
                     backgroundColor: Color(0x77000000),
-                    child: Icon(Icons.play_arrow_rounded, color: Colors.white, size: 20),
+                    child: Icon(Icons.play_arrow_rounded,
+                        color: Colors.white, size: 20),
                   ),
                 ),
             ],

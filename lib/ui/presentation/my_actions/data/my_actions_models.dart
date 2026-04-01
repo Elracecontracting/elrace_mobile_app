@@ -29,6 +29,7 @@ class MyActionItem {
   final String? reportLink;
   final String? clientImage;
   final String? operatingUnit;
+  final String? fileId;
 
   const MyActionItem({
     required this.id,
@@ -45,6 +46,7 @@ class MyActionItem {
     this.reportLink,
     this.clientImage,
     this.operatingUnit,
+    this.fileId,
   });
 
   factory MyActionItem.fromJson(Map<String, dynamic> json) {
@@ -75,17 +77,16 @@ class MyActionItem {
     final dynamic statusRaw = json['status'] ?? json['state'];
 
     // employee: try employee_name, employee (Odoo), requester_name
-    final dynamic empRaw = json['employee_name'] ??
-        json['employee'] ??
-        json['requester_name'];
+    final dynamic empRaw =
+        json['employee_name'] ?? json['employee'] ?? json['requester_name'];
 
     return MyActionItem(
       id: (json['id'] as num?)?.toInt() ??
           (json['parent_id'] as num?)?.toInt() ??
           0,
       name: _safeString(nameRaw),
-      reference: _safeString(
-          json['reference'] ?? json['ref'] ?? json['number']),
+      reference:
+          _safeString(json['reference'] ?? json['ref'] ?? json['number']),
       date: _safeString(json['date'] ??
           json['last_updated_on'] ??
           json['accounting_date'] ??
@@ -103,6 +104,12 @@ class MyActionItem {
       reportLink: _safeString(json['report_link']),
       clientImage: _safeString(json['client_image']),
       operatingUnit: _safeString(json['operating_unit']),
+      fileId: _safeString(
+        json['file_id'] ??
+            json['employee_file_id'] ??
+            json['emp_profile_id'] ??
+            json['employee_id'],
+      ),
     );
   }
 

@@ -111,7 +111,7 @@ class _TodoCategoryScreenState extends State<TodoCategoryScreen> {
                         return await _confirmDelete(context);
                       },
                       onDismissed: (direction) {
-                        provider.deleteTodo(todo.firebaseId!);
+                        provider.deleteTodo(todo);
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(translate('todo.task_deleted')),
@@ -135,12 +135,11 @@ class _TodoCategoryScreenState extends State<TodoCategoryScreen> {
                         );
                       },
                       child: TodoItemWidget(
-                        key: ValueKey('todo_item_${todo.firebaseId ?? todo.id}'),
+                        key:
+                            ValueKey('todo_item_${todo.firebaseId ?? todo.id}'),
                         todo: todo,
-                        onToggleComplete: () =>
-                            provider.toggleComplete(todo.firebaseId!),
-                        onToggleImportant: () =>
-                            provider.toggleImportant(todo.firebaseId!),
+                        onToggleComplete: () => provider.toggleComplete(todo),
+                        onToggleImportant: () => provider.toggleImportant(todo),
                         onTap: () => _showEditTodo(todo),
                       ),
                     );

@@ -13,13 +13,11 @@ import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:el_race/utils/safe_insets.dart';
 import 'package:intl/intl.dart';
 
 import '../../widgets/header_widget.dart';
-import '../home_screen/screens/main_screens.dart';
 
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({
@@ -30,10 +28,23 @@ class NotificationScreen extends StatefulWidget {
   State<NotificationScreen> createState() => _NotificationScreenState();
 }
 
+class _NotificationTabConfig {
+  final String category;
+  final String title;
+  final String icon;
+
+  const _NotificationTabConfig({
+    required this.category,
+    required this.title,
+    required this.icon,
+  });
+}
+
 class _NotificationScreenState extends State<NotificationScreen> {
   int currentIndex = 0;
   final ScrollController _scrollController = ScrollController();
-  final List<GlobalKey> _tabKeys = List.generate(3, (index) => GlobalKey());
+  List<GlobalKey> _tabKeys = <GlobalKey>[];
+  List<_NotificationTabConfig> _notificationTabs = const [];
   List<Map<String, dynamic>> notifications = [];
   bool _isLoading = true;
 
@@ -49,9 +60,97 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
+    _loadDynamicCategories();
     _loadMuteSettings();
     _loadNotifications();
     _loadCircularAnnouncements(); // Load from API
+  }
+
+  String _normalizeCategory(String value) {
+    return value.trim().toLowerCase();
+  }
+
+  String _humanizeCategory(String value) {
+    final category = value.trim();
+    if (category.isEmpty) return 'Notifications';
+
+    final parts = category
+        .split(RegExp(r'[._-]+'))
+        .where((part) => part.trim().isNotEmpty)
+        .map((part) {
+      final p = part.trim();
+      return '${p[0].toUpperCase()}${p.substring(1)}';
+    }).toList(growable: false);
+
+    if (parts.isEmpty) return 'Notifications';
+    return parts.join(' ');
+  }
+
+  String _tabIconForCategory(String category) {
+    final normalized = _normalizeCategory(category);
+    if (normalized == 'announcement') {
+      return 'assets/png/announcement.png';
+    }
+    if (normalized == 'circular') {
+      return 'assets/png/urgent_icon.png';
+    }
+    return 'assets/png/notification_icon.png';
+  }
+
+  Future<void> _loadDynamicCategories({bool forceRefresh = false}) async {
+    try {
+      final categories =
+          await NotificationStorageService.getNotificationCategories(
+              forceRefresh: forceRefresh);
+
+      final tabs = categories.map((item) {
+        final category = _normalizeCategory(item.model);
+        final title = item.title.trim().isEmpty
+            ? _humanizeCategory(category)
+            : item.title.trim();
+
+        return _NotificationTabConfig(
+          category: category,
+          title: title,
+          icon: _tabIconForCategory(category),
+        );
+      }).toList(growable: true);
+
+      if (tabs.isEmpty) {
+        tabs.add(
+          const _NotificationTabConfig(
+            category: 'notification',
+            title: 'Notifications',
+            icon: 'assets/png/notification_icon.png',
+          ),
+        );
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _notificationTabs = tabs;
+        _tabKeys = List.generate(tabs.length, (_) => GlobalKey());
+        if (currentIndex >= tabs.length) {
+          currentIndex = 0;
+        }
+      });
+    } catch (e) {
+      debugPrint('Error loading notification categories: $e');
+      if (!mounted) return;
+      setState(() {
+        _notificationTabs = const [
+          _NotificationTabConfig(
+            category: 'notification',
+            title: 'Notifications',
+            icon: 'assets/png/notification_icon.png',
+          ),
+        ];
+        _tabKeys = List.generate(_notificationTabs.length, (_) => GlobalKey());
+        if (currentIndex >= _notificationTabs.length) {
+          currentIndex = 0;
+        }
+      });
+    }
   }
 
   Future<void> _loadMuteSettings() async {
@@ -63,7 +162,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         _isMuteSettingsLoading = false;
       });
     } catch (e) {
-      print('Error loading mute settings: $e');
+      debugPrint('Error loading mute settings: $e');
       if (!mounted) return;
       setState(() => _isMuteSettingsLoading = false);
     }
@@ -79,6 +178,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     if (!mounted) return;
     await _loadMuteSettings();
+    await _loadDynamicCategories(forceRefresh: true);
     await _loadNotifications();
     await _loadCircularAnnouncements();
   }
@@ -166,14 +266,40 @@ class _NotificationScreenState extends State<NotificationScreen> {
     try {
       final loadedNotifications =
           await NotificationStorageService.getNotifications();
+      final observedCategories = loadedNotifications
+          .map(
+            (item) => _normalizeCategory((item["category"] ?? "").toString()),
+          )
+          .where((category) => category.isNotEmpty)
+          .toSet();
+
       if (mounted) {
         setState(() {
           notifications = loadedNotifications;
+
+          for (final category in observedCategories) {
+            final exists = _notificationTabs.any(
+              (tab) => tab.category == category,
+            );
+            if (!exists) {
+              _notificationTabs = [
+                ..._notificationTabs,
+                _NotificationTabConfig(
+                  category: category,
+                  title: _humanizeCategory(category),
+                  icon: _tabIconForCategory(category),
+                ),
+              ];
+              _tabKeys =
+                  List.generate(_notificationTabs.length, (_) => GlobalKey());
+            }
+          }
+
           _isLoading = false;
         });
       }
     } catch (e) {
-      print('Error loading notifications: $e');
+      debugPrint('Error loading notifications: $e');
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -195,7 +321,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
         });
       }
     } catch (e) {
-      print('❌ Error loading circulars/announcements: $e');
+      debugPrint('Error loading circulars/announcements: $e');
       if (mounted) {
         setState(() {
           _circularAnnouncementError = e.toString();
@@ -441,7 +567,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
     final recordId = _extractRecordId(item, data);
     final recordType = _resolveRecordType(item, data);
 
-    print('🔔 Notification redirect - type: $recordType, recordId: $recordId');
+    debugPrint(
+      'Notification redirect - type: $recordType, recordId: $recordId',
+    );
 
     if (!mounted || recordId == null) return false;
 
@@ -541,28 +669,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
     }
   }
 
-  final List<Map<String, dynamic>> notificationType = [
-    {
-      'icon': 'assets/png/notification_icon.png',
-      'title': translate('notification_screen.center'),
-      'category': 'notification',
-    },
-    {
-      'icon': 'assets/png/announcement.png',
-      'title': translate('news_banner.announcements'),
-      'category': 'announcement',
-    },
-    {
-      'icon': 'assets/png/urgent_icon.png',
-      'title': translate('notification_screen.circulars'),
-      'category': 'circular',
-    },
-  ];
-
   List<Map<String, dynamic>> _getFilteredNotifications() {
     if (notifications.isEmpty) return [];
+    if (_notificationTabs.isEmpty || currentIndex >= _notificationTabs.length) {
+      return notifications;
+    }
 
-    final selectedCategory = notificationType[currentIndex]['category'];
+    final selectedCategory = _notificationTabs[currentIndex].category;
 
     // Filter notifications by category
     return notifications.where((notification) {
@@ -610,14 +723,13 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                   padding: const EdgeInsets.only(
                                       left: 10, right: 10),
                                   controller: _scrollController,
-                                  itemCount: notificationType.length,
+                                  itemCount: _notificationTabs.length,
                                   physics: const BouncingScrollPhysics(),
                                   scrollDirection: Axis.horizontal,
                                   itemBuilder: (context, index) {
-                                    String notificationIcon =
-                                        notificationType[index]['icon'];
-                                    String notificationTitle =
-                                        notificationType[index]['title'];
+                                    final tab = _notificationTabs[index];
+                                    final notificationIcon = tab.icon;
+                                    final notificationTitle = tab.title;
                                     return InkWell(
                                       key: _tabKeys[index],
                                       onTap: () {
@@ -770,15 +882,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
   /// Build content based on selected tab
   Widget _buildContentForTab() {
-    final selectedCategory = notificationType[currentIndex]['category'];
-
-    // For Notifications tab (index 0) - use local storage
-    if (selectedCategory == 'notification') {
+    if (_notificationTabs.isEmpty || currentIndex >= _notificationTabs.length) {
       return _buildLocalNotificationsList();
     }
 
-    // For Announcements and Circulars tabs - use API data
-    return _buildApiDataList(selectedCategory);
+    final selectedCategory = _notificationTabs[currentIndex].category;
+
+    // Circulars and announcements are rendered from dedicated API payload.
+    if (selectedCategory == 'announcement' || selectedCategory == 'circular') {
+      return _buildApiDataList(selectedCategory);
+    }
+
+    // All dynamic categories are rendered from notification storage.
+    return _buildLocalNotificationsList();
   }
 
   /// Build local notifications list (from storage)
@@ -805,7 +921,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
       itemCount: filteredNotifications.length,
       itemBuilder: (context, index) {
         final item = filteredNotifications[index];
-        String currentNotificationIcon = notificationType[currentIndex]['icon'];
+        final currentNotificationIcon = _notificationTabs.isNotEmpty &&
+                currentIndex < _notificationTabs.length
+            ? _notificationTabs[currentIndex].icon
+            : 'assets/png/notification_icon.png';
         final notificationId = (item['id'] ?? '').toString();
         final isRead = _isRead(item);
 
@@ -905,7 +1024,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
               : Icons.assignment_outlined);
     }
 
-    String currentNotificationIcon = notificationType[currentIndex]['icon'];
+    final currentNotificationIcon =
+        _notificationTabs.isNotEmpty && currentIndex < _notificationTabs.length
+            ? _notificationTabs[currentIndex].icon
+            : 'assets/png/notification_icon.png';
 
     return ListView.builder(
       shrinkWrap: true,
@@ -1053,7 +1175,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         GestureDetector(
-          onTap: () => _openCircularAnnouncementFile(item),
+          onTap: () => _showCircularAnnouncementDialog(item),
           child: Container(
             margin: const EdgeInsets.only(bottom: 6),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -1141,6 +1263,116 @@ class _NotificationScreenState extends State<NotificationScreen> {
     );
   }
 
+  Future<void> _showCircularAnnouncementDialog(
+      CircularAnnouncementItem item) async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierColor: Colors.black.withAlpha((0.6 * 255).toInt()),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(dialogContext).size.height * 0.75,
+            ),
+            padding: const EdgeInsets.all(22),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.displayTitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                if (item.date != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    DateFormat('dd/MM/yyyy').format(item.date!),
+                    style: GoogleFonts.inter(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Flexible(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Text(
+                      item.displayBody.isNotEmpty
+                          ? item.displayBody
+                          : item.displayTitle,
+                      style: GoogleFonts.inter(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black87,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Center(
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(30),
+                    onTap: item.hasFile
+                        ? () {
+                            Navigator.pop(dialogContext);
+                            _openCircularAnnouncementFile(item);
+                          }
+                        : null,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 22,
+                        vertical: 11,
+                      ),
+                      decoration: BoxDecoration(
+                        color: item.hasFile
+                            ? const Color(0xFF0A1133)
+                            : const Color(0xFFB9BFCC),
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.attach_file,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            'VIEW ATTACHMENT',
+                            style: GoogleFonts.bebasNeue(
+                              fontSize: 24.sp,
+                              letterSpacing: 0.5,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   /// Open file for circular/announcement
   void _openCircularAnnouncementFile(CircularAnnouncementItem item) {
     if (!item.hasFile) {
@@ -1213,7 +1445,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 Center(
                   child: InkWell(
                     onTap: () {
-                      // TODO: Handle attachment view
                       Navigator.pop(context);
                     },
                     child: Container(

@@ -4,6 +4,13 @@ import 'package:el_race/ui/presentation/tasks/task_details_screen.dart';
 import 'package:el_race/ui/presentation/tasks/data/task_model.dart';
 import 'package:el_race/ui/presentation/lpo/screens/lpo_screen.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashScreen.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/screens/project_list_screen.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_bloc.dart';
+import 'package:el_race/ui/presentation/my_projects/data/repositories/project_repository_impl.dart';
+import 'package:el_race/ui/presentation/my_projects/data/datasources/project_remote_datasource.dart';
+import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_usecase.dart';
+import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_by_partner_usecase.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Helper class for navigating to detail screens from search results
 ///
@@ -92,20 +99,48 @@ class GlobalSearchNavigationHelper {
     BuildContext context,
     GlobalSearchItem item,
   ) {
-    // TODO: Implement navigation to Project details screen
-    // Once you have the detail screen ready, uncomment and modify:
-    /*
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ProjectDetailScreen(
-          projectId: item.id,
-        ),
-      ),
-    );
-    */
+    try {
+      final data = item.additionalData ?? const <String, dynamic>{};
 
-    _showNotImplemented(context, item);
+      int? _asInt(dynamic value) {
+        if (value is int) return value;
+        if (value is String) return int.tryParse(value);
+        return null;
+      }
+
+      final int partnerId = _asInt(data['partner_id']) ?? item.id;
+      final String partnerName =
+          (data['partner_name'] ?? item.title).toString();
+      final String partnerPhoto =
+          (data['photo_url'] ?? data['partner_photo'] ?? '').toString();
+
+      final repo = ProjectRepositoryImpl(ProjectRemoteDataSource());
+      final bloc = ProjectListBloc(
+        getProjectsUseCase: GetProjectsUseCase(repository: repo),
+        getProjectAttachmentsUseCase:
+            GetProjectAttachmentsUseCase(repository: repo),
+        getProjectsByPartnerUseCase:
+            GetProjectsByPartnerUseCase(repository: repo),
+      );
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => BlocProvider.value(
+            value: bloc,
+            child: ProjectListScreen(
+              bloc: bloc,
+              partnerId: partnerId,
+              partnerName: partnerName,
+              partnerPhoto: partnerPhoto,
+            ),
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error navigating to project details: $e');
+      _showError(context, 'Unable to open project details');
+    }
   }
 
   /// Navigate to LPO Details

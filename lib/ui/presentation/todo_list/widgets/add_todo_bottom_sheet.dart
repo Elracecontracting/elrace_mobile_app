@@ -572,9 +572,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
     );
 
     if (confirm == true && mounted) {
-      await context
-          .read<TodoFirebaseProvider>()
-          .deleteTodo(widget.todo!.firebaseId!);
+      await context.read<TodoFirebaseProvider>().deleteTodo(widget.todo!);
       if (mounted) Navigator.pop(context);
     }
   }

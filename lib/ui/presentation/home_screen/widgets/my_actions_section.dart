@@ -4,6 +4,7 @@ import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:el_race/ui/presentation/my_actions/screens/hr_screen.dart';
+import 'package:el_race/ui/presentation/my_actions/screens/my_requests_screen.dart';
 import 'package:el_race/ui/presentation/my_actions/screens/rfq_screen.dart';
 import 'package:el_race/ui/presentation/my_actions/screens/petty_cash_my_action_screen.dart';
 import 'package:el_race/ui/presentation/my_actions/screens/invoice_my_actions_screen.dart';
@@ -134,6 +135,20 @@ class MyActionsSection extends StatelessWidget {
                     SlideRightPageRoute(
                       child: const TimesheetScreen(),
                       settings: const RouteSettings(name: '/timesheet'),
+                    ),
+                  );
+                },
+              ),
+              SizedBox(width: 12.w),
+              _MyActionTile(
+                iconAsset: 'assets/newapp/newicon/my_action_my_request.png',
+                label: 'My Requests',
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    SlideRightPageRoute(
+                      child: const MyRequestsScreen(),
+                      settings: const RouteSettings(name: '/my_requests'),
                     ),
                   );
                 },
