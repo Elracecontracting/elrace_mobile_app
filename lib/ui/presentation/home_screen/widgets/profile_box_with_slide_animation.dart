@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/main.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
@@ -28,6 +29,10 @@ class _ProfileBoxWithSlideAnimationState
   Uint8List? _qrCodeData;
   bool _isLoadingQr = true;
   String? _qrErrorMessage;
+  bool _isMutePopupVisible = false;
+  bool _isMutePopupSaving = false;
+  List<_MuteChannelConfig> _muteChannels = <_MuteChannelConfig>[];
+  Map<String, bool> _muteValueByKey = <String, bool>{};
 
   // Animation controller for moving numbers
   late AnimationController _numbersAnimationController;
@@ -119,17 +124,103 @@ class _ProfileBoxWithSlideAnimationState
     }
   }
 
+  String _pickExistingMuteKey(
+    Map<String, bool> settings,
+    List<String> candidates,
+  ) {
+    for (final candidate in candidates) {
+      final key = candidate.trim().toLowerCase();
+      if (settings.containsKey(key)) {
+        return key;
+      }
+    }
+    return candidates.first.trim().toLowerCase();
+  }
+
+  Future<void> _openMuteControlPopup() async {
+    final settings = await NotificationStorageService.getMuteSettings();
+    if (!mounted) return;
+
+    final channels = <_MuteChannelConfig>[
+      _MuteChannelConfig(
+        label: 'Announcement',
+        key: _pickExistingMuteKey(
+          settings,
+          const ['announcement', 'announcements'],
+        ),
+      ),
+      _MuteChannelConfig(
+        label: 'Circular',
+        key: _pickExistingMuteKey(settings, const ['circular', 'circulars']),
+      ),
+      _MuteChannelConfig(
+        label: 'Notifications',
+        key: _pickExistingMuteKey(settings, const ['notification', 'alert']),
+      ),
+      _MuteChannelConfig(
+        label: 'Azan',
+        key: _pickExistingMuteKey(settings, const ['prayer', 'azan']),
+      ),
+    ];
+
+    setState(() {
+      _muteChannels = channels;
+      _muteValueByKey = <String, bool>{
+        for (final channel in channels)
+          channel.key: settings[channel.key] == true,
+      };
+      _isMutePopupVisible = true;
+      _isMutePopupSaving = false;
+    });
+  }
+
+  Future<void> _updateMuteChannel(_MuteChannelConfig item, bool value) async {
+    final previous = _muteValueByKey[item.key] ?? false;
+    setState(() {
+      _muteValueByKey[item.key] = value;
+      _isMutePopupSaving = true;
+    });
+
+    try {
+      await NotificationStorageService.setMuteSetting(item.key, value);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _muteValueByKey[item.key] = previous;
+      });
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        const SnackBar(
+          content: Text('Failed to update mute setting'),
+          backgroundColor: Color(0xffBA1719),
+        ),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isMutePopupSaving = false;
+      });
+    }
+  }
+
+  void _closeMuteControlPopup() {
+    if (!mounted) return;
+    setState(() {
+      _isMutePopupVisible = false;
+      _isMutePopupSaving = false;
+    });
+  }
+
   /// Get profile image - handles both base64 and URL formats
   ImageProvider _getProfileImage(String imageData) {
     if (imageData.isEmpty) {
       return const AssetImage('assets/png/profile_1.png');
     }
-    
+
     // Check if it's a URL (starts with http:// or https://)
     if (imageData.startsWith('http://') || imageData.startsWith('https://')) {
       return NetworkImage(imageData);
     }
-    
+
     // Check if it's valid base64
     if (Util.isValidBase64(imageData)) {
       try {
@@ -138,7 +229,7 @@ class _ProfileBoxWithSlideAnimationState
         return const AssetImage('assets/png/profile_1.png');
       }
     }
-    
+
     // Default fallback
     return const AssetImage('assets/png/profile_1.png');
   }
@@ -393,419 +484,511 @@ class _ProfileBoxWithSlideAnimationState
   @override
   Widget build(BuildContext context) {
     return Consumer<ProfileBoxProvider>(
-            builder: (context, profileBoxProvider, child) {
-              final isAuthenticated = SharedPref.isUserAuthenticated();
-              if (isAuthenticated == false) return const SizedBox.shrink();
+      builder: (context, profileBoxProvider, child) {
+        final isAuthenticated = SharedPref.isUserAuthenticated();
+        if (isAuthenticated == false) return const SizedBox.shrink();
 
-              final screenWidth = MediaQuery.of(context).size.width;
-              final drawerWidth = screenWidth * 0.75;
+        final screenWidth = MediaQuery.of(context).size.width;
+        final drawerWidth = screenWidth * 0.75;
 
-              final base64Image = SharedPref().getUserBase64Image();
-              final hasValidImage =
-                  base64Image.isNotEmpty && Util.isValidBase64(base64Image);
+        final base64Image = SharedPref().getUserBase64Image();
+        final hasValidImage =
+            base64Image.isNotEmpty && Util.isValidBase64(base64Image);
 
-              final loginData = SharedPref.getLoginData();
+        final loginData = SharedPref.getLoginData();
 
-              // Debug: print FULL user data to the log so we can inspect it
-              try {
-                print('DEBUG: ===== FULL USER DATA FROM STORAGE =====');
-                print('DEBUG: Full stored JSON:');
-                final storedJson =
-                    SharedPref().getPreferenceString('loginResponse');
-                if (storedJson.isNotEmpty) {
-                  print(JsonEncoder.withIndent('  ')
-                      .convert(jsonDecode(storedJson)));
-                } else {
-                  print('DEBUG: No stored login data found!');
-                }
-                print('DEBUG: ==========================================');
-                print('DEBUG: Parsed fields from model:');
-                print('DEBUG: name = ${loginData.result?.data?.name}');
-                print('DEBUG: emp_name = ${loginData.result?.data?.emp_name}');
-                print('DEBUG: username = ${loginData.result?.data?.username}');
-                print(
-                    'DEBUG: partnerDisplayName = ${loginData.result?.data?.partnerDisplayName}');
-                print('DEBUG: job_id = ${loginData.result?.data?.job_id}');
-                print('DEBUG: emp_id = ${loginData.result?.data?.emp_id}');
-                print('DEBUG: uid = ${loginData.result?.data?.uid}');
-                print(
-                    'DEBUG: qr_status = ${loginData.result?.data?.qr_status}');
-                print(
-                    'DEBUG: image_url length = ${loginData.result?.data?.image_url?.length ?? 0}');
-                print('DEBUG: ==========================================');
-              } catch (e) {
-                print('DEBUG: user data read error: $e');
-              }
+        // Debug: print FULL user data to the log so we can inspect it
+        try {
+          print('DEBUG: ===== FULL USER DATA FROM STORAGE =====');
+          print('DEBUG: Full stored JSON:');
+          final storedJson = SharedPref().getPreferenceString('loginResponse');
+          if (storedJson.isNotEmpty) {
+            print(JsonEncoder.withIndent('  ').convert(jsonDecode(storedJson)));
+          } else {
+            print('DEBUG: No stored login data found!');
+          }
+          print('DEBUG: ==========================================');
+          print('DEBUG: Parsed fields from model:');
+          print('DEBUG: name = ${loginData.result?.data?.name}');
+          print('DEBUG: emp_name = ${loginData.result?.data?.emp_name}');
+          print('DEBUG: username = ${loginData.result?.data?.username}');
+          print(
+              'DEBUG: partnerDisplayName = ${loginData.result?.data?.partnerDisplayName}');
+          print('DEBUG: job_id = ${loginData.result?.data?.job_id}');
+          print('DEBUG: emp_id = ${loginData.result?.data?.emp_id}');
+          print('DEBUG: uid = ${loginData.result?.data?.uid}');
+          print('DEBUG: qr_status = ${loginData.result?.data?.qr_status}');
+          print(
+              'DEBUG: image_url length = ${loginData.result?.data?.image_url?.length ?? 0}');
+          print('DEBUG: ==========================================');
+        } catch (e) {
+          print('DEBUG: user data read error: $e');
+        }
 
-              return Stack(
-                children: [
-                  // Black transparent overlay
-                  if (profileBoxProvider.isProfileVisible)
-                    Positioned.fill(
-                      child: GestureDetector(
-                        onTap: () => profileBoxProvider.hideProfileBox(),
-                        child: Container(
-                          color: Colors.black26,
-                        ),
-                      ),
+        return Stack(
+          children: [
+            // Black transparent overlay
+            if (profileBoxProvider.isProfileVisible)
+              Positioned.fill(
+                child: GestureDetector(
+                  onTap: () => profileBoxProvider.hideProfileBox(),
+                  child: Container(
+                    color: Colors.black26,
+                  ),
+                ),
+              ),
+            // Side menu
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              left: SharedPref().isArabic()
+                  ? null
+                  : (profileBoxProvider.isProfileVisible ? 0 : -drawerWidth),
+              right: SharedPref().isArabic()
+                  ? (profileBoxProvider.isProfileVisible ? 0 : -drawerWidth)
+                  : null,
+              top: 0,
+              child: Material(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(20),
+                  bottomRight: Radius.circular(20),
+                ),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    image: DecorationImage(
+                        image:
+                            AssetImage("assets/newapp/profile_background.png"),
+                        fit: BoxFit.fill),
+                    borderRadius: BorderRadius.only(
+                      topRight: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
                     ),
-                  // Side menu
-                  AnimatedPositioned(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    left: SharedPref().isArabic()
-                        ? null
-                        : (profileBoxProvider.isProfileVisible
-                            ? 0
-                            : -drawerWidth),
-                    right: SharedPref().isArabic()
-                        ? (profileBoxProvider.isProfileVisible
-                            ? 0
-                            : -drawerWidth)
-                        : null,
-                    top: 0,
-                    child: Material(
-                      color: Colors.white,
-                      borderRadius: const BorderRadius.only(
-                        topRight: Radius.circular(20),
-                        bottomRight: Radius.circular(20),
-                      ),
-                      child: Container(
-                        decoration: const BoxDecoration(
-                          color: Colors.white,
-                          image: DecorationImage(
-                              image: AssetImage(
-                                  "assets/newapp/profile_background.png"),
-                              fit: BoxFit.fill),
-                          borderRadius: BorderRadius.only(
-                            topRight: Radius.circular(20),
-                            bottomRight: Radius.circular(20),
-                          ),
-                        ),
-                        width: drawerWidth,
-                        child: Column(
-                          // إزالة الفراغ السفلي الناتج عن التوسيط العمودي
-                          mainAxisAlignment: MainAxisAlignment.start,
-                          crossAxisAlignment: CrossAxisAlignment.center,
+                  ),
+                  width: drawerWidth,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      // إزالة الفراغ السفلي الناتج عن التوسيط العمودي
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Column(
                           children: [
-                            Column(
-                              children: [
-                                SizedBox(
-                                  height: 60.h,
-                                ),
-                                Container(
-                                  padding: const EdgeInsets.all(2),
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                        color: Colors.black, width: 2),
-                                  ),
-                                  child: CircleAvatar(
-                                    radius: 28,
-                                    backgroundImage: _getProfileImage(base64Image),
-                                  ),
-                                ),
-                                const SizedBox(height: 1),
-                                Text(
-                                  () {
-                                    // Try multiple sources for name
-                                    String? displayName =
-                                        loginData.result?.data?.name;
-                                    if (displayName == null ||
-                                        displayName.isEmpty ||
-                                        displayName == 'false') {
-                                      displayName = loginData
-                                          .result?.data?.partnerDisplayName;
-                                    }
-                                    if (displayName == null ||
-                                        displayName.isEmpty ||
-                                        displayName == 'false') {
-                                      displayName =
-                                          loginData.result?.data?.username;
-                                    }
-                                    if (displayName != null &&
-                                        displayName.isNotEmpty &&
-                                        displayName != 'false') {
-                                      return displayName
-                                          .split(' ')
-                                          .take(2)
-                                          .join(' ');
-                                    }
-                                    return translate(
-                                        'profile.name_not_available');
-                                  }(),
-                                  style: GoogleFonts.inter(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 11.26),
-                                ),
-                                const SizedBox(height: 1),
-                                Text(
-                                  () {
-                                    final jobId =
-                                        loginData.result?.data?.job_id;
-                                    if (jobId != null &&
-                                        jobId.isNotEmpty &&
-                                        jobId != 'null' &&
-                                        jobId != 'false') {
-                                      return jobId;
-                                    }
-                                    return translate(
-                                        'profile.job_id_not_available');
-                                  }(),
-                                  style: GoogleFonts.inter(
-                                      fontSize: 11.26,
-                                      fontWeight: FontWeight.w400),
-                                ),
-                                const SizedBox(height: 1),
-                                Text(
-                                  () {
-                                    final empId =
-                                        loginData.result?.data?.emp_id;
-                                    if (empId != null &&
-                                        empId.isNotEmpty &&
-                                        empId != 'null' &&
-                                        empId != 'false') {
-                                      return empId;
-                                    }
-                                    return translate(
-                                        'profile.id_not_available');
-                                  }(),
-                                  style: GoogleFonts.inter(
-                                      fontSize: 11.26,
-                                      fontWeight: FontWeight.w400),
-                                ),
-                                const SizedBox(height: 1),
-                                const SizedBox(height: 8),
-                                InkWell(
-                                  onTap: () {
-                                    print('🏆 Certificate icon tapped!');
-                                    _showCertificateOverEverything();
+                            SizedBox(
+                              height: 60.h,
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border:
+                                    Border.all(color: Colors.black, width: 2),
+                              ),
+                              child: CircleAvatar(
+                                radius: 28,
+                                backgroundImage: _getProfileImage(base64Image),
+                              ),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              () {
+                                // Try multiple sources for name
+                                String? displayName =
+                                    loginData.result?.data?.name;
+                                if (displayName == null ||
+                                    displayName.isEmpty ||
+                                    displayName == 'false') {
+                                  displayName = loginData
+                                      .result?.data?.partnerDisplayName;
+                                }
+                                if (displayName == null ||
+                                    displayName.isEmpty ||
+                                    displayName == 'false') {
+                                  displayName =
+                                      loginData.result?.data?.username;
+                                }
+                                if (displayName != null &&
+                                    displayName.isNotEmpty &&
+                                    displayName != 'false') {
+                                  return displayName
+                                      .split(' ')
+                                      .take(2)
+                                      .join(' ');
+                                }
+                                return translate('profile.name_not_available');
+                              }(),
+                              style: GoogleFonts.inter(
+                                  fontWeight: FontWeight.w700, fontSize: 11.26),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              () {
+                                final jobId = loginData.result?.data?.job_id;
+                                if (jobId != null &&
+                                    jobId.isNotEmpty &&
+                                    jobId != 'null' &&
+                                    jobId != 'false') {
+                                  return jobId;
+                                }
+                                return translate(
+                                    'profile.job_id_not_available');
+                              }(),
+                              style: GoogleFonts.inter(
+                                  fontSize: 11.26, fontWeight: FontWeight.w400),
+                            ),
+                            const SizedBox(height: 1),
+                            Text(
+                              () {
+                                final empId = loginData.result?.data?.emp_id;
+                                if (empId != null &&
+                                    empId.isNotEmpty &&
+                                    empId != 'null' &&
+                                    empId != 'false') {
+                                  return empId;
+                                }
+                                return translate('profile.id_not_available');
+                              }(),
+                              style: GoogleFonts.inter(
+                                  fontSize: 11.26, fontWeight: FontWeight.w400),
+                            ),
+                            const SizedBox(height: 1),
+                            const SizedBox(height: 8),
+                            InkWell(
+                              onTap: () {
+                                print('🏆 Certificate icon tapped!');
+                                _showCertificateOverEverything();
+                              },
+                              borderRadius: BorderRadius.circular(50),
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                child: Image.asset(
+                                  'assets/png/cert_icon.png',
+                                  height: 30,
+                                  width: 30,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    // If image not found, use icon instead
+                                    return const Icon(
+                                      Icons.workspace_premium,
+                                      size: 30,
+                                      color: Colors.amber,
+                                    );
                                   },
-                                  borderRadius: BorderRadius.circular(50),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    child: Image.asset(
-                                      'assets/png/cert_icon.png',
-                                      height: 30,
-                                      width: 30,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                        // If image not found, use icon instead
-                                        return const Icon(
-                                          Icons.workspace_premium,
-                                          size: 30,
-                                          color: Colors.amber,
-                                        );
-                                      },
-                                    ),
-                                  ),
                                 ),
-                                SizedBox(height: 8.h),
-                                SizedBox(
-                                  width: 220.w,
-                                  child: Text(
-                                    loginData.result?.data?.qr_status == true
-                                        ? 'Status : Active'
-                                        : 'Status : Not Active',
-                                    style: GoogleFonts.inter(
-                                        fontSize: 11.26,
-                                        fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(height: 8.h),
+                            SizedBox(
+                              width: 220.w,
+                              child: Text(
+                                loginData.result?.data?.qr_status == true
+                                    ? 'Status : Active'
+                                    : 'Status : Not Active',
+                                style: GoogleFonts.inter(
+                                    fontSize: 11.26,
+                                    fontWeight: FontWeight.bold,
+                                    color: loginData.result?.data?.qr_status ==
+                                            true
+                                        ? const Color(0xff4CAF50)
+                                        : const Color(0xff9E9E9E)),
+                              ),
+                            ),
+                            SizedBox(
+                              width: 250.w,
+                              height: 250.h,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                clipBehavior: Clip.hardEdge,
+                                children: [
+                                  // Background with repeated numbers
+                                  Container(
+                                    width: 240.w,
+                                    height: 240.w,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                        colors: [
+                                          Colors.grey.shade100,
+                                          Colors.grey.shade200,
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(28),
+                                      border: Border.all(
                                         color:
                                             loginData.result?.data?.qr_status ==
                                                     true
-                                                ? const Color(0xff4CAF50)
-                                                : const Color(0xff9E9E9E)),
+                                                ? HexColor("#009859")
+                                                : Colors.grey.shade400,
+                                        width: 1.5,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.1),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Center(
+                                        child: _buildQRBackground(loginData
+                                                .result?.data?.emp_id
+                                                ?.toString() ??
+                                            '000')),
                                   ),
-                                ),
-                                SizedBox(
-                                  width: 250.w,
-                                  height: 250.h,
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    clipBehavior: Clip.hardEdge,
-                                    children: [
-                                      // Background with repeated numbers
-                                      Container(
-                                        width: 240.w,
-                                        height: 240.w,
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                            colors: [
-                                              Colors.grey.shade100,
-                                              Colors.grey.shade200,
-                                            ],
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(28),
-                                          border: Border.all(
+                                  // QR Code (rotated 45 degrees)
+                                  Transform.rotate(
+                                    angle: 0.785398, // 45 degrees in radians
+                                    child: Container(
+                                      width: 140.w,
+                                      height: 140.w,
+                                      decoration: BoxDecoration(
+                                        color: Colors.black,
+                                        border: Border.all(
+                                          color: loginData.result?.data
+                                                      ?.qr_status ==
+                                                  true
+                                              ? HexColor("#009859")
+                                              : Colors.grey.shade400,
+                                          width: 1.5,
+                                        ),
+                                        //borderRadius: BorderRadius.circular(8),
+                                        boxShadow: [
+                                          BoxShadow(
                                             color: loginData.result?.data
                                                         ?.qr_status ==
                                                     true
                                                 ? HexColor("#009859")
                                                 : Colors.grey.shade400,
-                                            width: 1.5,
+                                            blurRadius: 5,
+                                            offset: const Offset(1, 1),
                                           ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color:
-                                                  Colors.black.withOpacity(0.1),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Center(
-                                            child: _buildQRBackground(loginData
-                                                    .result?.data?.emp_id
-                                                    ?.toString() ??
-                                                '000')),
+                                        ],
                                       ),
-                                      // QR Code (rotated 45 degrees)
-                                      Transform.rotate(
-                                        angle:
-                                            0.785398, // 45 degrees in radians
-                                        child: Container(
-                                          width: 140.w,
-                                          height: 140.w,
-                                          decoration: BoxDecoration(
-                                            color: Colors.black,
-                                            border: Border.all(
-                                              color: loginData.result?.data
-                                                          ?.qr_status ==
-                                                      true
-                                                  ? HexColor("#009859")
-                                                  : Colors.grey.shade400,
-                                              width: 1.5,
-                                            ),
-                                            //borderRadius: BorderRadius.circular(8),
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: loginData.result?.data
-                                                            ?.qr_status ==
-                                                        true
-                                                    ? HexColor("#009859")
-                                                    : Colors.grey.shade400,
-                                                blurRadius: 5,
-                                                offset: const Offset(1, 1),
+                                      child: _isLoadingQr
+                                          ? const Center(
+                                              child: CircularProgressIndicator(
+                                                color: Colors.white,
+                                                strokeWidth: 2,
                                               ),
-                                            ],
-                                          ),
-                                          child: _isLoadingQr
-                                              ? const Center(
-                                                  child:
-                                                      CircularProgressIndicator(
-                                                    color: Colors.white,
-                                                    strokeWidth: 2,
-                                                  ),
+                                            )
+                                          : _qrCodeData != null
+                                              ? Image.memory(
+                                                  _qrCodeData!,
+                                                  fit: BoxFit
+                                                      .contain, // Changed from cover to contain
+                                                  errorBuilder: (context, error,
+                                                      stackTrace) {
+                                                    print(
+                                                        '❌ Image.memory error: $error');
+                                                    return const Center(
+                                                      child: Icon(
+                                                        Icons.broken_image,
+                                                        color: Colors.white,
+                                                        size: 40,
+                                                      ),
+                                                    );
+                                                  },
                                                 )
-                                              : _qrCodeData != null
-                                                  ? Image.memory(
-                                                      _qrCodeData!,
-                                                      fit: BoxFit
-                                                          .contain, // Changed from cover to contain
-                                                      errorBuilder: (context,
-                                                          error, stackTrace) {
-                                                        print(
-                                                            '❌ Image.memory error: $error');
-                                                        return const Center(
-                                                          child: Icon(
-                                                            Icons.broken_image,
-                                                            color: Colors.white,
-                                                            size: 40,
-                                                          ),
-                                                        );
-                                                      },
-                                                    )
-                                                  : Column(
-                                                      mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .center,
-                                                      children: [
-                                                        const Icon(
-                                                          Icons.qr_code_2,
-                                                          color: Colors.white,
-                                                          size: 40,
-                                                        ),
-                                                        const SizedBox(
-                                                            height: 8),
-                                                        if (_qrErrorMessage !=
-                                                            null)
-                                                          Padding(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .symmetric(
-                                                                    horizontal:
-                                                                        12,
-                                                                    vertical:
-                                                                        4),
-                                                            child: Text(
-                                                              _qrErrorMessage!,
-                                                              style:
-                                                                  const TextStyle(
-                                                                color: Colors
-                                                                    .white,
-                                                                fontSize: 9,
-                                                              ),
-                                                              textAlign:
-                                                                  TextAlign
-                                                                      .center,
-                                                              maxLines: 3,
-                                                              overflow:
-                                                                  TextOverflow
-                                                                      .ellipsis,
-                                                            ),
-                                                          ),
-                                                        const SizedBox(
-                                                            height: 4),
-                                                        ElevatedButton(
-                                                          onPressed: () {
-                                                            print(
-                                                                '🔄 Retry button pressed');
-                                                            _loadQrCode();
-                                                          },
-                                                          style: ElevatedButton
-                                                              .styleFrom(
-                                                            backgroundColor:
-                                                                Colors.white
-                                                                    .withOpacity(
-                                                                        0.2),
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .symmetric(
-                                                              horizontal: 16,
-                                                              vertical: 6,
-                                                            ),
-                                                          ),
-                                                          child: const Text(
-                                                            'Retry',
-                                                            style: TextStyle(
-                                                                color: Colors
-                                                                    .white,
-                                                                fontSize: 12),
-                                                          ),
-                                                        ),
-                                                      ],
+                                              : Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment.center,
+                                                  children: [
+                                                    const Icon(
+                                                      Icons.qr_code_2,
+                                                      color: Colors.white,
+                                                      size: 40,
                                                     ),
+                                                    const SizedBox(height: 8),
+                                                    if (_qrErrorMessage != null)
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                                horizontal: 12,
+                                                                vertical: 4),
+                                                        child: Text(
+                                                          _qrErrorMessage!,
+                                                          style:
+                                                              const TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 9,
+                                                          ),
+                                                          textAlign:
+                                                              TextAlign.center,
+                                                          maxLines: 3,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                      ),
+                                                    const SizedBox(height: 4),
+                                                    ElevatedButton(
+                                                      onPressed: () {
+                                                        print(
+                                                            '🔄 Retry button pressed');
+                                                        _loadQrCode();
+                                                      },
+                                                      style: ElevatedButton
+                                                          .styleFrom(
+                                                        backgroundColor: Colors
+                                                            .white
+                                                            .withOpacity(0.2),
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          horizontal: 16,
+                                                          vertical: 6,
+                                                        ),
+                                                      ),
+                                                      child: const Text(
+                                                        'Retry',
+                                                        style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 12),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        AppSettingsWidget(
+                          navKey: navKey,
+                          onMuteControlTap: _openMuteControlPopup,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (_isMutePopupVisible)
+              Positioned.fill(
+                child: Material(
+                  color: Colors.black54,
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: _isMutePopupSaving ? null : _closeMuteControlPopup,
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: () {},
+                        child: Container(
+                          width: 304,
+                          padding: const EdgeInsets.fromLTRB(20, 22, 20, 16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE7E7E7),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              for (final item in _muteChannels)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 14),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          item.label,
+                                          style: const TextStyle(
+                                            color: Color(0xFF1A1D55),
+                                            fontSize: 17,
+                                            fontWeight: FontWeight.w700,
+                                            height: 1,
+                                          ),
+                                        ),
+                                      ),
+                                      SizedBox(
+                                        width: 58,
+                                        child: Transform.scale(
+                                          scale: 0.86,
+                                          child: Switch(
+                                            materialTapTargetSize:
+                                                MaterialTapTargetSize
+                                                    .shrinkWrap,
+                                            value: _muteValueByKey[item.key] ??
+                                                false,
+                                            onChanged: _isMutePopupSaving
+                                                ? null
+                                                : (value) => _updateMuteChannel(
+                                                    item, value),
+                                            activeThumbColor:
+                                                const Color(0xFF454545),
+                                            activeTrackColor:
+                                                const Color(0xFFC8C8CB),
+                                            inactiveThumbColor:
+                                                const Color(0xFF454545),
+                                            inactiveTrackColor:
+                                                const Color(0xFFC8C8CB),
+                                            trackOutlineColor:
+                                                const WidgetStatePropertyAll(
+                                              Color(0xFFC8C8CB),
+                                            ),
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                              ],
-                            ),
-                            AppSettingsWidget(navKey: navKey),
-                          ],
+                              const SizedBox(height: 4),
+                              SizedBox(
+                                height: 30,
+                                child: ElevatedButton.icon(
+                                  onPressed: _isMutePopupSaving
+                                      ? null
+                                      : _closeMuteControlPopup,
+                                  style: ElevatedButton.styleFrom(
+                                    elevation: 0,
+                                    backgroundColor: const Color(0xFF0FA25E),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                    ),
+                                  ),
+                                  icon: const Icon(
+                                    Icons.check_circle_outline,
+                                    size: 17,
+                                  ),
+                                  label: const Text(
+                                    'DONE',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ],
-              );
-            },
-          );
+                ),
+              ),
+          ],
+        );
+      },
+    );
   }
+}
+
+class _MuteChannelConfig {
+  final String label;
+  final String key;
+
+  const _MuteChannelConfig({
+    required this.label,
+    required this.key,
+  });
 }
 
 

@@ -250,8 +250,42 @@ class ReportProvider extends ChangeNotifier {
         oldTypes[r.id] = r.reportType;
       }
     }
-    _reports =
-        (jsonData['data'] as List).map((e) => ReportModel.fromJson(e)).toList();
+    final rawList = (jsonData['data'] as List)
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e as Map))
+        .toList();
+
+    final filteredList = rawList.where((item) {
+      // upload_site_report can create file rows inside get_folder_report_list.
+      // These rows belong to Generated Reports history, not editable project reports.
+      final rawS3 = item['s3_key'];
+      final hasS3Key =
+          rawS3 != null && rawS3 != false && rawS3.toString().trim().isNotEmpty;
+
+      final rawFileName = item['file_name'];
+      final hasFileName = rawFileName != null &&
+          rawFileName != false &&
+          rawFileName.toString().trim().isNotEmpty;
+
+      final rawName = item['name'];
+      final hasDisplayName = rawName != null &&
+          rawName != false &&
+          rawName.toString().trim().isNotEmpty;
+
+      final isGeneratedFileArtifact =
+          hasS3Key || hasFileName || (hasS3Key && !hasDisplayName);
+      return !isGeneratedFileArtifact;
+    }).toList();
+
+    if (kDebugMode) {
+      final dropped = rawList.length - filteredList.length;
+      if (dropped > 0) {
+        print(
+            '🧹 Filtered out $dropped generated-file artifacts from project reports list');
+      }
+    }
+
+    _reports = filteredList.map(ReportModel.fromJson).toList();
     // Re-apply preserved reportTypes if API didn't return them
     for (int i = 0; i < _reports.length; i++) {
       if (_reports[i].reportType == null &&

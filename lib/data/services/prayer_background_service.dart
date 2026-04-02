@@ -70,10 +70,8 @@ void callbackDispatcher() {
           if (!alreadyPlayed) {
             // تحديد إشارة أن الأذان قيد التشغيل
             await HiveService.markPrayerPlayed(playedKey);
-            // ألغِ الإشعار المجدول لتجنب التكرار ثم شغّل الأذان
-            await PrayerNotificationService()
-                .cancelScheduledAdhan(prayerName, ms);
-            // debugPrint('Playing adhan at prayer time!');
+            // Keep scheduled notification intact to guarantee delivery/sound
+            // even if background audio execution fails.
             await _playAdhanInBackground(prayerName, ms);
           } else {
             // debugPrint(
@@ -226,9 +224,7 @@ class PrayerBackgroundService {
   static Future<void> _schedulePrayerTasks() async {
     try {
       // debugPrint('🔄 Scheduling prayer tasks...');
-      // إلغاء كل المهام القديمة
-      await Workmanager().cancelAll();
-      // debugPrint('🗑️ Cancelled all old tasks');
+      // IMPORTANT: do not call cancelAll() هنا حتى لا نلغي مهام خدمات أخرى.
 
       final notificationService = PrayerNotificationService();
       await notificationService.initialize();
@@ -246,7 +242,8 @@ class PrayerBackgroundService {
           ? Coordinates(last.latitude, last.longitude)
           : Coordinates(25.2048, 55.2708); // fallback Dubai
       final params = CalculationMethod.egyptian.getParameters()
-        ..madhab = Madhab.shafi; // تم تغييره من hanafi إلى shafi ليتطابق مع Aladhan API method=5
+        ..madhab = Madhab
+            .shafi; // تم تغييره من hanafi إلى shafi ليتطابق مع Aladhan API method=5
       final prayerTimes = PrayerTimes.today(coords, params);
 
       final now = DateTime.now();
@@ -276,8 +273,11 @@ class PrayerBackgroundService {
             prayerTime,
           );
 
+          final taskUniqueName = 'prayer-$prayerName-$ms';
+          await Workmanager().cancelByUniqueName(taskUniqueName);
+
           await Workmanager().registerOneOffTask(
-            'prayer-$prayerName-$ms',
+            taskUniqueName,
             prayerCheckTaskName,
             inputData: {'prayer': prayerName, 'ms': ms},
             initialDelay: delay,
@@ -301,8 +301,11 @@ class PrayerBackgroundService {
       final tomorrow = DateTime(now.year, now.month, now.day + 1, 0, 5);
       final delayUntilTomorrow = tomorrow.difference(now);
 
+      final rescheduleUniqueName =
+          'reschedule-prayers-${now.year}-${now.month}-${now.day}';
+      await Workmanager().cancelByUniqueName(rescheduleUniqueName);
       await Workmanager().registerOneOffTask(
-        'reschedule-prayers-${now.day}',
+        rescheduleUniqueName,
         'reschedulePrayerTasks',
         initialDelay: delayUntilTomorrow,
         constraints: Constraints(
@@ -321,7 +324,27 @@ class PrayerBackgroundService {
   }
 
   static Future<void> cancelAll() async {
-    await Workmanager().cancelAll();
+    final now = DateTime.now();
+    final keys = <String>[
+      'fajr',
+      'dhuhr',
+      'asr',
+      'maghrib',
+      'isha',
+    ];
+
+    for (final prayer in keys) {
+      for (int dayOffset = 0; dayOffset <= 1; dayOffset++) {
+        final date = now.add(Duration(days: dayOffset));
+        final roughMs =
+            DateTime(date.year, date.month, date.day).millisecondsSinceEpoch;
+        await Workmanager().cancelByUniqueName('prayer-$prayer-$roughMs');
+      }
+    }
+
+    await Workmanager().cancelByUniqueName(
+      'reschedule-prayers-${now.year}-${now.month}-${now.day}',
+    );
     // debugPrint('Prayer background service cancelled');
   }
 }

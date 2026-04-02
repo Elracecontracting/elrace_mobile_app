@@ -4,6 +4,7 @@ import 'task_member_model.dart';
 class TodoModel {
   final int? id; // Local SQLite ID (deprecated)
   final String? firebaseId; // Firebase document ID
+  final String? ownerUid; // Owner user document ID in Firestore
   final String title;
   final String? description;
   final bool isCompleted;
@@ -13,7 +14,8 @@ class TodoModel {
   final DateTime? dueDate;
   final String? assignedTo;
   final String? assignedToName; // Name of the assigned member (legacy)
-  final List<TaskMember>? assignedMembers; // List of assigned members with status
+  final List<TaskMember>?
+      assignedMembers; // List of assigned members with status
   final List<TaskMember>? followedUpBy; // List of followers with status
   final List<String>? followers; // Names of followers (legacy)
   final List<String>? attachments; // Attachment file paths/names
@@ -28,6 +30,7 @@ class TodoModel {
   const TodoModel({
     this.id,
     this.firebaseId,
+    this.ownerUid,
     required this.title,
     this.description,
     this.isCompleted = false,
@@ -68,6 +71,7 @@ class TodoModel {
     return TodoModel(
       id: map['id'] as int?,
       firebaseId: map['firebase_id'] as String?,
+      ownerUid: map['owner_uid'] as String?,
       title: map['title'] as String,
       description: map['description'] as String?,
       isCompleted: (map['is_completed'] as int?) == 1,
@@ -82,13 +86,21 @@ class TodoModel {
       assignedTo: map['assigned_to'] as String?,
       assignedToName: map['assigned_to_name'] as String?,
       assignedMembers: map['assigned_members'] != null
-          ? (map['assigned_members'] as List).map((m) => TaskMember.fromMap(m as Map<String, dynamic>)).toList()
+          ? (map['assigned_members'] as List)
+              .map((m) => TaskMember.fromMap(m as Map<String, dynamic>))
+              .toList()
           : null,
       followedUpBy: map['followed_up_by'] != null
-          ? (map['followed_up_by'] as List).map((m) => TaskMember.fromMap(m as Map<String, dynamic>)).toList()
+          ? (map['followed_up_by'] as List)
+              .map((m) => TaskMember.fromMap(m as Map<String, dynamic>))
+              .toList()
           : null,
-      followers: map['followers'] != null ? List<String>.from(map['followers'] as List) : null,
-      attachments: map['attachments'] != null ? List<String>.from(map['attachments'] as List) : null,
+      followers: map['followers'] != null
+          ? List<String>.from(map['followers'] as List)
+          : null,
+      attachments: map['attachments'] != null
+          ? List<String>.from(map['attachments'] as List)
+          : null,
       listId: map['list_id'] as String?,
       reportId: map['report_id'] as String?,
       teamId: map['team_id'] as int?,
@@ -104,6 +116,7 @@ class TodoModel {
     final data = doc.data()!;
     return TodoModel(
       firebaseId: doc.id,
+      ownerUid: data['owner_uid'] as String? ?? doc.reference.parent.parent?.id,
       title: data['title'] as String? ?? '',
       description: data['description'] as String?,
       isCompleted: data['is_completed'] as bool? ?? false,
@@ -118,13 +131,21 @@ class TodoModel {
       assignedTo: data['assigned_to'] as String?,
       assignedToName: data['assigned_to_name'] as String?,
       assignedMembers: data['assigned_members'] != null
-          ? (data['assigned_members'] as List).map((m) => TaskMember.fromMap(m as Map<String, dynamic>)).toList()
+          ? (data['assigned_members'] as List)
+              .map((m) => TaskMember.fromMap(m as Map<String, dynamic>))
+              .toList()
           : null,
       followedUpBy: data['followed_up_by'] != null
-          ? (data['followed_up_by'] as List).map((m) => TaskMember.fromMap(m as Map<String, dynamic>)).toList()
+          ? (data['followed_up_by'] as List)
+              .map((m) => TaskMember.fromMap(m as Map<String, dynamic>))
+              .toList()
           : null,
-      followers: data['followers'] != null ? List<String>.from(data['followers'] as List) : null,
-      attachments: data['attachments'] != null ? List<String>.from(data['attachments'] as List) : null,
+      followers: data['followers'] != null
+          ? List<String>.from(data['followers'] as List)
+          : null,
+      attachments: data['attachments'] != null
+          ? List<String>.from(data['attachments'] as List)
+          : null,
       listId: data['list_id'] as String?,
       reportId: data['report_id'] as String?,
       teamId: data['team_id'] as int?,
@@ -143,6 +164,7 @@ class TodoModel {
     return {
       if (id != null) 'id': id,
       if (firebaseId != null) 'firebase_id': firebaseId,
+      if (ownerUid != null) 'owner_uid': ownerUid,
       'title': title,
       'description': description,
       'is_completed': isCompleted ? 1 : 0,
@@ -169,6 +191,7 @@ class TodoModel {
   /// Convert to Firestore data
   Map<String, dynamic> toFirestore() {
     return {
+      'owner_uid': ownerUid,
       'title': title,
       'description': description,
       'is_completed': isCompleted,
@@ -195,6 +218,7 @@ class TodoModel {
   TodoModel copyWith({
     int? id,
     String? firebaseId,
+    String? ownerUid,
     String? title,
     String? description,
     bool? isCompleted,
@@ -219,6 +243,7 @@ class TodoModel {
     return TodoModel(
       id: id ?? this.id,
       firebaseId: firebaseId ?? this.firebaseId,
+      ownerUid: ownerUid ?? this.ownerUid,
       title: title ?? this.title,
       description: description ?? this.description,
       isCompleted: isCompleted ?? this.isCompleted,
@@ -247,6 +272,7 @@ class TodoModel {
     return TodoModel(
       id: id,
       firebaseId: firebaseId,
+      ownerUid: ownerUid,
       title: title,
       description: description,
       isCompleted: isCompleted,

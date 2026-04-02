@@ -118,10 +118,8 @@ class _HomeScreenAppState extends State<HomeScreenApp> {
               itemBuilder: (context, index) {
                 return ReportTile(
                   report: reports[index],
-                  onMoreClicked: () async {
-                    int selectedOptionStatus = await showEditOptions(context,
-                        options: ['rename', 'delete']);
-                    if (selectedOptionStatus == 0) {
+                  onMenuSelected: (value) async {
+                    if (value == 'rename') {
                       if (!context.mounted) return;
                       ReportModel updatedReport = await showRenameDialog(
                           context,
@@ -135,15 +133,33 @@ class _HomeScreenAppState extends State<HomeScreenApp> {
                       await reportRepository.updateReport(updatedReport);
                       return;
                     }
-                    if (selectedOptionStatus == 1) {
+                    if (value == 'delete') {
                       if (!context.mounted) return;
-                      int deleteCodeStatus = await showEditOptions(context,
-                          options: ['Confirm Delete', 'Cancel']);
-                      if (deleteCodeStatus == 0) {
-                        await reportRepository.deleteReport(reports[index]);
-                        await deleteImageForWholeReport(reports[index].id);
+                      final shouldDelete = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Delete Report'),
+                          content: const Text(
+                            'Are you sure you want to delete this report?',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              child: const Text('Delete'),
+                            ),
+                          ],
+                        ),
+                      );
+                      if (shouldDelete == true) {
+                        final reportToDelete = reports[index];
+                        await reportRepository.deleteReport(reportToDelete);
+                        await deleteImageForWholeReport(reportToDelete.id);
                         reports.removeWhere((r) {
-                          return r.id == reports[index].id;
+                          return r.id == reportToDelete.id;
                         });
                         setState(() {});
 

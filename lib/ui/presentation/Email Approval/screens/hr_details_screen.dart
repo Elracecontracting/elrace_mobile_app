@@ -433,18 +433,22 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
       case 'salary_increment':
         return makeItems([
           ...common,
-          const _FieldDef('Increment Effective Date', [
+          const _FieldDef('Effective Date', [
             'increment_effective_date',
             'effective_date',
           ]),
-          const _FieldDef('Salary Max', ['salary_max']),
           const _FieldDef(
-              'Employee Suggested Salary', ['employee_suggested_salary']),
-          const _FieldDef(
-              'Manager Suggested Salary', ['manager_suggested_salary']),
-          const _FieldDef('Suggested Total', ['suggested_total']),
-          const _FieldDef('Evaluation Attachment', ['evaluation_attachment']),
-          const _FieldDef('Overall Score', ['overall_score']),
+              'Suggested Increment by Employee', ['employee_suggested_salary']),
+          const _FieldDef('Suggested By Manager', ['manager_suggested_salary']),
+          const _FieldDef('New Salary', [
+            'new_salary',
+            'salary_max',
+            'suggested_total',
+          ]),
+          const _FieldDef('Evaluation Score%', [
+            'evaluation_score',
+            'overall_score',
+          ]),
         ]);
       case 'resignation':
       case 'resign':
@@ -741,20 +745,32 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
 
   Widget _detailRow(String label, String value) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8.w),
+      padding: EdgeInsets.symmetric(vertical: 13.w),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _value(label, size: 13.sp, weight: FontWeight.w600),
-          _value(value, size: 13.sp, weight: FontWeight.w900),
+          _value(
+            value,
+            size: 13.sp,
+            weight: FontWeight.w900,
+            color: _isOrangeValueLabel(label)
+                ? const Color(0xFFFF8A00)
+                : const Color(0xFF0E0E0E),
+          ),
         ],
       ),
     );
   }
 
+  bool _isOrangeValueLabel(String label) {
+    return label == 'Suggested Increment by Employee' ||
+        label == 'Suggested By Manager';
+  }
+
   Widget _detailDescriptionBox(String label, String value) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 8.w),
+      padding: EdgeInsets.symmetric(vertical: 13.w),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -783,7 +799,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
     required String value,
   }) {
     return Container(
-      height: 70.w,
+      height: 74.w,
       padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 9.w),
       decoration: BoxDecoration(
         color: const Color(0xFFF3F3F3),
@@ -805,16 +821,21 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
               letterSpacing: 0.1,
             ),
           ),
-          const Spacer(),
-          Text(
-            value,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.inter(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w900,
-              color: const Color(0xFF111111),
-              height: 1.15,
+          SizedBox(height: 4.w),
+          Expanded(
+            child: Align(
+              alignment: Alignment.bottomLeft,
+              child: Text(
+                value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.inter(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF111111),
+                  height: 1.1,
+                ),
+              ),
             ),
           ),
         ],

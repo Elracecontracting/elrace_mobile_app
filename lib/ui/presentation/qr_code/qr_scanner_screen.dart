@@ -13,31 +13,32 @@ class QrScannerScreen extends StatefulWidget {
 
 class _QrScannerScreenState extends State<QrScannerScreen> {
   final QrLoginService _qrLoginService = QrLoginService();
-  MobileScannerController cameraController = MobileScannerController();
-  StreamSubscription<BarcodeCapture>? _barcodeSubscription;
+  final MobileScannerController cameraController = MobileScannerController(
+    detectionSpeed: DetectionSpeed.noDuplicates,
+  );
   bool _isProcessing = false;
   bool _isTorchOn = false;
 
   @override
   void initState() {
     super.initState();
-    _barcodeSubscription = cameraController.barcodes.listen((capture) {
-      final List<Barcode> barcodes = capture.barcodes;
-      for (final barcode in barcodes) {
-        final String? code = barcode.rawValue;
-        if (code != null && !_isProcessing) {
-          _handleQrScan(code);
-          break;
-        }
-      }
-    });
   }
 
   @override
   void dispose() {
-    _barcodeSubscription?.cancel();
     cameraController.dispose();
     super.dispose();
+  }
+
+  void _onDetect(BarcodeCapture capture) {
+    if (_isProcessing) return;
+    for (final barcode in capture.barcodes) {
+      final code = barcode.rawValue?.trim();
+      if (code != null && code.isNotEmpty) {
+        _handleQrScan(code);
+        break;
+      }
+    }
   }
 
   Future<void> _handleQrScan(String qrCode) async {
@@ -140,6 +141,42 @@ class _QrScannerScreenState extends State<QrScannerScreen> {
           // Camera Scanner
           MobileScanner(
             controller: cameraController,
+            onDetect: _onDetect,
+            errorBuilder: (context, error) {
+              return Center(
+                child: Container(
+                  margin: const EdgeInsets.all(24),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.redAccent),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.error_outline,
+                          color: Colors.redAccent, size: 32),
+                      const SizedBox(height: 10),
+                      const Text(
+                        'Camera error while scanning QR',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        error.errorCode.name,
+                        style: const TextStyle(color: Colors.white70),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
 
           // Scanning Frame Overlay

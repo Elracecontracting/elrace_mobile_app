@@ -5,6 +5,8 @@ import 'package:el_race/core/utils/shared_pref.dart';
 /// Model for team member fetched from backend
 class TeamMember {
   final int id;
+  final int? employeeId;
+  final int? odooUserId;
   final String name;
   final String? email;
   final String? phone;
@@ -14,6 +16,8 @@ class TeamMember {
 
   const TeamMember({
     required this.id,
+    this.employeeId,
+    this.odooUserId,
     required this.name,
     this.email,
     this.phone,
@@ -23,21 +27,61 @@ class TeamMember {
   });
 
   factory TeamMember.fromJson(Map<String, dynamic> json) {
+    final id = _asInt(
+          json['id'] ??
+              json['employee_id'] ??
+              json['emp_id'] ??
+              json['odoo_user_id'] ??
+              json['user_id'],
+        ) ??
+        0;
+
     return TeamMember(
-      id: json['id'] as int? ?? 0,
-      name: json['name'] as String? ?? '',
-      email: json['email'] as String?,
-      phone: json['phone'] as String?,
-      jobPosition: json['job_position'] as String?,
-      department: json['department'] as String?,
-      image: (json['profile_photo_url'] ?? json['image_url'] ?? json['image'])
-          as String?,
+      id: id,
+      employeeId:
+          _asInt(json['employee_id'] ?? json['emp_id'] ?? json['id']) ?? id,
+      odooUserId: _asInt(json['odoo_user_id'] ?? json['user_id']),
+      name: _asString(
+            json['name'] ??
+                json['employee_name'] ??
+                json['emp_name'] ??
+                json['display_name'],
+          ) ??
+          '',
+      email: _asString(
+        json['email'] ??
+            json['work_email'] ??
+            json['personal_email'] ??
+            json['official_email'] ??
+            json['mail'],
+      ),
+      phone: _asString(
+        json['phone'] ??
+            json['phone_number'] ??
+            json['mobile_phone'] ??
+            json['mobile'] ??
+            json['mobile_number'] ??
+            json['work_phone'] ??
+            json['telephone'],
+      ),
+      jobPosition: _asString(
+        json['job_position'] ??
+            json['job_title'] ??
+            json['designation'] ??
+            json['position'],
+      ),
+      department: _asString(json['department'] ?? json['section']),
+      image: _asString(
+        json['profile_photo_url'] ?? json['image_url'] ?? json['image'],
+      ),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'employee_id': employeeId,
+      'odoo_user_id': odooUserId,
       'name': name,
       'email': email,
       'phone': phone,
@@ -49,6 +93,24 @@ class TeamMember {
 
   @override
   String toString() => 'TeamMember(id: $id, name: $name)';
+
+  static int? _asInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    return int.tryParse(value.toString().trim());
+  }
+
+  static String? _asString(dynamic value) {
+    if (value == null || value == false) return null;
+    final text = value.toString().trim();
+    if (text.isEmpty) return null;
+    final lower = text.toLowerCase();
+    if (lower == 'null' || lower == 'false' || lower == 'n/a' || lower == '-') {
+      return null;
+    }
+    return text;
+  }
 }
 
 /// Service to fetch team members from backend API

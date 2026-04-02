@@ -13,7 +13,7 @@ import '../services/presence_service.dart';
 import 'user_repository.dart';
 
 /// Repository for chat-related Firestore and Storage operations.
-/// 
+///
 /// Handles:
 /// - DM creation and management
 /// - Role chat setup
@@ -24,7 +24,7 @@ import 'user_repository.dart';
 class ChatRepository {
   static ChatRepository? _instance;
   static ChatRepository get instance => _instance ??= ChatRepository._();
-  
+
   ChatRepository._();
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -38,7 +38,7 @@ class ChatRepository {
   // Collection references
   CollectionReference<Map<String, dynamic>> get _chatsCollection =>
       _firestore.collection('chats');
-  
+
   CollectionReference<Map<String, dynamic>> _userChatsCollection(String uid) =>
       _firestore.collection('userChats').doc(uid).collection('chats');
 
@@ -72,53 +72,68 @@ class ChatRepository {
 
       // Create/update chat document
       final chatRef = _chatsCollection.doc(chatId);
-      batch.set(chatRef, {
-        'type': 'dm',
-        'dm_pair': dmPair,
-        'member_ids': FieldValue.arrayUnion(dmPair),
-        'created_at': FieldValue.serverTimestamp(),
-        'updated_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      batch.set(
+          chatRef,
+          {
+            'type': 'dm',
+            'dm_pair': dmPair,
+            'member_ids': FieldValue.arrayUnion(dmPair),
+            'created_at': FieldValue.serverTimestamp(),
+            'updated_at': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true));
 
       // Create member documents for both users
       final currentMemberRef = chatRef.collection('members').doc(currentUid);
-      batch.set(currentMemberRef, {
-        'joined_at': FieldValue.serverTimestamp(),
-        'role_id_snapshot': currentUserRoleId,
-        'branch_id_snapshot': currentUserBranchId,
-        'company_id_snapshot': currentUserCompanyId,
-        'muted': false,
-      }, SetOptions(merge: true));
+      batch.set(
+          currentMemberRef,
+          {
+            'joined_at': FieldValue.serverTimestamp(),
+            'role_id_snapshot': currentUserRoleId,
+            'branch_id_snapshot': currentUserBranchId,
+            'company_id_snapshot': currentUserCompanyId,
+            'muted': false,
+          },
+          SetOptions(merge: true));
 
       final otherMemberRef = chatRef.collection('members').doc(otherUid);
-      batch.set(otherMemberRef, {
-        'joined_at': FieldValue.serverTimestamp(),
-        'role_id_snapshot': otherRoleId,
-        'branch_id_snapshot': otherBranchId,
-        'company_id_snapshot': otherCompanyId,
-        'muted': false,
-      }, SetOptions(merge: true));
+      batch.set(
+          otherMemberRef,
+          {
+            'joined_at': FieldValue.serverTimestamp(),
+            'role_id_snapshot': otherRoleId,
+            'branch_id_snapshot': otherBranchId,
+            'company_id_snapshot': otherCompanyId,
+            'muted': false,
+          },
+          SetOptions(merge: true));
 
       // Create userChats entries for both users
       final currentUserChatRef = _userChatsCollection(currentUid).doc(chatId);
-      batch.set(currentUserChatRef, {
-        'type': 'dm',
-        'peer_uid': otherUid,
-        'title': otherName,
-        'updated_at': FieldValue.serverTimestamp(),
-        'pinned': false,
-        'muted': false,
-      }, SetOptions(merge: true));
+      batch.set(
+          currentUserChatRef,
+          {
+            'type': 'dm',
+            'peer_uid': otherUid,
+            'title': otherName,
+            'updated_at': FieldValue.serverTimestamp(),
+            'pinned': false,
+            'muted': false,
+          },
+          SetOptions(merge: true));
 
       final otherUserChatRef = _userChatsCollection(otherUid).doc(chatId);
-      batch.set(otherUserChatRef, {
-        'type': 'dm',
-        'peer_uid': currentUid,
-        'title': currentUserName,
-        'updated_at': FieldValue.serverTimestamp(),
-        'pinned': false,
-        'muted': false,
-      }, SetOptions(merge: true));
+      batch.set(
+          otherUserChatRef,
+          {
+            'type': 'dm',
+            'peer_uid': currentUid,
+            'title': currentUserName,
+            'updated_at': FieldValue.serverTimestamp(),
+            'pinned': false,
+            'muted': false,
+          },
+          SetOptions(merge: true));
 
       await batch.commit();
       print('✅ ChatRepository: Created/updated DM chat $chatId');
@@ -143,56 +158,68 @@ class ChatRepository {
     String? title, // Optional title for the group
   }) async {
     // Determine chat ID
-    final chatId = roleChatId ?? Chat.generateRoleChatId(
-      roleId: roleId,
-      branchId: branchId,
-      groupByBranch: groupByBranch,
-    );
+    final chatId = roleChatId ??
+        Chat.generateRoleChatId(
+          roleId: roleId,
+          branchId: branchId,
+          groupByBranch: groupByBranch,
+        );
 
     // Generate default title - use provided title (role name) or fallback to role ID
-    final groupTitle = title ?? 'مجموعة $roleId${groupByBranch && branchId != null ? ' - فرع $branchId' : ''}';
+    final groupTitle = title ??
+        'مجموعة $roleId${groupByBranch && branchId != null ? ' - فرع $branchId' : ''}';
 
     try {
       final batch = _firestore.batch();
 
       // Create/update role chat document
       final chatRef = _chatsCollection.doc(chatId);
-      batch.set(chatRef, {
-        'type': 'role',
-        'role_id': roleId,
-        'branch_id': branchId,
-        'company_id': companyId,
-        'title': groupTitle,
-        'member_ids': FieldValue.arrayUnion([uid]),
-        'created_at': FieldValue.serverTimestamp(),
-        'updated_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      batch.set(
+          chatRef,
+          {
+            'type': 'role',
+            'role_id': roleId,
+            'branch_id': branchId,
+            'company_id': companyId,
+            'title': groupTitle,
+            'member_ids': FieldValue.arrayUnion([uid]),
+            'created_at': FieldValue.serverTimestamp(),
+            'updated_at': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true));
 
       // Add current user as member
       final memberRef = chatRef.collection('members').doc(uid);
-      batch.set(memberRef, {
-        'joined_at': FieldValue.serverTimestamp(),
-        'role_id_snapshot': roleId,
-        'branch_id_snapshot': branchId,
-        'company_id_snapshot': companyId,
-        'muted': false,
-      }, SetOptions(merge: true));
+      batch.set(
+          memberRef,
+          {
+            'joined_at': FieldValue.serverTimestamp(),
+            'role_id_snapshot': roleId,
+            'branch_id_snapshot': branchId,
+            'company_id_snapshot': companyId,
+            'muted': false,
+          },
+          SetOptions(merge: true));
 
       // Create userChats entry for current user
       final userChatRef = _userChatsCollection(uid).doc(chatId);
-      batch.set(userChatRef, {
-        'type': 'role',
-        'role_id': roleId,
-        'branch_id': branchId,
-        'company_id': companyId,
-        'title': groupTitle,
-        'updated_at': FieldValue.serverTimestamp(),
-        'pinned': false,
-        'muted': false,
-      }, SetOptions(merge: true));
+      batch.set(
+          userChatRef,
+          {
+            'type': 'role',
+            'role_id': roleId,
+            'branch_id': branchId,
+            'company_id': companyId,
+            'title': groupTitle,
+            'updated_at': FieldValue.serverTimestamp(),
+            'pinned': false,
+            'muted': false,
+          },
+          SetOptions(merge: true));
 
       await batch.commit();
-      print('✅ ChatRepository: Ensured role chat membership for $uid in $chatId');
+      print(
+          '✅ ChatRepository: Ensured role chat membership for $uid in $chatId');
 
       return chatId;
     } catch (e) {
@@ -214,53 +241,67 @@ class ChatRepository {
     required String userName,
     required int targetRoleId,
     required String groupTitle, // e.g. "HR"
+    String? sourceRoleChatId,
+    String? supportGroupKey,
     int? userRoleId,
     int? userBranchId,
     int? userCompanyId,
   }) async {
-    final chatId = Chat.generateSupportChatId(
-      roleId: targetRoleId,
-      userUid: userUid,
-    );
+    final normalizedGroupKey = _normalizeSupportGroupKey(supportGroupKey);
+    final chatId = (normalizedGroupKey != null)
+        ? 'support_${normalizedGroupKey}_$userUid'
+        : Chat.generateSupportChatId(
+            roleId: targetRoleId,
+            userUid: userUid,
+          );
 
     try {
       final batch = _firestore.batch();
 
       // Create/update support chat document
       final chatRef = _chatsCollection.doc(chatId);
-      batch.set(chatRef, {
-        'type': 'support',
-        'role_id': targetRoleId,
-        'support_user_uid': userUid,
-        'title': groupTitle,
-        'member_ids': FieldValue.arrayUnion([userUid]),
-        'created_at': FieldValue.serverTimestamp(),
-        'updated_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      batch.set(
+          chatRef,
+          {
+            'type': 'support',
+            'role_id': targetRoleId,
+            'support_user_uid': userUid,
+            'title': groupTitle,
+            'member_ids': FieldValue.arrayUnion([userUid]),
+            'created_at': FieldValue.serverTimestamp(),
+            'updated_at': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true));
 
       // Add the external user as member
       final userMemberRef = chatRef.collection('members').doc(userUid);
-      batch.set(userMemberRef, {
-        'joined_at': FieldValue.serverTimestamp(),
-        'role_id_snapshot': userRoleId,
-        'branch_id_snapshot': userBranchId,
-        'company_id_snapshot': userCompanyId,
-        'muted': false,
-        'is_support_user': true, // Mark as the external user
-      }, SetOptions(merge: true));
+      batch.set(
+          userMemberRef,
+          {
+            'joined_at': FieldValue.serverTimestamp(),
+            'role_id_snapshot': userRoleId,
+            'branch_id_snapshot': userBranchId,
+            'company_id_snapshot': userCompanyId,
+            'muted': false,
+            'is_support_user': true, // Mark as the external user
+          },
+          SetOptions(merge: true));
 
       // Create userChats entry for the external user (sees group name)
       final userChatRef = _userChatsCollection(userUid).doc(chatId);
-      batch.set(userChatRef, {
-        'type': 'support',
-        'role_id': targetRoleId,
-        'title': groupTitle, // User sees "HR Group"
-        'support_user_uid': userUid,
-        'support_group_title': groupTitle,
-        'updated_at': FieldValue.serverTimestamp(),
-        'pinned': false,
-        'muted': false,
-      }, SetOptions(merge: true));
+      batch.set(
+          userChatRef,
+          {
+            'type': 'support',
+            'role_id': targetRoleId,
+            'title': groupTitle, // User sees "HR Group"
+            'support_user_uid': userUid,
+            'support_group_title': groupTitle,
+            'updated_at': FieldValue.serverTimestamp(),
+            'pinned': false,
+            'muted': false,
+          },
+          SetOptions(merge: true));
 
       await batch.commit();
 
@@ -271,6 +312,7 @@ class ChatRepository {
         userName: userName,
         userUid: userUid,
         groupTitle: groupTitle,
+        sourceRoleChatId: sourceRoleChatId,
       );
 
       print('✅ ChatRepository: Created/updated support chat $chatId');
@@ -289,14 +331,14 @@ class ChatRepository {
     required String userName,
     required String userUid,
     required String groupTitle,
+    String? sourceRoleChatId,
   }) async {
     try {
       // Find the role chat to get its members
-      final roleChatId = Chat.generateRoleChatId(roleId: targetRoleId);
-      final membersSnapshot = await _chatsCollection
-          .doc(roleChatId)
-          .collection('members')
-          .get();
+      final roleChatId =
+          sourceRoleChatId ?? Chat.generateRoleChatId(roleId: targetRoleId);
+      final membersSnapshot =
+          await _chatsCollection.doc(roleChatId).collection('members').get();
 
       if (membersSnapshot.docs.isEmpty) {
         print('⚠️ ChatRepository: No members found in role chat $roleChatId');
@@ -308,38 +350,43 @@ class ChatRepository {
 
       for (final memberDoc in membersSnapshot.docs) {
         final memberUid = memberDoc.id;
-        if (memberUid == userUid) continue; // Skip the external user (already added)
+        if (memberUid == userUid)
+          continue; // Skip the external user (already added)
 
         memberUids.add(memberUid);
         final memberData = memberDoc.data();
 
         // Add as member of support chat
-        final memberRef = _chatsCollection
-            .doc(chatId)
-            .collection('members')
-            .doc(memberUid);
-        batch.set(memberRef, {
-          'joined_at': FieldValue.serverTimestamp(),
-          'role_id_snapshot': memberData['role_id_snapshot'],
-          'branch_id_snapshot': memberData['branch_id_snapshot'],
-          'company_id_snapshot': memberData['company_id_snapshot'],
-          'muted': false,
-          'is_support_user': false, // Mark as group member
-        }, SetOptions(merge: true));
+        final memberRef =
+            _chatsCollection.doc(chatId).collection('members').doc(memberUid);
+        batch.set(
+            memberRef,
+            {
+              'joined_at': FieldValue.serverTimestamp(),
+              'role_id_snapshot': memberData['role_id_snapshot'],
+              'branch_id_snapshot': memberData['branch_id_snapshot'],
+              'company_id_snapshot': memberData['company_id_snapshot'],
+              'muted': false,
+              'is_support_user': false, // Mark as group member
+            },
+            SetOptions(merge: true));
 
         // Create userChats entry for group member (sees user's name)
         final memberChatRef = _userChatsCollection(memberUid).doc(chatId);
-        batch.set(memberChatRef, {
-          'type': 'support',
-          'role_id': targetRoleId,
-          'title': userName, // Group member sees "محمد أحمد"
-          'peer_uid': userUid, // To identify the external user
-          'support_user_uid': userUid,
-          'support_group_title': groupTitle,
-          'updated_at': FieldValue.serverTimestamp(),
-          'pinned': false,
-          'muted': false,
-        }, SetOptions(merge: true));
+        batch.set(
+            memberChatRef,
+            {
+              'type': 'support',
+              'role_id': targetRoleId,
+              'title': userName, // Group member sees "محمد أحمد"
+              'peer_uid': userUid, // To identify the external user
+              'support_user_uid': userUid,
+              'support_group_title': groupTitle,
+              'updated_at': FieldValue.serverTimestamp(),
+              'pinned': false,
+              'muted': false,
+            },
+            SetOptions(merge: true));
       }
 
       // Update chat member_ids array
@@ -350,7 +397,8 @@ class ChatRepository {
       }
 
       await batch.commit();
-      print('✅ ChatRepository: Added ${memberUids.length} role members to support chat $chatId');
+      print(
+          '✅ ChatRepository: Added ${memberUids.length} role members to support chat $chatId');
     } catch (e) {
       print('❌ ChatRepository: Error adding role members to support chat: $e');
     }
@@ -364,18 +412,15 @@ class ChatRepository {
 
     try {
       // Get all role chats
-      final roleChatSnapshot = await _chatsCollection
-          .where('type', isEqualTo: 'role')
-          .get();
+      final roleChatSnapshot =
+          await _chatsCollection.where('type', isEqualTo: 'role').get();
 
       final availableGroups = <Chat>[];
 
       for (final doc in roleChatSnapshot.docs) {
         // Check if current user is NOT a member of this role chat
-        final memberDoc = await doc.reference
-            .collection('members')
-            .doc(currentUid)
-            .get();
+        final memberDoc =
+            await doc.reference.collection('members').doc(currentUid).get();
 
         if (!memberDoc.exists) {
           availableGroups.add(Chat.fromFirestore(doc));
@@ -390,12 +435,24 @@ class ChatRepository {
   }
 
   /// Get ALL role groups (for support tab — show every department).
-  /// Queries the users collection (which is readable) to discover all distinct roles.
+  /// Reads role chat documents directly so duplicate names with different chat IDs are preserved.
   Future<List<Chat>> getAllRoleGroups() async {
     try {
-      final usersSnapshot = await _firestore.collection('users').get();
+      final roleChatsSnapshot =
+          await _chatsCollection.where('type', isEqualTo: 'role').get();
 
-      // Collect distinct roleId → roleName/title from users
+      final roleChats = roleChatsSnapshot.docs
+          .map(Chat.fromFirestore)
+          .where((chat) => chat.roleId != null)
+          .toList()
+        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+
+      if (roleChats.isNotEmpty) {
+        return roleChats;
+      }
+
+      // Fallback for legacy data when role chat docs are not available yet.
+      final usersSnapshot = await _firestore.collection('users').get();
       final Map<int, String> roleMap = {};
       for (final doc in usersSnapshot.docs) {
         final data = doc.data();
@@ -406,22 +463,28 @@ class ChatRepository {
         roleMap[roleId as int] = roleName ?? 'Department $roleId';
       }
 
-      // Build lightweight Chat objects for each role
-      return roleMap.entries.map((e) {
-        final chatId = Chat.generateRoleChatId(roleId: e.key);
-        return Chat(
-          id: chatId,
-          type: ChatType.role,
-          roleId: e.key,
-          title: e.value,
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-      }).toList();
+      return roleMap.entries
+          .map((e) => Chat(
+                id: Chat.generateRoleChatId(roleId: e.key),
+                type: ChatType.role,
+                roleId: e.key,
+                title: e.value,
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              ))
+          .toList();
     } catch (e) {
       print('❌ ChatRepository: Error getting all role groups: $e');
       return [];
     }
+  }
+
+  String? _normalizeSupportGroupKey(String? rawKey) {
+    if (rawKey == null) return null;
+    final trimmed = rawKey.trim();
+    if (trimmed.isEmpty) return null;
+    final normalized = trimmed.replaceAll(RegExp(r'[^a-zA-Z0-9_]'), '_');
+    return normalized.isEmpty ? null : normalized;
   }
 
   /// Check if the current user is the support user (external) in a support chat.
@@ -442,10 +505,8 @@ class ChatRepository {
   /// Get role member UIDs for a support chat (for updating all member userChats on new message)
   Future<List<String>> _getSupportChatMemberUids(String chatId) async {
     try {
-      final snapshot = await _chatsCollection
-          .doc(chatId)
-          .collection('members')
-          .get();
+      final snapshot =
+          await _chatsCollection.doc(chatId).collection('members').get();
       return snapshot.docs.map((doc) => doc.id).toList();
     } catch (e) {
       return [];
@@ -478,7 +539,7 @@ class ChatRepository {
   Future<UserChat?> getUserChat(String chatId) async {
     final uid = _currentUid;
     if (uid == null) return null;
-    
+
     try {
       final doc = await _userChatsCollection(uid).doc(chatId).get();
       if (!doc.exists) return null;
@@ -517,7 +578,9 @@ class ChatRepository {
 
     return query.snapshots().map((snapshot) {
       final now = DateTime.now();
-      return snapshot.docs.map((doc) => Message.fromFirestore(doc)).where((msg) {
+      return snapshot.docs
+          .map((doc) => Message.fromFirestore(doc))
+          .where((msg) {
         // Filter out expired unsigned signable docs
         if (msg.type == MessageType.signableDoc &&
             msg.signStatus != SignStatus.signed &&
@@ -552,15 +615,333 @@ class ChatRepository {
     }
   }
 
+  /// Get a single message by ID from a chat.
+  Future<Message?> getMessageById(String chatId, String messageId) async {
+    try {
+      final doc = await _chatsCollection
+          .doc(chatId)
+          .collection('messages')
+          .doc(messageId)
+          .get();
+
+      if (!doc.exists) return null;
+
+      final message = Message.fromFirestore(doc);
+      final now = DateTime.now();
+
+      // Keep behavior consistent with subscribeToMessages filter.
+      if (message.type == MessageType.signableDoc &&
+          message.signStatus != SignStatus.signed &&
+          message.expiresAt != null &&
+          now.isAfter(message.expiresAt!)) {
+        return null;
+      }
+
+      return message;
+    } catch (e) {
+      print('❌ ChatRepository: Error getting message by ID: $e');
+      return null;
+    }
+  }
+
+  /// Get a window of messages around a timestamp.
+  /// Useful when direct document get is blocked or unavailable.
+  Future<List<Message>> getMessagesAroundCreatedAt(
+    String chatId,
+    DateTime anchor, {
+    int windowSize = 400,
+  }) async {
+    try {
+      final anchorTs = Timestamp.fromDate(anchor);
+      final halfWindow = (windowSize / 2).round();
+
+      final olderOrEqualFuture = _chatsCollection
+          .doc(chatId)
+          .collection('messages')
+          .where('created_at', isLessThanOrEqualTo: anchorTs)
+          .orderBy('created_at', descending: true)
+          .limit(halfWindow)
+          .get();
+
+      final newerFuture = _chatsCollection
+          .doc(chatId)
+          .collection('messages')
+          .where('created_at', isGreaterThan: anchorTs)
+          .orderBy('created_at', descending: false)
+          .limit(halfWindow)
+          .get();
+
+      final results = await Future.wait([olderOrEqualFuture, newerFuture]);
+      final olderOrEqual = results[0].docs;
+      final newer = results[1].docs;
+
+      final Map<String, Message> byId = {};
+      final now = DateTime.now();
+
+      for (final doc in [...olderOrEqual, ...newer]) {
+        final msg = Message.fromFirestore(doc);
+        if (msg.type == MessageType.signableDoc &&
+            msg.signStatus != SignStatus.signed &&
+            msg.expiresAt != null &&
+            now.isAfter(msg.expiresAt!)) {
+          continue;
+        }
+        byId[msg.id] = msg;
+      }
+
+      final merged = byId.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return merged;
+    } catch (e) {
+      print('❌ ChatRepository: Error getting messages around created_at: $e');
+      return [];
+    }
+  }
+
+  /// Find a message for starred navigation by scanning paginated message history.
+  /// Tries exact ID first, then metadata matching as a fallback.
+  Future<Message?> findMessageForStarredNavigation(
+    String chatId, {
+    String? messageId,
+    DateTime? createdAt,
+    String? senderId,
+    String? type,
+    String? text,
+    String? fileName,
+    int pageSize = 300,
+    int maxPages = 80,
+  }) async {
+    try {
+      print('🔎 STAR_JUMP[repo]: find start '
+          'chatId=$chatId messageId=$messageId createdAt=$createdAt '
+          'senderId=$senderId type=$type fileName=$fileName '
+          'textLen=${text?.length ?? 0} pageSize=$pageSize maxPages=$maxPages');
+
+      final normalizedMessageId = messageId?.trim();
+      final expectedSender = senderId?.trim();
+      final expectedTypeRaw = type?.trim();
+      final expectedText = text?.trim();
+      final expectedFileName = fileName?.trim();
+
+      MessageType? expectedType;
+      if (expectedTypeRaw != null && expectedTypeRaw.isNotEmpty) {
+        expectedType = MessageType.fromString(expectedTypeRaw);
+      }
+
+      if (normalizedMessageId != null &&
+          normalizedMessageId.isNotEmpty &&
+          !normalizedMessageId.startsWith('pending_')) {
+        final exact = await getMessageById(chatId, normalizedMessageId);
+        if (exact != null) {
+          print('✅ STAR_JUMP[repo]: exact id match found id=${exact.id}');
+          return exact;
+        }
+        print(
+            '⚠️ STAR_JUMP[repo]: exact id not found for id=$normalizedMessageId');
+      }
+
+      // For legacy starred entries where message_id may be missing/invalid,
+      // anchor around created_at first for a deterministic nearby lookup.
+      if (createdAt != null) {
+        final around = await getMessagesAroundCreatedAt(
+          chatId,
+          createdAt,
+          windowSize: 1200,
+        );
+
+        final aroundMatches = around.where((msg) {
+          return _matchesStarredDescriptor(
+            msg,
+            expectedSender: expectedSender,
+            expectedType: expectedType,
+            expectedText: expectedText,
+            expectedFileName: expectedFileName,
+          );
+        }).toList();
+
+        if (aroundMatches.isNotEmpty) {
+          aroundMatches.sort((a, b) {
+            final da = a.createdAt.difference(createdAt).inMilliseconds.abs();
+            final db = b.createdAt.difference(createdAt).inMilliseconds.abs();
+            return da.compareTo(db);
+          });
+          print('✅ STAR_JUMP[repo]: around(created_at) matched '
+              'count=${aroundMatches.length} selected=${aroundMatches.first.id}');
+          return aroundMatches.first;
+        }
+        print('⚠️ STAR_JUMP[repo]: around(created_at) returned 0 matches');
+      }
+
+      QueryDocumentSnapshot<Map<String, dynamic>>? lastDoc;
+      final now = DateTime.now();
+      final candidates = <Message>[];
+
+      for (int page = 0; page < maxPages; page++) {
+        Query<Map<String, dynamic>> query = _chatsCollection
+            .doc(chatId)
+            .collection('messages')
+            .orderBy('created_at', descending: true)
+            .limit(pageSize);
+
+        if (lastDoc != null) {
+          query = query.startAfterDocument(lastDoc);
+        }
+
+        final snapshot = await query.get();
+        if (snapshot.docs.isEmpty) break;
+
+        if (page == 0 || page % 10 == 0) {
+          print('🔎 STAR_JUMP[repo]: scanning page=${page + 1} '
+              'docs=${snapshot.docs.length} candidates=${candidates.length}');
+        }
+
+        for (final doc in snapshot.docs) {
+          final msg = Message.fromFirestore(doc);
+
+          if (msg.type == MessageType.signableDoc &&
+              msg.signStatus != SignStatus.signed &&
+              msg.expiresAt != null &&
+              now.isAfter(msg.expiresAt!)) {
+            continue;
+          }
+
+          if (normalizedMessageId != null &&
+              normalizedMessageId.isNotEmpty &&
+              msg.id == normalizedMessageId) {
+            return msg;
+          }
+
+          if (_matchesStarredDescriptor(
+            msg,
+            expectedSender: expectedSender,
+            expectedType: expectedType,
+            expectedText: expectedText,
+            expectedFileName: expectedFileName,
+          )) {
+            candidates.add(msg);
+          }
+        }
+
+        lastDoc = snapshot.docs.last;
+        if (snapshot.docs.length < pageSize) break;
+      }
+
+      if (candidates.isEmpty) {
+        // Last-resort resolver: jump to the closest message by time so starred
+        // navigation always lands near the intended message instead of opening
+        // chat without any jump.
+        if (createdAt != null) {
+          final around = await getMessagesAroundCreatedAt(
+            chatId,
+            createdAt,
+            windowSize: 1200,
+          );
+          if (around.isNotEmpty) {
+            around.sort((a, b) {
+              final da = a.createdAt.difference(createdAt).inMilliseconds.abs();
+              final db = b.createdAt.difference(createdAt).inMilliseconds.abs();
+              return da.compareTo(db);
+            });
+            print('✅ STAR_JUMP[repo]: fallback nearest-by-time selected '
+                'id=${around.first.id} totalNearby=${around.length}');
+            return around.first;
+          }
+          print(
+              '❌ STAR_JUMP[repo]: fallback nearest-by-time found no nearby messages');
+        }
+        print('❌ STAR_JUMP[repo]: no candidates found');
+        return null;
+      }
+      if (createdAt == null) {
+        print('✅ STAR_JUMP[repo]: candidates found without anchor date '
+            'count=${candidates.length} selected=${candidates.first.id}');
+        return candidates.first;
+      }
+
+      candidates.sort((a, b) {
+        final da = a.createdAt.difference(createdAt).inMilliseconds.abs();
+        final db = b.createdAt.difference(createdAt).inMilliseconds.abs();
+        return da.compareTo(db);
+      });
+      print('✅ STAR_JUMP[repo]: candidates sorted by anchor date '
+          'count=${candidates.length} selected=${candidates.first.id}');
+      return candidates.first;
+    } catch (e) {
+      print('❌ ChatRepository: Error finding starred target message: $e');
+      print(
+          '❌ STAR_JUMP[repo]: find crashed chatId=$chatId messageId=$messageId');
+      return null;
+    }
+  }
+
+  bool _matchesStarredDescriptor(
+    Message message, {
+    String? expectedSender,
+    MessageType? expectedType,
+    String? expectedText,
+    String? expectedFileName,
+  }) {
+    if (expectedSender != null &&
+        expectedSender.isNotEmpty &&
+        message.senderId != expectedSender) {
+      final hasOtherHints = (expectedText != null && expectedText.isNotEmpty) ||
+          (expectedFileName != null && expectedFileName.isNotEmpty);
+      if (!hasOtherHints) {
+        return false;
+      }
+    }
+
+    if (expectedType != null && message.type != expectedType) {
+      return false;
+    }
+
+    if (expectedType == MessageType.text &&
+        expectedText != null &&
+        expectedText.isNotEmpty) {
+      final normalizedMessageText = _normalizeText(message.text);
+      final normalizedExpectedText = _normalizeText(expectedText);
+
+      // Text content can differ slightly after serialization/normalization.
+      // Keep strict/partial checks first, then allow created_at proximity
+      // (done by caller) instead of rejecting the candidate outright.
+      if (normalizedMessageText.isNotEmpty &&
+          normalizedExpectedText.isNotEmpty) {
+        if (normalizedMessageText != normalizedExpectedText &&
+            !normalizedMessageText.contains(normalizedExpectedText) &&
+            !normalizedExpectedText.contains(normalizedMessageText)) {
+          // Do not return false here.
+        }
+      }
+    }
+
+    if ((expectedType == MessageType.file ||
+            expectedType == MessageType.signableDoc) &&
+        expectedFileName != null &&
+        expectedFileName.isNotEmpty) {
+      if ((message.fileName ?? '').trim() != expectedFileName) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  String _normalizeText(String? value) {
+    if (value == null) return '';
+    return value.trim().replaceAll(RegExp(r'\s+'), ' ');
+  }
+
   /// Send a text message
-  Future<Message> sendText(String chatId, String text, {ReplyTo? replyTo}) async {
+  Future<Message> sendText(String chatId, String text,
+      {ReplyTo? replyTo}) async {
     final currentUid = _currentUid;
     if (currentUid == null) {
       throw Exception('Not authenticated');
     }
 
     final clientMsgId = _uuid.v4();
-    final messageRef = _chatsCollection.doc(chatId).collection('messages').doc();
+    final messageRef =
+        _chatsCollection.doc(chatId).collection('messages').doc();
 
     final message = Message(
       id: messageRef.id,
@@ -580,7 +961,8 @@ class ChatRepository {
       if (chatId.startsWith('dm_')) {
         _dmPair = _parseDmPair(chatId, currentUid);
         if (_dmPair != null) {
-          _dmOtherUid = _dmPair.firstWhere((u) => u != currentUid, orElse: () => '');
+          _dmOtherUid =
+              _dmPair.firstWhere((u) => u != currentUid, orElse: () => '');
         }
         await _ensureDmChatExists(chatId);
       }
@@ -618,8 +1000,8 @@ class ChatRepository {
       if (_dmOtherUid != null && _dmOtherUid.isNotEmpty) {
         senderChatUpdate['peer_uid'] = _dmOtherUid;
       }
-      batch.set(_userChatsCollection(currentUid).doc(chatId),
-          senderChatUpdate, SetOptions(merge: true));
+      batch.set(_userChatsCollection(currentUid).doc(chatId), senderChatUpdate,
+          SetOptions(merge: true));
 
       await batch.commit();
 
@@ -656,10 +1038,12 @@ class ChatRepository {
       return;
     }
 
-    final otherUid = dmPair.firstWhere((u) => u != currentUid, orElse: () => '');
+    final otherUid =
+        dmPair.firstWhere((u) => u != currentUid, orElse: () => '');
     if (otherUid.isEmpty) return;
 
-    print('🔍 _ensureDmChatExists: chatId=$chatId, currentUid=$currentUid, otherUid=$otherUid');
+    print(
+        '🔍 _ensureDmChatExists: chatId=$chatId, currentUid=$currentUid, otherUid=$otherUid');
 
     // Check if chat doc already exists — if yes, skip creation steps.
     // Permission error on read is treated as "probably doesn't exist".
@@ -781,7 +1165,8 @@ class ChatRepository {
     try {
       final dmPair = _parseDmPair(chatId, currentUid);
       if (dmPair == null) return;
-      final otherUid = dmPair.firstWhere((uid) => uid != currentUid, orElse: () => '');
+      final otherUid =
+          dmPair.firstWhere((uid) => uid != currentUid, orElse: () => '');
       if (otherUid.isEmpty) return;
 
       // Get current user's name so the other user sees it as the chat title
@@ -803,7 +1188,8 @@ class ChatRepository {
   }
 
   /// Update all support chat members' userChats timestamps (fire-and-forget)
-  Future<void> _updateSupportChatMemberTimestamps(String chatId, String excludeUid) async {
+  Future<void> _updateSupportChatMemberTimestamps(
+      String chatId, String excludeUid) async {
     try {
       final memberUids = await _getSupportChatMemberUids(chatId);
       final batch = _firestore.batch();
@@ -815,7 +1201,8 @@ class ChatRepository {
       }
       await batch.commit();
     } catch (e) {
-      print('⚠️ ChatRepository: Error updating support chat member timestamps: $e');
+      print(
+          '⚠️ ChatRepository: Error updating support chat member timestamps: $e');
     }
   }
 
@@ -878,7 +1265,6 @@ class ChatRepository {
     String? caption,
     int expiresInDays = 2,
     int? pageCount,
-    String? clientMsgId,
   }) async {
     final currentUid = _currentUid;
     if (currentUid == null) throw Exception('Not authenticated');
@@ -891,8 +1277,9 @@ class ChatRepository {
       throw Exception('File does not exist: ${pdfFile.path}');
     }
 
-    clientMsgId ??= _uuid.v4();
-    final messageRef = _chatsCollection.doc(chatId).collection('messages').doc();
+    final clientMsgId = _uuid.v4();
+    final messageRef =
+        _chatsCollection.doc(chatId).collection('messages').doc();
     final fileName = p.basename(pdfFile.path);
     final fileSize = await pdfFile.length();
     final storagePath = 'chat_media/$chatId/${messageRef.id}/$fileName';
@@ -950,13 +1337,17 @@ class ChatRepository {
           chatUpdate['member_ids'] = FieldValue.arrayUnion(dmPair);
         }
       }
-      batch.set(_chatsCollection.doc(chatId), chatUpdate, SetOptions(merge: true));
+      batch.set(
+          _chatsCollection.doc(chatId), chatUpdate, SetOptions(merge: true));
 
       // Update sender's userChats
-      batch.set(_userChatsCollection(currentUid).doc(chatId), {
-        'type': chatId.startsWith('dm_') ? 'dm' : 'role',
-        'updated_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      batch.set(
+          _userChatsCollection(currentUid).doc(chatId),
+          {
+            'type': chatId.startsWith('dm_') ? 'dm' : 'role',
+            'updated_at': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true));
 
       await batch.commit();
 
@@ -1041,8 +1432,9 @@ class ChatRepository {
     }
 
     final clientMsgId = _uuid.v4();
-    final messageRef = _chatsCollection.doc(chatId).collection('messages').doc();
-    
+    final messageRef =
+        _chatsCollection.doc(chatId).collection('messages').doc();
+
     final fileName = p.basename(file.path);
     final fileSize = await file.length();
     final storagePath = 'chat_media/$chatId/${messageRef.id}/$fileName';
@@ -1052,15 +1444,18 @@ class ChatRepository {
       print('📤 ChatRepository: Uploading to path: $storagePath');
       print('📤 ChatRepository: Storage bucket: ${_storage.bucket}');
       print('📤 ChatRepository: Current user UID: $currentUid');
-      print('📤 ChatRepository: File exists: ${await file.exists()}, size: $fileSize');
-      
+      print(
+          '📤 ChatRepository: File exists: ${await file.exists()}, size: $fileSize');
+
       // Check Firebase Auth state
       final authUser = FirebaseAuth.instance.currentUser;
       if (authUser == null) {
-        throw Exception('Firebase Auth: No user signed in. Cannot upload to Storage.');
+        throw Exception(
+            'Firebase Auth: No user signed in. Cannot upload to Storage.');
       }
-      print('📤 ChatRepository: Auth user email: ${authUser.email}, isAnonymous: ${authUser.isAnonymous}');
-      
+      print(
+          '📤 ChatRepository: Auth user email: ${authUser.email}, isAnonymous: ${authUser.isAnonymous}');
+
       final ref = _storage.ref(storagePath);
       final metadata = SettableMetadata(
         contentType: mimeType ?? _getMimeType(fileName),
@@ -1069,28 +1464,32 @@ class ChatRepository {
           'chatId': chatId,
         },
       );
-      
+
       // Read file bytes and use putData for better compatibility
       final fileBytes = await file.readAsBytes();
-      print('📤 ChatRepository: Read ${fileBytes.length} bytes, starting upload...');
-      
+      print(
+          '📤 ChatRepository: Read ${fileBytes.length} bytes, starting upload...');
+
       final uploadTask = ref.putData(fileBytes, metadata);
-      
+
       // Listen to upload progress for debugging
       uploadTask.snapshotEvents.listen((TaskSnapshot snapshot) {
-        final progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-        print('📤 ChatRepository: Upload progress: ${progress.toStringAsFixed(1)}%');
+        final progress =
+            (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+        print(
+            '📤 ChatRepository: Upload progress: ${progress.toStringAsFixed(1)}%');
       }, onError: (e) {
         print('❌ ChatRepository: Upload stream error: $e');
       });
-      
+
       // Wait for upload
       final snapshot = await uploadTask;
       print('📤 ChatRepository: Upload complete, state: ${snapshot.state}');
-      
+
       // Get download URL
       final mediaUrl = await ref.getDownloadURL();
-      print('📤 ChatRepository: Download URL obtained: ${mediaUrl.substring(0, 50)}...');
+      print(
+          '📤 ChatRepository: Download URL obtained: ${mediaUrl.substring(0, 50)}...');
 
       // 2. Create message document
       final message = Message(
@@ -1135,13 +1534,17 @@ class ChatRepository {
           chatUpdate['member_ids'] = FieldValue.arrayUnion(dmPair);
         }
       }
-      batch.set(_chatsCollection.doc(chatId), chatUpdate, SetOptions(merge: true));
+      batch.set(
+          _chatsCollection.doc(chatId), chatUpdate, SetOptions(merge: true));
 
       // Update sender's userChats
-      batch.set(_userChatsCollection(currentUid).doc(chatId), {
-        'type': chatId.startsWith('dm_') ? 'dm' : 'role',
-        'updated_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      batch.set(
+          _userChatsCollection(currentUid).doc(chatId),
+          {
+            'type': chatId.startsWith('dm_') ? 'dm' : 'role',
+            'updated_at': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true));
 
       await batch.commit();
 
@@ -1243,9 +1646,8 @@ class ChatRepository {
         if (chat.muted) continue;
         final lastReadAt = chat.lastReadAt;
         try {
-          Query query = _chatsCollection
-              .doc(chat.chatId)
-              .collection('messages');
+          Query query =
+              _chatsCollection.doc(chat.chatId).collection('messages');
 
           // Only add created_at filter if user has read the chat before
           if (lastReadAt != null) {
@@ -1264,7 +1666,8 @@ class ChatRepository {
           }).length;
 
           if (count > 0) {
-            print('🔔 Chat ${chat.chatId}: $count unread (lastReadAt=$lastReadAt)');
+            print(
+                '🔔 Chat ${chat.chatId}: $count unread (lastReadAt=$lastReadAt)');
           }
           total += count;
         } catch (e) {
@@ -1289,13 +1692,14 @@ class ChatRepository {
         .snapshots()
         .asyncMap((userChatDoc) async {
       if (!userChatDoc.exists) {
-        print('⚠️ subscribeToUnreadCount($chatId): userChats doc does NOT exist');
+        print(
+            '⚠️ subscribeToUnreadCount($chatId): userChats doc does NOT exist');
         return 0;
       }
 
       final data = userChatDoc.data();
       final lastReadAt = (data?['last_read_at'] as Timestamp?)?.toDate();
-      
+
       try {
         Query query = _chatsCollection.doc(chatId).collection('messages');
 
@@ -1315,7 +1719,9 @@ class ChatRepository {
           return data?['sender_id'] != currentUid;
         }).length;
 
-        if (count > 0) print('🔵 subscribeToUnreadCount($chatId): $count unread (lastReadAt=$lastReadAt)');
+        if (count > 0)
+          print(
+              '🔵 subscribeToUnreadCount($chatId): $count unread (lastReadAt=$lastReadAt)');
         return count;
       } catch (e) {
         print('⚠️ subscribeToUnreadCount($chatId): Error: $e');
@@ -1329,14 +1735,10 @@ class ChatRepository {
   /// Get members of a chat
   Future<List<ChatMember>> getChatMembers(String chatId) async {
     try {
-      final snapshot = await _chatsCollection
-          .doc(chatId)
-          .collection('members')
-          .get();
+      final snapshot =
+          await _chatsCollection.doc(chatId).collection('members').get();
 
-      return snapshot.docs
-          .map((doc) => ChatMember.fromFirestore(doc))
-          .toList();
+      return snapshot.docs.map((doc) => ChatMember.fromFirestore(doc)).toList();
     } catch (e) {
       print('❌ ChatRepository: Error getting chat members: $e');
       return [];

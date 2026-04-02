@@ -5,6 +5,7 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/auth/uaepass_auth_cubit.dart';
 import 'package:el_race/ui/auth/auth_loading_screen.dart';
 import 'package:el_race/chat/chat.dart';
+import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/color_utils.dart';
@@ -152,6 +153,12 @@ class _SignInScreenState extends State<SignInScreen> {
           }
         }
         if (state is InitialSignedInST) {
+          try {
+            context.read<HomeBloc>().add(const ChangeCurrentIndex(index: 1));
+          } catch (e) {
+            print('⚠️ Failed to reset HomeBloc index on login: $e');
+          }
+
           Util.fetchHomeScreenData(context);
 
           // Debug: Log the FULL login response before saving
@@ -197,8 +204,8 @@ class _SignInScreenState extends State<SignInScreen> {
           // ✅ Face Recognition with LOCAL storage only
           // In Test Mode: skip face verification (Apple review compliance)
           final isTestMode = AppConfigService.instance.isTestMode;
-          SharedPref().setPreferencesBoolean(
-              'pendingFaceVerification', !isTestMode);
+          SharedPref()
+              .setPreferencesBoolean('pendingFaceVerification', !isTestMode);
           SharedPref()
               .setPreferencesBoolean('isFaceRegistrationInProgress', false);
           if (isTestMode) {
@@ -347,7 +354,8 @@ class _SignInScreenState extends State<SignInScreen> {
                                 ),
                               ),
                               Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 16),
                                 child: Text(
                                   'or',
                                   style: TextStyle(

@@ -3,6 +3,20 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/delayed/models/delayed_approval_model.dart';
 import 'package:http/http.dart' as http;
 
+class DelayedAllPageResult {
+  final DelayedApprovalsResponse data;
+  final int currentPage;
+  final int? nextPage;
+  final bool hasMore;
+
+  const DelayedAllPageResult({
+    required this.data,
+    required this.currentPage,
+    required this.nextPage,
+    required this.hasMore,
+  });
+}
+
 class DelayedApprovalsRepository {
   static const String _baseUrl = 'https://erp.elrace.com/api';
 
@@ -14,7 +28,8 @@ class DelayedApprovalsRepository {
 
   String _requireToken() {
     final token = SharedPref.getLoginData().result?.token;
-    if (token == null || token.isEmpty) throw Exception('User not authenticated');
+    if (token == null || token.isEmpty)
+      throw Exception('User not authenticated');
     return token;
   }
 
@@ -124,10 +139,151 @@ class DelayedApprovalsRepository {
     }
   }
 
+  /// Paginated fetch from /api/my_delayed_approvals/all.
+  ///
+  /// Sends common pagination keys in both query params and request body to
+  /// match backend variants without breaking existing behavior.
+  Future<DelayedAllPageResult> fetchAllPage({
+    required int page,
+    int pageSize = 20,
+  }) async {
+    final token = _requireToken();
+    final url = Uri.parse('$_baseUrl/my_delayed_approvals/all').replace(
+      queryParameters: {
+        'page': '$page',
+        'limit': '$pageSize',
+        'per_page': '$pageSize',
+      },
+    );
+
+    final body = jsonEncode({
+      "jsonrpc": "2.0",
+      "params": {
+        "page": page,
+        "limit": pageSize,
+        "per_page": pageSize,
+        "page_size": pageSize,
+      }
+    });
+
+    try {
+      final request = http.Request('GET', url)
+        ..headers.addAll(_buildHeaders(token))
+        ..body = body;
+
+      final response = await http.Response.fromStream(await request.send());
+
+      print('=== DELAYED ALL PAGED RESPONSE ===');
+      print('Status: ${response.statusCode}');
+      print('Page: $page, PageSize: $pageSize');
+      print('Body: ${response.body}');
+      print('===================================');
+
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Failed to fetch delayed approvals page $page: ${response.statusCode}');
+      }
+
+      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final parsed = DelayedApprovalsResponse.fromJson(json);
+
+      final result = json['result'];
+      final resultMap =
+          result is Map<String, dynamic> ? result : <String, dynamic>{};
+      final meta = _extractPaginationMeta(resultMap);
+
+      final currentPage =
+          _readInt(meta, const ['current_page', 'page'], fallback: page);
+      final totalPages = _readInt(meta, const ['total_pages', 'last_page']);
+      final explicitNextPage = _readNullableInt(meta, const ['next_page']);
+      final explicitHasMore = _readBool(meta, const ['has_more', 'has_next']);
+
+      final bool hasMore;
+      if (explicitHasMore != null) {
+        hasMore = explicitHasMore;
+      } else if (explicitNextPage != null) {
+        hasMore = explicitNextPage > currentPage;
+      } else if (totalPages > 0) {
+        hasMore = currentPage < totalPages;
+      } else {
+        // Fallback when metadata is missing.
+        hasMore = parsed.totalCount >= pageSize;
+      }
+
+      final nextPage = explicitNextPage ?? (hasMore ? currentPage + 1 : null);
+
+      return DelayedAllPageResult(
+        data: parsed,
+        currentPage: currentPage,
+        nextPage: nextPage,
+        hasMore: hasMore,
+      );
+    } catch (e) {
+      throw Exception('Error fetching delayed approvals page $page: $e');
+    }
+  }
+
+  Map<String, dynamic> _extractPaginationMeta(Map<String, dynamic> resultMap) {
+    final directMeta = resultMap['pagination'];
+    if (directMeta is Map<String, dynamic>) return directMeta;
+
+    final directMeta2 = resultMap['meta'];
+    if (directMeta2 is Map<String, dynamic>) return directMeta2;
+
+    final data = resultMap['data'];
+    if (data is Map<String, dynamic>) {
+      final nestedPagination = data['pagination'];
+      if (nestedPagination is Map<String, dynamic>) return nestedPagination;
+
+      final nestedMeta = data['meta'];
+      if (nestedMeta is Map<String, dynamic>) return nestedMeta;
+
+      return data;
+    }
+
+    return resultMap;
+  }
+
+  int _readInt(Map<String, dynamic> source, List<String> keys,
+      {int fallback = 0}) {
+    final value = _readNullableInt(source, keys);
+    return value ?? fallback;
+  }
+
+  int? _readNullableInt(Map<String, dynamic> source, List<String> keys) {
+    for (final key in keys) {
+      final value = source[key];
+      if (value == null) continue;
+      if (value is int) return value;
+      if (value is num) return value.toInt();
+      if (value is String) {
+        final parsed = int.tryParse(value.trim());
+        if (parsed != null) return parsed;
+      }
+    }
+    return null;
+  }
+
+  bool? _readBool(Map<String, dynamic> source, List<String> keys) {
+    for (final key in keys) {
+      final value = source[key];
+      if (value == null) continue;
+      if (value is bool) return value;
+      if (value is num) return value != 0;
+      if (value is String) {
+        final normalized = value.trim().toLowerCase();
+        if (normalized == 'true' || normalized == '1') return true;
+        if (normalized == 'false' || normalized == '0') return false;
+      }
+    }
+    return null;
+  }
+
   // ─────────────────────────────────────────────────────────────
   // Legacy method – kept for backward compatibility.
   // Calls the old single endpoint (now maps to /all).
   // ─────────────────────────────────────────────────────────────
-  @Deprecated('Use fetchCounters() for dashboard and fetchDetails(type) on tap.')
+  @Deprecated(
+      'Use fetchCounters() for dashboard and fetchDetails(type) on tap.')
   Future<DelayedApprovalsResponse> fetchDelayedApprovals() => fetchAll();
 }

@@ -57,6 +57,7 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
 
   /// Drawn once, reused for all zones
   Uint8List? _cachedSignatureBytes;
+  final List<Size> _pageSizes = [];
 
   bool get _allSigned =>
       _allZones.isNotEmpty && _signedZoneIndices.length == _allZones.length;
@@ -75,20 +76,46 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
         ? (widget.message.signedPdfUrl ?? widget.message.mediaUrl)
         : widget.message.mediaUrl;
     if (url == null) {
-      setState(() { _error = 'No document URL'; _loading = false; });
+      setState(() {
+        _error = 'No document URL';
+        _loading = false;
+      });
       return;
     }
     try {
       final r = await http.get(Uri.parse(url));
       if (r.statusCode == 200 && mounted) {
-        setState(() { _pdfBytes = r.bodyBytes; _loading = false; });
+        try {
+          final doc = PdfDocument(inputBytes: r.bodyBytes);
+          _pageSizes
+            ..clear()
+            ..addAll(List<Size>.generate(doc.pages.count, (i) {
+              final s = doc.pages[i].getClientSize();
+              return Size(s.width, s.height);
+            }));
+          doc.dispose();
+        } catch (_) {
+          _pageSizes
+            ..clear()
+            ..add(const Size(595, 842));
+        }
+
+        setState(() {
+          _pdfBytes = r.bodyBytes;
+          _loading = false;
+        });
       } else if (mounted) {
         setState(() {
-          _error = 'HTTP ${r.statusCode}'; _loading = false;
+          _error = 'HTTP ${r.statusCode}';
+          _loading = false;
         });
       }
     } catch (e) {
-      if (mounted) setState(() { _error = '$e'; _loading = false; });
+      if (mounted)
+        setState(() {
+          _error = '$e';
+          _loading = false;
+        });
     }
   }
 
@@ -136,7 +163,7 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
 
     setState(() {
       _pdfBytes = updated;
-      _pdfVersion++;            // forces new PDFView
+      _pdfVersion++; // forces new PDFView
       _pendingPage = stayOnPage; // will jump here after render
       _signedZoneIndices.add(_focusedZoneIndex!);
       _focusedZoneIndex = null; // clear focus, user sees stamped sig
@@ -144,7 +171,9 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
   }
 
   Uint8List _stampSingleZone(
-    Uint8List pdfBytes, SignZone zone, Uint8List sigImgBytes,
+    Uint8List pdfBytes,
+    SignZone zone,
+    Uint8List sigImgBytes,
   ) {
     final doc = PdfDocument(inputBytes: pdfBytes);
     if (zone.page < doc.pages.count) {
@@ -154,7 +183,8 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
       final y = zone.y * ps.height;
       final w = zone.width * ps.width;
       final h = zone.height * ps.height;
-      page.graphics.drawImage(PdfBitmap(sigImgBytes), Rect.fromLTWH(x, y, w, h));
+      page.graphics
+          .drawImage(PdfBitmap(sigImgBytes), Rect.fromLTWH(x, y, w, h));
       page.graphics.drawRectangle(
         pen: PdfPen(PdfColor(180, 180, 180), width: 0.5),
         bounds: Rect.fromLTWH(x, y, w, h),
@@ -268,7 +298,8 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
                 child: Text(
                   '${_signedZoneIndices.length}/${_allZones.length}',
                   style: const TextStyle(
-                    fontSize: 14, fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                     color: Color(0xFFD4A843),
                   ),
                 ),
@@ -295,7 +326,10 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              setState(() { _loading = true; _error = null; });
+              setState(() {
+                _loading = true;
+                _error = null;
+              });
               _loadPdf();
             },
             child: const Text('Retry'),
@@ -406,9 +440,12 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
           Icon(icon, size: 18, color: iconColor),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(text,
+            child: Text(
+              text,
               style: TextStyle(
-                fontSize: 13, color: textColor, fontWeight: FontWeight.w500,
+                fontSize: 13,
+                color: textColor,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ),
@@ -422,7 +459,9 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
   Widget _buildBottomBar(bool isSigned) {
     return Container(
       padding: EdgeInsets.only(
-        left: 8, right: 8, top: 8,
+        left: 8,
+        right: 8,
+        top: 8,
         bottom: MediaQuery.of(context).padding.bottom + 8,
       ),
       decoration: BoxDecoration(
@@ -430,7 +469,8 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 8, offset: const Offset(0, -2),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
           ),
         ],
       ),
@@ -463,11 +503,15 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
         ),
         Text(
           'Page ${_currentPage + 1} of $_totalPages',
-          style: TextStyle(fontSize: 13, color: Colors.grey[600], fontWeight: FontWeight.w500),
+          style: TextStyle(
+              fontSize: 13,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500),
         ),
         IconButton(
           onPressed: _currentPage < _totalPages - 1
-              ? () => _goPage(_currentPage + 1) : null,
+              ? () => _goPage(_currentPage + 1)
+              : null,
           icon: const Icon(Icons.chevron_right),
           visualDensity: VisualDensity.compact,
         ),
@@ -484,11 +528,15 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
           backgroundColor: Colors.green,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         ),
         icon: _sending
-            ? const SizedBox(width: 16, height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white))
             : const Icon(Icons.send, size: 18),
         label: Text(
           _sending ? 'Sending...' : 'Send Signed Document',
@@ -513,7 +561,8 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
               backgroundColor: const Color(0xFF1D2449),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
             ),
             icon: const Icon(Icons.navigate_next, size: 18),
             label: const Text('Next Zone',
@@ -527,7 +576,8 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.grey[600],
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
             ),
             child: const Text('Skip', style: TextStyle(fontSize: 13)),
           ),
@@ -538,7 +588,8 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
               backgroundColor: const Color(0xFFD4A843),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
             ),
             icon: const Icon(Icons.draw, size: 18),
             label: const Text('Sign & Stamp',
@@ -552,20 +603,24 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
   // ─── Zone overlays ───────────────────────────────────────
 
   List<Widget> _buildZoneOverlays() {
+    final pageRect = _pdfPageRectForCurrentView();
     final widgets = <Widget>[];
     for (int i = 0; i < _allZones.length; i++) {
       final zone = _allZones[i];
       if (zone.page != _currentPage) continue;
       if (_signedZoneIndices.contains(i)) continue; // baked into PDF
 
-      final left = zone.x * _viewSize.width;
-      final top = zone.y * _viewSize.height;
-      final w = zone.width * _viewSize.width;
-      final h = zone.height * _viewSize.height;
+      final left = pageRect.left + (zone.x * pageRect.width);
+      final top = pageRect.top + (zone.y * pageRect.height);
+      final w = zone.width * pageRect.width;
+      final h = zone.height * pageRect.height;
       final isFocused = _focusedZoneIndex == i;
 
       widgets.add(Positioned(
-        left: left, top: top, width: w, height: h,
+        left: left,
+        top: top,
+        width: w,
+        height: h,
         child: GestureDetector(
           onTap: () => setState(() => _focusedZoneIndex = i),
           child: AnimatedContainer(
@@ -592,13 +647,15 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
                     children: [
                       Icon(
                         isFocused ? Icons.arrow_downward : Icons.draw,
-                        size: 12, color: const Color(0xFF856404),
+                        size: 12,
+                        color: const Color(0xFF856404),
                       ),
                       const SizedBox(width: 3),
                       Text(
                         isFocused ? 'Tap Sign below' : 'Sign Here',
                         style: const TextStyle(
-                          fontSize: 10, fontWeight: FontWeight.w700,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
                           color: Color(0xFF856404),
                         ),
                       ),
@@ -613,6 +670,30 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
     }
     return widgets;
   }
+
+  Rect _pdfPageRectForCurrentView() {
+    if (_viewSize.width <= 0 || _viewSize.height <= 0) return Rect.zero;
+
+    final fallback = const Size(595, 842);
+    final pageSize = (_currentPage >= 0 && _currentPage < _pageSizes.length)
+        ? _pageSizes[_currentPage]
+        : fallback;
+
+    final pageRatio = pageSize.width / pageSize.height;
+    final viewRatio = _viewSize.width / _viewSize.height;
+
+    if (viewRatio > pageRatio) {
+      final height = _viewSize.height;
+      final width = height * pageRatio;
+      final left = (_viewSize.width - width) / 2;
+      return Rect.fromLTWH(left, 0, width, height);
+    }
+
+    final width = _viewSize.width;
+    final height = width / pageRatio;
+    final top = (_viewSize.height - height) / 2;
+    return Rect.fromLTWH(0, top, width, height);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -626,32 +707,89 @@ class _SignaturePadDialog extends StatefulWidget {
 }
 
 class _SignaturePadDialogState extends State<_SignaturePadDialog> {
+  static const double _padWidth = 350;
+  static const double _padHeight = 150;
+  static const double _minPointDistance = 0.7;
+
   final List<List<Offset>> _strokes = [];
   List<Offset> _currentStroke = [];
+  bool _isDrawing = false;
 
-  void _clear() => setState(() { _strokes.clear(); _currentStroke.clear(); });
+  Offset _clampToPad(Offset p) {
+    final dx = p.dx.clamp(0.0, _padWidth) as double;
+    final dy = p.dy.clamp(0.0, _padHeight) as double;
+    return Offset(dx, dy);
+  }
+
+  bool _isInsidePad(Offset p) {
+    return p.dx >= 0 && p.dx <= _padWidth && p.dy >= 0 && p.dy <= _padHeight;
+  }
+
+  void _startStroke(DragStartDetails d) {
+    if (!_isInsidePad(d.localPosition)) {
+      _isDrawing = false;
+      return;
+    }
+
+    final point = _clampToPad(d.localPosition);
+    setState(() {
+      _isDrawing = true;
+      _currentStroke = [point];
+      _strokes.add(_currentStroke);
+    });
+  }
+
+  void _appendStroke(DragUpdateDetails d) {
+    if (!_isDrawing || _currentStroke.isEmpty) return;
+
+    final point = _clampToPad(d.localPosition);
+    final last = _currentStroke.last;
+
+    // Skip tiny movements to reduce rebuild pressure on low-end Android.
+    if ((point - last).distance < _minPointDistance) return;
+
+    setState(() => _currentStroke.add(point));
+  }
+
+  void _endStroke() {
+    _isDrawing = false;
+    _currentStroke = [];
+  }
+
+  void _clear() => setState(() {
+        _strokes.clear();
+        _currentStroke.clear();
+      });
 
   Future<void> _confirm() async {
     if (_strokes.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please draw your signature'), backgroundColor: Colors.orange),
+        const SnackBar(
+            content: Text('Please draw your signature'),
+            backgroundColor: Colors.orange),
       );
       return;
     }
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    canvas.drawRect(const Rect.fromLTWH(0, 0, 400, 150), Paint()..color = Colors.white);
+    canvas.drawRect(
+      const Rect.fromLTWH(0, 0, _padWidth, _padHeight),
+      Paint()..color = Colors.white,
+    );
     final paint = Paint()
-      ..color = Colors.black ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.round ..style = PaintingStyle.stroke;
+      ..color = Colors.black
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
     for (final stroke in _strokes) {
       if (stroke.length < 2) continue;
       final path = Path()..moveTo(stroke.first.dx, stroke.first.dy);
-      for (int i = 1; i < stroke.length; i++) path.lineTo(stroke[i].dx, stroke[i].dy);
+      for (int i = 1; i < stroke.length; i++)
+        path.lineTo(stroke[i].dx, stroke[i].dy);
       canvas.drawPath(path, paint);
     }
     final picture = recorder.endRecording();
-    final image = await picture.toImage(400, 150);
+    final image = await picture.toImage(_padWidth.toInt(), _padHeight.toInt());
     final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     if (byteData != null && mounted) {
       Navigator.pop(context, byteData.buffer.asUint8List());
@@ -667,22 +805,27 @@ class _SignaturePadDialogState extends State<_SignaturePadDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 350, height: 150,
+            width: _padWidth,
+            height: _padHeight,
             decoration: BoxDecoration(
               color: Colors.white,
               border: Border.all(color: Colors.grey[300]!),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: GestureDetector(
-              onPanStart: (d) => setState(() {
-                _currentStroke = [d.localPosition];
-                _strokes.add(_currentStroke);
-              }),
-              onPanUpdate: (d) => setState(() => _currentStroke.add(d.localPosition)),
-              onPanEnd: (_) => _currentStroke = [],
-              child: CustomPaint(
-                painter: _SignaturePainter(strokes: _strokes),
-                size: const Size(350, 150),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: RepaintBoundary(
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onPanStart: _startStroke,
+                  onPanUpdate: _appendStroke,
+                  onPanEnd: (_) => _endStroke(),
+                  onPanCancel: _endStroke,
+                  child: CustomPaint(
+                    painter: _SignaturePainter(strokes: _strokes),
+                    size: const Size(_padWidth, _padHeight),
+                  ),
+                ),
               ),
             ),
           ),
@@ -693,10 +836,13 @@ class _SignaturePadDialogState extends State<_SignaturePadDialog> {
       ),
       actions: [
         TextButton(onPressed: _clear, child: const Text('Clear')),
-        TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel')),
         ElevatedButton(
           onPressed: _confirm,
-          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1D2449)),
+          style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1D2449)),
           child: const Text('Confirm', style: TextStyle(color: Colors.white)),
         ),
       ],
@@ -711,12 +857,15 @@ class _SignaturePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.black ..strokeWidth = 2.5
-      ..strokeCap = StrokeCap.round ..style = PaintingStyle.stroke;
+      ..color = Colors.black
+      ..strokeWidth = 2.5
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
     for (final stroke in strokes) {
       if (stroke.length < 2) continue;
       final path = Path()..moveTo(stroke.first.dx, stroke.first.dy);
-      for (int i = 1; i < stroke.length; i++) path.lineTo(stroke[i].dx, stroke[i].dy);
+      for (int i = 1; i < stroke.length; i++)
+        path.lineTo(stroke[i].dx, stroke[i].dy);
       canvas.drawPath(path, paint);
     }
   }

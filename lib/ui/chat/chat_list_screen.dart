@@ -1,16 +1,13 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../chat/chat.dart';
 import '../../resources/app_colors.dart';
 import '../widgets/header_widget.dart';
 import 'chat_screen.dart';
-import 'new_chat_screen.dart';
 import 'starred_messages_screen.dart';
 import 'widgets/typing_indicator.dart';
 
@@ -33,14 +30,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
   Timer? _debounce;
 
   // Tab state for Groups / Support — ValueNotifier so only tab section rebuilds
-  final ValueNotifier<int> _topTabNotifier = ValueNotifier(0); // 0 = Groups, 1 = Support
+  final ValueNotifier<int> _topTabNotifier =
+      ValueNotifier(0); // 0 = Groups, 1 = Support
   List<Chat> _supportGroups = [];
 
   /// Cached chat stream — created once, reused across rebuilds
   Stream<List<UserChat>>? _userChatsStream;
 
   // Global user search state — ValueNotifiers so only the bottom section rebuilds
-  final ValueNotifier<List<ChatUser>> _globalResultsNotifier = ValueNotifier([]);
+  final ValueNotifier<List<ChatUser>> _globalResultsNotifier =
+      ValueNotifier([]);
   final ValueNotifier<bool> _globalSearchingNotifier = ValueNotifier(false);
   ChatUser? _currentUser;
   Timer? _globalDebounce;
@@ -92,9 +91,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
     try {
       final groups = await ChatRepository.instance.getAllRoleGroups();
       if (mounted) {
-        _supportGroups = groups;
-        // Only trigger rebuild of tab section via notifier
-        _topTabNotifier.notifyListeners();
+        setState(() {
+          _supportGroups = groups;
+        });
       }
     } catch (e) {
       print('⚠️ ChatListScreen: Error loading support groups: $e');
@@ -163,8 +162,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     // Show loading indicator while initializing chat
     if (_isInitializing) {
       return Scaffold(
@@ -295,10 +292,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         c.type == ChatType.role || c.type == ChatType.group)
                     .toList();
 
-                // Bottom list shows only DMs (groups already shown above)
-                final directChats =
-                    allChats.where((c) => c.type == ChatType.dm).toList();
-
                 return NotificationListener<ScrollNotification>(
                   onNotification: (scrollNotification) {
                     if (scrollNotification is ScrollUpdateNotification ||
@@ -336,14 +329,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
                               children: [
                                 // Tab buttons
                                 Padding(
-                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+                                  padding:
+                                      const EdgeInsets.fromLTRB(16, 0, 16, 10),
                                   child: Row(
                                     children: [
                                       _TopTab(
                                         label: 'Groups',
                                         isActive: tabIndex == 0,
                                         onTap: () {
-                                          if (tabIndex != 0) _topTabNotifier.value = 0;
+                                          if (tabIndex != 0)
+                                            _topTabNotifier.value = 0;
                                         },
                                       ),
                                       const SizedBox(width: 14),
@@ -351,7 +346,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                         label: 'Support',
                                         isActive: tabIndex == 1,
                                         onTap: () {
-                                          if (tabIndex != 1) _topTabNotifier.value = 1;
+                                          if (tabIndex != 1)
+                                            _topTabNotifier.value = 1;
                                         },
                                       ),
                                     ],
@@ -367,11 +363,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                               child: Text(
                                                 'No groups yet',
                                                 style: TextStyle(
-                                                    color: Colors.white54, fontSize: 13),
+                                                    color: Colors.white54,
+                                                    fontSize: 13),
                                               ),
                                             )
                                           : ListView.builder(
-                                              padding: const EdgeInsets.only(left: 16),
+                                              padding: const EdgeInsets.only(
+                                                  left: 16),
                                               scrollDirection: Axis.horizontal,
                                               itemCount: groups.length,
                                               itemBuilder: (context, i) {
@@ -388,18 +386,22 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                               child: Text(
                                                 'No departments available',
                                                 style: TextStyle(
-                                                    color: Colors.white54, fontSize: 13),
+                                                    color: Colors.white54,
+                                                    fontSize: 13),
                                               ),
                                             )
                                           : ListView.builder(
-                                              padding: const EdgeInsets.only(left: 16),
+                                              padding: const EdgeInsets.only(
+                                                  left: 16),
                                               scrollDirection: Axis.horizontal,
                                               itemCount: _supportGroups.length,
                                               itemBuilder: (context, i) {
                                                 final g = _supportGroups[i];
                                                 return _SupportGroupQuickItem(
-                                                  label: g.title ?? 'Dept ${g.roleId}',
-                                                  onTap: () => _startSupportChat(g),
+                                                  label: g.title ??
+                                                      'Dept ${g.roleId}',
+                                                  onTap: () =>
+                                                      _startSupportChat(g),
                                                 );
                                               },
                                             )),
@@ -449,8 +451,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                           .toList();
 
                                   final bool hasQuery = query.isNotEmpty;
-                                  final bool hasGlobalResults = globalResults.isNotEmpty;
-                                  final bool showNoResults = hasQuery && filteredChats.isEmpty && !hasGlobalResults && !isGlobalSearching;
+                                  final bool hasGlobalResults =
+                                      globalResults.isNotEmpty;
+                                  final bool showNoResults = hasQuery &&
+                                      filteredChats.isEmpty &&
+                                      !hasGlobalResults &&
+                                      !isGlobalSearching;
 
                                   if (showNoResults) {
                                     return SliverFillRemaining(
@@ -459,10 +465,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                         color: Colors.white,
                                         child: Center(
                                           child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: [
                                               Icon(Icons.chat_bubble_outline,
-                                                  size: 70, color: Colors.grey[400]),
+                                                  size: 70,
+                                                  color: Colors.grey[400]),
                                               const SizedBox(height: 12),
                                               Text(
                                                 allChats.isEmpty
@@ -486,7 +494,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                     items.add(
                                       Container(
                                         color: Colors.white,
-                                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 12),
                                         child: _ChatListTile(
                                           userChat: userChat,
                                           currentUid: _currentUid!,
@@ -497,11 +506,13 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                   }
 
                                   // Show global search results when searching
-                                  if (hasQuery && (isGlobalSearching || hasGlobalResults)) {
+                                  if (hasQuery &&
+                                      (isGlobalSearching || hasGlobalResults)) {
                                     items.add(
                                       Container(
                                         color: Colors.white,
-                                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                                        padding: const EdgeInsets.fromLTRB(
+                                            16, 16, 16, 8),
                                         child: Row(
                                           children: [
                                             Text(
@@ -517,7 +528,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                               const SizedBox(
                                                 width: 14,
                                                 height: 14,
-                                                child: CircularProgressIndicator(strokeWidth: 2),
+                                                child:
+                                                    CircularProgressIndicator(
+                                                        strokeWidth: 2),
                                               ),
                                             ],
                                           ],
@@ -531,21 +544,26 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                           color: Colors.white,
                                           child: _InlineUserTile(
                                             user: user,
-                                            onTap: () => _startChatWithUser(user),
+                                            onTap: () =>
+                                                _startChatWithUser(user),
                                           ),
                                         ),
                                       );
                                     }
 
-                                    if (!isGlobalSearching && globalResults.isEmpty) {
+                                    if (!isGlobalSearching &&
+                                        globalResults.isEmpty) {
                                       items.add(
                                         Container(
                                           color: Colors.white,
-                                          padding: const EdgeInsets.symmetric(vertical: 16),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 16),
                                           child: Center(
                                             child: Text(
                                               'No users found',
-                                              style: TextStyle(color: Colors.grey[500], fontSize: 13),
+                                              style: TextStyle(
+                                                  color: Colors.grey[500],
+                                                  fontSize: 13),
                                             ),
                                           ),
                                         ),
@@ -560,10 +578,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                         color: Colors.white,
                                         child: Center(
                                           child: Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: [
                                               Icon(Icons.chat_bubble_outline,
-                                                  size: 70, color: Colors.grey[400]),
+                                                  size: 70,
+                                                  color: Colors.grey[400]),
                                               const SizedBox(height: 12),
                                               Text(
                                                 'No chats yet',
@@ -607,39 +627,22 @@ class _ChatListScreenState extends State<ChatListScreen> {
               child: ValueListenableBuilder<bool>(
                 valueListenable: _isScrolledNotifier,
                 builder: (context, isScrolled, child) {
-                  return ClipRect(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(
-                        sigmaX: isScrolled ? 5.0 : 0.0,
-                        sigmaY: isScrolled ? 5.0 : 0.0,
-                      ),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-                        decoration: BoxDecoration(
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryColor,
+                      border: Border(
+                        bottom: BorderSide(
                           color: isScrolled
-                              ? Colors.white.withOpacity(0.10)
+                              ? Colors.white.withOpacity(0.18)
                               : Colors.transparent,
-                          border: Border(
-                            bottom: BorderSide(
-                              color: isScrolled
-                                  ? Colors.white.withOpacity(0.25)
-                                  : Colors.transparent,
-                              width: 1,
-                            ),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
-                              blurRadius: 4,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
+                          width: 1,
                         ),
-                        child:
-                            _SecondaryChatBar(onMessagesTap: _openStarredMessages),
                       ),
                     ),
+                    child:
+                        _SecondaryChatBar(onMessagesTap: _openStarredMessages),
                   );
                 },
               ),
@@ -660,15 +663,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
           chatType: userChat.type,
           peerUid: userChat.peerUid,
         ),
-      ),
-    );
-  }
-
-  void _startNewChat() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const NewChatScreen(),
       ),
     );
   }
@@ -698,6 +692,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
         userName: _currentUser!.name,
         targetRoleId: group.roleId!,
         groupTitle: group.title ?? 'Group ${group.roleId}',
+        sourceRoleChatId: group.id,
+        supportGroupKey: group.id,
         userRoleId: _currentUser!.roleId,
         userBranchId: _currentUser!.branchId,
         userCompanyId: _currentUser!.companyId,
@@ -739,15 +735,6 @@ class _ChatListScreenState extends State<ChatListScreen> {
         builder: (context) => const StarredMessagesScreen(),
       ),
     );
-  }
-
-  void _openSearch() {
-    // Focus the local search bar instead of navigating away
-    _localSearchController.clear();
-    FocusScope.of(context).requestFocus(FocusNode());
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Unfocus first so the keyboard doesn't linger from previous field
-    });
   }
 
   Future<void> _startChatWithUser(ChatUser user) async {
@@ -1029,7 +1016,6 @@ class _ChatListTile extends StatelessWidget {
     }
 
     String text;
-    IconData? icon;
 
     switch (lastMessage.type) {
       case 'image':
@@ -1187,7 +1173,8 @@ class _ChatSearchBar extends StatelessWidget {
               color: Color(0xFF9A9A9A),
               fontWeight: FontWeight.w500,
             ),
-            prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF8E8E8E)),
+            prefixIcon:
+                const Icon(Icons.search_rounded, color: Color(0xFF8E8E8E)),
             suffixIcon: hasText
                 ? IconButton(
                     tooltip: 'Clear search',
@@ -1195,7 +1182,8 @@ class _ChatSearchBar extends StatelessWidget {
                       controller.clear();
                       onClear();
                     },
-                    icon: const Icon(Icons.close_rounded, color: Color(0xFF8E8E8E), size: 20),
+                    icon: const Icon(Icons.close_rounded,
+                        color: Color(0xFF8E8E8E), size: 20),
                   )
                 : null,
             filled: true,
@@ -1244,9 +1232,8 @@ class _InlineUserTile extends StatelessWidget {
           CircleAvatar(
             radius: 24,
             backgroundColor: AppColors.primaryBlackLight,
-            backgroundImage: user.avatarUrl != null
-                ? NetworkImage(user.avatarUrl!)
-                : null,
+            backgroundImage:
+                user.avatarUrl != null ? NetworkImage(user.avatarUrl!) : null,
             child: user.avatarUrl == null
                 ? Text(
                     _getInitials(user.name),
@@ -1289,7 +1276,8 @@ class _InlineUserTile extends StatelessWidget {
               style: TextStyle(fontSize: 13, color: Colors.grey[600]),
             )
           : null,
-      trailing: const Icon(Icons.message_rounded, color: AppColors.primaryColor, size: 22),
+      trailing: const Icon(Icons.message_rounded,
+          color: AppColors.primaryColor, size: 22),
     );
   }
 
@@ -1311,7 +1299,7 @@ class _SecondaryChatBar extends StatelessWidget {
     final theme = Theme.of(context);
 
     return SizedBox(
-      height: 80,
+      height: 62,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -1330,11 +1318,11 @@ class _SecondaryChatBar extends StatelessWidget {
                 style: theme.textTheme.titleLarge?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
-                    fontSize: 17),
+                    fontSize: 16),
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Align(
             alignment: Alignment.centerRight,
             child: OutlinedButton.icon(
@@ -1437,7 +1425,9 @@ class _TopTab extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFFE9B23A) : Colors.white.withOpacity(0.12),
+          color: isActive
+              ? const Color(0xFFE9B23A)
+              : Colors.white.withOpacity(0.12),
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(

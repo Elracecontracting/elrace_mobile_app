@@ -138,6 +138,7 @@ exports.onNewChatMessage = onDocumentCreated(
       },
       android: {
         priority: "high",
+        ttl: 300000,
         notification: {
           channelId: "chat_messages",
           priority: "high",
@@ -146,6 +147,10 @@ exports.onNewChatMessage = onDocumentCreated(
         },
       },
       apns: {
+        headers: {
+          "apns-priority": "10",
+          "apns-push-type": "alert",
+        },
         payload: {
           aps: {
             alert: {

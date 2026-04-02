@@ -5,6 +5,7 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_models.dart';
 import 'package:el_race/utils/api_query.dart';
 import 'package:el_race/utils/urll_utils.dart';
+import 'package:http/http.dart' as http;
 
 class MyActionsRepository {
   final ApiQuery _apiQuery;
@@ -93,27 +94,34 @@ class MyActionsRepository {
     // ── Debug: dump raw response structure for investigation ──
     print('[MyActions][${type.apiValue}] result type: ${result.runtimeType}');
     if (result is Map) {
-      print('[MyActions][${type.apiValue}] result keys: ${result.keys.toList()}');
+      print(
+          '[MyActions][${type.apiValue}] result keys: ${result.keys.toList()}');
       final d = result['data'];
       if (d is Map) {
         print('[MyActions][${type.apiValue}] data keys: ${d.keys.toList()}');
         d.forEach((k, v) {
           if (v is List && v.isNotEmpty) {
-            print('[MyActions][${type.apiValue}] data["$k"] first item keys: ${(v.first as Map?)?.keys.toList()}');
-            print('[MyActions][${type.apiValue}] data["$k"] first item: ${v.first}');
+            print(
+                '[MyActions][${type.apiValue}] data["$k"] first item keys: ${(v.first as Map?)?.keys.toList()}');
+            print(
+                '[MyActions][${type.apiValue}] data["$k"] first item: ${v.first}');
           }
         });
       } else if (d is List && d.isNotEmpty) {
-        print('[MyActions][${type.apiValue}] data is List, first item keys: ${(d.first as Map?)?.keys.toList()}');
+        print(
+            '[MyActions][${type.apiValue}] data is List, first item keys: ${(d.first as Map?)?.keys.toList()}');
         print('[MyActions][${type.apiValue}] data first item: ${d.first}');
       }
       final directList = result[type.responseKey];
       if (directList is List && directList.isNotEmpty) {
-        print('[MyActions][${type.apiValue}] result["${type.responseKey}"] first item keys: ${(directList.first as Map?)?.keys.toList()}');
-        print('[MyActions][${type.apiValue}] result["${type.responseKey}"] first item: ${directList.first}');
+        print(
+            '[MyActions][${type.apiValue}] result["${type.responseKey}"] first item keys: ${(directList.first as Map?)?.keys.toList()}');
+        print(
+            '[MyActions][${type.apiValue}] result["${type.responseKey}"] first item: ${directList.first}');
       }
     } else if (result is List && result.isNotEmpty) {
-      print('[MyActions][${type.apiValue}] result is List, first item keys: ${(result.first as Map?)?.keys.toList()}');
+      print(
+          '[MyActions][${type.apiValue}] result is List, first item keys: ${(result.first as Map?)?.keys.toList()}');
       print('[MyActions][${type.apiValue}] result first item: ${result.first}');
     }
     // ── End debug ──
@@ -178,5 +186,84 @@ class MyActionsRepository {
     }
 
     return const <MyActionItem>[];
+  }
+
+  Future<List<MyActionItem>> fetchMyRequests({String keyword = ''}) async {
+    final login = SharedPref.getLoginDataOrNull();
+    final token = login?.result?.token;
+    if (token == null || token.isEmpty) {
+      throw Exception('Invalid token');
+    }
+
+    final loginData = login?.result?.data;
+    final loginEmployeeName = (loginData?.emp_name?.trim().isNotEmpty == true)
+        ? loginData!.emp_name!.trim()
+        : (loginData?.name?.trim().isNotEmpty == true)
+            ? loginData!.name!.trim()
+            : (loginData?.username ?? '').trim();
+    final loginEmployeeImage = loginData?.image_url ?? '';
+    final loginFileId = (loginData?.emp_profile_id?.trim().isNotEmpty == true)
+        ? loginData!.emp_profile_id!.trim()
+        : (loginData?.employee_id?.toString() ?? loginData?.emp_id ?? '');
+
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Authorization': 'Bearer $token',
+    };
+
+    final body = jsonEncode({
+      'jsonrpc': '2.0',
+      'params': {
+        'keyword': keyword,
+      },
+    });
+
+    final url = Uri.parse('${UrlUtil.baseUrl}my_requests');
+    final request = http.Request('GET', url)
+      ..headers.addAll(headers)
+      ..body = body;
+
+    final streamedResponse = await request.send();
+    final response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode != 200) {
+      throw Exception('My requests HTTP ${response.statusCode}');
+    }
+
+    final dynamic payload =
+        response.body.isEmpty ? <String, dynamic>{} : jsonDecode(response.body);
+
+    if (payload is! Map) {
+      throw Exception(
+          'Unexpected my_requests payload type: ${payload.runtimeType}');
+    }
+
+    final json = Map<String, dynamic>.from(payload);
+    final result = json['result'];
+
+    List<dynamic> items = const [];
+    if (result is Map && result['data'] is List) {
+      items = List<dynamic>.from(result['data'] as List);
+    } else if (result is List) {
+      items = List<dynamic>.from(result);
+    }
+
+    return items.whereType<Map>().map((rawItem) {
+      final map = Map<String, dynamic>.from(rawItem);
+      map['employee_name'] =
+          (map['employee_name']?.toString().trim().isNotEmpty == true)
+              ? map['employee_name']
+              : loginEmployeeName;
+      map['employee_image'] =
+          (map['employee_image']?.toString().trim().isNotEmpty == true)
+              ? map['employee_image']
+              : loginEmployeeImage;
+      map['file_id'] = (map['file_id']?.toString().trim().isNotEmpty == true)
+          ? map['file_id']
+          : loginFileId;
+
+      return MyActionItem.fromJson(map);
+    }).toList(growable: false);
   }
 }

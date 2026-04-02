@@ -18,18 +18,74 @@ class ContentModel {
   });
 
   factory ContentModel.fromJson(Map<String, dynamic> json) {
+    final previewUrls = _extractPreviewUrls(json);
+
     return ContentModel(
       id: json['id'] ?? 0,
       fileName: json['file_name'] ?? '',
       projectName: json['project_name'] ?? '',
       is360View: json['is_360_view'] ?? false,
-      previewUrl: json['preview_url'] ?? '',
+      previewUrl: previewUrls.isNotEmpty ? previewUrls.first : '',
       dateCreated: _parseDateTime(json['date_created']) ??
           _parseDateTime(json['uploaded_on']) ??
           _parseDateTime(json['created_at']) ??
           _parseDateTime(json['create_date']) ??
           _parseDateTime(json['date']),
     );
+  }
+
+  /// Builds one or more photo models from API entry.
+  ///
+  /// Some payloads provide `preview_urls` (array) instead of `preview_url`.
+  /// Each URL is treated as an individual photo item so all images can render.
+  static List<ContentModel> fromPhotoJson(Map<String, dynamic> json) {
+    final urls = _extractPreviewUrls(json);
+    if (urls.isEmpty) return const [];
+
+    final baseId = (json['id'] is num) ? (json['id'] as num).toInt() : 0;
+    final fileName = json['file_name']?.toString() ?? '';
+    final projectName = json['project_name']?.toString() ?? '';
+    final is360View = json['is_360_view'] == true;
+    final parsedDate = _parseDateTime(json['date_created']) ??
+        _parseDateTime(json['uploaded_on']) ??
+        _parseDateTime(json['created_at']) ??
+        _parseDateTime(json['create_date']) ??
+        _parseDateTime(json['date']);
+
+    return List<ContentModel>.generate(urls.length, (index) {
+      final generatedId = baseId == 0 ? index + 1 : (baseId * 1000) + index;
+      return ContentModel(
+        id: generatedId,
+        fileName: fileName,
+        projectName: projectName,
+        is360View: is360View,
+        previewUrl: urls[index],
+        dateCreated: parsedDate,
+      );
+    });
+  }
+
+  static List<String> _extractPreviewUrls(Map<String, dynamic> json) {
+    final urls = <String>[];
+
+    void addUrl(dynamic value) {
+      if (value is! String) return;
+      final trimmed = value.trim();
+      if (trimmed.isNotEmpty) {
+        urls.add(trimmed);
+      }
+    }
+
+    addUrl(json['preview_url']);
+
+    final many = json['preview_urls'];
+    if (many is List) {
+      for (final raw in many) {
+        addUrl(raw);
+      }
+    }
+
+    return urls.toSet().toList(growable: false);
   }
 
   static DateTime? _parseDateTime(dynamic value) {
@@ -123,17 +179,17 @@ class ContentsResponse {
       if (rawPhotos is List) {
         for (final entry in rawPhotos) {
           if (entry is List) {
-            final group = entry
-                .whereType<Map<String, dynamic>>()
-                .map(ContentModel.fromJson)
-                .toList();
+            final group = <ContentModel>[];
+            for (final item in entry.whereType<Map<String, dynamic>>()) {
+              group.addAll(ContentModel.fromPhotoJson(item));
+            }
             _sortNewestFirst(group);
             if (group.isNotEmpty) {
               photoGroupsList.add(group);
               photosList.addAll(group);
             }
           } else if (entry is Map<String, dynamic>) {
-            photosList.add(ContentModel.fromJson(entry));
+            photosList.addAll(ContentModel.fromPhotoJson(entry));
           }
         }
 

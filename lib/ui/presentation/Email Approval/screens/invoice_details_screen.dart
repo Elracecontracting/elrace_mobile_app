@@ -16,11 +16,13 @@ import 'package:url_launcher/url_launcher.dart';
 class InvoiceDetailsScreen extends StatefulWidget {
   final String requestId;
   final String type;
+  final Map<String, dynamic>? initialData;
 
   const InvoiceDetailsScreen({
     super.key,
     required this.requestId,
     required this.type,
+    this.initialData,
   });
 
   @override
@@ -55,6 +57,13 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialData != null) {
+      _formData = Map<String, dynamic>.from(widget.initialData!);
+      final rawAttachments = widget.initialData!['attachment_ids'];
+      if (rawAttachments is List) {
+        _attachmentIds = rawAttachments;
+      }
+    }
     _fetchInvoiceDetails();
   }
 
@@ -77,7 +86,8 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     print('══════════ [INVOICE] API REQUEST ══════════');
     print('[INVOICE] URL: $url');
     print('[INVOICE] METHOD: GET');
-    print('[INVOICE] HEADERS: ${headers.map((k, v) => MapEntry(k, k == "Authorization" ? "Bearer ***" : v))}');
+    print(
+        '[INVOICE] HEADERS: ${headers.map((k, v) => MapEntry(k, k == "Authorization" ? "Bearer ***" : v))}');
     print('[INVOICE] BODY: $body');
     print('══════════════════════════════════════════');
 
@@ -95,13 +105,15 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       print('════════════════════════════════════════════');
 
       if (response.statusCode != 200) {
-        throw Exception('Failed to load invoice details: ${response.statusCode}');
+        throw Exception(
+            'Failed to load invoice details: ${response.statusCode}');
       }
 
       final decoded = jsonDecode(response.body) as Map<String, dynamic>;
       final result = (decoded['result'] as Map?)?['data'] as Map?;
-      final formView = (result?['form_view'] as Map?)?.cast<String, dynamic>() ??
-          <String, dynamic>{};
+      final formView =
+          (result?['form_view'] as Map?)?.cast<String, dynamic>() ??
+              <String, dynamic>{};
       final attachmentIds = (result?['attachment_ids'] as List?) ?? const [];
 
       print('[INVOICE] PARSED result keys: ${result?.keys.toList()}');
@@ -143,8 +155,9 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     dynamic attachmentId;
     final firstAttachment = _attachmentIds.first;
     if (firstAttachment is Map) {
-      attachmentId =
-          firstAttachment['attachment_id'] ?? firstAttachment['id'] ?? firstAttachment['res_id'];
+      attachmentId = firstAttachment['attachment_id'] ??
+          firstAttachment['id'] ??
+          firstAttachment['res_id'];
     } else {
       attachmentId = firstAttachment;
     }
@@ -268,7 +281,8 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
   Widget _card({required Widget child, EdgeInsets? padding}) {
     return Container(
       width: double.infinity,
-      padding: padding ?? EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.w),
+      padding:
+          padding ?? EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.w),
       decoration: BoxDecoration(
         color: const Color(0xFFF1F1F1),
         borderRadius: BorderRadius.circular(14.r),
@@ -365,7 +379,9 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                     style: GoogleFonts.inter(
                       fontSize: 13.sp,
                       fontWeight: FontWeight.w800,
-                      color: dim ? const Color(0xFFBDBDBD) : const Color(0xFF131313),
+                      color: dim
+                          ? const Color(0xFFBDBDBD)
+                          : const Color(0xFF131313),
                     ),
                   ),
                   if (hasValue)
@@ -374,7 +390,9 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                       style: GoogleFonts.inter(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w800,
-                        color: dim ? const Color(0xFFBDBDBD) : const Color(0xFF131313),
+                        color: dim
+                            ? const Color(0xFFBDBDBD)
+                            : const Color(0xFF131313),
                       ),
                     ),
                 ],
@@ -396,6 +414,119 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     return NumberFormat('#,##0.##', 'en_US').format(value);
   }
 
+  String _formatDate(dynamic value) {
+    final raw = _safe(value);
+    if (raw.isEmpty) return '';
+    final normalized = raw.contains(' ') ? raw.replaceFirst(' ', 'T') : raw;
+    final parsed = DateTime.tryParse(normalized) ?? DateTime.tryParse(raw);
+    if (parsed == null) return raw;
+    return DateFormat('dd/MM/yyyy').format(parsed);
+  }
+
+  String _formatCompletion(String raw) {
+    final value = raw.trim();
+    if (value.isEmpty) return '';
+    if (value.contains('%')) return value;
+    final numeric = double.tryParse(value.replaceAll(RegExp(r'[^0-9.\-]'), ''));
+    if (numeric == null) return value;
+    if (numeric % 1 == 0) return '${numeric.toInt()}%';
+    return '${numeric.toStringAsFixed(1)}%';
+  }
+
+  List<String> _extractTags(List<dynamic> candidates) {
+    for (final raw in candidates) {
+      if (raw == null || raw == false || raw == true) continue;
+
+      if (raw is List) {
+        final listTags = raw
+            .map((e) => e.toString().trim())
+            .map((e) => e
+                .replaceAll('[', '')
+                .replaceAll(']', '')
+                .replaceAll('"', '')
+                .replaceAll("'", '')
+                .trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+        if (listTags.isNotEmpty) return listTags;
+        continue;
+      }
+
+      final str = raw.toString().trim();
+      if (str.isEmpty ||
+          str.toLowerCase() == 'null' ||
+          str.toLowerCase() == 'false' ||
+          str.toLowerCase() == 'true') {
+        continue;
+      }
+
+      final parsed = str
+          .split(RegExp(r'[,|]'))
+          .map((e) => e.trim())
+          .map((e) => e
+              .replaceAll('[', '')
+              .replaceAll(']', '')
+              .replaceAll('"', '')
+              .replaceAll("'", '')
+              .trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+
+      if (parsed.isNotEmpty) return parsed;
+    }
+
+    return const <String>[];
+  }
+
+  String _normalizeImageUrl(String? rawUrl) {
+    final value = (rawUrl ?? '').trim();
+    if (value.isEmpty) return '';
+    final uri = Uri.tryParse(value);
+    if (uri != null && uri.hasScheme) return value;
+    if (value.startsWith('/')) return 'https://erp.elrace.com$value';
+    return 'https://erp.elrace.com/$value';
+  }
+
+  Widget _buildVendorAvatar({
+    required String imageUrl,
+    required String vendorName,
+  }) {
+    final initials = vendorName.trim().isEmpty
+        ? 'VN'
+        : vendorName.trim().characters.first.toUpperCase();
+
+    Widget placeholder() {
+      return Container(
+        color: const Color(0xFFE8EDF5),
+        alignment: Alignment.center,
+        child: Text(
+          initials,
+          style: GoogleFonts.inter(
+            fontSize: 10.sp,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF4A607A),
+          ),
+        ),
+      );
+    }
+
+    if (imageUrl.isEmpty) {
+      return ClipOval(child: placeholder());
+    }
+
+    return ClipOval(
+      child: Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => placeholder(),
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return placeholder();
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final requestNo = _pick([
@@ -413,6 +544,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       _formData['date_of_invoice'],
       _formData['date'],
     ]);
+    final reqDateDisplay = _formatDate(reqDate);
 
     final vendorName = _pick([
       _formData['vendor_name'],
@@ -421,6 +553,14 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       _formData['client_name'],
       _formData['supplier'],
     ]);
+
+    final vendorPhotoUrl = _normalizeImageUrl(_pick([
+      _formData['client_photo_url'],
+      _formData['vendor_photo_url'],
+      _formData['partner_image_url'],
+      _formData['image_url'],
+      _formData['photo_url'],
+    ]));
 
     final projectName = _pick([
       _formData['project_name'],
@@ -452,6 +592,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       _formData['date_lpo'],
       _formData['due_date'],
     ]);
+    final lpoDateDisplay = _formatDate(lpoDate);
 
     final lpoType = _pick([
       _formData['lpo_type'],
@@ -481,18 +622,15 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       _formData['date'],
       _formData['req_date'],
     ], fallback: reqDate);
+    final invoiceDateDisplay = _formatDate(invoiceDate);
+    final completionDisplay = _formatCompletion(completion);
 
-    final vendorTagsRaw = _pick([
+    final vendorTags = _extractTags([
+      _formData['vendor_tag'],
       _formData['vendor_tags'],
       _formData['tags'],
       _formData['tag_names'],
     ]);
-
-    final vendorTags = vendorTagsRaw
-        .split(RegExp(r'[,|]'))
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
 
     final chips = vendorTags.take(4).toList();
 
@@ -500,7 +638,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
 
     final pillWidth =
-      ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
+        ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F2),
@@ -528,7 +666,8 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                     children: [
                       Expanded(
                         child: SingleChildScrollView(
-                          padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.w),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 18.w, vertical: 10.w),
                           child: Column(
                             children: [
                               SizedBox(height: 8.w),
@@ -568,7 +707,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                         children: [
                                           _sectionTitle('Req Date'),
                                           SizedBox(height: 10.w),
-                                          _value(reqDate,
+                                          _value(reqDateDisplay,
                                               size: 12.sp,
                                               weight: FontWeight.w900),
                                         ],
@@ -578,7 +717,6 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                 ],
                               ),
                               SizedBox(height: 12.w),
-
                               _card(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -618,7 +756,6 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                 ),
                               ),
                               SizedBox(height: 12.w),
-
                               _card(
                                 child: Stack(
                                   children: [
@@ -632,11 +769,11 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                           label: 'Project Name',
                                           value: projectName,
                                         ),
-                                        if (workOrderNo.isNotEmpty)
-                                          _bulletLine(
-                                            label: 'Work order no',
-                                            value: workOrderNo,
-                                          ),
+                                        _bulletLine(
+                                          label: 'Work order no',
+                                          value: workOrderNo,
+                                          dim: true,
+                                        ),
                                       ],
                                     ),
                                     PositionedDirectional(
@@ -652,11 +789,9 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                           ),
                                         ),
                                         child: ClipOval(
-                                          child: Image.asset(
-                                            'assets/png/invoice-icon.png',
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) =>
-                                                const SizedBox(),
+                                          child: _buildVendorAvatar(
+                                            imageUrl: vendorPhotoUrl,
+                                            vendorName: vendorName,
                                           ),
                                         ),
                                       ),
@@ -665,7 +800,6 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                 ),
                               ),
                               SizedBox(height: 12.w),
-
                               _card(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -675,13 +809,14 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                     if (lpoContract.isNotEmpty)
                                       _bulletLine(label: lpoContract),
                                     if (lpoDate.isNotEmpty)
-                                      _bulletLine(label: lpoDate),
+                                      _bulletLine(label: lpoDateDisplay),
                                     if (lpoType.isNotEmpty)
                                       _bulletLine(label: lpoType),
                                     SizedBox(height: 2.w),
                                     if (formattedAmount.isNotEmpty)
                                       Align(
-                                        alignment: AlignmentDirectional.centerEnd,
+                                        alignment:
+                                            AlignmentDirectional.centerEnd,
                                         child: _value(
                                           formattedAmount,
                                           size: 14.sp,
@@ -693,13 +828,13 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                 ),
                               ),
                               SizedBox(height: 12.w),
-
                               _card(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         _sectionTitle('Invoice Details'),
                                         Container(
@@ -707,12 +842,13 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                               horizontal: 10.w, vertical: 4.w),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFECECEC),
-                                            borderRadius: BorderRadius.circular(8.r),
+                                            borderRadius:
+                                                BorderRadius.circular(8.r),
                                             border: Border.all(
                                                 color: const Color(0xFF9F9F9F)),
                                           ),
                                           child: Text(
-                                            invoiceDate,
+                                            invoiceDateDisplay,
                                             style: GoogleFonts.inter(
                                               fontSize: 12.sp,
                                               fontWeight: FontWeight.w700,
@@ -723,14 +859,57 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                       ],
                                     ),
                                     SizedBox(height: 10.w),
-                                    _bulletLine(
-                                      label: 'Amount',
-                                      value: formattedAmount,
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Padding(
+                                          padding: EdgeInsets.only(top: 4.w),
+                                          child: Text(
+                                            '•',
+                                            style: GoogleFonts.inter(
+                                              fontSize: 12.sp,
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFF0E0E0E),
+                                            ),
+                                          ),
+                                        ),
+                                        SizedBox(width: 8.w),
+                                        Expanded(
+                                          child: RichText(
+                                            text: TextSpan(
+                                              children: [
+                                                TextSpan(
+                                                  text: 'Amount',
+                                                  style: GoogleFonts.inter(
+                                                    fontSize: 13.sp,
+                                                    fontWeight: FontWeight.w800,
+                                                    color:
+                                                        const Color(0xFF131313),
+                                                  ),
+                                                ),
+                                                if (formattedAmount.isNotEmpty)
+                                                  TextSpan(
+                                                    text: ' $formattedAmount',
+                                                    style: GoogleFonts.inter(
+                                                      fontSize: 13.sp,
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                      color: const Color(
+                                                          0xFFE58B00),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    if (completion.isNotEmpty)
+                                    SizedBox(height: 8.w),
+                                    if (completionDisplay.isNotEmpty)
                                       _bulletLine(
                                         label: 'completion',
-                                        value: completion,
+                                        value: completionDisplay,
                                       ),
                                     Align(
                                       alignment: AlignmentDirectional.centerEnd,
@@ -741,7 +920,8 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                               ? null
                                               : _viewAttachment,
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(0xFF64666D),
+                                            backgroundColor:
+                                                const Color(0xFF64666D),
                                             disabledBackgroundColor:
                                                 const Color(0xFF64666D)
                                                     .withValues(alpha: 0.45),
@@ -767,10 +947,9 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                 ),
                               ),
                               SizedBox(height: 14.w),
-
                               SizedBox(
                                 width: double.infinity,
-                                height: 52.w,
+                                height: 54.w,
                                 child: ElevatedButton.icon(
                                   onPressed: _attachmentIds.isEmpty
                                       ? null
@@ -786,12 +965,12 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                     ),
                                   ),
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF64666D),
+                                    backgroundColor: const Color(0xFF5F626A),
                                     disabledBackgroundColor:
-                                        const Color(0xFF64666D)
+                                        const Color(0xFF5F626A)
                                             .withValues(alpha: 0.45),
                                     shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
+                                      borderRadius: BorderRadius.circular(14.r),
                                     ),
                                   ),
                                 ),
@@ -801,17 +980,16 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                           ),
                         ),
                       ),
-
                       const Divider(
                         height: 1,
                         thickness: 1,
                         color: Color(0xFFB7B7B7),
                       ),
-
                       SafeArea(
                         top: false,
                         child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.w),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 20.w, vertical: 14.w),
                           child: Center(
                             child: ApprovalActionButtons(
                               requestId: widget.requestId,

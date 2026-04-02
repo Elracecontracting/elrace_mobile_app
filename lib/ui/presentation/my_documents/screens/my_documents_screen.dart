@@ -926,95 +926,129 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                         onLongPress: () {
                           _showDocumentDetailsDialog(context, item);
                         },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(30.18),
-                            border: Border.all(
-                              color: isExpired
-                                  ? const Color(0xFFBA1719)
-                                  : const Color(0xffD9D9D9),
-                              width: isExpired ? 2 : 1,
-                            ),
-                          ),
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(
-                              vertical: 10.h,
-                              horizontal: 10.w,
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                SizedBox(
-                                  height: 90.h,
-                                  width: double.infinity,
-                                  child: Center(
-                                    child: Image.asset(
-                                      item['icon'],
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.topCenter,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(30.18),
+                                border: Border.all(
+                                  color: isExpired
+                                      ? const Color(0xFFBA1719)
+                                      : const Color(0xffD9D9D9),
+                                  width: isExpired ? 2 : 1,
+                                ),
+                              ),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: 10.h,
+                                  horizontal: 10.w,
+                                ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    SizedBox(
                                       height: 90.h,
                                       width: double.infinity,
-                                      fit: BoxFit.contain,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: 10.h),
-                                Builder(
-                                  builder: (context) {
-                                    final rawName =
-                                        (item['name'] ?? '').toString().trim();
-                                    final rawType =
-                                        (item['title'] ?? '').toString().trim();
-                                    final typeLabel = _toTitleCase(
-                                      rawType.replaceAll('_', ' '),
-                                    );
-                                    final nameLabel = _toTitleCase(
-                                      rawName.replaceAll('_', ' '),
-                                    );
-                                    final displayName =
-                                        _isMeaningfulDocLabel(nameLabel)
-                                            ? nameLabel
-                                            : typeLabel;
-                                    final date =
-                                        _formatCardDate(item['issue_date']);
-
-                                    return Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          displayName,
-                                          textAlign: TextAlign.center,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.aBeeZee(
-                                            fontSize: 14.sp,
-                                            fontWeight: FontWeight.w700,
-                                            letterSpacing: .10,
-                                            color: Colors.black,
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.start,
+                                        children: [
+                                          if (isExpired)
+                                            Padding(
+                                              padding:
+                                                  EdgeInsets.only(top: 2.h),
+                                              child: SizedBox(
+                                                width: 22.w,
+                                                height: 22.w,
+                                                child: Image.asset(
+                                                  'assets/newapp/newicon/pencil_7754138 1.png',
+                                                  fit: BoxFit.contain,
+                                                  errorBuilder: (_, __, ___) =>
+                                                      Icon(
+                                                    Icons.edit,
+                                                    size: 18.sp,
+                                                    color:
+                                                        const Color(0xFFBA1719),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          if (isExpired) SizedBox(height: 4.h),
+                                          Expanded(
+                                            child: Center(
+                                              child: Image.asset(
+                                                item['icon'],
+                                                width: double.infinity,
+                                                fit: BoxFit.contain,
+                                              ),
+                                            ),
                                           ),
-                                        ),
-                                        if (date.isNotEmpty) ...[
-                                          SizedBox(height: 4.h),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(height: 10.h),
+                                    Builder(builder: (context) {
+                                      final rawName = (item['name'] ?? '')
+                                          .toString()
+                                          .trim();
+                                      final rawType = (item['title'] ?? '')
+                                          .toString()
+                                          .trim();
+                                      final typeLabel = _toTitleCase(
+                                        rawType.replaceAll('_', ' '),
+                                      );
+                                      final nameLabel = _toTitleCase(
+                                        rawName.replaceAll('_', ' '),
+                                      );
+                                      final displayName =
+                                          _isMeaningfulDocLabel(nameLabel)
+                                              ? nameLabel
+                                              : typeLabel;
+                                      final date =
+                                          _formatCardDate(item['issue_date']);
+
+                                      return Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
                                           Text(
-                                            date,
+                                            displayName,
                                             textAlign: TextAlign.center,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style: GoogleFonts.aBeeZee(
-                                              fontSize: 10.sp,
-                                              fontWeight: FontWeight.w400,
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.w700,
                                               letterSpacing: .10,
-                                              color: const Color(0xff949494),
+                                              color: Colors.black,
                                             ),
                                           ),
+                                          if (date.isNotEmpty) ...[
+                                            SizedBox(height: 4.h),
+                                            Text(
+                                              date,
+                                              textAlign: TextAlign.center,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: GoogleFonts.aBeeZee(
+                                                fontSize: 10.sp,
+                                                fontWeight: FontWeight.w400,
+                                                letterSpacing: .10,
+                                                color: const Color(0xff949494),
+                                              ),
+                                            ),
+                                          ],
                                         ],
-                                      ],
-                                    );
-                                  },
+                                      );
+                                    }),
+                                  ],
                                 ),
-                              ],
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       );
                     },

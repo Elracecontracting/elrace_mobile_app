@@ -57,6 +57,20 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
     return fallback;
   }
 
+  String _displayOrNA(String? value) {
+    final normalized = (value ?? '').trim();
+    return normalized.isEmpty ? 'N/A' : normalized;
+  }
+
+  String _normalizeImageUrl(String? rawUrl) {
+    final value = (rawUrl ?? '').trim();
+    if (value.isEmpty) return '';
+    final uri = Uri.tryParse(value);
+    if (uri != null && uri.hasScheme) return value;
+    if (value.startsWith('/')) return 'https://erp.elrace.com$value';
+    return 'https://erp.elrace.com/$value';
+  }
+
   Future<void> _fetchRfqDetails() async {
     final token = SharedPref.getLoginData().result?.token;
     final headers = {
@@ -76,7 +90,8 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
     print('══════════ [RFQ] API REQUEST ══════════');
     print('[RFQ] URL: $url');
     print('[RFQ] METHOD: GET');
-    print('[RFQ] HEADERS: ${headers.map((k, v) => MapEntry(k, k == "Authorization" ? "Bearer ***" : v))}');
+    print(
+        '[RFQ] HEADERS: ${headers.map((k, v) => MapEntry(k, k == "Authorization" ? "Bearer ***" : v))}');
     print('[RFQ] BODY: $body');
     print('═══════════════════════════════════════');
 
@@ -221,7 +236,8 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
   Widget _card({required Widget child, EdgeInsets? padding}) {
     return Container(
       width: double.infinity,
-      padding: padding ?? EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.w),
+      padding:
+          padding ?? EdgeInsets.symmetric(horizontal: 14.w, vertical: 12.w),
       decoration: BoxDecoration(
         color: const Color(0xFFF1F1F1),
         borderRadius: BorderRadius.circular(14.r),
@@ -259,7 +275,7 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
   Widget _value(String text,
       {double? size, FontWeight? weight, Color? color, TextAlign? align}) {
     return Text(
-      text,
+      _displayOrNA(text),
       textAlign: align,
       style: GoogleFonts.inter(
         fontSize: size ?? 14.sp,
@@ -290,8 +306,45 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
     );
   }
 
+  Widget _buildClientAvatar({required String imageUrl, required String name}) {
+    final initials = name.trim().isEmpty ? 'CL' : name.trim()[0].toUpperCase();
+
+    Widget placeholder() {
+      return Container(
+        color: const Color(0xFFE8EDF5),
+        alignment: Alignment.center,
+        child: Text(
+          initials,
+          style: GoogleFonts.inter(
+            fontSize: 10.sp,
+            fontWeight: FontWeight.w800,
+            color: const Color(0xFF4A607A),
+          ),
+        ),
+      );
+    }
+
+    if (imageUrl.isEmpty) {
+      return ClipOval(child: placeholder());
+    }
+
+    return ClipOval(
+      child: Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => placeholder(),
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return placeholder();
+        },
+      ),
+    );
+  }
+
   Widget _bulletLine({required String label, String? value, bool dim = false}) {
-    final hasValue = value != null && value.trim().isNotEmpty;
+    final hasValue = value != null;
+    final displayLabel = _displayOrNA(label);
+    final displayValue = _displayOrNA(value);
     return Padding(
       padding: EdgeInsets.only(bottom: 8.w),
       child: Row(
@@ -314,20 +367,24 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
               text: TextSpan(
                 children: [
                   TextSpan(
-                    text: label,
+                    text: displayLabel,
                     style: GoogleFonts.inter(
                       fontSize: 13.sp,
                       fontWeight: FontWeight.w800,
-                      color: dim ? const Color(0xFFBDBDBD) : const Color(0xFF131313),
+                      color: dim
+                          ? const Color(0xFFBDBDBD)
+                          : const Color(0xFF131313),
                     ),
                   ),
                   if (hasValue)
                     TextSpan(
-                      text: ' $value',
+                      text: ' $displayValue',
                       style: GoogleFonts.inter(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w800,
-                        color: dim ? const Color(0xFFBDBDBD) : const Color(0xFF131313),
+                        color: dim
+                            ? const Color(0xFFBDBDBD)
+                            : const Color(0xFF131313),
                       ),
                     ),
                 ],
@@ -340,13 +397,59 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
   }
 
   String _formatAmount(String raw) {
+    if (raw.trim().isEmpty) return 'N/A';
     final cleaned = raw.replaceAll(RegExp(r'[^0-9.\-]'), '');
     final value = double.tryParse(cleaned);
-    if (value == null) return raw;
+    if (value == null) return 'N/A';
     if (value % 1 == 0) {
       return NumberFormat('#,##0', 'en_US').format(value);
     }
     return NumberFormat('#,##0.##', 'en_US').format(value);
+  }
+
+  List<String> _extractTags(List<dynamic> candidates) {
+    for (final raw in candidates) {
+      if (raw == null || raw == false || raw == true) continue;
+
+      if (raw is List) {
+        final listTags = raw
+            .map((e) => e.toString().trim())
+            .map((e) => e
+                .replaceAll('[', '')
+                .replaceAll(']', '')
+                .replaceAll('"', '')
+                .replaceAll("'", '')
+                .trim())
+            .where((e) => e.isNotEmpty)
+            .toList();
+        if (listTags.isNotEmpty) return listTags;
+        continue;
+      }
+
+      final str = raw.toString().trim();
+      if (str.isEmpty ||
+          str.toLowerCase() == 'null' ||
+          str.toLowerCase() == 'false' ||
+          str.toLowerCase() == 'true') {
+        continue;
+      }
+
+      final parsed = str
+          .split(RegExp(r'[,|]'))
+          .map((e) => e.trim())
+          .map((e) => e
+              .replaceAll('[', '')
+              .replaceAll(']', '')
+              .replaceAll('"', '')
+              .replaceAll("'", '')
+              .trim())
+          .where((e) => e.isNotEmpty)
+          .toList();
+
+      if (parsed.isNotEmpty) return parsed;
+    }
+
+    return const <String>[];
   }
 
   @override
@@ -382,7 +485,7 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
       _formData['project_name_id'],
       _formData['project_id'],
       _formData['name'],
-    ], fallback: 'Project Name');
+    ]);
 
     final lpoContract = _pick([
       _formData['lpo_no'],
@@ -408,8 +511,10 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
 
     final lpoType = _pick([
       _formData['lpo_type'],
+      _formData['lpo_contract_type'],
+      _formData['contract_type'],
+      _formData['po_type'],
       _formData['type_name'],
-      _formData['category'],
     ]);
 
     final totalAmount = _pick([
@@ -421,11 +526,19 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
 
     final materialType = _pick([
       _formData['material_type'],
+      _formData['material_type_name'],
       _formData['material'],
-      _formData['lpo_type'],
-      _formData['type_name'],
-      _formData['category'],
+      _formData['item_type'],
+      _formData['product_type'],
     ]);
+
+    final clientPhotoUrl = _normalizeImageUrl(_pick([
+      _formData['client_photo_url'],
+      _formData['vendor_photo_url'],
+      _formData['partner_image_url'],
+      _formData['image_url'],
+      _formData['photo_url'],
+    ]));
 
     final detailsDate = _pick([
       _formData['rfq_date'],
@@ -434,19 +547,14 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
       _formData['date'],
     ], fallback: reqDate);
 
-    final vendorTagsRaw = _pick([
+    final vendorTags = _extractTags([
+      _formData['vendor_tag'],
       _formData['vendor_tags'],
       _formData['tags'],
       _formData['tag_names'],
       _formData['tag'],
       _formData['rfq_tag'],
     ]);
-
-    final vendorTags = vendorTagsRaw
-        .split(RegExp(r'[,|]'))
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
 
     final chips = vendorTags.take(4).toList();
     final formattedAmount = _formatAmount(totalAmount);
@@ -455,7 +563,7 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
 
     final pillWidth =
-      ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
+        ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F2F2),
@@ -489,7 +597,8 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                         ),
                       Expanded(
                         child: SingleChildScrollView(
-                          padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.w),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 18.w, vertical: 10.w),
                           child: Column(
                             children: [
                               SizedBox(height: 8.w),
@@ -539,7 +648,6 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                 ],
                               ),
                               SizedBox(height: 12.w),
-
                               _card(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -579,7 +687,6 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                 ),
                               ),
                               SizedBox(height: 12.w),
-
                               _card(
                                 child: Stack(
                                   children: [
@@ -613,11 +720,9 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                           ),
                                         ),
                                         child: ClipOval(
-                                          child: Image.asset(
-                                            'assets/png/invoice-icon.png',
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, __, ___) =>
-                                                const SizedBox(),
+                                          child: _buildClientAvatar(
+                                            imageUrl: clientPhotoUrl,
+                                            name: vendorName,
                                           ),
                                         ),
                                       ),
@@ -626,7 +731,6 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                 ),
                               ),
                               SizedBox(height: 12.w),
-
                               _card(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -642,7 +746,8 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                     SizedBox(height: 2.w),
                                     if (formattedAmount.isNotEmpty)
                                       Align(
-                                        alignment: AlignmentDirectional.centerEnd,
+                                        alignment:
+                                            AlignmentDirectional.centerEnd,
                                         child: _value(
                                           formattedAmount,
                                           size: 14.sp,
@@ -654,13 +759,13 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                 ),
                               ),
                               SizedBox(height: 12.w),
-
                               _card(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         _sectionTitle('RFQ Details'),
                                         Container(
@@ -668,12 +773,13 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                               horizontal: 10.w, vertical: 4.w),
                                           decoration: BoxDecoration(
                                             color: const Color(0xFFECECEC),
-                                            borderRadius: BorderRadius.circular(8.r),
+                                            borderRadius:
+                                                BorderRadius.circular(8.r),
                                             border: Border.all(
                                                 color: const Color(0xFF9F9F9F)),
                                           ),
                                           child: Text(
-                                            detailsDate,
+                                            _displayOrNA(detailsDate),
                                             style: GoogleFonts.inter(
                                               fontSize: 12.sp,
                                               fontWeight: FontWeight.w700,
@@ -687,7 +793,8 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                     Padding(
                                       padding: EdgeInsets.only(bottom: 8.w),
                                       child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Padding(
                                             padding: EdgeInsets.only(top: 4.w),
@@ -709,17 +816,22 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                                     text: 'Amount',
                                                     style: GoogleFonts.inter(
                                                       fontSize: 13.sp,
-                                                      fontWeight: FontWeight.w800,
-                                                      color: const Color(0xFF131313),
+                                                      fontWeight:
+                                                          FontWeight.w800,
+                                                      color: const Color(
+                                                          0xFF131313),
                                                     ),
                                                   ),
-                                                  if (formattedAmount.isNotEmpty)
+                                                  if (formattedAmount
+                                                      .isNotEmpty)
                                                     TextSpan(
                                                       text: ' $formattedAmount',
                                                       style: GoogleFonts.inter(
                                                         fontSize: 13.sp,
-                                                        fontWeight: FontWeight.w900,
-                                                        color: const Color(0xFFE58B00),
+                                                        fontWeight:
+                                                            FontWeight.w900,
+                                                        color: const Color(
+                                                            0xFFE58B00),
                                                       ),
                                                     ),
                                                 ],
@@ -731,7 +843,9 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                     ),
                                     _bulletLine(
                                       label: 'Material Type',
-                                      value: materialType,
+                                      value: materialType.trim().isEmpty
+                                          ? null
+                                          : materialType,
                                     ),
                                     Align(
                                       alignment: AlignmentDirectional.centerEnd,
@@ -742,7 +856,8 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                               ? null
                                               : _viewAttachment,
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(0xFF64666D),
+                                            backgroundColor:
+                                                const Color(0xFF64666D),
                                             disabledBackgroundColor:
                                                 const Color(0xFF64666D)
                                                     .withValues(alpha: 0.45),
@@ -768,13 +883,13 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                 ),
                               ),
                               SizedBox(height: 14.w),
-
                               SizedBox(
                                 width: double.infinity,
                                 height: 52.w,
                                 child: ElevatedButton.icon(
-                                  onPressed:
-                                      _attachmentIds.isEmpty ? null : _viewAttachment,
+                                  onPressed: _attachmentIds.isEmpty
+                                      ? null
+                                      : _viewAttachment,
                                   icon: const Icon(Icons.attach_file,
                                       color: Colors.white),
                                   label: Text(
@@ -809,7 +924,8 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                       SafeArea(
                         top: false,
                         child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 14.w),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 20.w, vertical: 14.w),
                           child: Center(
                             child: ApprovalActionButtons(
                               requestId: widget.requestId,

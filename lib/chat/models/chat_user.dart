@@ -44,7 +44,7 @@ class ChatUser {
   /// Generate search keywords from name and email for prefix search.
   static List<String> buildSearchKeywords(String name, String? email) {
     final keywords = <String>{};
-    
+
     // Process name tokens
     final nameTokens = name.toLowerCase().split(RegExp(r'\s+'));
     for (final token in nameTokens) {
@@ -55,12 +55,12 @@ class ChatUser {
         keywords.add(token.substring(0, i));
       }
     }
-    
+
     // Process email if present
     if (email != null && email.isNotEmpty) {
       final emailLower = email.toLowerCase();
       keywords.add(emailLower);
-      
+
       // Extract username part (before @)
       final atIndex = emailLower.indexOf('@');
       if (atIndex > 0) {
@@ -71,21 +71,63 @@ class ChatUser {
         }
       }
     }
-    
+
     return keywords.toList();
   }
 
   factory ChatUser.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>? ?? {};
+    final resolvedEmail = _readString(data, const [
+      'email',
+      'work_email',
+      'personal_email',
+      'official_email',
+      'mail',
+      'username',
+    ]);
+    final resolvedJobTitle = _readString(data, const [
+      'job_title',
+      'job_position',
+      'job',
+      'designation',
+      'position',
+      'title',
+    ]);
+    final resolvedPhone = _readString(data, const [
+      'phone',
+      'phone_number',
+      'mobile_phone',
+      'mobile',
+      'mobile_number',
+      'work_phone',
+      'emp_phone',
+      'telephone',
+    ]);
+
+    if (resolvedEmail == null || resolvedPhone == null) {
+      print('👤 ChatUser.fromFirestore: uid=${doc.id} missingFields '
+          'email=${resolvedEmail ?? 'null'} phone=${resolvedPhone ?? 'null'}');
+      print('👤 ChatUser.fromFirestore: available keys=${data.keys.toList()}');
+      print('👤 ChatUser.fromFirestore: email candidates -> '
+          'email=${data['email']} work_email=${data['work_email']} '
+          'personal_email=${data['personal_email']} official_email=${data['official_email']} '
+          'mail=${data['mail']} username=${data['username']}');
+      print('👤 ChatUser.fromFirestore: phone candidates -> '
+          'phone=${data['phone']} phone_number=${data['phone_number']} '
+          'mobile_phone=${data['mobile_phone']} mobile=${data['mobile']} '
+          'mobile_number=${data['mobile_number']} work_phone=${data['work_phone']} '
+          'emp_phone=${data['emp_phone']} telephone=${data['telephone']}');
+    }
+
     return ChatUser(
       uid: doc.id,
       odooUserId: data['odoo_user_id'] ?? 0,
       employeeId: data['employee_id'],
       name: data['name'] ?? '',
-      email: data['email'],
+      email: resolvedEmail,
       roleName: data['role_name']?.toString(),
-      jobTitle: (data['job_title'] ?? data['job'] ?? data['designation'])?.toString(),
-      phoneNumber: (data['phone'] ?? data['mobile_phone'] ?? data['mobile'])?.toString(),
+      jobTitle: resolvedJobTitle,
+      phoneNumber: resolvedPhone,
       roleId: data['role_id'] ?? 0,
       branchId: data['branch_id'],
       companyId: data['company_id'] ?? 0,
@@ -96,6 +138,24 @@ class ChatUser {
       updatedAt: (data['updated_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
       searchKeywords: List<String>.from(data['search_keywords'] ?? []),
     );
+  }
+
+  static String? _readString(Map<String, dynamic> data, List<String> keys) {
+    for (final key in keys) {
+      final value = data[key];
+      if (value == null || value == false) continue;
+      final text = value.toString().trim();
+      if (text.isEmpty) continue;
+      final lower = text.toLowerCase();
+      if (lower == 'null' ||
+          lower == 'false' ||
+          lower == 'n/a' ||
+          lower == '-') {
+        continue;
+      }
+      return text;
+    }
+    return null;
   }
 
   Map<String, dynamic> toFirestore({bool isUpdate = false}) {
@@ -115,11 +175,11 @@ class ChatUser {
       'updated_at': FieldValue.serverTimestamp(),
       'search_keywords': searchKeywords,
     };
-    
+
     if (!isUpdate) {
       map['created_at'] = FieldValue.serverTimestamp();
     }
-    
+
     return map;
   }
 

@@ -129,27 +129,61 @@ class CircularAnnouncementResponse {
     final announcementCount = (counters['announcement'] as num?)?.toInt() ?? 0;
 
     // Parse data
-    final data = result['data'] as Map<String, dynamic>? ?? {};
+    final rawData = result['data'];
+    final data = rawData is Map<String, dynamic>
+        ? rawData
+        : rawData is Map
+            ? Map<String, dynamic>.from(rawData)
+            : <String, dynamic>{};
 
-    // Parse circulars
-    final circularList = data['circular'] as List<dynamic>? ?? [];
-    final circulars = circularList
-        .whereType<Map<String, dynamic>>()
-        .map((item) => CircularAnnouncementItem.fromJson(item))
-        .toList();
+    List<dynamic> _readList(Map<String, dynamic> source, List<String> keys) {
+      for (final key in keys) {
+        final value = source[key];
+        if (value is List) return value;
+      }
+      return const [];
+    }
 
-    // Parse announcements
-    final announcementList = data['announcement'] as List<dynamic>? ?? [];
-    final announcements = announcementList
-        .whereType<Map<String, dynamic>>()
-        .map((item) => CircularAnnouncementItem.fromJson(item))
-        .toList();
+    // Trust backend buckets to avoid any swapped tabs caused by per-item labels.
+    // Backend payload is currently reversed, so map buckets inversely.
+    final rawCirculars =
+        _readList(data, const ['announcement', 'announcements']);
+    final rawAnnouncements = _readList(data, const ['circular', 'circulars']);
+
+    List<CircularAnnouncementItem> _toItems(List<dynamic> rawItems) {
+      return rawItems
+          .whereType<Map>()
+          .map((item) => CircularAnnouncementItem.fromJson(
+              Map<String, dynamic>.from(item)))
+          .toList(growable: false);
+    }
+
+    var finalCirculars = _toItems(rawCirculars);
+    var finalAnnouncements = _toItems(rawAnnouncements);
+
+    // Fallback for flat list payloads: split by category only when buckets are absent.
+    if (finalCirculars.isEmpty &&
+        finalAnnouncements.isEmpty &&
+        rawData is List) {
+      final combined = rawData
+          .whereType<Map>()
+          .map((item) => CircularAnnouncementItem.fromJson(
+              Map<String, dynamic>.from(item)))
+          .toList(growable: false);
+
+      finalCirculars = combined
+          .where((item) => item.category.toLowerCase().contains('circular'))
+          .toList(growable: false);
+      finalAnnouncements = combined
+          .where((item) => item.category.toLowerCase().contains('announcement'))
+          .toList(growable: false);
+    }
 
     return CircularAnnouncementResponse(
       circularCount: circularCount,
       announcementCount: announcementCount,
-      circulars: circulars,
-      announcements: announcements,
+      circulars: finalCirculars,
+      announcements: finalAnnouncements,
     );
   }
 

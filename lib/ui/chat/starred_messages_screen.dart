@@ -18,6 +18,27 @@ class StarredMessagesScreen extends StatefulWidget {
 class _StarredMessagesScreenState extends State<StarredMessagesScreen> {
   String? _currentUid;
 
+  DateTime? _parseStarredDate(dynamic value) {
+    if (value == null) return null;
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    if (value is int) {
+      // Accept both seconds and milliseconds epoch.
+      if (value > 1000000000000) {
+        return DateTime.fromMillisecondsSinceEpoch(value);
+      }
+      if (value > 1000000000) {
+        return DateTime.fromMillisecondsSinceEpoch(value * 1000);
+      }
+      return null;
+    }
+    if (value is String) {
+      final parsed = DateTime.tryParse(value.trim());
+      return parsed;
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -80,8 +101,8 @@ class _StarredMessagesScreenState extends State<StarredMessagesScreen> {
 
     return StreamBuilder<List<Map<String, dynamic>>>(
       stream: ChatRepository.instance.subscribeToStarredMessages(),
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
+      builder: (context, starredSnapshot) {
+        if (starredSnapshot.hasError) {
           return Center(
             child: Text(
               'Error loading starred messages',
@@ -90,7 +111,7 @@ class _StarredMessagesScreenState extends State<StarredMessagesScreen> {
           );
         }
 
-        final starredMessages = snapshot.data ?? [];
+        final starredMessages = starredSnapshot.data ?? [];
 
         if (starredMessages.isEmpty) {
           return Center(
@@ -119,16 +140,29 @@ class _StarredMessagesScreenState extends State<StarredMessagesScreen> {
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          itemCount: starredMessages.length,
-          itemBuilder: (context, index) {
-            final data = starredMessages[index];
-            return _StarredMessageTile(
-              data: data,
-              currentUid: _currentUid!,
-              onTap: () => _navigateToChat(data),
-              onUnstar: () => _unstarMessage(data['id'] as String),
+        return StreamBuilder<List<UserChat>>(
+          stream: ChatRepository.instance.subscribeToUserChats(_currentUid!),
+          builder: (context, chatsSnapshot) {
+            final chats = chatsSnapshot.data ?? const <UserChat>[];
+            final chatsById = {for (final c in chats) c.chatId: c};
+
+            return ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: starredMessages.length,
+              itemBuilder: (context, index) {
+                final data = starredMessages[index];
+                final chatId = data['chat_id'] as String?;
+                final chatTitle =
+                    (chatId != null) ? chatsById[chatId]?.title : null;
+
+                return _StarredMessageTile(
+                  data: data,
+                  currentUid: _currentUid!,
+                  chatTitle: chatTitle,
+                  onTap: () => _navigateToChat(data),
+                  onUnstar: () => _unstarMessage(data['id'] as String),
+                );
+              },
             );
           },
         );
@@ -136,17 +170,49 @@ class _StarredMessagesScreenState extends State<StarredMessagesScreen> {
     );
   }
 
-  void _navigateToChat(Map<String, dynamic> data) {
+  Future<void> _navigateToChat(Map<String, dynamic> data) async {
     final chatId = data['chat_id'] as String?;
     if (chatId == null) return;
+
+    final messageId =
+        (data['message_id'] as String?) ?? (data['id'] as String?);
+    final messageCreatedAt = _parseStarredDate(data['created_at']) ??
+        _parseStarredDate(data['starred_at']);
+    final messageSenderId = data['sender_id'] as String?;
+    final messageType = data['type'] as String?;
+    final messageText = data['text'] as String?;
+    final messageFileName = data['file_name'] as String?;
+
+    print('🔎 STAR_JUMP[source]: open from starred tile '
+        'chatId=$chatId messageId=$messageId type=$messageType '
+        'createdAt=$messageCreatedAt senderId=$messageSenderId '
+        'fileName=$messageFileName textLen=${messageText?.length ?? 0}');
+
+    final userChat = await ChatRepository.instance.getUserChat(chatId);
+    if (!mounted) return;
+
+    final chatType = userChat?.type ?? ChatType.dm;
+    final title = userChat?.title ?? 'Chat';
+    final peerUid = userChat?.peerUid;
+    final supportUserUid = userChat?.supportUserUid;
+    final supportGroupTitle = userChat?.supportGroupTitle;
 
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => ChatScreen(
           chatId: chatId,
-          title: 'Chat',
-          chatType: ChatType.dm,
+          title: title,
+          chatType: chatType,
+          peerUid: peerUid,
+          supportUserUid: supportUserUid,
+          supportGroupTitle: supportGroupTitle,
+          initialMessageId: messageId,
+          initialMessageCreatedAt: messageCreatedAt,
+          initialMessageSenderId: messageSenderId,
+          initialMessageType: messageType,
+          initialMessageText: messageText,
+          initialMessageFileName: messageFileName,
         ),
       ),
     );
@@ -166,12 +232,14 @@ class _StarredMessagesScreenState extends State<StarredMessagesScreen> {
 class _StarredMessageTile extends StatelessWidget {
   final Map<String, dynamic> data;
   final String currentUid;
+  final String? chatTitle;
   final VoidCallback onTap;
   final VoidCallback onUnstar;
 
   const _StarredMessageTile({
     required this.data,
     required this.currentUid,
+    required this.chatTitle,
     required this.onTap,
     required this.onUnstar,
   });
@@ -183,7 +251,10 @@ class _StarredMessageTile extends StatelessWidget {
     final text = data['text'] as String?;
     final isMe = senderId == currentUid;
     final createdAt = (data['created_at'] as Timestamp?)?.toDate();
-    final starredAt = (data['starred_at'] as Timestamp?)?.toDate();
+    final effectiveChatTitle =
+        (chatTitle != null && chatTitle!.trim().isNotEmpty)
+            ? chatTitle!
+            : (isMe ? 'You' : 'Contact');
 
     // Build preview text
     String preview;
@@ -224,8 +295,7 @@ class _StarredMessageTile extends StatelessWidget {
               value: 'unstar',
               child: Row(
                 children: const [
-                  Icon(Icons.star_rounded,
-                      color: Color(0xFFF4C542), size: 22),
+                  Icon(Icons.star_rounded, color: Color(0xFFF4C542), size: 22),
                   SizedBox(width: 14),
                   Text(
                     'Unstar',
@@ -280,7 +350,7 @@ class _StarredMessageTile extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          isMe ? 'You' : 'Contact',
+                          effectiveChatTitle,
                           style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
@@ -355,9 +425,7 @@ class _StarredMessageTile extends StatelessWidget {
     if (dt.year == now.year && dt.month == now.month && dt.day == now.day) {
       return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     }
-    if (dt.year == now.year &&
-        dt.month == now.month &&
-        dt.day == now.day - 1) {
+    if (dt.year == now.year && dt.month == now.month && dt.day == now.day - 1) {
       return 'Yesterday';
     }
     return '${dt.day}/${dt.month}/${dt.year}';

@@ -4,6 +4,7 @@ import 'package:el_race/providers/announcements_provider.dart';
 import 'package:el_race/ui/presentation/News%20Banner/news_detail_screen_api.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
@@ -207,12 +208,13 @@ class _NewsScreenState extends State<NewsScreen> {
   /// Build news list
   Widget _buildNewsList(List<AnnouncementModel> newsList) {
     return SliverPadding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final newsItem = newsList[index];
-            return _buildNewsCard(newsItem);
+            return _buildNewsCard(newsItem,
+                isLast: index == newsList.length - 1);
           },
           childCount: newsList.length,
         ),
@@ -221,17 +223,23 @@ class _NewsScreenState extends State<NewsScreen> {
   }
 
   /// Build individual news card
-  Widget _buildNewsCard(AnnouncementModel newsItem) {
-    return Card(
-      color: Colors.white,
-      elevation: 2,
-      margin: EdgeInsets.only(bottom: 16.h),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12.r),
+  Widget _buildNewsCard(AnnouncementModel newsItem, {required bool isLast}) {
+    final bottomMargin = isLast ? (kBottomNavigationBarHeight + 20.h) : 3.h;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: bottomMargin),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: InkWell(
         onTap: () {
-          // Navigate to detail screen
           Navigator.push(
             context,
             MaterialPageRoute(
@@ -239,116 +247,166 @@ class _NewsScreenState extends State<NewsScreen> {
             ),
           );
         },
-        borderRadius: BorderRadius.circular(12.r),
-        child: Padding(
-          padding: EdgeInsets.all(16.w),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // News image if available
-              if (newsItem.hasAttachment && newsItem.attachmentUrl != null) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8.r),
-                  child: Image.network(
-                    newsItem.attachmentUrl!,
-                    width: double.infinity,
-                    height: 200.h,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Container(
-                      width: double.infinity,
-                      height: 200.h,
-                      color: Colors.grey[300],
-                      child: Icon(
-                        Icons.image_not_supported,
-                        size: 50.w,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Container(
-                        width: double.infinity,
-                        height: 200.h,
-                        color: Colors.grey[200],
-                        child: Center(
-                          child: CircularProgressIndicator(
-                            value: loadingProgress.expectedTotalBytes != null
-                                ? loadingProgress.cumulativeBytesLoaded /
-                                    loadingProgress.expectedTotalBytes!
-                                : null,
-                          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.fromLTRB(5.w, 15.h, 0, 10.h),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Color(0xFFD6D6D6),
+                    Color(0xFFADB2BD),
+                  ],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color.fromRGBO(0, 0, 0, 0.25),
+                    offset: Offset(0, 4),
+                    blurRadius: 4,
+                    spreadRadius: 0,
+                  ),
+                  BoxShadow(
+                    color: Color.fromRGBO(0, 0, 0, 0.46),
+                    offset: Offset(0, 10),
+                    blurRadius: 9.6,
+                    spreadRadius: 0,
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  newsItem.name.toUpperCase(),
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.koulen(
+                    color: appFontColor,
+                    fontWeight: FontWeight.w400,
+                    fontSize: 24.sp,
+                  ),
+                ),
+              ),
+            ),
+            Container(
+              decoration: BoxDecoration(
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.4),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  _buildNewsImage(newsItem),
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.center,
+                          colors: [
+                            const Color(0xFF000000).withOpacity(0.50),
+                            Colors.transparent,
+                          ],
+                          stops: const [0.0, 0.6],
                         ),
-                      );
-                    },
-                  ),
-                ),
-                SizedBox(height: 12.h),
-              ],
-
-              // Title
-              Text(
-                newsItem.name,
-                style: GoogleFonts.koulen(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w600,
-                  color: appFontColor,
-                  height: 1.3,
-                ),
-              ),
-              SizedBox(height: 12.h),
-
-              // Description preview (first 150 characters)
-              Text(
-                _getDescriptionPreview(newsItem.description),
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  fontSize: 14.sp,
-                  color: Colors.grey[700],
-                  height: 1.5,
-                ),
-              ),
-
-              // Bottom action row
-              SizedBox(height: 12.h),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            NewsDetailScreenAPI(newsItem: newsItem),
                       ),
-                    );
-                  },
-                  style: TextButton.styleFrom(
-                    foregroundColor: appFontColor,
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-                  ),
-                  child: Text(
-                    'Read More',
-                    style: GoogleFonts.inter(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+            Padding(
+              padding: EdgeInsets.only(
+                left: 24.w,
+                right: 12.w,
+                top: 10.h,
+                bottom: 14.h,
+              ),
+              child: _buildReferenceDescription(newsItem),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  /// Get description preview (first 150 characters)
-  String _getDescriptionPreview(String description) {
-    if (description.length <= 150) {
-      return description;
+  Widget _buildNewsImage(AnnouncementModel newsItem) {
+    final imageUrl = newsItem.attachmentUrl;
+
+    if (newsItem.hasAttachment && imageUrl != null && imageUrl.isNotEmpty) {
+      return Image.network(
+        imageUrl,
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: 200.w,
+        errorBuilder: (context, error, stackTrace) => Image.asset(
+          'assets/jpeg/slide_1_c.jpg',
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: 200.w,
+        ),
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            width: double.infinity,
+            height: 200.w,
+            color: Colors.grey[200],
+            child: const Center(
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        },
+      );
     }
-    return '${description.substring(0, 150)}...';
+
+    return Image.asset(
+      'assets/jpeg/slide_1_c.jpg',
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: 200.w,
+    );
+  }
+
+  Widget _buildReferenceDescription(AnnouncementModel newsItem) {
+    final description = newsItem.description.trim();
+    final preview = description.length > 165
+        ? '${description.substring(0, 165).trim()}...'
+        : description;
+
+    return RichText(
+      text: TextSpan(
+        style: GoogleFonts.inter(
+          fontSize: 14.sp,
+          color: Colors.black,
+          height: 1.65,
+        ),
+        children: [
+          TextSpan(text: preview),
+          TextSpan(
+            text: '  See All',
+            style: GoogleFonts.inter(
+              color: const Color(0xFF868686),
+              fontWeight: FontWeight.bold,
+              fontSize: 16.sp,
+            ),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        NewsDetailScreenAPI(newsItem: newsItem),
+                  ),
+                );
+              },
+          ),
+        ],
+      ),
+    );
   }
 }

@@ -92,37 +92,24 @@ class SliderProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Step 1: Fetch announcements list to get IDs (category 2 = Announcements for banner)
-      final results = await _apiService.fetchAnnouncements(
-        category: AnnouncementCategory.announcements,
+      // Banner now uses /api/announcements directly with category 1 (News).
+      _announcements = await _apiService.fetchAnnouncements(
+        category: AnnouncementCategory.news,
       );
 
-      // If no announcements in category 2, try News (category 1)
-      if (results.isEmpty) {
-        final newsResults = await _apiService.fetchAnnouncements(
-          category: AnnouncementCategory.news,
-        );
-        _announcements = newsResults;
-      } else {
-        _announcements = results;
-      }
-
-      // Step 2: Fetch details for each announcement ID (limit to first 5 for performance)
-      final List<AnnouncementDetailsModel> details = [];
-      final announcementsToFetch = _announcements.take(5).toList();
-
-      for (final announcement in announcementsToFetch) {
-        try {
-          final detail = await _apiService.fetchAnnouncementDetails(
-            announcementId: announcement.id,
-          );
-          details.add(detail);
-        } catch (e) {
-          // Continue with next announcement if one fails
-        }
-      }
-
-      _bannerDetails = details;
+      // Build banner payload directly from API response.
+      _bannerDetails = _announcements
+          .take(5)
+          .map(
+            (item) => AnnouncementDetailsModel(
+              id: item.id,
+              title: item.name,
+              announcementText: item.description,
+              hasAttachment: item.hasAttachment,
+              attachmentUrl: item.attachmentUrl,
+            ),
+          )
+          .toList(growable: false);
 
       // Update timestamp to force cache refresh
       _lastFetchTimestamp = DateTime.now().millisecondsSinceEpoch;

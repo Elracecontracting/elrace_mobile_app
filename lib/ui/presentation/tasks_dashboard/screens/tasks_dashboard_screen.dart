@@ -34,8 +34,9 @@ class _TasksDashboardScreenState extends State<TasksDashboardScreen> {
   void initState() {
     super.initState();
     // Create a stream that emits current time every day to update days countdown
-    _timeStream = Stream.periodic(const Duration(days: 1), (_) => DateTime.now());
-    
+    _timeStream =
+        Stream.periodic(const Duration(days: 1), (_) => DateTime.now());
+
     // Load tasks from Firebase
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TodoFirebaseProvider>().loadTodos();
@@ -420,7 +421,8 @@ class _TotalTasksCard extends StatelessWidget {
                     value: progress,
                     minHeight: 6.0,
                     backgroundColor: Colors.grey.shade300,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(Colors.green),
                   ),
                 ),
               ],
@@ -621,12 +623,14 @@ class _TaskCardState extends State<_TaskCard> {
   void initState() {
     super.initState();
     // Update every day to reflect days countdown changes
-    _timeStream = Stream.periodic(const Duration(days: 1), (_) => DateTime.now());
+    _timeStream =
+        Stream.periodic(const Duration(days: 1), (_) => DateTime.now());
   }
 
   TaskStatus get _status {
     if (widget.todo.isCompleted) return TaskStatus.completed;
-    if (widget.todo.dueDate != null && widget.todo.dueDate!.isBefore(DateTime.now())) {
+    if (widget.todo.dueDate != null &&
+        widget.todo.dueDate!.isBefore(DateTime.now())) {
       return TaskStatus.overdue;
     }
     return TaskStatus.pending;
@@ -650,9 +654,11 @@ class _TaskCardState extends State<_TaskCard> {
 
   double _getProgress(DateTime now) {
     if (widget.todo.isCompleted) return 1.0;
-    if (widget.todo.dueDate == null || widget.todo.createdAt == null) return 0.0;
+    if (widget.todo.dueDate == null || widget.todo.createdAt == null)
+      return 0.0;
 
-    final total = widget.todo.dueDate!.difference(widget.todo.createdAt!).inDays;
+    final total =
+        widget.todo.dueDate!.difference(widget.todo.createdAt!).inDays;
     final elapsed = now.difference(widget.todo.createdAt!).inDays;
 
     if (total <= 0) return 0.0;
@@ -699,274 +705,278 @@ class _TaskCardState extends State<_TaskCard> {
             child: Stack(
               children: [
                 Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // LEFT
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(right: 32),
-                        child: Text(
-                          widget.todo.title.toUpperCase(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.4,
-                            decoration: widget.todo.isCompleted
-                                ? TextDecoration.lineThrough
-                                : null,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // LEFT
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(right: 32),
+                            child: Text(
+                              widget.todo.title.toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.4,
+                                decoration: widget.todo.isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
+                            ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Builder(
-                        builder: (context) {
-                          final raw = widget.todo.assignedToName ?? '';
-                          final names = raw
-                              .split(',')
-                              .map((e) => e.trim())
-                              .where((e) => e.isNotEmpty)
-                              .toList();
+                          const SizedBox(height: 8),
+                          Builder(
+                            builder: (context) {
+                              final raw = widget.todo.assignedToName ?? '';
+                              final names = raw
+                                  .split(',')
+                                  .map((e) => e.trim())
+                                  .where((e) => e.isNotEmpty)
+                                  .toList();
 
-                          if (names.isEmpty) {
-                            return Row(
-                              children: [
-                                widget.buildAvatar('U', size: 36),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  'Unassigned',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ],
-                            );
-                          }
+                              if (names.isEmpty) {
+                                return Row(
+                                  children: [
+                                    widget.buildAvatar('U', size: 36),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      'Unassigned',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
 
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: names
-                                .map(
-                                  (name) => Padding(
-                                    padding: const EdgeInsets.only(bottom: 6),
-                                    child: Row(
-                                      children: [
-                                        widget.buildAvatar(name, size: 36),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            name,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w700,
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: names
+                                    .map(
+                                      (name) => Padding(
+                                        padding:
+                                            const EdgeInsets.only(bottom: 6),
+                                        child: Row(
+                                          children: [
+                                            widget.buildAvatar(name, size: 36),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                name,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
                                             ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                              );
+                            },
+                          ),
+                          if (widget.todo.listId != null)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 44, top: 4),
+                              child: Consumer<TodoFirebaseProvider>(
+                                builder: (context, provider, _) {
+                                  final list = provider.todoLists.firstWhere(
+                                    (l) => l.firebaseId == widget.todo.listId,
+                                    orElse: () => provider.todoLists.isNotEmpty
+                                        ? provider.todoLists.first
+                                        : throw Exception('No list found'),
+                                  );
+                                  return Text(
+                                    list.name.toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: Color(0xFF9AA3AE),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          const SizedBox(height: 12),
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              final trackWidth = constraints.maxWidth;
+                              final progressLocal = progress;
+
+                              const double iconSize = 16;
+                              final double coloredWidth =
+                                  trackWidth * progressLocal;
+                              final double iconLeft =
+                                  (coloredWidth - iconSize / 2)
+                                      .clamp(0.0, trackWidth - iconSize);
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    height: 24,
+                                    child: Stack(
+                                      clipBehavior: Clip.none,
+                                      children: [
+                                        Align(
+                                          alignment: Alignment.bottomLeft,
+                                          child: Container(
+                                            height: 4,
+                                            width: double.infinity,
+                                            color: Colors.black,
+                                          ),
+                                        ),
+                                        Align(
+                                          alignment: Alignment.bottomLeft,
+                                          child: Container(
+                                            height: 4,
+                                            width: coloredWidth,
+                                            color: statusColor,
+                                          ),
+                                        ),
+                                        Positioned(
+                                          left: iconLeft,
+                                          bottom: 4,
+                                          child: Image.asset(
+                                            progressLocal < 1.0
+                                                ? 'assets/png/walker-man.png'
+                                                : 'assets/png/stand.png',
+                                            width: iconSize,
+                                            height: iconSize,
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                )
-                                .toList(),
-                          );
-                        },
-                      ),
-                      if (widget.todo.listId != null)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 44, top: 4),
-                          child: Consumer<TodoFirebaseProvider>(
-                            builder: (context, provider, _) {
-                              final list = provider.todoLists.firstWhere(
-                                (l) => l.firebaseId == widget.todo.listId,
-                                orElse: () => provider.todoLists.isNotEmpty
-                                    ? provider.todoLists.first
-                                    : throw Exception('No list found'),
-                              );
-                              return Text(
-                                list.name.toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: Color(0xFF9AA3AE),
-                                ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    widget.todo.dueDate != null
+                                        ? DateFormat('h:mm a')
+                                            .format(widget.todo.dueDate!)
+                                        : '--:--',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF9AA3AE),
+                                    ),
+                                  ),
+                                ],
                               );
                             },
                           ),
-                        ),
-                      const SizedBox(height: 12),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final trackWidth = constraints.maxWidth;
-                          final progressLocal = progress;
-
-                          const double iconSize = 16;
-                          final double coloredWidth = trackWidth * progressLocal;
-                          final double iconLeft = (coloredWidth - iconSize / 2)
-                              .clamp(0.0, trackWidth - iconSize);
-
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Container(
+                      width: 1,
+                      height: 72,
+                      color: const Color(0xFFD9D9D9),
+                    ),
+                    const SizedBox(width: 10),
+                    // RIGHT
+                    SizedBox(
+                      width: 86,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'START DATE',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFF11A84A),
+                            ),
+                          ),
+                          Text(
+                            widget.todo.createdAt != null
+                                ? DateFormat('dd MMM yyyy')
+                                    .format(widget.todo.createdAt!)
+                                    .toUpperCase()
+                                : '--',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF9AA3AE),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          const Text(
+                            'END DATE',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: Color(0xFFD32F2F),
+                            ),
+                          ),
+                          Text(
+                            widget.todo.dueDate != null
+                                ? DateFormat('dd MMM yyyy')
+                                    .format(widget.todo.dueDate!)
+                                    .toUpperCase()
+                                : '--',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF9AA3AE),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              SizedBox(
-                                height: 24,
-                                child: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    Align(
-                                      alignment: Alignment.bottomLeft,
-                                      child: Container(
-                                        height: 4,
-                                        width: double.infinity,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                    Align(
-                                      alignment: Alignment.bottomLeft,
-                                      child: Container(
-                                        height: 4,
-                                        width: coloredWidth,
-                                        color: statusColor,
-                                      ),
-                                    ),
-                                    Positioned(
-                                      left: iconLeft,
-                                      bottom: 4,
-                                      child: Image.asset(
-                                        progressLocal < 1.0
-                                            ? 'assets/png/walker-man.png'
-                                            : 'assets/png/stand.png',
-                                        width: iconSize,
-                                        height: iconSize,
-                                      ),
-                                    ),
-                                  ],
+                              Text(
+                                '${remainingDays.abs()}',
+                                style: const TextStyle(
+                                  fontSize: 40,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFFBDBDBD),
+                                  height: 0.9,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(width: 4),
                               Text(
-                                widget.todo.dueDate != null
-                                    ? DateFormat('h:mm a').format(widget.todo.dueDate!)
-                                    : '--:--',
-                                style: const TextStyle(
+                                remainingDays >= 0 ? 'Days' : 'Late',
+                                style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF9AA3AE),
+                                  color: remainingDays >= 0
+                                      ? const Color(0xFFBDBDBD)
+                                      : Colors.red,
                                 ),
                               ),
                             ],
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Container(
-                  width: 1,
-                  height: 72,
-                  color: const Color(0xFFD9D9D9),
-                ),
-                const SizedBox(width: 10),
-                // RIGHT
-                SizedBox(
-                  width: 86,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'START DATE',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFF11A84A),
-                        ),
-                      ),
-                      Text(
-                        widget.todo.createdAt != null
-                            ? DateFormat('dd MMM yyyy')
-                                .format(widget.todo.createdAt!)
-                                .toUpperCase()
-                            : '--',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Color(0xFF9AA3AE),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'END DATE',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          color: Color(0xFFD32F2F),
-                        ),
-                      ),
-                      Text(
-                        widget.todo.dueDate != null
-                            ? DateFormat('dd MMM yyyy')
-                                .format(widget.todo.dueDate!)
-                                .toUpperCase()
-                            : '--',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Color(0xFF9AA3AE),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            '${remainingDays.abs()}',
-                            style: const TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFFBDBDBD),
-                              height: 0.9,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            remainingDays >= 0 ? 'Days' : 'Late',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                              color: remainingDays >= 0
-                                  ? const Color(0xFFBDBDBD)
-                                  : Colors.red,
-                            ),
                           ),
                         ],
                       ),
-                    ],
+                    ),
+                  ],
+                ),
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: GestureDetector(
+                    onTap: widget.onToggleComplete,
+                    child: StarburstBadge(
+                      size: 22,
+                      color: statusColor,
+                    ),
                   ),
                 ),
               ],
             ),
-            Positioned(
-              top: 6,
-              right: 6,
-              child: GestureDetector(
-                onTap: widget.onToggleComplete,
-                child: StarburstBadge(
-                  size: 22,
-                  color: statusColor,
-                ),
-              ),
-            ),
-          ],
-        ),
-        ),
-      );
-    },
+          ),
+        );
+      },
     );
   }
 }
@@ -1046,13 +1056,18 @@ class AddTaskButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        final created = await Navigator.push<bool>(
           context,
           MaterialPageRoute(
             builder: (context) => const AddTaskScreen(),
           ),
         );
+
+        if (created == true && context.mounted) {
+          await context.read<TodoFirebaseProvider>().loadTodos();
+          await context.read<TodoFirebaseProvider>().refreshCounts();
+        }
       },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

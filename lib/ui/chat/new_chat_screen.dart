@@ -355,6 +355,8 @@ class _NewChatScreenState extends State<NewChatScreen> {
         userName: _currentUser!.name,
         targetRoleId: group.roleId!,
         groupTitle: group.title ?? 'Group ${group.roleId}',
+        sourceRoleChatId: group.id,
+        supportGroupKey: group.id,
         userRoleId: _currentUser!.roleId,
         userBranchId: _currentUser!.branchId,
         userCompanyId: _currentUser!.companyId,

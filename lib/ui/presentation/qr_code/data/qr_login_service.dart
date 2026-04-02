@@ -6,6 +6,60 @@ class QrLoginService {
   final Dio _dio = Dio();
   static const String baseUrl = 'https://rcc.sawatech.ae/api/auth';
 
+  int? _asInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    return int.tryParse(value.toString());
+  }
+
+  int? _resolveUserId(dynamic data) {
+    if (data == null) return null;
+    final map = data as dynamic;
+    return _asInt(map.odoo_user_id) ?? _asInt(map.uid) ?? _asInt(map.user_id);
+  }
+
+  String _extractCodeFromQr(String qrRaw) {
+    final raw = qrRaw.trim();
+
+    // JSON payload support: {"code":"..."} and common variants.
+    try {
+      final qrJson = jsonDecode(raw);
+      if (qrJson is Map) {
+        for (final key in ['code', 'qr_code', 'token', 'login_code']) {
+          final value = qrJson[key];
+          final parsed = value?.toString().trim();
+          if (parsed != null && parsed.isNotEmpty) {
+            return parsed;
+          }
+        }
+      }
+    } catch (_) {
+      // Not JSON, continue with URL/text parsing.
+    }
+
+    final uri = Uri.tryParse(raw);
+    if (uri != null && (uri.hasScheme || uri.host.isNotEmpty)) {
+      for (final key in ['code', 'qr', 'token', 'login_code']) {
+        final q = uri.queryParameters[key]?.trim();
+        if (q != null && q.isNotEmpty) {
+          return q;
+        }
+      }
+
+      if (uri.pathSegments.isNotEmpty) {
+        final last = uri.pathSegments.last.trim();
+        if (last.isNotEmpty &&
+            !last.contains('.php') &&
+            !last.contains('.html')) {
+          return last;
+        }
+      }
+    }
+
+    // Fallback: plain text scanned content.
+    return raw;
+  }
+
   /// Login to website using QR code
   /// Similar to WhatsApp Web login
   Future<Map<String, dynamic>> loginWithQrCode(String qrCode) async {
@@ -16,10 +70,10 @@ class QrLoginService {
       print('📦 Login Data Retrieved:');
       print('   - Has Result: ${loginData.result != null}');
       print('   - Has Data: ${loginData.result?.data != null}');
-      
-      final odooId = loginData.result?.data?.odoo_user_id;
+
+      final odooId = _resolveUserId(loginData.result?.data);
       print('🆔 User IDs Available:');
-      print('   - odoo_user_id: $odooId');
+      print('   - resolved_user_id: $odooId');
       print('   - uid: ${loginData.result?.data?.uid}');
       print('   - emp_id: ${loginData.result?.data?.emp_id}');
       print('   - emp_profile_id: ${loginData.result?.data?.emp_profile_id}');
@@ -33,37 +87,24 @@ class QrLoginService {
         };
       }
 
-      // Parse QR code if it's JSON
-      String actualCode = qrCode;
-      try {
-        final qrJson = jsonDecode(qrCode);
-        if (qrJson is Map && qrJson.containsKey('code')) {
-          actualCode = qrJson['code'];
-          print('🔍 QR Code is JSON - Extracted code field:');
-          print('   - Original: $qrCode');
-          print('   - Extracted Code: $actualCode');
-          print('   - Type: ${qrJson['type']}');
-          print('   - Timestamp: ${qrJson['timestamp']}');
-          print('   - ExpiresIn: ${qrJson['expiresIn']}');
-        }
-      } catch (e) {
-        print('ℹ️ QR Code is plain text (not JSON)');
-        actualCode = qrCode;
-      }
+      final actualCode = _extractCodeFromQr(qrCode);
+      final encodedCode = Uri.encodeComponent(actualCode);
 
       print('\n📡 API Request Details:');
       print('   - Original QR: $qrCode');
       print('   - Actual Code to Send: $actualCode');
+      print('   - Encoded Code to Send: $encodedCode');
       print('   - Odoo ID: $odooId');
       print('   - Code Length: ${actualCode.length}');
 
-      final url = '$baseUrl/login-with-code/$actualCode';
+      final url = '$baseUrl/login-with-code/$encodedCode';
       print('\n🌐 Making HTTP Request:');
       print('   - Method: POST');
       print('   - URL: $url');
       print('   - Body: {"odoo_id": $odooId}');
-      print('   - Headers: {"Content-Type": "application/json", "Accept": "application/json"}');
-      
+      print(
+          '   - Headers: {"Content-Type": "application/json", "Accept": "application/json"}');
+
       final response = await _dio.post(
         url,
         data: {'odoo_id': odooId},

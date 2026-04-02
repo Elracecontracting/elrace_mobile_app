@@ -3,7 +3,8 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 class PrayerNotificationService {
-  static const String prayerAdhanChannelId = 'prayer_adhan_channel_v2';
+  static const String prayerAdhanChannelId = 'prayer_adhan_channel_sound_v3';
+  static const String prayerSilentChannelId = 'prayer_adhan_channel_silent_v1';
 
   static final PrayerNotificationService _instance =
       PrayerNotificationService._internal();
@@ -36,6 +37,39 @@ class PrayerNotificationService {
     );
 
     await _notificationsPlugin.initialize(settings);
+
+    final androidImpl =
+        _notificationsPlugin.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidImpl != null) {
+      await androidImpl.createNotificationChannel(
+        const AndroidNotificationChannel(
+          prayerAdhanChannelId,
+          'Prayer Adhan (Sound)',
+          description: 'Sound notifications for prayer times',
+          importance: Importance.high,
+          sound: RawResourceAndroidNotificationSound('athan'),
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+
+      await androidImpl.createNotificationChannel(
+        const AndroidNotificationChannel(
+          prayerSilentChannelId,
+          'Prayer Adhan (Silent In-App)',
+          description: 'Silent in-app prayer notifications',
+          importance: Importance.high,
+          playSound: false,
+          enableVibration: true,
+        ),
+      );
+
+      await androidImpl.requestNotificationsPermission();
+      await androidImpl.requestExactAlarmsPermission();
+    }
+
     _initialized = true;
     // debugPrint('🔔 Prayer notification service initialized');
   }
@@ -45,9 +79,9 @@ class PrayerNotificationService {
     // لتفادي تشغيل صوتين للأذان في نفس الوقت
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
-      prayerAdhanChannelId,
-      'Prayer Adhan',
-      channelDescription: 'Notifications for prayer adhan times',
+      prayerSilentChannelId,
+      'Prayer Adhan (Silent In-App)',
+      channelDescription: 'Silent in-app prayer notifications',
       importance: Importance.high,
       priority: Priority.high,
       icon: '@mipmap/ic_launcher',
@@ -98,8 +132,8 @@ class PrayerNotificationService {
       const NotificationDetails(
         android: AndroidNotificationDetails(
           prayerAdhanChannelId,
-          'Prayer Adhan',
-          channelDescription: 'Notifications for prayer adhan times',
+          'Prayer Adhan (Sound)',
+          channelDescription: 'Sound notifications for prayer times',
           importance: Importance.high,
           priority: Priority.high,
           icon: '@mipmap/ic_launcher',

@@ -305,9 +305,15 @@ class TodoFirebaseProvider extends ChangeNotifier {
   }
 
   // Delete todo
-  Future<bool> deleteTodo(String firebaseId) async {
+  Future<bool> deleteTodo(TodoModel todo) async {
     try {
-      await _firebaseService.deleteTodo(firebaseId);
+      final firebaseId = todo.firebaseId;
+      if (firebaseId == null) return false;
+
+      await _firebaseService.deleteTodo(
+        firebaseId,
+        ownerUid: todo.ownerUid,
+      );
       _todos.removeWhere((t) => t.firebaseId == firebaseId);
       _applyFilter();
       await refreshCounts();
@@ -384,14 +390,21 @@ class TodoFirebaseProvider extends ChangeNotifier {
   // ==================== END REPORT METHODS ====================
 
   // Toggle complete
-  Future<void> toggleComplete(String firebaseId) async {
+  Future<void> toggleComplete(TodoModel todo) async {
     try {
+      final firebaseId = todo.firebaseId;
+      if (firebaseId == null) return;
+
       final index = _todos.indexWhere((t) => t.firebaseId == firebaseId);
       if (index != -1) {
-        final todo = _todos[index];
-        final newValue = !todo.isCompleted;
-        await _firebaseService.toggleTodoComplete(firebaseId, newValue);
-        _todos[index] = todo.copyWith(
+        final currentTodo = _todos[index];
+        final newValue = !currentTodo.isCompleted;
+        await _firebaseService.toggleTodoComplete(
+          firebaseId,
+          newValue,
+          ownerUid: currentTodo.ownerUid,
+        );
+        _todos[index] = currentTodo.copyWith(
           isCompleted: newValue,
           updatedAt: DateTime.now(),
         );
@@ -406,14 +419,21 @@ class TodoFirebaseProvider extends ChangeNotifier {
   }
 
   // Toggle important
-  Future<void> toggleImportant(String firebaseId) async {
+  Future<void> toggleImportant(TodoModel todo) async {
     try {
+      final firebaseId = todo.firebaseId;
+      if (firebaseId == null) return;
+
       final index = _todos.indexWhere((t) => t.firebaseId == firebaseId);
       if (index != -1) {
-        final todo = _todos[index];
-        final newValue = !todo.isImportant;
-        await _firebaseService.toggleTodoImportant(firebaseId, newValue);
-        _todos[index] = todo.copyWith(
+        final currentTodo = _todos[index];
+        final newValue = !currentTodo.isImportant;
+        await _firebaseService.toggleTodoImportant(
+          firebaseId,
+          newValue,
+          ownerUid: currentTodo.ownerUid,
+        );
+        _todos[index] = currentTodo.copyWith(
           isImportant: newValue,
           updatedAt: DateTime.now(),
         );
@@ -428,14 +448,21 @@ class TodoFirebaseProvider extends ChangeNotifier {
   }
 
   // Toggle my day
-  Future<void> toggleMyDay(String firebaseId) async {
+  Future<void> toggleMyDay(TodoModel todo) async {
     try {
+      final firebaseId = todo.firebaseId;
+      if (firebaseId == null) return;
+
       final index = _todos.indexWhere((t) => t.firebaseId == firebaseId);
       if (index != -1) {
-        final todo = _todos[index];
-        final newValue = !todo.isMyDay;
-        await _firebaseService.toggleTodoMyDay(firebaseId, newValue);
-        _todos[index] = todo.copyWith(
+        final currentTodo = _todos[index];
+        final newValue = !currentTodo.isMyDay;
+        await _firebaseService.toggleTodoMyDay(
+          firebaseId,
+          newValue,
+          ownerUid: currentTodo.ownerUid,
+        );
+        _todos[index] = currentTodo.copyWith(
           isMyDay: newValue,
           updatedAt: DateTime.now(),
         );
@@ -501,7 +528,8 @@ class TodoFirebaseProvider extends ChangeNotifier {
       final updatedList = list.copyWith(updatedAt: DateTime.now());
       await _firebaseService.updateTodoList(updatedList);
 
-      final index = _todoLists.indexWhere((l) => l.firebaseId == list.firebaseId);
+      final index =
+          _todoLists.indexWhere((l) => l.firebaseId == list.firebaseId);
       if (index != -1) {
         _todoLists[index] = updatedList;
       }

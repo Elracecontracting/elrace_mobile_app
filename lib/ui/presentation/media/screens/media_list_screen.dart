@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
@@ -39,6 +40,73 @@ class _MediaListScreenState extends State<MediaListScreen> {
   final GlobalKey _videosTabKey = GlobalKey();
   final GlobalKey _photosTabKey = GlobalKey();
   final GlobalKey _view360TabKey = GlobalKey();
+
+  Map<String, String>? get _imageHeaders {
+    final token = SharedPref.getLoginData().result?.token;
+    if (token == null || token.isEmpty) return null;
+    return {
+      'Authorization': 'Bearer $token',
+      'Accept': 'image/*,*/*',
+    };
+  }
+
+  String _safeImageUrl(String rawUrl) {
+    final input = rawUrl.trim();
+    if (input.isEmpty) return input;
+    return Uri.encodeFull(input);
+  }
+
+  void _logPhotoLoadError({
+    required String source,
+    required String rawUrl,
+    required Object error,
+  }) {
+    final safeUrl = _safeImageUrl(rawUrl);
+    final hasAuth = (_imageHeaders?['Authorization'] ?? '').isNotEmpty;
+    debugPrint('❌ [Media][Photo][$source] image load failed');
+    debugPrint('   rawUrl: $rawUrl');
+    debugPrint('   safeUrl: $safeUrl');
+    debugPrint('   hasAuthHeader: $hasAuth');
+    debugPrint('   error: $error');
+  }
+
+  Widget _buildPhotoLoadingPlaceholder(
+    BuildContext context,
+    ImageChunkEvent? loadingProgress,
+  ) {
+    final progress = loadingProgress?.expectedTotalBytes != null
+        ? loadingProgress!.cumulativeBytesLoaded /
+            loadingProgress.expectedTotalBytes!
+        : null;
+
+    return Container(
+      color: const Color(0xFFE9E9E9),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 24.w,
+            height: 24.w,
+            child: CircularProgressIndicator(
+              strokeWidth: 2.2,
+              color: const Color(0xFF6E6E6E),
+              value: progress,
+            ),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            'Loading...',
+            style: GoogleFonts.poppins(
+              fontSize: 10.sp,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF6E6E6E),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _setActiveTab(_MediaFilterTab tab) {
     if (_activeTab == tab) return;
@@ -479,31 +547,26 @@ class _MediaListScreenState extends State<MediaListScreen> {
     final q = _searchController.text.trim().toLowerCase();
 
     if (_activeTab == _MediaFilterTab.photos) {
-      var groups = contents.photoGroups.isNotEmpty
-          ? contents.photoGroups
-          : _chunkPhotoList(contents.photos, 3);
+      var photos = List<ContentModel>.from(contents.photos);
 
       if (q.isNotEmpty) {
-        groups = groups.where((group) {
-          for (final item in group) {
-            final name = item.fileName.toLowerCase();
-            final project = item.projectName.toLowerCase();
-            if (name.contains(q) || project.contains(q)) return true;
-          }
-          return false;
+        photos = photos.where((item) {
+          final name = item.fileName.toLowerCase();
+          final project = item.projectName.toLowerCase();
+          return name.contains(q) || project.contains(q);
         }).toList();
       }
 
-      if (groups.isEmpty) {
+      if (photos.isEmpty) {
         return _buildEmptyState();
       }
 
       return ListView.separated(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        itemCount: groups.length,
+        itemCount: photos.length,
         itemBuilder: (context, index) {
-          return _buildPhotoGroupCard(groups[index]);
+          return _buildSinglePhotoCard(photos[index]);
         },
         separatorBuilder: (BuildContext context, int index) =>
             SizedBox(height: 12.h),
@@ -545,23 +608,10 @@ class _MediaListScreenState extends State<MediaListScreen> {
     );
   }
 
-  List<List<ContentModel>> _chunkPhotoList(List<ContentModel> items, int size) {
-    if (items.isEmpty || size <= 0) return [];
-    final chunks = <List<ContentModel>>[];
-    for (var i = 0; i < items.length; i += size) {
-      final end = (i + size < items.length) ? i + size : items.length;
-      chunks.add(items.sublist(i, end));
-    }
-    return chunks;
-  }
-
-  Widget _buildPhotoGroupCard(List<ContentModel> group) {
-    if (group.isEmpty) return const SizedBox.shrink();
-
-    final primary = group.first;
-    final uploadedDate = primary.dateCreated == null
+  Widget _buildSinglePhotoCard(ContentModel content) {
+    final uploadedDate = content.dateCreated == null
         ? null
-        : DateFormat('dd/MM/yyyy').format(primary.dateCreated!);
+        : DateFormat('dd/MM/yyyy').format(content.dateCreated!);
 
     return Container(
       decoration: BoxDecoration(
@@ -588,44 +638,49 @@ class _MediaListScreenState extends State<MediaListScreen> {
               ),
             ),
             SizedBox(height: 6.h),
-            Row(
-              children: List.generate(3, (index) {
-                final item = index < group.length ? group[index] : null;
-                return Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.only(right: index == 2 ? 0 : 6.w),
-                    child: AspectRatio(
-                      aspectRatio: 1,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20.r),
-                        child: item == null
-                            ? Container(color: Colors.white.withOpacity(0.45))
-                            : Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  onTap: () => _showPhotoPreview(context, item),
-                                  child: Image.network(
-                                    item.previewUrl,
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            Container(
-                                      color: Colors.white.withOpacity(0.45),
-                                      alignment: Alignment.center,
-                                      child: Icon(
-                                        Icons.image_outlined,
-                                        color: appFontColor.withOpacity(0.6),
-                                        size: 26.sp,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                      ),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20.r),
+              child: AspectRatio(
+                aspectRatio: 16 / 7,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () => _showPhotoPreview(
+                      context,
+                      [content],
+                      initialIndex: 0,
+                    ),
+                    child: Image.network(
+                      _safeImageUrl(content.previewUrl),
+                      headers: _imageHeaders,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return _buildPhotoLoadingPlaceholder(
+                          context,
+                          loadingProgress,
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        _logPhotoLoadError(
+                          source: 'single-card',
+                          rawUrl: content.previewUrl,
+                          error: error,
+                        );
+                        return Container(
+                          color: Colors.white.withOpacity(0.45),
+                          alignment: Alignment.center,
+                          child: Icon(
+                            Icons.image_outlined,
+                            color: appFontColor.withOpacity(0.6),
+                            size: 28.sp,
+                          ),
+                        );
+                      },
                     ),
                   ),
-                );
-              }),
+                ),
+              ),
             ),
             SizedBox(height: 10.h),
             Row(
@@ -636,7 +691,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        primary.displayName,
+                        content.displayName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.poppins(
@@ -647,7 +702,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                       ),
                       SizedBox(height: 2.h),
                       Text(
-                        primary.projectName,
+                        content.projectName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.poppins(
@@ -667,7 +722,11 @@ class _MediaListScreenState extends State<MediaListScreen> {
                     children: [
                       InkWell(
                         borderRadius: BorderRadius.circular(12.r),
-                        onTap: () => _showPhotoPreview(context, primary),
+                        onTap: () => _showPhotoPreview(
+                          context,
+                          [content],
+                          initialIndex: 0,
+                        ),
                         child: Container(
                           height: 22.h,
                           padding: EdgeInsets.symmetric(horizontal: 14.w),
@@ -689,7 +748,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                       SizedBox(width: 5.w),
                       InkWell(
                         borderRadius: BorderRadius.circular(12.r),
-                        onTap: () => _sharePhotoGroup(group),
+                        onTap: () => _sharePhotoItem(content),
                         child: Container(
                           width: 28.w,
                           height: 24.h,
@@ -718,19 +777,9 @@ class _MediaListScreenState extends State<MediaListScreen> {
     );
   }
 
-  Future<void> _sharePhotoGroup(List<ContentModel> group) async {
-    if (group.isEmpty) return;
-
-    final primary = group.first;
-    final buffer = StringBuffer();
-    buffer.writeln(primary.fileName);
-    for (final item in group) {
-      buffer.writeln(item.previewUrl);
-    }
-
-    await SharePlus.instance.share(
-      ShareParams(text: buffer.toString().trim()),
-    );
+  Future<void> _sharePhotoItem(ContentModel content) async {
+    final text = '${content.fileName}\n${content.previewUrl}'.trim();
+    await SharePlus.instance.share(ShareParams(text: text));
   }
 
   void _handleContentTap(BuildContext context, ContentModel content) async {
@@ -742,100 +791,156 @@ class _MediaListScreenState extends State<MediaListScreen> {
       }
     } else {
       // Show photo in full screen or dialog
-      _showPhotoPreview(context, content);
+      _showPhotoPreview(context, [content], initialIndex: 0);
     }
   }
 
-  void _showPhotoPreview(BuildContext context, ContentModel content) {
+  void _showPhotoPreview(
+    BuildContext context,
+    List<ContentModel> photos, {
+    int initialIndex = 0,
+  }) {
+    if (photos.isEmpty) return;
+
+    final safeInitialIndex = initialIndex.clamp(0, photos.length - 1).toInt();
+    final pageController = PageController(initialPage: safeInitialIndex);
+
     showDialog(
       context: context,
-      builder: (dialogContext) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Stack(
-          children: [
-            Center(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12.r),
-                child: Image.network(
-                  content.previewUrl,
-                  fit: BoxFit.contain,
-                  loadingBuilder: (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
-                    return Container(
-                      width: 200.w,
-                      height: 200.h,
-                      color: Colors.black54,
-                      child: const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
+      builder: (dialogContext) {
+        int currentIndex = safeInitialIndex;
+        return StatefulBuilder(
+          builder: (context, setDialogState) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding:
+                EdgeInsets.symmetric(horizontal: 10.w, vertical: 18.h),
+            child: Stack(
+              children: [
+                Center(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12.r),
+                    child: AspectRatio(
+                      aspectRatio: 1,
+                      child: PageView.builder(
+                        controller: pageController,
+                        itemCount: photos.length,
+                        onPageChanged: (index) {
+                          setDialogState(() => currentIndex = index);
+                        },
+                        itemBuilder: (context, index) {
+                          final content = photos[index];
+                          return Image.network(
+                            _safeImageUrl(content.previewUrl),
+                            headers: _imageHeaders,
+                            fit: BoxFit.contain,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: Colors.black54,
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white),
+                                ),
+                              );
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              _logPhotoLoadError(
+                                source: 'preview',
+                                rawUrl: content.previewUrl,
+                                error: error,
+                              );
+                              return Container(
+                                color: Colors.black54,
+                                child: const Center(
+                                  child: Icon(Icons.error,
+                                      color: Colors.white, size: 48),
+                                ),
+                              );
+                            },
+                          );
+                        },
                       ),
-                    );
-                  },
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: 200.w,
-                    height: 200.h,
-                    color: Colors.black54,
-                    child: const Center(
-                      child: Icon(Icons.error, color: Colors.white, size: 48),
                     ),
                   ),
                 ),
-              ),
-            ),
-            Positioned(
-              top: 0,
-              right: 0,
-              child: IconButton(
-                onPressed: () => Navigator.of(dialogContext).pop(),
-                icon: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Colors.black54,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.close, color: Colors.white),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 16,
-              left: 16,
-              right: 16,
-              child: Container(
-                padding: EdgeInsets.all(12.w),
-                decoration: BoxDecoration(
-                  color: Colors.black54,
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      content.displayName,
-                      style: GoogleFonts.poppins(
-                        fontSize: 16.sp,
-                        color: Colors.white,
-                        letterSpacing: 1.0,
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: IconButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    icon: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
                       ),
+                      child: const Icon(Icons.close, color: Colors.white),
                     ),
-                    if (content.projectName.isNotEmpty) ...[
-                      SizedBox(height: 4.h),
-                      Text(
-                        content.projectName,
+                  ),
+                ),
+                if (photos.length > 1)
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Container(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Text(
+                        '${currentIndex + 1}/${photos.length}',
                         style: GoogleFonts.poppins(
                           fontSize: 12.sp,
-                          color: Colors.white70,
-                          letterSpacing: 0.8,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
-                  ],
+                    ),
+                  ),
+                Positioned(
+                  bottom: 16,
+                  left: 16,
+                  right: 16,
+                  child: Container(
+                    padding: EdgeInsets.all(12.w),
+                    decoration: BoxDecoration(
+                      color: Colors.black54,
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          photos[currentIndex].displayName,
+                          style: GoogleFonts.poppins(
+                            fontSize: 16.sp,
+                            color: Colors.white,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                        if (photos[currentIndex].projectName.isNotEmpty) ...[
+                          SizedBox(height: 4.h),
+                          Text(
+                            photos[currentIndex].projectName,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12.sp,
+                              color: Colors.white70,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 

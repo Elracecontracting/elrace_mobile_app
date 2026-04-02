@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -23,6 +24,15 @@ class MediaItemWidget extends StatelessWidget {
     this.onTap,
     this.onLongPress,
   });
+
+  Rect _shareOriginRect(BuildContext context) {
+    final box = context.findRenderObject();
+    if (box is RenderBox) {
+      final origin = box.localToGlobal(Offset.zero);
+      return origin & box.size;
+    }
+    return const Rect.fromLTWH(0, 0, 1, 1);
+  }
 
   Widget _buildThumbnail() {
     final String imageUrl = media.previewUrl;
@@ -324,17 +334,30 @@ class MediaItemWidget extends StatelessWidget {
       }
 
       // 4. Share the thumbnail image + video URL
+      final originRect = _shareOriginRect(context);
       if (thumbnailFile != null) {
         // Share with both thumbnail and URL
         print('📤 Sharing thumbnail + URL');
-        await Share.shareXFiles(
-          [thumbnailFile],
-          text: shareableUrl,
-        );
+        try {
+          await Share.shareXFiles(
+            [thumbnailFile],
+            text: shareableUrl,
+            sharePositionOrigin: originRect,
+          );
+        } on PlatformException catch (e) {
+          print('⚠️ iOS shareXFiles failed, fallback to URL share: $e');
+          await Share.share(
+            shareableUrl,
+            sharePositionOrigin: originRect,
+          );
+        }
       } else {
         // Share only the URL if thumbnail download failed
         print('📤 Sharing URL only');
-        await Share.share(shareableUrl);
+        await Share.share(
+          shareableUrl,
+          sharePositionOrigin: originRect,
+        );
       }
 
       print('✅ Share completed successfully');

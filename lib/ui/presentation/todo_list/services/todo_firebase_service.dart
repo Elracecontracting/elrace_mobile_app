@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
@@ -31,12 +33,15 @@ class TodoFirebaseService {
     if (FirebaseAuth.instance.currentUser != null) return;
     final loginData = SharedPref.getLoginData();
     final customToken = loginData.result?.data?.firebase_custom_token;
-    if (customToken != null && customToken.isNotEmpty && customToken != 'false') {
+    if (customToken != null &&
+        customToken.isNotEmpty &&
+        customToken != 'false') {
       try {
         await FirebaseAuth.instance.signInWithCustomToken(customToken);
         print('✅ TodoFirebaseService: Signed in to Firebase with custom token');
       } catch (e) {
-        print('⚠️ TodoFirebaseService: Could not sign in with custom token: $e');
+        print(
+            '⚠️ TodoFirebaseService: Could not sign in with custom token: $e');
       }
     }
   }
@@ -67,6 +72,192 @@ class TodoFirebaseService {
           String uid) =>
       _firestore.collection('users').doc(uid).collection('todoLists');
 
+  List<TodoModel> _sortTodosByCreatedDesc(Iterable<TodoModel> todos) {
+    final sorted = todos.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return sorted;
+  }
+
+  Future<List<TodoModel>> _getOwnTodos(String uid) async {
+    final snapshot = await _userTodosCollection(uid).get();
+    return _sortTodosByCreatedDesc(
+      snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)),
+    );
+  }
+
+  Stream<List<TodoModel>> _streamOwnTodos(String uid) {
+    return _userTodosCollection(uid).snapshots().map(
+          (snapshot) => _sortTodosByCreatedDesc(
+            snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)),
+          ),
+        );
+  }
+
+  Future<DocumentSnapshot<Map<String, dynamic>>?> _findTodoDocumentById(
+    String todoId,
+  ) async {
+    final snapshot = await _firestore
+        .collectionGroup('todos')
+        .where(FieldPath.documentId, isEqualTo: todoId)
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isEmpty) return null;
+    return snapshot.docs.first;
+  }
+
+  String _resolveOwnerUidForTodo(TodoModel todo, String currentUid) {
+    final ownerUid = todo.ownerUid?.trim();
+    if (ownerUid != null && ownerUid.isNotEmpty) {
+      return ownerUid;
+    }
+    return currentUid;
+  }
+
+  List<String> get _currentUserIdentifiers {
+    final data = SharedPref.getLoginData().result?.data;
+    final values = <String?>[
+      data?.odoo_user_id?.toString(),
+      data?.uid?.toString(),
+      data?.employee_id?.toString(),
+      data?.emp_id?.toString(),
+      data?.emp_profile_id?.toString(),
+    ];
+    final cleaned = values
+        .whereType<String>()
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty && e.toLowerCase() != 'false')
+        .toSet()
+        .toList();
+    return cleaned;
+  }
+
+  List<String> get _currentUserNames {
+    final data = SharedPref.getLoginData().result?.data;
+    final values = <String?>[
+      data?.name,
+      data?.emp_name,
+      data?.username,
+      data?.partnerDisplayName,
+    ];
+    final cleaned = values
+        .whereType<String>()
+        .map((e) => e.trim().toLowerCase())
+        .where((e) => e.isNotEmpty && e != 'false')
+        .toSet()
+        .toList();
+    return cleaned;
+  }
+
+  Map<String, dynamic> _withMembershipFields(TodoModel todo) {
+    final data = todo.toFirestore();
+    final assignedIds = (todo.assignedMembers ?? const <TaskMember>[])
+        .map((m) => m.odooId?.trim())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+    final followerIds = (todo.followedUpBy ?? const <TaskMember>[])
+        .map((m) => m.odooId?.trim())
+        .whereType<String>()
+        .where((id) => id.isNotEmpty)
+        .toSet()
+        .toList();
+    final assignedNames = (todo.assignedMembers ?? const <TaskMember>[])
+        .map((m) => m.name.trim().toLowerCase())
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList();
+
+    data['owner_uid'] = todo.ownerUid;
+    data['assigned_member_ids'] = assignedIds;
+    data['follower_member_ids'] = followerIds;
+    data['assigned_member_names'] = assignedNames;
+    return data;
+  }
+
+  List<TodoModel> _mergeUniqueTodos(
+    List<TodoModel> primary,
+    List<TodoModel> secondary,
+  ) {
+    final map = <String, TodoModel>{};
+
+    String keyFor(TodoModel t) {
+      if (t.firebaseId != null && t.firebaseId!.isNotEmpty) {
+        return t.firebaseId!;
+      }
+      return '${t.title}_${t.createdAt.millisecondsSinceEpoch}';
+    }
+
+    for (final t in [...primary, ...secondary]) {
+      final key = keyFor(t);
+      final existing = map[key];
+      if (existing == null || t.updatedAt.isAfter(existing.updatedAt)) {
+        map[key] = t;
+      }
+    }
+
+    final merged = map.values.toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return merged;
+  }
+
+  Future<List<TodoModel>> _getAssignedToCurrentUserFromAllCollections() async {
+    final ids = _currentUserIdentifiers;
+    final names = _currentUserNames;
+    if (ids.isEmpty && names.isEmpty) return const [];
+
+    try {
+      final snapshot = await _firestore.collectionGroup('todos').get();
+
+      final all =
+          snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
+      return all.where(_isAssignedToCurrentUser).toList();
+    } catch (e) {
+      print(
+          '❌ TodoFirebaseService: Error loading assigned tasks from all users: $e');
+      return const [];
+    }
+  }
+
+  bool _isAssignedToCurrentUser(TodoModel todo) {
+    final ids = _currentUserIdentifiers;
+    final names = _currentUserNames;
+    if (ids.isEmpty && names.isEmpty) return false;
+
+    final memberIds = (todo.assignedMembers ?? const <TaskMember>[])
+        .map((m) => m.odooId?.trim())
+        .whereType<String>()
+        .toSet();
+
+    if (memberIds.any(ids.contains)) return true;
+
+    final memberNames = (todo.assignedMembers ?? const <TaskMember>[])
+        .map((m) => m.name.trim().toLowerCase())
+        .where((name) => name.isNotEmpty)
+        .toSet();
+    if (memberNames.any(names.contains)) return true;
+
+    final assignedTo = todo.assignedTo?.trim();
+    if (assignedTo != null &&
+        assignedTo.isNotEmpty &&
+        ids.contains(assignedTo)) {
+      return true;
+    }
+
+    final assignedToName = todo.assignedToName?.trim().toLowerCase();
+    if (assignedToName != null && assignedToName.isNotEmpty) {
+      final splitNames = assignedToName
+          .split(',')
+          .map((e) => e.trim())
+          .where((e) => e.isNotEmpty)
+          .toSet();
+      if (splitNames.any(names.contains)) return true;
+    }
+
+    return false;
+  }
+
   // ==================== TODO OPERATIONS ====================
 
   /// Insert a new todo
@@ -76,7 +267,9 @@ class TodoFirebaseService {
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      final docRef = await _userTodosCollection(uid).add(todo.toFirestore());
+      final todoWithOwner = todo.copyWith(ownerUid: uid);
+      final docRef = await _userTodosCollection(uid)
+          .add(_withMembershipFields(todoWithOwner));
       print('✅ TodoFirebaseService: Created todo ${docRef.id}');
       return docRef.id;
     } catch (e) {
@@ -93,9 +286,10 @@ class TodoFirebaseService {
     if (todo.firebaseId == null) throw Exception('Todo has no Firebase ID');
 
     try {
-      await _userTodosCollection(uid)
+      final ownerUid = _resolveOwnerUidForTodo(todo, uid);
+      await _userTodosCollection(ownerUid)
           .doc(todo.firebaseId)
-          .update(todo.toFirestore());
+          .update(_withMembershipFields(todo.copyWith(ownerUid: ownerUid)));
       print('✅ TodoFirebaseService: Updated todo ${todo.firebaseId}');
     } catch (e) {
       print('❌ TodoFirebaseService: Error updating todo: $e');
@@ -104,13 +298,13 @@ class TodoFirebaseService {
   }
 
   /// Delete a todo
-  Future<void> deleteTodo(String todoId) async {
+  Future<void> deleteTodo(String todoId, {String? ownerUid}) async {
     await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      await _userTodosCollection(uid).doc(todoId).delete();
+      await _userTodosCollection(ownerUid ?? uid).doc(todoId).delete();
       print('✅ TodoFirebaseService: Deleted todo $todoId');
     } catch (e) {
       print('❌ TodoFirebaseService: Error deleting todo: $e');
@@ -119,16 +313,30 @@ class TodoFirebaseService {
   }
 
   /// Get todo by ID
-  Future<TodoModel?> getTodoById(String todoId) async {
+  Future<TodoModel?> getTodoById(String todoId, {String? ownerUid}) async {
     await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      final doc = await _userTodosCollection(uid).doc(todoId).get();
-      if (doc.exists) {
+      if (ownerUid != null && ownerUid.isNotEmpty) {
+        final doc = await _userTodosCollection(ownerUid).doc(todoId).get();
+        if (doc.exists) {
+          return TodoModel.fromFirestore(doc);
+        }
+        return null;
+      }
+
+      final ownDoc = await _userTodosCollection(uid).doc(todoId).get();
+      if (ownDoc.exists) {
+        return TodoModel.fromFirestore(ownDoc);
+      }
+
+      final doc = await _findTodoDocumentById(todoId);
+      if (doc != null && doc.exists) {
         return TodoModel.fromFirestore(doc);
       }
+
       return null;
     } catch (e) {
       print('❌ TodoFirebaseService: Error getting todo: $e');
@@ -143,11 +351,10 @@ class TodoFirebaseService {
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      final snapshot = await _userTodosCollection(uid)
-          .orderBy('created_at', descending: true)
-          .get();
+      final ownTodos = await _getOwnTodos(uid);
+      final assignedTodos = await _getAssignedToCurrentUserFromAllCollections();
 
-      return snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
+      return _mergeUniqueTodos(ownTodos, assignedTodos);
     } catch (e) {
       print('❌ TodoFirebaseService: Error getting all todos: $e');
       rethrow;
@@ -156,28 +363,63 @@ class TodoFirebaseService {
 
   /// Stream all todos for real-time updates
   Stream<List<TodoModel>> streamAllTodos() {
-    final uid = _currentUid;
-    if (uid == null) return Stream.value([]);
+    return Stream.fromFuture(_ensureSignedIn()).asyncExpand((_) {
+      final uid = _currentUid;
+      if (uid == null) return Stream.value(const <TodoModel>[]);
 
-    return _userTodosCollection(uid)
-        .orderBy('created_at', descending: true)
-        .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList());
+      final ownStream = _streamOwnTodos(uid);
+
+      final assignedStream =
+          (_currentUserIdentifiers.isEmpty && _currentUserNames.isEmpty)
+              ? Stream.value(const <TodoModel>[])
+              : _firestore.collectionGroup('todos').snapshots().map((snapshot) {
+                  final all = snapshot.docs
+                      .map((doc) => TodoModel.fromFirestore(doc))
+                      .toList();
+                  return all.where(_isAssignedToCurrentUser).toList();
+                });
+
+      return Stream.multi((controller) {
+        List<TodoModel> own = const [];
+        List<TodoModel> assigned = const [];
+
+        void emit() {
+          controller.add(_mergeUniqueTodos(own, assigned));
+        }
+
+        final ownSub = ownStream.listen(
+          (data) {
+            own = data;
+            emit();
+          },
+          onError: controller.addError,
+        );
+
+        final assignedSub = assignedStream.listen(
+          (data) {
+            assigned = data;
+            emit();
+          },
+          onError: controller.addError,
+        );
+
+        controller.onCancel = () async {
+          await ownSub.cancel();
+          await assignedSub.cancel();
+        };
+      });
+    });
   }
 
   /// Get incomplete todos
   Future<List<TodoModel>> getIncompleteTodos() async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      final snapshot = await _userTodosCollection(uid)
-          .where('is_completed', isEqualTo: false)
-          .orderBy('created_at', descending: true)
-          .get();
-
-      return snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
+      final todos = await _getOwnTodos(uid);
+      return todos.where((todo) => !todo.isCompleted).toList();
     } catch (e) {
       print('❌ TodoFirebaseService: Error getting incomplete todos: $e');
       rethrow;
@@ -186,16 +428,13 @@ class TodoFirebaseService {
 
   /// Get My Day todos
   Future<List<TodoModel>> getMyDayTodos() async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      final snapshot = await _userTodosCollection(uid)
-          .where('is_my_day', isEqualTo: true)
-          .orderBy('created_at', descending: true)
-          .get();
-
-      return snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
+      final todos = await _getOwnTodos(uid);
+      return todos.where((todo) => todo.isMyDay).toList();
     } catch (e) {
       print('❌ TodoFirebaseService: Error getting my day todos: $e');
       rethrow;
@@ -204,16 +443,13 @@ class TodoFirebaseService {
 
   /// Get Important todos
   Future<List<TodoModel>> getImportantTodos() async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      final snapshot = await _userTodosCollection(uid)
-          .where('is_important', isEqualTo: true)
-          .orderBy('created_at', descending: true)
-          .get();
-
-      return snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
+      final todos = await _getOwnTodos(uid);
+      return todos.where((todo) => todo.isImportant).toList();
     } catch (e) {
       print('❌ TodoFirebaseService: Error getting important todos: $e');
       rethrow;
@@ -222,16 +458,22 @@ class TodoFirebaseService {
 
   /// Get Planned todos (with due date)
   Future<List<TodoModel>> getPlannedTodos() async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      final snapshot = await _userTodosCollection(uid)
-          .where('due_date', isNull: false)
-          .orderBy('due_date')
-          .get();
-
-      return snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
+      final todos = await _getOwnTodos(uid);
+      final planned = todos.where((todo) => todo.dueDate != null).toList()
+        ..sort((a, b) {
+          final aDate = a.dueDate;
+          final bDate = b.dueDate;
+          if (aDate == null && bDate == null) return 0;
+          if (aDate == null) return 1;
+          if (bDate == null) return -1;
+          return aDate.compareTo(bDate);
+        });
+      return planned;
     } catch (e) {
       print('❌ TodoFirebaseService: Error getting planned todos: $e');
       rethrow;
@@ -240,22 +482,17 @@ class TodoFirebaseService {
 
   /// Get Assigned To Me todos
   Future<List<TodoModel>> getAssignedToMeTodos(String? assignee) async {
-    final uid = _currentUid;
-    if (uid == null) throw Exception('User not authenticated');
-
     try {
-      Query<Map<String, dynamic>> query = _userTodosCollection(uid);
+      final allTodos = await getAllTodos();
 
-      if (assignee != null) {
-        query = query.where('assigned_to', isEqualTo: assignee);
-      } else {
-        // Get todos where assigned_to is not null
-        query = query.where('assigned_to', isNull: false);
-      }
+      final assigned = allTodos.where((todo) {
+        if (!_isAssignedToCurrentUser(todo)) return false;
+        if (assignee == null || assignee.trim().isEmpty) return true;
+        return (todo.assignedTo ?? '').trim() == assignee.trim();
+      }).toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-      final snapshot = await query.orderBy('created_at', descending: true).get();
-
-      return snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
+      return assigned;
     } catch (e) {
       print('❌ TodoFirebaseService: Error getting assigned todos: $e');
       rethrow;
@@ -264,16 +501,13 @@ class TodoFirebaseService {
 
   /// Get todos by list ID
   Future<List<TodoModel>> getTodosByListId(String listId) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      final snapshot = await _userTodosCollection(uid)
-          .where('list_id', isEqualTo: listId)
-          .orderBy('created_at', descending: true)
-          .get();
-
-      return snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
+      final todos = await _getOwnTodos(uid);
+      return todos.where((todo) => todo.listId == listId).toList();
     } catch (e) {
       print('❌ TodoFirebaseService: Error getting todos by list: $e');
       rethrow;
@@ -282,16 +516,13 @@ class TodoFirebaseService {
 
   /// Get todos by report ID
   Future<List<TodoModel>> getTodosByReportId(String reportId) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      final snapshot = await _userTodosCollection(uid)
-          .where('report_id', isEqualTo: reportId)
-          .orderBy('created_at', descending: true)
-          .get();
-
-      return snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
+      final todos = await _getOwnTodos(uid);
+      return todos.where((todo) => todo.reportId == reportId).toList();
     } catch (e) {
       print('❌ TodoFirebaseService: Error getting todos by report: $e');
       rethrow;
@@ -327,12 +558,17 @@ class TodoFirebaseService {
   }
 
   /// Toggle todo complete status
-  Future<void> toggleTodoComplete(String todoId, bool isCompleted) async {
+  Future<void> toggleTodoComplete(
+    String todoId,
+    bool isCompleted, {
+    String? ownerUid,
+  }) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      await _userTodosCollection(uid).doc(todoId).update({
+      await _userTodosCollection(ownerUid ?? uid).doc(todoId).update({
         'is_completed': isCompleted,
         'updated_at': FieldValue.serverTimestamp(),
       });
@@ -343,12 +579,17 @@ class TodoFirebaseService {
   }
 
   /// Toggle todo important status
-  Future<void> toggleTodoImportant(String todoId, bool isImportant) async {
+  Future<void> toggleTodoImportant(
+    String todoId,
+    bool isImportant, {
+    String? ownerUid,
+  }) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      await _userTodosCollection(uid).doc(todoId).update({
+      await _userTodosCollection(ownerUid ?? uid).doc(todoId).update({
         'is_important': isImportant,
         'updated_at': FieldValue.serverTimestamp(),
       });
@@ -359,12 +600,17 @@ class TodoFirebaseService {
   }
 
   /// Toggle todo my day status
-  Future<void> toggleTodoMyDay(String todoId, bool isMyDay) async {
+  Future<void> toggleTodoMyDay(
+    String todoId,
+    bool isMyDay, {
+    String? ownerUid,
+  }) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      await _userTodosCollection(uid).doc(todoId).update({
+      await _userTodosCollection(ownerUid ?? uid).doc(todoId).update({
         'is_my_day': isMyDay,
         'updated_at': FieldValue.serverTimestamp(),
       });
@@ -376,6 +622,7 @@ class TodoFirebaseService {
 
   /// Update todo order
   Future<void> updateTodoOrder(List<TodoModel> todos) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
@@ -384,7 +631,9 @@ class TodoFirebaseService {
 
       for (int i = 0; i < todos.length; i++) {
         if (todos[i].firebaseId != null) {
-          final docRef = _userTodosCollection(uid).doc(todos[i].firebaseId);
+          final ownerUid = _resolveOwnerUidForTodo(todos[i], uid);
+          final docRef =
+              _userTodosCollection(ownerUid).doc(todos[i].firebaseId);
           batch.update(docRef, {
             'sort_order': i,
             'updated_at': FieldValue.serverTimestamp(),
@@ -407,48 +656,43 @@ class TodoFirebaseService {
   }
 
   Future<int> getMyDayCount() async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) return 0;
 
     try {
-      final snapshot = await _userTodosCollection(uid)
-          .where('is_my_day', isEqualTo: true)
-          .where('is_completed', isEqualTo: false)
-          .get();
-
-      return snapshot.docs.length;
+      final todos = await _getOwnTodos(uid);
+      return todos.where((todo) => todo.isMyDay && !todo.isCompleted).length;
     } catch (e) {
       return 0;
     }
   }
 
   Future<int> getImportantCount() async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) return 0;
 
     try {
-      final snapshot = await _userTodosCollection(uid)
-          .where('is_important', isEqualTo: true)
-          .where('is_completed', isEqualTo: false)
-          .get();
-
-      return snapshot.docs.length;
+      final todos = await _getOwnTodos(uid);
+      return todos
+          .where((todo) => todo.isImportant && !todo.isCompleted)
+          .length;
     } catch (e) {
       return 0;
     }
   }
 
   Future<int> getPlannedCount() async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) return 0;
 
     try {
-      final snapshot = await _userTodosCollection(uid)
-          .where('due_date', isNull: false)
-          .where('is_completed', isEqualTo: false)
-          .get();
-
-      return snapshot.docs.length;
+      final todos = await _getOwnTodos(uid);
+      return todos
+          .where((todo) => todo.dueDate != null && !todo.isCompleted)
+          .length;
     } catch (e) {
       return 0;
     }
@@ -456,17 +700,16 @@ class TodoFirebaseService {
 
   /// Reset My Day at midnight
   Future<void> resetMyDay() async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) return;
 
     try {
-      final snapshot = await _userTodosCollection(uid)
-          .where('is_my_day', isEqualTo: true)
-          .get();
-
       final batch = _firestore.batch();
-      for (final doc in snapshot.docs) {
-        batch.update(doc.reference, {
+      final todos = await _getOwnTodos(uid);
+      for (final todo in todos.where((item) => item.isMyDay)) {
+        if (todo.firebaseId == null) continue;
+        batch.update(_userTodosCollection(uid).doc(todo.firebaseId), {
           'is_my_day': false,
           'updated_at': FieldValue.serverTimestamp(),
         });
@@ -544,6 +787,7 @@ class TodoFirebaseService {
 
   /// Get all todo lists
   Future<List<TodoListModel>> getAllTodoLists() async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
@@ -563,15 +807,17 @@ class TodoFirebaseService {
 
   /// Stream all todo lists
   Stream<List<TodoListModel>> streamAllTodoLists() {
-    final uid = _currentUid;
-    if (uid == null) return Stream.value([]);
+    return Stream.fromFuture(_ensureSignedIn()).asyncExpand((_) {
+      final uid = _currentUid;
+      if (uid == null) return Stream.value(const <TodoListModel>[]);
 
-    return _userTodoListsCollection(uid)
-        .orderBy('created_at', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => TodoListModel.fromFirestore(doc))
-            .toList());
+      return _userTodoListsCollection(uid)
+          .orderBy('created_at', descending: true)
+          .snapshots()
+          .map((snapshot) => snapshot.docs
+              .map((doc) => TodoListModel.fromFirestore(doc))
+              .toList());
+    });
   }
 
   /// Get todo list by ID
@@ -600,11 +846,17 @@ class TodoFirebaseService {
   // ==================== COMMENTS OPERATIONS ====================
 
   /// Get comments collection for a todo
-  CollectionReference<Map<String, dynamic>> _todoCommentsCollection(String uid, String todoId) =>
+  CollectionReference<Map<String, dynamic>> _todoCommentsCollection(
+          String uid, String todoId) =>
       _userTodosCollection(uid).doc(todoId).collection('comments');
 
   /// Add a comment to a todo
-  Future<String> addComment(String todoId, String content) async {
+  Future<String> addComment(
+    String todoId,
+    String content, {
+    String? ownerUid,
+  }) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
@@ -617,8 +869,9 @@ class TodoFirebaseService {
         'type': 'text',
         'created_at': FieldValue.serverTimestamp(),
       };
-      
-      final docRef = await _todoCommentsCollection(uid, todoId).add(commentData);
+
+      final docRef = await _todoCommentsCollection(ownerUid ?? uid, todoId)
+          .add(commentData);
       print('✅ TodoFirebaseService: Added comment ${docRef.id}');
       return docRef.id;
     } catch (e) {
@@ -628,7 +881,10 @@ class TodoFirebaseService {
   }
 
   /// Add a voice comment to a todo
-  Future<String> addVoiceComment(String todoId, String audioUrl, String duration) async {
+  Future<String> addVoiceComment(
+      String todoId, String audioUrl, String duration,
+      {String? ownerUid}) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
@@ -643,8 +899,9 @@ class TodoFirebaseService {
         'type': 'voice',
         'created_at': FieldValue.serverTimestamp(),
       };
-      
-      final docRef = await _todoCommentsCollection(uid, todoId).add(commentData);
+
+      final docRef = await _todoCommentsCollection(ownerUid ?? uid, todoId)
+          .add(commentData);
       print('✅ TodoFirebaseService: Added voice comment ${docRef.id}');
       return docRef.id;
     } catch (e) {
@@ -654,15 +911,19 @@ class TodoFirebaseService {
   }
 
   /// Get comments for a todo
-  Future<List<Map<String, dynamic>>> getComments(String todoId) async {
+  Future<List<Map<String, dynamic>>> getComments(
+    String todoId, {
+    String? ownerUid,
+  }) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      final snapshot = await _todoCommentsCollection(uid, todoId)
+      final snapshot = await _todoCommentsCollection(ownerUid ?? uid, todoId)
           .orderBy('created_at', descending: false)
           .get();
-      
+
       return snapshot.docs.map((doc) {
         final data = doc.data();
         data['id'] = doc.id;
@@ -675,27 +936,39 @@ class TodoFirebaseService {
   }
 
   /// Stream comments for a todo
-  Stream<List<Map<String, dynamic>>> streamComments(String todoId) {
-    final uid = _currentUid;
-    if (uid == null) return Stream.value([]);
+  Stream<List<Map<String, dynamic>>> streamComments(
+    String todoId, {
+    String? ownerUid,
+  }) {
+    return Stream.fromFuture(_ensureSignedIn()).asyncExpand((_) {
+      final uid = _currentUid;
+      if (uid == null) return Stream.value(const <Map<String, dynamic>>[]);
 
-    return _todoCommentsCollection(uid, todoId)
-        .orderBy('created_at', descending: false)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-          final data = doc.data();
-          data['id'] = doc.id;
-          return data;
-        }).toList());
+      return _todoCommentsCollection(ownerUid ?? uid, todoId)
+          .orderBy('created_at', descending: false)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.map((doc) {
+                final data = doc.data();
+                data['id'] = doc.id;
+                return data;
+              }).toList());
+    });
   }
 
   /// Delete a comment
-  Future<void> deleteComment(String todoId, String commentId) async {
+  Future<void> deleteComment(
+    String todoId,
+    String commentId, {
+    String? ownerUid,
+  }) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      await _todoCommentsCollection(uid, todoId).doc(commentId).delete();
+      await _todoCommentsCollection(ownerUid ?? uid, todoId)
+          .doc(commentId)
+          .delete();
       print('✅ TodoFirebaseService: Deleted comment $commentId');
     } catch (e) {
       print('❌ TodoFirebaseService: Error deleting comment: $e');
@@ -707,17 +980,16 @@ class TodoFirebaseService {
 
   /// Update member completion status by name
   Future<void> updateMemberStatus(
-    String todoId, 
-    String memberName, 
-    bool isCompleted, 
-    {required bool isAssigned}
-  ) async {
+      String todoId, String memberName, bool isCompleted,
+      {required bool isAssigned, String? ownerUid}) async {
+    await _ensureSignedIn();
     final uid = _currentUid;
     if (uid == null) throw Exception('User not authenticated');
 
     try {
-      final todo = await getTodoById(todoId);
+      final todo = await getTodoById(todoId, ownerUid: ownerUid);
       if (todo == null) throw Exception('Todo not found');
+      final resolvedOwnerUid = _resolveOwnerUidForTodo(todo, uid);
 
       if (isAssigned) {
         // Update assigned members
@@ -725,7 +997,8 @@ class TodoFirebaseService {
           throw Exception('No assigned members found');
         }
 
-        final memberIndex = todo.assignedMembers!.indexWhere((m) => m.name == memberName);
+        final memberIndex =
+            todo.assignedMembers!.indexWhere((m) => m.name == memberName);
         if (memberIndex == -1) throw Exception('Member not found');
 
         final updatedMembers = List<TaskMember>.from(todo.assignedMembers!);
@@ -737,7 +1010,7 @@ class TodoFirebaseService {
         // Check if all assigned members completed - mark task as complete
         final allCompleted = updatedMembers.every((m) => m.isCompleted);
 
-        await _userTodosCollection(uid).doc(todoId).update({
+        await _userTodosCollection(resolvedOwnerUid).doc(todoId).update({
           'assigned_members': updatedMembers.map((m) => m.toMap()).toList(),
           'is_completed': allCompleted,
           'updated_at': FieldValue.serverTimestamp(),
@@ -748,7 +1021,8 @@ class TodoFirebaseService {
           throw Exception('No followers found');
         }
 
-        final memberIndex = todo.followedUpBy!.indexWhere((m) => m.name == memberName);
+        final memberIndex =
+            todo.followedUpBy!.indexWhere((m) => m.name == memberName);
         if (memberIndex == -1) throw Exception('Follower not found');
 
         final updatedFollowers = List<TaskMember>.from(todo.followedUpBy!);
@@ -757,7 +1031,7 @@ class TodoFirebaseService {
           completedAt: isCompleted ? DateTime.now() : null,
         );
 
-        await _userTodosCollection(uid).doc(todoId).update({
+        await _userTodosCollection(resolvedOwnerUid).doc(todoId).update({
           'followed_up_by': updatedFollowers.map((m) => m.toMap()).toList(),
           'updated_at': FieldValue.serverTimestamp(),
         });

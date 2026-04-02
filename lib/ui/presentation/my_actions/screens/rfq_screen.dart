@@ -40,7 +40,7 @@ class _RfqScreenState extends State<RfqScreen> {
 
   String _formatAmount(double? amount) {
     if (amount == null) return '';
-    return '${NumberFormat.decimalPattern().format(amount)} M';
+    return '${NumberFormat.decimalPattern().format(amount)} AED';
   }
 
   DateTime? _parseDate(String? rawDate) {
@@ -147,7 +147,8 @@ class _RfqScreenState extends State<RfqScreen> {
             }
 
             final sections = orderedTitles
-                .map((title) => _RfqSection(title: title, items: grouped[title]!))
+                .map((title) =>
+                    _RfqSection(title: title, items: grouped[title]!))
                 .toList();
 
             return ListView(
@@ -200,8 +201,8 @@ class _RfqScreenState extends State<RfqScreen> {
                       SizedBox(height: 10.h),
                       ...section.items.map(
                         (item) => Padding(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 16.w, vertical: 7.h),
                           child: _RfqRequestCard(item: item),
                         ),
                       ),

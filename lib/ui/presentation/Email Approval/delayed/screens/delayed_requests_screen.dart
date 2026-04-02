@@ -14,81 +14,128 @@ class DelayedRequestsScreen extends StatefulWidget {
 
 class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
   final DelayedApprovalsRepository _repository = DelayedApprovalsRepository();
+  final ScrollController _scrollController = ScrollController();
 
-  // true only during the fast counters fetch; false once we know the categories
+  static const int _pageSize = 20;
+
   bool _isLoading = true;
-  // number of category detail requests still in-flight
-  int _pendingCategories = 0;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
+  int _currentPage = 1;
+  int? _nextPage = 2;
   String _error = '';
   List<Map<String, dynamic>> _items = [];
 
   Future<void> _fetchDelayedRequests() async {
     setState(() {
       _isLoading = true;
+      _isLoadingMore = false;
+      _hasMore = true;
+      _currentPage = 1;
+      _nextPage = 2;
       _error = '';
       _items = [];
-      _pendingCategories = 0;
     });
 
     try {
-      // Step 1 – fast counters endpoint (~0.5 s) tells us which categories
-      // have data so we don't waste a round-trip on empty ones.
-      final counters = await _repository
-          .fetchCounters()
-          .timeout(const Duration(seconds: 15));
+      final firstPage = await _repository
+          .fetchAllPage(page: 1, pageSize: _pageSize)
+          .timeout(const Duration(seconds: 30));
 
-      final types = <String>[];
-      if (counters.hrCount > 0) types.add('hr');
-      if (counters.rfqCount > 0) types.add('rfq');
-      if (counters.invoiceCount > 0) types.add('invoice');
-      if (counters.pettyCashCount > 0) types.add('petty_cash');
+      final normalized = firstPage.data.toCardItems();
+      final merged = _mergeUniqueByTypeAndId([], normalized);
 
       if (!mounted) return;
       setState(() {
-        _isLoading = false; // hide full-screen spinner after counters
-        _pendingCategories = types.length;
+        _items = merged;
+        _isLoading = false;
+        _currentPage = firstPage.currentPage;
+        _nextPage = firstPage.nextPage;
+        _hasMore = firstPage.hasMore;
       });
-
-      if (types.isEmpty) return;
-
-      // Step 2 – fire one fetchDetails() per non-empty category in parallel.
-      // HR (7 records) will appear almost immediately; Invoice (66) follows.
-      await Future.wait(types.map((type) async {
-        try {
-          final resp = await _repository
-              .fetchDetails(type)
-              .timeout(const Duration(seconds: 30));
-          final newItems = resp.toCardItems();
-          if (!mounted) return;
-          setState(() {
-            final combined = [..._items, ...newItems];
-            combined.sort((a, b) => (b['daysDelayed'] as int)
-                .compareTo(a['daysDelayed'] as int));
-            _items = combined;
-            _pendingCategories = (_pendingCategories - 1).clamp(0, 99);
-          });
-        } catch (e) {
-          debugPrint('⚠️ Failed to fetch $type delayed details: $e');
-          if (!mounted) return;
-          setState(() {
-            _pendingCategories = (_pendingCategories - 1).clamp(0, 99);
-          });
-        }
-      }));
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
         _isLoading = false;
-        _pendingCategories = 0;
+        _hasMore = false;
+        _isLoadingMore = false;
       });
     }
+  }
+
+  Future<void> _loadMore() async {
+    if (_isLoading || _isLoadingMore || !_hasMore) return;
+
+    final pageToLoad = _nextPage ?? (_currentPage + 1);
+    if (pageToLoad <= _currentPage) return;
+
+    setState(() => _isLoadingMore = true);
+    try {
+      final page = await _repository
+          .fetchAllPage(page: pageToLoad, pageSize: _pageSize)
+          .timeout(const Duration(seconds: 30));
+
+      final newItems = page.data.toCardItems();
+      if (!mounted) return;
+
+      setState(() {
+        _items = _mergeUniqueByTypeAndId(_items, newItems);
+        _currentPage = page.currentPage;
+        _nextPage = page.nextPage;
+        _hasMore = page.hasMore;
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      debugPrint('⚠️ Failed loading delayed approvals page $pageToLoad: $e');
+      if (!mounted) return;
+      setState(() {
+        _isLoadingMore = false;
+      });
+    }
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 240) {
+      _loadMore();
+    }
+  }
+
+  List<Map<String, dynamic>> _mergeUniqueByTypeAndId(
+    List<Map<String, dynamic>> base,
+    List<Map<String, dynamic>> incoming,
+  ) {
+    final result = List<Map<String, dynamic>>.from(base);
+    final seen = <String>{
+      for (final item in base)
+        '${(item['type'] ?? '').toString()}_${(item['id'] ?? item['reqNo'] ?? '').toString()}'
+    };
+
+    for (final item in incoming) {
+      final key =
+          '${(item['type'] ?? '').toString()}_${(item['id'] ?? item['reqNo'] ?? '').toString()}';
+      if (seen.add(key)) {
+        result.add(item);
+      }
+    }
+
+    return result;
   }
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _fetchDelayedRequests();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -96,6 +143,7 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
+        controller: _scrollController,
         slivers: [
           const SliverAppBar(
             pinned: false,
@@ -133,7 +181,6 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
   }
 
   Widget _buildSliverContent() {
-    // Full-screen spinner: only during initial counters fetch
     if (_isLoading) {
       return const SliverFillRemaining(
         child: Center(
@@ -144,15 +191,6 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
 
     if (_error.isNotEmpty && _items.isEmpty) {
       return _buildErrorSliver(_error, _fetchDelayedRequests);
-    }
-
-    // Still waiting for the first category to return data
-    if (_items.isEmpty && _pendingCategories > 0) {
-      return const SliverFillRemaining(
-        child: Center(
-          child: CircularProgressIndicator(color: Color(0xFF0B2D5E)),
-        ),
-      );
     }
 
     if (_items.isEmpty) {
@@ -170,6 +208,18 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
+            if (index >= items.length) {
+              if (_isLoadingMore) {
+                return Padding(
+                  padding: EdgeInsets.symmetric(vertical: 14.h),
+                  child: const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF0B2D5E)),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            }
+
             final item = items[index];
             return DelayedRequestCard(
               reqNo: item['reqNo'] ?? '',
@@ -184,7 +234,7 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
               },
             );
           },
-          childCount: items.length,
+          childCount: items.length + ((_hasMore || _isLoadingMore) ? 1 : 0),
         ),
       ),
     );
@@ -256,4 +306,3 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
     );
   }
 }
-

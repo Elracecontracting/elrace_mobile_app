@@ -141,6 +141,17 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
     debugPrint('[$groupType] status=${response.statusCode}');
 
+    if (groupType == 'petty_cash') {
+      debugPrint('🧾 [MyApproval][petty_cash] Raw response start');
+      const chunkSize = 800;
+      final raw = response.body;
+      for (var i = 0; i < raw.length; i += chunkSize) {
+        final end = (i + chunkSize < raw.length) ? i + chunkSize : raw.length;
+        debugPrint(raw.substring(i, end));
+      }
+      debugPrint('🧾 [MyApproval][petty_cash] Raw response end');
+    }
+
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
       const Map<String, String> responseKeys = {
@@ -150,7 +161,15 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         "petty_cash": "petty_cash",
       };
       final actualKey = responseKeys[groupType] ?? groupType;
-      return data['result']['data'][actualKey] ?? [];
+      final items = data['result']['data'][actualKey] ?? [];
+
+      if (groupType == 'petty_cash') {
+        debugPrint(
+          '🧾 [MyApproval][petty_cash] Parsed items count=${items.length}',
+        );
+      }
+
+      return items;
     } else {
       throw Exception("Failed to fetch $groupType: ${response.statusCode}");
     }
@@ -285,15 +304,15 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   String _tabTitleFor(String categoryKey) {
     switch (categoryKey) {
       case _CategoryKeys.all:
-        return 'ALL';
+        return 'All';
       case _CategoryKeys.hr:
         return 'HR';
       case _CategoryKeys.rfq:
         return 'RFQ';
       case _CategoryKeys.invoice:
-        return 'INVOICE';
+        return 'Invoice';
       case _CategoryKeys.pettyCash:
-        return 'PETTY CASH';
+        return 'Petty Cash';
       default:
         return categoryKey;
     }
@@ -316,12 +335,19 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     }
   }
 
+  Color? _iconTintFor(String categoryKey) {
+    if (categoryKey == _CategoryKeys.invoice) {
+      return const Color(0xFF16A56B);
+    }
+    return null;
+  }
+
   final List<String> categoryKeys = const [
     _CategoryKeys.all,
     _CategoryKeys.hr,
     _CategoryKeys.rfq,
-    _CategoryKeys.invoice,
     _CategoryKeys.pettyCash,
+    _CategoryKeys.invoice,
   ];
   bool isSearch = false;
 
@@ -423,6 +449,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                             },
                             child: _buildGlassTab(
                               icon: _iconFor(categoryKey),
+                              iconTint: _iconTintFor(categoryKey),
                               title: _tabTitleFor(categoryKey),
                               isSelected: isSelected,
                               count: 0,
@@ -529,6 +556,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
 
   Widget _buildGlassTab({
     required String icon,
+    Color? iconTint,
     required String title,
     required bool isSelected,
     int count = 0,
@@ -540,26 +568,40 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
           clipBehavior: Clip.none,
           children: [
             Container(
-              width: 85.w,
+              width: 92.w,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(
-                  color: const Color(0xFF8E8E8E),
-                  width: 1.2,
+                  color: isSelected
+                      ? const Color(0xFF141B3A)
+                      : const Color(0xFFB7B7B7),
+                  width: isSelected ? 0 : 1.1,
                 ),
+                boxShadow: isSelected
+                    ? [
+                        BoxShadow(
+                          color: const Color(0xFF141B3A).withOpacity(0.14),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                        ),
+                      ]
+                    : null,
               ),
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 10),
+                padding: const EdgeInsets.symmetric(vertical: 11),
                 decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: isSelected ? const Color(0xFF1A2540) : null,
+                  borderRadius: BorderRadius.circular(13),
+                  color: isSelected ? const Color(0xFF141B3A) : Colors.white,
                 ),
                 child: Center(
                   child: SvgPicture.asset(
                     icon,
-                    height: 44.w,
-                    width: 44.w,
+                    height: 42.w,
+                    width: 42.w,
                     fit: BoxFit.contain,
+                    colorFilter: iconTint != null
+                        ? ColorFilter.mode(iconTint, BlendMode.srcIn)
+                        : null,
                   ),
                 ),
               ),
@@ -601,13 +643,13 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         ),
         SizedBox(height: 6.h),
         SizedBox(
-          width: 85.w,
+          width: 92.w,
           child: Text(
             title,
             style: GoogleFonts.inter(
-              fontSize: 11.sp,
+              fontSize: 10.6.sp,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF1A2540),
+              color: const Color(0xFF161616),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,

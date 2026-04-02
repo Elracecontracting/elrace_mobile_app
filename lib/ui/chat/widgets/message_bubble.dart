@@ -19,8 +19,10 @@ class MessageBubble extends StatelessWidget {
   final Message message;
   final bool isMe;
   final bool isStarred;
+  final bool isHighlighted;
   final String? senderName; // for showing sender name in group/support chats
-  final bool showSenderName; // whether to display the sender name above the bubble
+  final bool
+      showSenderName; // whether to display the sender name above the bubble
   final MessageActionCallback? onStar;
   final MessageActionCallback? onReply;
   final MessageActionCallback? onForward;
@@ -30,6 +32,7 @@ class MessageBubble extends StatelessWidget {
     required this.message,
     required this.isMe,
     this.isStarred = false,
+    this.isHighlighted = false,
     this.senderName,
     this.showSenderName = false,
     this.onStar,
@@ -51,7 +54,8 @@ class MessageBubble extends StatelessWidget {
             bottom: 4,
           ),
           child: Column(
-            crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            crossAxisAlignment:
+                isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
             children: [
               if (showSenderName && senderName != null && !isMe)
                 Padding(
@@ -160,44 +164,63 @@ class MessageBubble extends StatelessWidget {
   Widget _buildBubble(BuildContext context) {
     final textColor = isMe ? Colors.white : const Color(0xFF141E24);
 
-    return Container(
+    final bubbleRadius = BorderRadius.only(
+      topLeft: const Radius.circular(16),
+      topRight: const Radius.circular(16),
+      bottomLeft: Radius.circular(isMe ? 16 : 6),
+      bottomRight: Radius.circular(isMe ? 6 : 16),
+    );
+
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
       decoration: BoxDecoration(
-        color: isMe ? null : const Color(0xFFE6EAEE),
-        gradient: isMe
-            ? const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF1D2449),
-                  Color(0xFF2B355D),
-                ],
+        borderRadius: bubbleRadius,
+        border: isHighlighted
+            ? Border.all(
+                color: const Color(0xFFF4C542).withValues(alpha: 0.70),
+                width: 1.4,
               )
             : null,
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(16),
-          topRight: const Radius.circular(16),
-          bottomLeft: Radius.circular(isMe ? 16 : 6),
-          bottomRight: Radius.circular(isMe ? 6 : 16),
-        ),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isMe ? 0.10 : 0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
+          if (isHighlighted)
+            BoxShadow(
+              color: const Color(0xFFF4C542).withValues(alpha: 0.16),
+              blurRadius: 8,
+              spreadRadius: 0,
+              offset: const Offset(0, 0),
+            ),
         ],
       ),
-      constraints: BoxConstraints(
-        maxWidth: MediaQuery.of(context).size.width * 0.75,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.only(
-          topLeft: const Radius.circular(16),
-          topRight: const Radius.circular(16),
-          bottomLeft: Radius.circular(isMe ? 16 : 6),
-          bottomRight: Radius.circular(isMe ? 6 : 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isMe ? null : const Color(0xFFE6EAEE),
+          gradient: isMe
+              ? const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Color(0xFF1D2449),
+                    Color(0xFF2B355D),
+                  ],
+                )
+              : null,
+          borderRadius: bubbleRadius,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isMe ? 0.10 : 0.03),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        child: _buildContent(context, textColor),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
+        ),
+        child: ClipRRect(
+          borderRadius: bubbleRadius,
+          child: _buildContent(context, textColor),
+        ),
       ),
     );
   }
@@ -206,7 +229,8 @@ class MessageBubble extends StatelessWidget {
     Widget content;
     switch (message.type) {
       case MessageType.text:
-        content = _TextContent(message: message, textColor: textColor, isMe: isMe);
+        content =
+            _TextContent(message: message, textColor: textColor, isMe: isMe);
       case MessageType.image:
         content = _ImageContent(message: message, isMe: isMe);
       case MessageType.audio:
@@ -214,7 +238,8 @@ class MessageBubble extends StatelessWidget {
       case MessageType.video:
         content = _VideoContent(message: message, isMe: isMe);
       case MessageType.file:
-        content = _FileContent(message: message, textColor: textColor, isMe: isMe);
+        content =
+            _FileContent(message: message, textColor: textColor, isMe: isMe);
       case MessageType.signableDoc:
         content = _SignableDocContent(
           message: message,
@@ -362,7 +387,8 @@ class _ImageContent extends StatelessWidget {
                   child: Center(
                     child: CircularProgressIndicator(
                       value: progress.expectedTotalBytes != null
-                          ? progress.cumulativeBytesLoaded / progress.expectedTotalBytes!
+                          ? progress.cumulativeBytesLoaded /
+                              progress.expectedTotalBytes!
                           : null,
                     ),
                   ),
@@ -393,7 +419,7 @@ class _ImageContent extends StatelessWidget {
 
   void _showFullImage(BuildContext context) {
     if (message.mediaUrl == null) return;
-    
+
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => Scaffold(
@@ -434,9 +460,31 @@ class _AudioContentState extends State<_AudioContent> {
 
   // Waveform bar heights (simulated – gives a realistic pattern)
   static const List<double> _barHeights = [
-    0.25, 0.40, 0.55, 0.70, 0.50, 0.80, 0.95, 0.60, 0.85, 0.45,
-    0.70, 0.90, 0.35, 0.65, 0.80, 0.50, 0.75, 0.55, 0.40, 0.90,
-    0.60, 0.35, 0.70, 0.85, 0.45,
+    0.25,
+    0.40,
+    0.55,
+    0.70,
+    0.50,
+    0.80,
+    0.95,
+    0.60,
+    0.85,
+    0.45,
+    0.70,
+    0.90,
+    0.35,
+    0.65,
+    0.80,
+    0.50,
+    0.75,
+    0.55,
+    0.40,
+    0.90,
+    0.60,
+    0.35,
+    0.70,
+    0.85,
+    0.45,
   ];
 
   @override
@@ -483,7 +531,8 @@ class _AudioContentState extends State<_AudioContent> {
 
   double get _progress {
     if (_duration.inMilliseconds == 0) return 0;
-    return (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0);
+    return (_position.inMilliseconds / _duration.inMilliseconds)
+        .clamp(0.0, 1.0);
   }
 
   @override
@@ -661,7 +710,7 @@ class _VideoContent extends StatelessWidget {
 
   void _openVideo(BuildContext context) async {
     if (message.mediaUrl == null) return;
-    
+
     final uri = Uri.parse(message.mediaUrl!);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -755,7 +804,8 @@ class ChatIdProvider extends InheritedWidget {
   }
 
   @override
-  bool updateShouldNotify(ChatIdProvider oldWidget) => chatId != oldWidget.chatId;
+  bool updateShouldNotify(ChatIdProvider oldWidget) =>
+      chatId != oldWidget.chatId;
 }
 
 class _FileContent extends StatelessWidget {
@@ -783,8 +833,8 @@ class _FileContent extends StatelessWidget {
               height: 44,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
-                color: isMe 
-                    ? AppColors.primaryColor.withValues(alpha: 0.2) 
+                color: isMe
+                    ? AppColors.primaryColor.withValues(alpha: 0.2)
                     : Colors.grey[300],
               ),
               child: Icon(
@@ -832,20 +882,24 @@ class _FileContent extends StatelessWidget {
 
   IconData _getFileIcon() {
     final mimeType = message.mimeType?.toLowerCase() ?? '';
-    
+
     if (mimeType.contains('pdf')) return Icons.picture_as_pdf;
-    if (mimeType.contains('word') || mimeType.contains('doc')) return Icons.description;
-    if (mimeType.contains('excel') || mimeType.contains('sheet')) return Icons.table_chart;
-    if (mimeType.contains('powerpoint') || mimeType.contains('presentation')) return Icons.slideshow;
-    if (mimeType.contains('zip') || mimeType.contains('rar')) return Icons.folder_zip;
+    if (mimeType.contains('word') || mimeType.contains('doc'))
+      return Icons.description;
+    if (mimeType.contains('excel') || mimeType.contains('sheet'))
+      return Icons.table_chart;
+    if (mimeType.contains('powerpoint') || mimeType.contains('presentation'))
+      return Icons.slideshow;
+    if (mimeType.contains('zip') || mimeType.contains('rar'))
+      return Icons.folder_zip;
     if (mimeType.contains('text')) return Icons.article;
-    
+
     return Icons.insert_drive_file;
   }
 
   void _openFile() async {
     if (message.mediaUrl == null) return;
-    
+
     final uri = Uri.parse(message.mediaUrl!);
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -871,18 +925,21 @@ class _ReplyToPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = isMe
-        ? Colors.white.withValues(alpha: 0.12)
-        : const Color(0xFFD6DCE2);
-    final accentColor = isMe ? const Color(0xFF7FE0D8) : const Color(0xFF1D2449);
+    final bgColor =
+        isMe ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFD6DCE2);
+    final accentColor =
+        isMe ? const Color(0xFF7FE0D8) : const Color(0xFF1D2449);
     final textColor = isMe ? Colors.white70 : const Color(0xFF5A6570);
 
     String preview = replyTo.text ?? '';
     if (preview.isEmpty) {
       final type = replyTo.type;
-      if (type == 'image') preview = '📷 Photo';
-      else if (type == 'audio') preview = '🎵 Voice message';
-      else if (type == 'video') preview = '🎬 Video';
+      if (type == 'image')
+        preview = '📷 Photo';
+      else if (type == 'audio')
+        preview = '🎵 Voice message';
+      else if (type == 'video')
+        preview = '🎬 Video';
       else if (type == 'file') preview = '📎 File';
     }
 
