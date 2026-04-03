@@ -41,6 +41,19 @@ class _NotificationTabConfig {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
+  static const List<_NotificationTabConfig> _fixedNotificationTabs = [
+    _NotificationTabConfig(
+      category: 'circular',
+      title: 'Circulars',
+      icon: 'assets/png/urgent_icon.png',
+    ),
+    _NotificationTabConfig(
+      category: 'announcement',
+      title: 'Announcements',
+      icon: 'assets/png/announcement.png',
+    ),
+  ];
+
   int currentIndex = 0;
   final ScrollController _scrollController = ScrollController();
   List<GlobalKey> _tabKeys = <GlobalKey>[];
@@ -103,20 +116,31 @@ class _NotificationScreenState extends State<NotificationScreen> {
           await NotificationStorageService.getNotificationCategories(
               forceRefresh: forceRefresh);
 
-      final tabs = categories.map((item) {
-        final category = _normalizeCategory(item.model);
-        final title = item.title.trim().isEmpty
-            ? _humanizeCategory(category)
-            : item.title.trim();
+      final dynamicTabs = categories
+          .map((item) {
+            final category = _normalizeCategory(item.model);
+            if (category == 'circular' || category == 'announcement') {
+              return null;
+            }
+            final title = item.title.trim().isEmpty
+                ? _humanizeCategory(category)
+                : item.title.trim();
 
-        return _NotificationTabConfig(
-          category: category,
-          title: title,
-          icon: _tabIconForCategory(category),
-        );
-      }).toList(growable: true);
+            return _NotificationTabConfig(
+              category: category,
+              title: title,
+              icon: _tabIconForCategory(category),
+            );
+          })
+          .whereType<_NotificationTabConfig>()
+          .toList(growable: true);
 
-      if (tabs.isEmpty) {
+      final tabs = <_NotificationTabConfig>[
+        ..._fixedNotificationTabs,
+        ...dynamicTabs,
+      ];
+
+      if (tabs.length == _fixedNotificationTabs.length) {
         tabs.add(
           const _NotificationTabConfig(
             category: 'notification',
@@ -139,6 +163,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
       if (!mounted) return;
       setState(() {
         _notificationTabs = const [
+          ..._fixedNotificationTabs,
           _NotificationTabConfig(
             category: 'notification',
             title: 'Notifications',
@@ -282,6 +307,9 @@ class _NotificationScreenState extends State<NotificationScreen> {
               (tab) => tab.category == category,
             );
             if (!exists) {
+              if (category == 'circular' || category == 'announcement') {
+                continue;
+              }
               _notificationTabs = [
                 ..._notificationTabs,
                 _NotificationTabConfig(
@@ -712,11 +740,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           ),
                           child: Column(
                             children: [
-                              Padding(
-                                padding:
-                                    EdgeInsets.fromLTRB(16.w, 0, 16.w, 12.h),
-                                child: _buildMuteSettingsEntryCard(),
-                              ),
                               SizedBox(
                                 height: 55.w,
                                 child: ListView.separated(

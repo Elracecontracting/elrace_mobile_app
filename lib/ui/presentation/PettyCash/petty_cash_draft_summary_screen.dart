@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:cunning_document_scanner/cunning_document_scanner.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
@@ -36,6 +37,7 @@ class _PettyCashDraftSummaryScreenState
   final List<File> _draftAttachments = [];
 
   bool _isLoading = true;
+  bool _isSubmitting = false;
   String _error = '';
   double _totalBalance = 0;
   double _totalDraftAmount = 0;
@@ -80,6 +82,548 @@ class _PettyCashDraftSummaryScreenState
       return int.tryParse(rawHolderId?.toString() ?? '');
     } catch (_) {
       return null;
+    }
+  }
+
+  int? _resolveOperatingUnitId() {
+    final loginData = SharedPref.getLoginData();
+    final modeled = loginData.result?.data?.default_operating_unit_id;
+    if (modeled != null) return modeled;
+
+    final loginJson = SharedPref.sharedPreferences.getString('loginResponse') ??
+        SharedPref.sharedPreferences.getString('LOGIN_RESPONSE');
+    if (loginJson == null || loginJson.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(loginJson) as Map<String, dynamic>;
+      final result = decoded['result'];
+      if (result is! Map<String, dynamic>) return null;
+      final data = result['data'];
+      if (data is! Map<String, dynamic>) return null;
+      final raw = data['default_operating_unit_id'];
+      if (raw is int) return raw;
+      return int.tryParse(raw?.toString() ?? '');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _resolveRequestedBy() {
+    final data = SharedPref.getLoginData().result?.data;
+    final values = [
+      data?.emp_name,
+      data?.name,
+      data?.username,
+    ];
+    for (final v in values) {
+      final s = (v ?? '').toString().trim();
+      if (s.isNotEmpty) return s;
+    }
+    return '-';
+  }
+
+  List<int> _resolveExpenseLineIds() {
+    return _draftExpenses
+        .map((e) => e.id)
+        .where((id) => id > 0)
+        .toList(growable: false);
+  }
+
+  String _submitTypeValue() {
+    return widget.expenseType.toLowerCase().trim() == 'fleet'
+        ? 'fleet'
+        : 'others';
+  }
+
+  Future<String> _buildAttachmentBase64() async {
+    if (_draftAttachments.isEmpty) return '';
+
+    final first = _draftAttachments.first;
+    if (!await first.exists()) return '';
+
+    try {
+      final bytes = await first.readAsBytes();
+      return base64Encode(bytes);
+    } catch (_) {
+      return '';
+    }
+  }
+
+  dynamic _firstOf(dynamic value) {
+    if (value is List && value.isNotEmpty) return value.first;
+    return value;
+  }
+
+  String _pickString(Map<String, dynamic> map, List<String> keys,
+      {String fallback = ''}) {
+    for (final key in keys) {
+      final raw = map[key];
+      final value = _firstOf(raw)?.toString().trim() ?? '';
+      if (value.isNotEmpty && value.toLowerCase() != 'false') {
+        return value;
+      }
+    }
+    return fallback;
+  }
+
+  int? _pickInt(Map<String, dynamic> map, List<String> keys) {
+    for (final key in keys) {
+      final raw = _firstOf(map[key]);
+      if (raw is int) return raw;
+      final parsed = int.tryParse(raw?.toString() ?? '');
+      if (parsed != null) return parsed;
+    }
+    return null;
+  }
+
+  Future<_SubmitPreviewData> _callSubmitPreview() async {
+    final token = SharedPref.getLoginData().result?.token;
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication token is missing');
+    }
+
+    final holderId = _resolveHolderId();
+    if (holderId == null) {
+      throw Exception('Petty cash holder is missing');
+    }
+
+    final expenseLineIds = _resolveExpenseLineIds();
+    if (expenseLineIds.isEmpty) {
+      throw Exception('No expense lines found to submit');
+    }
+
+    final attachmentData = await _buildAttachmentBase64();
+
+    final payload = {
+      'jsonrpc': '2.0',
+      'params': {
+        'expense_line_ids': expenseLineIds,
+        'holder_id': holderId,
+        'type': _submitTypeValue(),
+        'attachment_data': attachmentData,
+      },
+    };
+
+    final response = await http.post(
+      Uri.parse('https://erp.elrace.com/api/submit_expense_preview'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Preview failed: HTTP ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final result = decoded['result'];
+    if (result is! Map<String, dynamic>) {
+      throw Exception('Invalid preview response');
+    }
+    if (result['status']?.toString().toLowerCase() != 'success') {
+      throw Exception(result['message']?.toString() ?? 'Preview failed');
+    }
+
+    final data = result['data'] is Map<String, dynamic>
+        ? Map<String, dynamic>.from(result['data'] as Map)
+        : <String, dynamic>{};
+
+    final resolvedAttachmentIds =
+        data['attachment_ids'] ?? result['attachment_ids'];
+    final resolvedExpenseIds = data['expense_line_ids'] ?? expenseLineIds;
+    final resolvedOperatingUnitId =
+        _pickInt(data, ['operating_unit_id']) ?? _resolveOperatingUnitId();
+
+    final submitDate = _pickString(
+      data,
+      ['submit_date', 'submission_date', 'date', 'create_date'],
+      fallback: DateTime.now().toIso8601String(),
+    );
+    final holder = _pickString(
+      data,
+      ['petty_cash_holder', 'holder_name', 'holder', 'pettycash_holder'],
+      fallback: _resolveSheetTitle(),
+    );
+    final requestedBy = _pickString(
+      data,
+      ['requested_by', 'request_by', 'employee_name'],
+      fallback: _resolveRequestedBy(),
+    );
+    final company = _pickString(
+      data,
+      ['company', 'company_name'],
+      fallback: 'RCC',
+    );
+    final batch = _pickString(
+      data,
+      ['petty_cash_batch', 'batch_name', 'sheet_name'],
+      fallback: _resolveSheetTitle(),
+    );
+    final pettyType = _pickString(
+      data,
+      ['petty_cash_type', 'type', 'expense_type'],
+      fallback: widget.expenseType == 'fleet' ? 'Transportations' : 'Others',
+    );
+
+    return _SubmitPreviewData(
+      submitDate: submitDate,
+      pettyCashHolder: holder,
+      requestedBy: requestedBy,
+      company: company,
+      pettyCashBatch: batch,
+      pettyCashType: pettyType,
+      expenseLineIds: resolvedExpenseIds,
+      holderId: holderId,
+      operatingUnitId: resolvedOperatingUnitId,
+      attachmentIds: resolvedAttachmentIds,
+      hasAttachments: _draftAttachments.isNotEmpty,
+    );
+  }
+
+  Future<void> _submitExpense(_SubmitPreviewData preview) async {
+    final token = SharedPref.getLoginData().result?.token;
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication token is missing');
+    }
+
+    if (preview.operatingUnitId == null) {
+      throw Exception('operating_unit_id is missing');
+    }
+
+    if (preview.attachmentIds == null) {
+      throw Exception('attachment_ids is missing from preview response');
+    }
+
+    final payload = {
+      'jsonrpc': '2.0',
+      'params': {
+        'expense_line_ids': preview.expenseLineIds,
+        'holder_id': preview.holderId,
+        'operating_unit_id': preview.operatingUnitId,
+        'attachment_ids': preview.attachmentIds,
+      },
+    };
+
+    final response = await http.post(
+      Uri.parse('https://erp.elrace.com/api/submit_expense'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Submit failed: HTTP ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final result = decoded['result'];
+    if (result is! Map<String, dynamic>) {
+      throw Exception('Invalid submit response');
+    }
+
+    if (result['status']?.toString().toLowerCase() != 'success') {
+      throw Exception(result['message']?.toString() ?? 'Submit failed');
+    }
+  }
+
+  Future<bool> _showSubmitConfirmationPopup(_SubmitPreviewData preview) async {
+    double sliderValue = 0.5;
+    bool submitting = false;
+
+    final result = await showDialog<bool>(
+      context: context,
+      barrierDismissible: !submitting,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            Future<void> confirmSubmit() async {
+              if (submitting) return;
+              setDialogState(() => submitting = true);
+              try {
+                await _submitExpense(preview);
+                if (mounted) Navigator.of(ctx).pop(true);
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(e.toString())),
+                  );
+                }
+                setDialogState(() {
+                  submitting = false;
+                  sliderValue = 0.5;
+                });
+              }
+            }
+
+            return Dialog(
+              insetPadding: const EdgeInsets.symmetric(horizontal: 18),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Confirmation massage',
+                      style: GoogleFonts.inter(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF111111),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    _PreviewFieldCard(
+                        label: 'Submit Date',
+                        value: _formatDate(preview.submitDate)),
+                    const SizedBox(height: 10),
+                    _PreviewFieldCard(
+                        label: 'Petty cash holder',
+                        value: preview.pettyCashHolder),
+                    const SizedBox(height: 10),
+                    _PreviewFieldCard(
+                        label: 'Requested By', value: preview.requestedBy),
+                    const SizedBox(height: 10),
+                    _PreviewFieldCard(
+                      label: 'Company',
+                      valueWidget: Row(
+                        children: [
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Text('HCN',
+                                    style: GoogleFonts.inter(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w700)),
+                                const SizedBox(width: 8),
+                                Icon(
+                                  preview.company.toUpperCase().contains('HCN')
+                                      ? Icons.check_box
+                                      : Icons.check_box_outline_blank,
+                                  color: const Color(0xFF6C4AB6),
+                                  size: 18,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            child: Row(
+                              children: [
+                                Text('RCC',
+                                    style: GoogleFonts.inter(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w700)),
+                                const SizedBox(width: 8),
+                                Icon(
+                                  !preview.company.toUpperCase().contains('HCN')
+                                      ? Icons.check_box
+                                      : Icons.check_box_outline_blank,
+                                  color: const Color(0xFF6C4AB6),
+                                  size: 18,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _PreviewFieldCard(
+                        label: 'Petty Cash Batch',
+                        value: preview.pettyCashBatch),
+                    const SizedBox(height: 10),
+                    _PreviewFieldCard(
+                        label: 'Petty cash type', value: preview.pettyCashType),
+                    const SizedBox(height: 10),
+                    InkWell(
+                      onTap: preview.hasAttachments
+                          ? () => _showSelectedAttachmentsPreview()
+                          : null,
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 13),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF3F3F3),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFF9D9D9D)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.attach_file_rounded,
+                                color: Color(0xFF111111), size: 20),
+                            const SizedBox(width: 8),
+                            Text(
+                              'View Attachments',
+                              style: GoogleFonts.inter(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF111111),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'Are you sure you want to Submit ?',
+                      style: GoogleFonts.inter(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF111111),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF3F3F3),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(color: const Color(0xFF8F8F8F)),
+                      ),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              Text('No',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFFCC2424))),
+                              Text('Yes',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF0E9F57))),
+                            ],
+                          ),
+                          SliderTheme(
+                            data: SliderTheme.of(ctx).copyWith(
+                              trackHeight: 36,
+                              activeTrackColor: Colors.transparent,
+                              inactiveTrackColor: Colors.transparent,
+                              thumbShape: const RoundSliderThumbShape(
+                                  enabledThumbRadius: 22),
+                              overlayShape: SliderComponentShape.noOverlay,
+                              thumbColor: const Color(0xFFD1D1D1),
+                            ),
+                            child: Slider(
+                              min: 0,
+                              max: 1,
+                              value: sliderValue,
+                              onChanged: submitting
+                                  ? null
+                                  : (v) =>
+                                      setDialogState(() => sliderValue = v),
+                              onChangeEnd: submitting
+                                  ? null
+                                  : (v) {
+                                      if (v >= 0.9) {
+                                        confirmSubmit();
+                                      } else if (v <= 0.1) {
+                                        Navigator.of(ctx).pop(false);
+                                      } else {
+                                        setDialogState(() => sliderValue = 0.5);
+                                      }
+                                    },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (submitting)
+                      const Padding(
+                        padding: EdgeInsets.only(top: 12),
+                        child: SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.2),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    return result == true;
+  }
+
+  Future<void> _showSelectedAttachmentsPreview() async {
+    if (_draftAttachments.isEmpty) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+      ),
+      builder: (ctx) {
+        return SafeArea(
+          child: ListView.separated(
+            shrinkWrap: true,
+            padding: const EdgeInsets.all(16),
+            itemCount: _draftAttachments.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (_, i) {
+              final file = _draftAttachments[i];
+              final name = file.path.split(Platform.pathSeparator).last;
+              return ListTile(
+                leading: const Icon(Icons.insert_drive_file_outlined),
+                title: Text(name),
+                subtitle: Text(file.path),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _onPrimaryActionTap() async {
+    if (_isSubmitting) return;
+
+    if (!_canBeSubmit) {
+      _openAddExpenseDialog();
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+    try {
+      final preview = await _callSubmitPreview();
+      final confirmed = await _showSubmitConfirmationPopup(preview);
+      if (confirmed && mounted) {
+        _draftAttachments.clear();
+        await _fetchDraftSummary();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Expense sheet submitted successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString())),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
     }
   }
 
@@ -293,12 +837,17 @@ class _PettyCashDraftSummaryScreenState
   }
 
   void _openAddExpenseDialog() {
-    Navigator.of(context).push(
+    final normalizedType =
+        widget.expenseType.toLowerCase().trim() == 'fleet' ? 'fleet' : 'other';
+
+    Navigator.of(context)
+        .push<bool>(
       PageRouteBuilder(
         opaque: false,
         barrierDismissible: true,
         barrierColor: Colors.black.withOpacity(0.20),
-        pageBuilder: (_, __, ___) => const PettyCashAddExpense(),
+        pageBuilder: (_, __, ___) =>
+            PettyCashAddExpense(fixedExpenseType: normalizedType),
         transitionsBuilder: (_, animation, __, child) {
           final fade = CurvedAnimation(
             parent: animation,
@@ -311,7 +860,12 @@ class _PettyCashDraftSummaryScreenState
           );
         },
       ),
-    );
+    )
+        .then((value) {
+      if (value == true) {
+        _fetchDraftSummary();
+      }
+    });
   }
 
   @override
@@ -520,29 +1074,40 @@ class _PettyCashDraftSummaryScreenState
                   bottom: 20,
                   child: Center(
                     child: InkWell(
-                      onTap: _openAddExpenseDialog,
+                      onTap: _onPrimaryActionTap,
                       borderRadius: BorderRadius.circular(28),
                       child: Container(
                         width: 246,
                         height: 54,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(28),
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF767A80), Color(0xFF5C6066)],
+                          gradient: LinearGradient(
+                            colors: _canBeSubmit
+                                ? const [Color(0xFF1ACA6C), Color(0xFF0E9E57)]
+                                : const [Color(0xFF767A80), Color(0xFF5C6066)],
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                           ),
                         ),
                         alignment: Alignment.center,
-                        child: Text(
-                          '+ ADD EXPENSE',
-                          style: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: Colors.white,
-                            letterSpacing: 0.4,
-                          ),
-                        ),
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.4,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(
+                                _canBeSubmit ? 'SUBMIT' : '+ ADD EXPENSE',
+                                style: GoogleFonts.inter(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: Colors.white,
+                                  letterSpacing: 0.4,
+                                ),
+                              ),
                       ),
                     ),
                   ),
@@ -677,12 +1242,14 @@ class _PettyCashDraftSummaryScreenState
 }
 
 class _DraftExpense {
+  final int id;
   final String title;
   final String sheetTitle;
   final String rawDate;
   final double amount;
 
   const _DraftExpense({
+    required this.id,
     required this.title,
     required this.sheetTitle,
     required this.rawDate,
@@ -706,6 +1273,13 @@ class _DraftExpense {
     }
 
     return _DraftExpense(
+      id: ((json['id'] ?? json['line_id'] ?? json['expense_line_id']) as num?)
+              ?.toInt() ??
+          int.tryParse(
+              (json['id'] ?? json['line_id'] ?? json['expense_line_id'])
+                      ?.toString() ??
+                  '') ??
+          0,
       title: pickString([
         json['expense_type_label'],
         json['label'],
@@ -731,6 +1305,82 @@ class _DraftExpense {
           json['amount'] ?? json['total_amount'] ?? json['unit_amount']),
     );
   }
+}
+
+class _PreviewFieldCard extends StatelessWidget {
+  final String label;
+  final String? value;
+  final Widget? valueWidget;
+
+  const _PreviewFieldCard({
+    required this.label,
+    this.value,
+    this.valueWidget,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3F3F3),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFF9D9D9D)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFFB0B0B0),
+            ),
+          ),
+          const SizedBox(height: 4),
+          valueWidget ??
+              Text(
+                (value ?? '-').trim().isEmpty ? '-' : value!,
+                style: GoogleFonts.inter(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF111111),
+                ),
+              ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SubmitPreviewData {
+  final String submitDate;
+  final String pettyCashHolder;
+  final String requestedBy;
+  final String company;
+  final String pettyCashBatch;
+  final String pettyCashType;
+  final dynamic expenseLineIds;
+  final int holderId;
+  final int? operatingUnitId;
+  final dynamic attachmentIds;
+  final bool hasAttachments;
+
+  const _SubmitPreviewData({
+    required this.submitDate,
+    required this.pettyCashHolder,
+    required this.requestedBy,
+    required this.company,
+    required this.pettyCashBatch,
+    required this.pettyCashType,
+    required this.expenseLineIds,
+    required this.holderId,
+    required this.operatingUnitId,
+    required this.attachmentIds,
+    required this.hasAttachments,
+  });
 }
 
 class _AttachmentSourceTile extends StatelessWidget {

@@ -130,6 +130,7 @@ class _MyProjectState extends State<MyProject> {
   bool _isLoading = false;
   String? _error;
   List<UserProjectModel> _projects = [];
+  int? _selectedCompanyId;
 
   @override
   void initState() {
@@ -149,6 +150,10 @@ class _MyProjectState extends State<MyProject> {
 
       setState(() {
         _projects = response.projects;
+        if (_selectedCompanyId != null &&
+            !_projects.any((p) => p.projectId == _selectedCompanyId)) {
+          _selectedCompanyId = null;
+        }
         _isLoading = false;
       });
     } catch (e) {
@@ -157,6 +162,78 @@ class _MyProjectState extends State<MyProject> {
         _isLoading = false;
       });
     }
+  }
+
+  List<UserProjectModel> get _filteredProjects {
+    if (_selectedCompanyId == null) {
+      return _projects;
+    }
+    return _projects
+        .where((p) => p.projectId == _selectedCompanyId)
+        .toList(growable: false);
+  }
+
+  Widget _buildCompanyFilterTabs() {
+    const unfocusedStart = Color(0xFFD6D6D6);
+    const unfocusedEnd = Color(0xFFADB2BD);
+    const focusedStart = Color(0xB81B1F26);
+    const focusedEnd = Color(0xFF717171);
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      padding: EdgeInsets.symmetric(horizontal: 12.w),
+      child: Row(
+        children: List.generate(_projects.length + 1, (index) {
+          final bool isAllTab = index == 0;
+          final UserProjectModel? company =
+              isAllTab ? null : _projects[index - 1];
+          final bool isSelected = isAllTab
+              ? _selectedCompanyId == null
+              : _selectedCompanyId == company!.projectId;
+
+          return Padding(
+            padding:
+                EdgeInsetsDirectional.only(end: index == _projects.length ? 0 : 6.w),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(22.r),
+              onTap: () {
+                setState(() {
+                  _selectedCompanyId = isAllTab ? null : company!.projectId;
+                });
+              },
+              child: Container(
+                constraints: BoxConstraints(minWidth: 84.w, maxWidth: 210.w),
+                height: 36.h,
+                padding: EdgeInsets.symmetric(horizontal: 12.w),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22.r),
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: isSelected
+                        ? const [focusedStart, focusedEnd]
+                        : const [unfocusedStart, unfocusedEnd],
+                  ),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  isAllTab ? 'ALL' : company!.projectName.toUpperCase(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.koulen(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.white,
+                    letterSpacing: 0.8,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
   }
 
   @override
@@ -195,6 +272,10 @@ class _MyProjectState extends State<MyProject> {
                   ),
                 ),
                 const SizedBox(height: 5),
+                if (!_isLoading && _error == null && _projects.isNotEmpty) ...[
+                  _buildCompanyFilterTabs(),
+                  const SizedBox(height: 8),
+                ],
               ],
             ),
           ),
@@ -211,16 +292,16 @@ class _MyProjectState extends State<MyProject> {
                             style: const TextStyle(color: Colors.red)),
                       ),
                     )
-                  : _projects.isEmpty
+                  : _filteredProjects.isEmpty
                       ? const SliverFillRemaining(
                           child: Center(
-                            child: Text('No projects found'),
+                            child: Text('No projects found for this company'),
                           ),
                         )
                       : SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
-                              final project = _projects[index];
+                              final project = _filteredProjects[index];
 
                               final id = project.projectId;
                               final name = project.projectName;
@@ -268,7 +349,7 @@ class _MyProjectState extends State<MyProject> {
                                 ),
                               );
                             },
-                            childCount: _projects.length,
+                            childCount: _filteredProjects.length,
                           ),
                         ),
           // Bottom padding

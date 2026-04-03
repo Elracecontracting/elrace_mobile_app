@@ -15,7 +15,22 @@ class NotificationMuteSettingsScreen extends StatefulWidget {
 
 class _NotificationMuteSettingsScreenState
     extends State<NotificationMuteSettingsScreen> {
+  static const List<String> _alwaysOnCategories = <String>[
+    'circular',
+    'announcement',
+  ];
+
   static const Map<String, _CategoryUiMeta> _knownCategories = {
+    'circular': _CategoryUiMeta(
+      title: 'Circulars',
+      icon: Icons.campaign_rounded,
+      color: Color(0xFF455A64),
+    ),
+    'announcement': _CategoryUiMeta(
+      title: 'Announcements',
+      icon: Icons.announcement_rounded,
+      color: Color(0xFF6A1B9A),
+    ),
     'purchase.order': _CategoryUiMeta(
       title: 'Purchase Orders',
       icon: Icons.shopping_bag_rounded,
@@ -104,6 +119,11 @@ class _NotificationMuteSettingsScreenState
     );
   }
 
+  bool _isAlwaysOnCategory(String model) {
+    final key = model.trim().toLowerCase();
+    return _alwaysOnCategories.contains(key);
+  }
+
   Future<void> _loadSettings({bool forceRefresh = false}) async {
     if (mounted) {
       setState(() {
@@ -126,16 +146,28 @@ class _NotificationMuteSettingsScreenState
       for (final category in categories) {
         final key = category.model.trim().toLowerCase();
         if (key.isEmpty) continue;
+        if (_isAlwaysOnCategory(key)) continue;
         merged[key] = settings[key] ?? false;
       }
       for (final entry in settings.entries) {
-        merged[entry.key.trim().toLowerCase()] = entry.value;
+        final key = entry.key.trim().toLowerCase();
+        if (_isAlwaysOnCategory(key)) continue;
+        merged[key] = entry.value;
       }
 
-      final categoryModels = merged.entries
+      final fixedCategoryModels = _alwaysOnCategories
+          .map((model) => _toCategoryModel(model, false))
+          .toList(growable: false);
+
+      final dynamicCategoryModels = merged.entries
           .map((entry) => _toCategoryModel(entry.key, entry.value))
           .toList(growable: false)
         ..sort((a, b) => a.title.compareTo(b.title));
+
+      final categoryModels = <NotificationCategoryModel>[
+        ...fixedCategoryModels,
+        ...dynamicCategoryModels,
+      ];
 
       if (!mounted) return;
       setState(() {
@@ -169,6 +201,10 @@ class _NotificationMuteSettingsScreenState
     NotificationCategoryModel category,
     bool muted,
   ) async {
+    if (_isAlwaysOnCategory(category.model)) {
+      return;
+    }
+
     final model = category.model;
     final previous = category.muted;
 
@@ -286,6 +322,7 @@ class _NotificationMuteSettingsScreenState
 
   Widget _buildCategoryTile(NotificationCategoryModel category) {
     final isSaving = _savingModels.contains(category.model);
+    final isAlwaysOn = _isAlwaysOnCategory(category.model);
 
     return Container(
       margin: EdgeInsets.only(bottom: 10.h),
@@ -334,6 +371,15 @@ class _NotificationMuteSettingsScreenState
                     color: const Color(0xFF5F6F89),
                   ),
                 ),
+                if (isAlwaysOn)
+                  Text(
+                    'Always enabled',
+                    style: GoogleFonts.inter(
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w700,
+                      color: category.color,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -348,10 +394,10 @@ class _NotificationMuteSettingsScreenState
             )
           else
             Switch.adaptive(
-              value: category.muted,
+              value: isAlwaysOn ? false : category.muted,
               activeTrackColor: category.color.withValues(alpha: 0.35),
               activeColor: category.color,
-              onChanged: _isBulkUpdating
+              onChanged: _isBulkUpdating || isAlwaysOn
                   ? null
                   : (value) => _toggleMute(category, value),
             ),

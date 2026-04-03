@@ -1,16 +1,12 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/utils/color_utils.dart';
-import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_translate/flutter_translate.dart';
 import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
-import '../Attendace_list/repository/attendance_repository.dart';
 
-// Number formatter with thousand separators
 class ThousandsSeparatorInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
@@ -19,23 +15,19 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
       return newValue;
     }
 
-    // Remove all non-digit characters except decimal point
     String newText = newValue.text.replaceAll(RegExp(r'[^\d.]'), '');
 
-    // Ensure only one decimal point
     if (newText.split('.').length > 2) {
       return oldValue;
     }
 
-    // Split into integer and decimal parts
-    List<String> parts = newText.split('.');
-    String integerPart = parts[0];
-    String decimalPart = parts.length > 1 ? parts[1] : '';
+    final parts = newText.split('.');
+    final integerPart = parts[0];
+    final decimalPart = parts.length > 1 ? parts[1] : '';
 
-    // Add thousand separators to integer part
     String formattedInteger = '';
-    int count = 0;
-    for (int i = integerPart.length - 1; i >= 0; i--) {
+    var count = 0;
+    for (var i = integerPart.length - 1; i >= 0; i--) {
       if (count > 0 && count % 3 == 0) {
         formattedInteger = ',$formattedInteger';
       }
@@ -43,366 +35,445 @@ class ThousandsSeparatorInputFormatter extends TextInputFormatter {
       count++;
     }
 
-    // Combine with decimal part
-    String formattedText = formattedInteger;
+    var formattedText = formattedInteger;
     if (parts.length > 1) {
       formattedText += '.$decimalPart';
     }
 
-    // Calculate new cursor position
-    int selectionIndex = formattedText.length;
-
     return TextEditingValue(
       text: formattedText,
-      selection: TextSelection.collapsed(offset: selectionIndex),
+      selection: TextSelection.collapsed(offset: formattedText.length),
     );
   }
 }
 
 class PettyCashAddExpense extends StatefulWidget {
-  const PettyCashAddExpense({super.key});
+  final String fixedExpenseType;
+
+  const PettyCashAddExpense({
+    super.key,
+    required this.fixedExpenseType,
+  });
 
   @override
-  _PettyCashAddExpenseState createState() => _PettyCashAddExpenseState();
+  State<PettyCashAddExpense> createState() => _PettyCashAddExpenseState();
 }
 
 class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
-  String description = '';
-  DateTime selectedDate = DateTime.now();
-  String error = '';
-  List<dynamic> pettyCashUsers = [];
-  List<dynamic> filteredUsers = [];
-  String searchQuery = '';
-  bool isLoading = false;
-  String? errorMessage;
-  dynamic selectedUser;
-  String amount = '';
-  String selectedExpenseType = 'EXPENSE TYPE';
-  final List<String> expenseTypes = ['Petrol ', 'Hospitality ', 'Others'];
-  String empID = '';
-  String companyId = '';
-  final String baseUrl = 'https://erp.elrace.com/api/';
-  bool isSubmitting = false;
+  final TextEditingController _projectController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _holderController = TextEditingController();
+  final TextEditingController _dateController = TextEditingController();
 
-  // Text controllers
-  final TextEditingController user = TextEditingController();
-  final TextEditingController date = TextEditingController();
-  final TextEditingController amout = TextEditingController();
+  List<Map<String, dynamic>> _projectResults = const [];
+  Map<String, dynamic>? _selectedProject;
+
+  bool _isSubmitting = false;
+  bool _isProjectLoading = false;
+  Timer? _projectSearchDebounce;
+
+  DateTime _selectedDate = DateTime.now();
+  int? _holderId;
+
+  static const TextStyle _labelStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w800,
+    color: Colors.black,
+    height: 1.1,
+  );
+
+  bool get _isTransportation {
+    return widget.fixedExpenseType.toLowerCase().trim() == 'fleet';
+  }
+
+  String get _displayType {
+    return _isTransportation ? 'Transportations' : 'Miscellaneous';
+  }
+
+  String get _apiExpenseType {
+    return _isTransportation ? 'fleet' : 'other';
+  }
 
   @override
   void initState() {
     super.initState();
-    date.text = DateFormat('dd/MM/yyyy').format(selectedDate);
+    _dateController.text = DateFormat('dd/MM/yyyy').format(_selectedDate);
+    _holderId = _resolveHolderId();
+    _holderController.text = _holderId?.toString() ?? '';
   }
 
   @override
   void dispose() {
-    user.dispose();
-    date.dispose();
-    amout.dispose();
+    _projectSearchDebounce?.cancel();
+    _projectController.dispose();
+    _amountController.dispose();
+    _holderController.dispose();
+    _dateController.dispose();
     super.dispose();
   }
 
-  Future<void> _showPettyCashUserDialog() async {
-    setState(() {
-      isLoading = true;
-      errorMessage = null;
-    });
+  int? _resolveHolderId() {
+    final loginData = SharedPref.getLoginData();
+    final modeledHolderId = loginData.result?.data?.holder_id;
+    if (modeledHolderId != null) {
+      return modeledHolderId;
+    }
+
+    final loginJson = SharedPref.sharedPreferences.getString('loginResponse') ??
+        SharedPref.sharedPreferences.getString('LOGIN_RESPONSE');
+    if (loginJson == null || loginJson.isEmpty) {
+      return null;
+    }
 
     try {
-      final token = SharedPref.getLoginData().result?.token;
+      final decoded = jsonDecode(loginJson) as Map<String, dynamic>;
+      final result = decoded['result'];
+      if (result is! Map<String, dynamic>) return null;
 
-      final headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": "Bearer $token",
-      };
+      final data = result['data'];
+      if (data is! Map<String, dynamic>) return null;
 
-      final url =
-          Uri.parse("https://erp.elrace.com/api/get_petty_cash_records");
-      final body = jsonEncode({
-        "jsonrpc": "2.0",
-        "params": {},
+      final rawHolderId = data['holder_id'];
+      if (rawHolderId is int) return rawHolderId;
+      return int.tryParse(rawHolderId?.toString() ?? '');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchProjects({
+    required String keyword,
+  }) async {
+    final token = SharedPref.getLoginData().result?.token;
+    if (token == null || token.isEmpty) {
+      throw Exception('Authentication token is missing');
+    }
+
+    final request = http.Request(
+      'GET',
+      Uri.parse('https://erp.elrace.com/api/petty_cash/projects'),
+    )
+      ..headers.addAll(<String, String>{
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      })
+      ..body = jsonEncode(<String, dynamic>{
+        'jsonrpc': '2.0',
+        'params': <String, dynamic>{
+          'keyword': keyword,
+        },
       });
 
-      final request = http.Request('POST', url)
-        ..headers.addAll(headers)
-        ..body = body;
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
 
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
+    if (response.statusCode != 200) {
+      throw Exception('Failed to fetch projects: ${response.statusCode}');
+    }
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final users = data["result"]["data"];
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    final result = decoded['result'];
+    if (result is! Map<String, dynamic>) {
+      return const <Map<String, dynamic>>[];
+    }
 
-        setState(() {
-          pettyCashUsers = users;
-          filteredUsers = users.take(4).toList();
-          isLoading = false;
-        });
+    final data = result['data'];
+    if (data is! List) {
+      return const <Map<String, dynamic>>[];
+    }
 
-        // Now show the dialog
+    return data
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList(growable: false);
+  }
+
+  Future<void> _showProjectSearchDialog() async {
+    final searchController = TextEditingController();
+    var dialogResults = List<Map<String, dynamic>>.from(_projectResults);
+    var dialogLoading = false;
+    var dialogError = '';
+
+    Future<void> runSearch(StateSetter setDialogState, String keyword) async {
+      setDialogState(() {
+        dialogLoading = true;
+        dialogError = '';
+      });
+
+      try {
+        final projects = await _fetchProjects(keyword: keyword);
         if (!mounted) return;
-        showDialog(
-          context: context,
-          builder: (BuildContext context) {
-            return StatefulBuilder(
-              builder: (context, setDialogState) {
-                return Dialog(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
-                  insetPadding:
-                      const EdgeInsets.symmetric(horizontal: 30, vertical: 24),
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 26, 24, 20),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('Select Petty Cash Holder',
-                            style: TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 16)),
-                        const SizedBox(height: 16),
-                        TextField(
-                          onChanged: (value) {
-                            setDialogState(() {
-                              searchQuery = value;
-                              filteredUsers = pettyCashUsers
-                                  .where((user) => user['name']
-                                      .toLowerCase()
-                                      .contains(searchQuery.toLowerCase()))
-                                  .take(4)
-                                  .toList();
-                            });
-                          },
-                          decoration: InputDecoration(
-                            prefixIcon: const Icon(Icons.search, size: 18),
-                            hintText: 'Search user...',
-                            contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        isLoading
-                            ? const CircularProgressIndicator()
-                            : filteredUsers.isEmpty
-                                ? Text(translate('pettycash.no_users'))
-                                : SizedBox(
-                                    height: 200,
-                                    child: ListView.separated(
-                                      itemCount: filteredUsers.length,
-                                      itemBuilder: (_, index) {
-                                        final userItem = filteredUsers[index];
-                                        return ListTile(
-                                          title: Text(userItem['name'],
-                                              style: const TextStyle(
-                                                  fontSize: 13)),
-                                          tileColor: selectedUser?['id'] ==
-                                                  userItem['id']
-                                              ? Colors.blue.shade100
-                                              : Colors.transparent,
-                                          onTap: () => setDialogState(() {
-                                            selectedUser = userItem;
-                                          }),
-                                        );
-                                      },
-                                      separatorBuilder: (_, __) =>
-                                          Divider(color: Colors.grey.shade400),
-                                    ),
-                                  ),
-                        const SizedBox(height: 20),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: Text(translate('pettycash.cancel')),
-                            ),
-                            const SizedBox(width: 12),
-                            ElevatedButton(
-                              onPressed: selectedUser != null
-                                  ? () {
-                                      setState(() {
-                                        user.text = "${selectedUser['name']}";
-                                      });
-                                      Navigator.pop(context);
-                                      FocusScope.of(context).unfocus();
-                                    }
-                                  : null,
-                              child: Text(translate('pettycash.ok')),
-                            ),
-                          ],
-                        )
-                      ],
+        setDialogState(() {
+          dialogResults = projects;
+          dialogLoading = false;
+        });
+      } catch (e) {
+        setDialogState(() {
+          dialogLoading = false;
+          dialogError = e.toString();
+        });
+      }
+    }
+
+    if (_projectResults.isEmpty) {
+      setState(() => _isProjectLoading = true);
+      try {
+        final initial = await _fetchProjects(keyword: '');
+        if (mounted) {
+          setState(() {
+            _projectResults = initial;
+            _isProjectLoading = false;
+          });
+          dialogResults = initial;
+        }
+      } catch (_) {
+        if (mounted) {
+          setState(() => _isProjectLoading = false);
+        }
+      }
+    }
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Select Project',
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                     ),
-                  ),
-                );
-              },
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: searchController,
+                      onChanged: (value) {
+                        _projectSearchDebounce?.cancel();
+                        _projectSearchDebounce =
+                            Timer(const Duration(milliseconds: 350), () {
+                          runSearch(setDialogState, value.trim());
+                        });
+                      },
+                      decoration: InputDecoration(
+                        hintText: 'Search project/cost center',
+                        prefixIcon: const Icon(Icons.search, size: 20),
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    if (dialogLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: CircularProgressIndicator(),
+                      )
+                    else if (dialogError.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Text(
+                          dialogError,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(color: Colors.red),
+                        ),
+                      )
+                    else
+                      SizedBox(
+                        height: 280,
+                        child: ListView.separated(
+                          itemCount: dialogResults.length,
+                          separatorBuilder: (_, __) =>
+                              Divider(color: Colors.grey.shade300, height: 1),
+                          itemBuilder: (_, index) {
+                            final project = dialogResults[index];
+                            final projectName =
+                                (project['name'] ?? '').toString().trim();
+                            final projectId = int.tryParse(
+                                project['project_id']?.toString() ?? '');
+
+                            return ListTile(
+                              dense: true,
+                              title: Text(
+                                projectName.isEmpty
+                                    ? 'Unnamed project'
+                                    : projectName,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w600),
+                              ),
+                              subtitle: projectId == null
+                                  ? null
+                                  : Text('ID: $projectId'),
+                              onTap: projectId == null
+                                  ? null
+                                  : () {
+                                      setState(() {
+                                        _selectedProject = project;
+                                        _projectController.text = projectName;
+                                        _projectResults = dialogResults;
+                                      });
+                                      Navigator.pop(dialogContext);
+                                    },
+                            );
+                          },
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             );
           },
         );
-      } else {
-        throw Exception("Failed to fetch users: ${response.body}");
-      }
-    } catch (e) {
-      setState(() {
-        isLoading = false;
-        errorMessage = e.toString();
-      });
-    }
-  }
-
-  Future<void> init({required String base}) async {
-    empID =
-        (await userRepo.getLoginResponse())!.result!.data!.emp_id.toString();
-  }
-
-  String getExpenseTypeApiValue(String label) {
-    switch (label.toLowerCase()) {
-      case 'fuel':
-        return 'fuel';
-      case 'hospitality':
-        return 'hospitality';
-      case 'site material':
-        return 'site';
-      case 'others':
-        return 'other';
-      default:
-        return 'other';
-    }
+      },
+    );
   }
 
   Future<void> _pickDate() async {
-    DateTime? picked = await showDatePicker(
+    final picked = await showDatePicker(
       context: context,
-      initialDate: selectedDate,
+      initialDate: _selectedDate,
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
-    if (picked != null && picked != selectedDate) {
+
+    if (picked != null) {
       setState(() {
-        selectedDate = picked;
-        date.text = DateFormat('dd/MM/yyyy').format(selectedDate);
+        _selectedDate = picked;
+        _dateController.text = DateFormat('dd/MM/yyyy').format(_selectedDate);
       });
     }
   }
 
-  Future<void> submitExpense() async {
-    if (empID.isEmpty || companyId.isEmpty) {
-      await init(base: baseUrl);
-    }
-
-    // Field validation
-    if (selectedExpenseType == 'EXPENSE TYPE') {
+  Future<void> _submitExpense() async {
+    if (_holderId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(translate('home.Select_Expense_Type'))),
+        const SnackBar(content: Text('Petty cash holder is missing')),
       );
       return;
     }
 
-    if (selectedUser == null) {
+    if (_selectedProject == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(translate('home.Select_Petty_Cash_Holder'))),
+        const SnackBar(content: Text('Please select a project')),
       );
       return;
     }
 
-    if (amount.trim().isEmpty) {
+    final projectId =
+        int.tryParse(_selectedProject?['project_id']?.toString() ?? '');
+    if (projectId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(translate('home.Enter_amount_in_AED'))),
+        const SnackBar(content: Text('Invalid project selected')),
       );
       return;
     }
 
-    if (description.trim().isEmpty) {
+    final parsedAmount =
+        double.tryParse(_amountController.text.replaceAll(',', '').trim());
+    if (parsedAmount == null || parsedAmount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(translate('home.DESCRIPTION'))),
+        const SnackBar(content: Text('Please enter a valid amount')),
       );
       return;
     }
 
-    setState(() => isSubmitting = true);
+    final token = SharedPref.getLoginData().result?.token;
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Authentication token is missing')),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
 
     try {
-      final token = SharedPref.getLoginData().result?.token;
-      final headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": "Bearer $token",
+      final projectName = (_selectedProject?['name'] ?? '').toString().trim();
+
+      final body = <String, dynamic>{
+        'jsonrpc': '2.0',
+        'params': <String, dynamic>{
+          'project_id': projectId,
+          'holder_id': _holderId,
+          'unit_amount': parsedAmount,
+          'name':
+              '$projectName - ${DateFormat('dd/MM/yyyy').format(_selectedDate)}',
+          'x_expense_type': _apiExpenseType,
+        },
       };
 
-      final body = jsonEncode({
-        "jsonrpc": "2.0",
-        "params": {
-          "project_id": null,
-          "employee_id": int.parse(empID),
-          "petty_cash_id": selectedUser['id'],
-          "unit_amount": double.tryParse(amount) ?? 0.0,
-          "name": description,
-          "x_expense_type": getExpenseTypeApiValue(selectedExpenseType),
-          "state": "draft",
-        }
-      });
-
       final response = await http.post(
-        Uri.parse('${baseUrl}create_hr_expense'),
-        headers: headers,
-        body: body,
+        Uri.parse('https://erp.elrace.com/api/create_hr_expense'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
       );
 
-      final decoded = jsonDecode(response.body);
-
-      if (decoded['result']['status'] == 'success') {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(decoded['result']['message'] ??
-                  translate('pettycash.request_submitted'))),
-        );
-        Navigator.pop(context);
-      } else {
-        throw Exception(decoded['result']['message'] ??
-            translate('pettycash.failed_to_submit'));
+      if (response.statusCode != 200) {
+        throw Exception('Failed to submit expense: ${response.statusCode}');
       }
-    } catch (e) {
+
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final result = decoded['result'];
+      if (result is! Map<String, dynamic> || result['status'] != 'success') {
+        final message = (result is Map<String, dynamic>)
+            ? (result['message']?.toString() ?? 'Failed to submit expense')
+            : 'Failed to submit expense';
+        throw Exception(message);
+      }
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text("${translate('pettycash.error')}: ${e.toString()}")),
+            content: Text(result['message']?.toString() ?? 'Expense added')),
+      );
+      Navigator.pop(context, true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
       );
     } finally {
       if (mounted) {
-        setState(() => isSubmitting = false);
+        setState(() => _isSubmitting = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const labelStyle = TextStyle(
-      fontSize: 18,
-      fontWeight: FontWeight.w800,
-      color: Colors.black,
-      height: 1.1,
-    );
-
     TextStyle fieldTextStyle(bool isPlaceholder) => TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w700,
-          color: isPlaceholder ? Colors.black.withOpacity(0.45) : Colors.black,
-          height: 1.1,
+          color: isPlaceholder ? Colors.black.withOpacity(0.40) : Colors.black,
         );
 
     InputDecoration pillDecoration({String? hintText, Widget? suffixIcon}) {
       return InputDecoration(
         hintText: hintText,
         hintStyle: fieldTextStyle(true),
-        filled: false,
         isDense: true,
         contentPadding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+            const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
         suffixIcon: suffixIcon,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(28),
@@ -426,16 +497,15 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w800, height: 1.1)),
-          const SizedBox(height: 6),
+          Text(
+            label,
+            style: _labelStyle,
+          ),
+          const SizedBox(height: 8),
           child,
         ],
       );
     }
-
-    final isExpenseTypePlaceholder = selectedExpenseType == 'EXPENSE TYPE';
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -455,25 +525,57 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                 onTap: () => FocusScope.of(context).unfocus(),
                 child: SingleChildScrollView(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
+                    constraints: const BoxConstraints(maxWidth: 430),
                     child: Container(
-                      padding: const EdgeInsets.fromLTRB(22, 22, 22, 18),
+                      padding: const EdgeInsets.fromLTRB(24, 24, 24, 22),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(28),
+                        color: const Color(0xFFE9E9E9),
+                        borderRadius: BorderRadius.circular(34),
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text('+ ADD EXPENSE',
-                              style: labelStyle, textAlign: TextAlign.center),
+                          Text(
+                            '+ ADD EXPENSE',
+                            style: const TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black,
+                              height: 1,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
                           const SizedBox(height: 18),
+                          labeledField(
+                            label: 'Project',
+                            child: TextField(
+                              controller: _projectController,
+                              readOnly: true,
+                              textAlign: TextAlign.center,
+                              style: fieldTextStyle(
+                                  _projectController.text.trim().isEmpty),
+                              onTap: _isProjectLoading
+                                  ? null
+                                  : _showProjectSearchDialog,
+                              decoration: pillDecoration(
+                                hintText: _isProjectLoading
+                                    ? 'Loading...'
+                                    : 'Project Name',
+                                suffixIcon: const Icon(
+                                  Icons.keyboard_arrow_down,
+                                  size: 30,
+                                  color: Colors.black45,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 14),
                           labeledField(
                             label: 'Amount',
                             child: TextField(
-                              controller: amout,
+                              controller: _amountController,
                               keyboardType:
                                   const TextInputType.numberWithOptions(
                                       decimal: true),
@@ -481,161 +583,78 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                                 ThousandsSeparatorInputFormatter()
                               ],
                               textAlign: TextAlign.center,
-                              style: fieldTextStyle(false),
-                              onChanged: (value) => setState(() {
-                                amount = value.replaceAll(',', '');
-                              }),
-                              decoration: pillDecoration(hintText: '0'),
+                              style: fieldTextStyle(
+                                  _amountController.text.trim().isEmpty),
+                              decoration: pillDecoration(hintText: '5,000'),
                             ),
                           ),
                           const SizedBox(height: 14),
                           labeledField(
                             label: 'Pettycash holder',
                             child: TextField(
-                              controller: user,
+                              controller: _holderController,
                               readOnly: true,
                               textAlign: TextAlign.center,
-                              style: fieldTextStyle(user.text.trim().isEmpty),
-                              onTap: _showPettyCashUserDialog,
-                              decoration: pillDecoration(
-                                  hintText: translate('pettycash.select_user')),
+                              style: fieldTextStyle(
+                                  _holderController.text.trim().isEmpty),
+                              decoration: pillDecoration(hintText: 'Holder'),
                             ),
                           ),
                           const SizedBox(height: 14),
                           labeledField(
                             label: 'Invoice Date',
                             child: TextField(
-                              controller: date,
+                              controller: _dateController,
                               readOnly: true,
                               textAlign: TextAlign.center,
                               style: fieldTextStyle(false),
                               onTap: _pickDate,
                               decoration: pillDecoration(
-                                  hintText: DateFormat('dd/MM/yyyy')
-                                      .format(selectedDate)),
+                                hintText: DateFormat('dd/MM/yyyy')
+                                    .format(_selectedDate),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 14),
                           labeledField(
                             label: 'Expense type',
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton2<String>(
-                                value: isExpenseTypePlaceholder
-                                    ? null
-                                    : selectedExpenseType,
-                                isExpanded: true,
-                                hint: Center(
-                                  child: Text(
-                                    'Car petrol',
-                                    style: fieldTextStyle(true),
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                                items: expenseTypes
-                                    .map(
-                                      (t) => DropdownMenuItem<String>(
-                                        value: t,
-                                        child: Text(
-                                          t.trim(),
-                                          style: fieldTextStyle(false),
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ),
-                                    )
-                                    .toList(),
-                                selectedItemBuilder: (context) {
-                                  return expenseTypes
-                                      .map(
-                                        (t) => Center(
-                                          child: Text(
-                                            t.trim(),
-                                            style: fieldTextStyle(false),
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      )
-                                      .toList();
-                                },
-                                onChanged: (v) {
-                                  if (v == null) return;
-                                  setState(() {
-                                    selectedExpenseType = v;
-                                  });
-                                },
-                                buttonStyleData: ButtonStyleData(
-                                  height: 48,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 18),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(28),
-                                    border: Border.all(
-                                      color: Colors.black.withOpacity(0.25),
-                                      width: 1,
-                                    ),
-                                  ),
-                                ),
-                                iconStyleData: const IconStyleData(
-                                  icon: Icon(Icons.keyboard_arrow_down),
-                                  iconSize: 22,
-                                  iconEnabledColor: Colors.black54,
-                                ),
-                                dropdownStyleData: DropdownStyleData(
-                                  maxHeight: 260,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(14),
-                                    color: Colors.white,
-                                  ),
-                                  offset: const Offset(0, -6),
-                                  scrollbarTheme: ScrollbarThemeData(
-                                    radius: const Radius.circular(40),
-                                    thickness: WidgetStateProperty.all(6),
-                                    thumbVisibility:
-                                        WidgetStateProperty.all(true),
-                                  ),
-                                ),
-                                menuItemStyleData: const MenuItemStyleData(
-                                  height: 44,
-                                  padding: EdgeInsets.symmetric(horizontal: 16),
+                            child: InputDecorator(
+                              decoration: pillDecoration(),
+                              child: Center(
+                                child: Text(
+                                  _displayType,
+                                  style: fieldTextStyle(false),
                                 ),
                               ),
                             ),
                           ),
-                          const SizedBox(height: 14),
-                          labeledField(
-                            label: translate('pettycash.description'),
-                            child: TextField(
-                              maxLines: 3,
-                              style: fieldTextStyle(false),
-                              onChanged: (value) =>
-                                  setState(() => description = value),
-                              decoration: pillDecoration(
-                                  hintText: 'Write your description...'),
-                            ),
-                          ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 20),
                           SizedBox(
                             width: double.infinity,
-                            height: 48,
+                            height: 52,
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF6E6E6E),
+                                backgroundColor: const Color(0xFF676A70),
                                 shape: const StadiumBorder(),
                                 elevation: 0,
                               ),
-                              onPressed: isSubmitting ? null : submitExpense,
-                              child: isSubmitting
+                              onPressed: _isSubmitting ? null : _submitExpense,
+                              child: _isSubmitting
                                   ? const SizedBox(
                                       width: 20,
                                       height: 20,
                                       child: CircularProgressIndicator(
-                                          color: Colors.white, strokeWidth: 2),
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
                                     )
                                   : const Text(
                                       '+ ADD EXPENSE',
                                       style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.white),
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                      ),
                                     ),
                             ),
                           ),
