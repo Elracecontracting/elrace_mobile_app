@@ -66,10 +66,14 @@ class MyActionItem {
         json['amount'] ??
         json['total'];
 
-    // name: try name, display_name (Odoo standard), report_name (reports), then project / request_type
+    // name: prioritize file/report names when available, then generic labels.
     final dynamic nameRaw = json['name'] ??
         json['display_name'] ??
         json['report_name'] ??
+        json['file_name'] ??
+        json['filename'] ??
+        json['document_name'] ??
+        json['attachment_name'] ??
         json['project'] ??
         json['request_type'];
 
@@ -79,6 +83,33 @@ class MyActionItem {
     // employee: try employee_name, employee (Odoo), requester_name
     final dynamic empRaw =
         json['employee_name'] ?? json['employee'] ?? json['requester_name'];
+
+    String parseFileLink(Map<String, dynamic> data) {
+      final candidates = <dynamic>[
+        data['report_link'],
+        data['file_url'],
+        data['document_url'],
+        data['attachment_url'],
+        data['signed_file_url'],
+        data['url'],
+      ];
+
+      for (final c in candidates) {
+        final s = _safeString(c).trim();
+        if (s.isNotEmpty) return s;
+      }
+
+      final attachment = data['attachment'];
+      if (attachment is Map) {
+        final map = Map<String, dynamic>.from(attachment);
+        final nested = _safeString(
+          map['url'] ?? map['link'] ?? map['public_url'] ?? map['download_url'],
+        ).trim();
+        if (nested.isNotEmpty) return nested;
+      }
+
+      return '';
+    }
 
     return MyActionItem(
       id: (json['id'] as num?)?.toInt() ??
@@ -101,7 +132,7 @@ class MyActionItem {
       status: parseStatus(statusRaw),
       employeeName: _safeString(empRaw),
       employeeImage: json['employee_image']?.toString() ?? '',
-      reportLink: _safeString(json['report_link']),
+      reportLink: parseFileLink(json),
       clientImage: _safeString(json['client_image']),
       operatingUnit: _safeString(json['operating_unit']),
       fileId: _safeString(

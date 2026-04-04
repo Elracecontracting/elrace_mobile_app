@@ -5,6 +5,7 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashDraftScreen.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashList.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashPopUpScreen.dart';
+import 'package:el_race/ui/presentation/PettyCash/PettyCashSubmittedScreen.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -253,7 +254,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                       children: [
                         Text(
                           'Failed to load petty cash home',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
                             color: Colors.black87,
@@ -263,7 +264,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                         const SizedBox(height: 10),
                         Text(
                           _error,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: Colors.black54,
@@ -293,9 +294,9 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                             Expanded(
                               child: Text(
                                 'Recent ${math.min(_home.recentSheets.length, 10)}/10',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
                                   color: Colors.black.withOpacity(0.28),
                                 ),
                               ),
@@ -305,15 +306,16 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => const PettyCashList(),
+                                    builder: (_) =>
+                                        const PettyCashSubmittedScreen(),
                                   ),
                                 );
                               },
                               child: Text(
                                 'View More',
-                                style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
                                   color: Colors.black.withOpacity(0.28),
                                 ),
                               ),
@@ -328,7 +330,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                           child: Center(
                             child: Text(
                               'No recent expense sheets',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.black54,
@@ -378,7 +380,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(28, 16, 28, 18),
+                  padding: const EdgeInsets.fromLTRB(28, 14, 28, 14),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
@@ -394,28 +396,30 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                           const SizedBox(width: 8),
                           Text(
                             'PETTYCASH',
-                            style: GoogleFonts.robotoMono(
+                            style: GoogleFonts.poppins(
                               fontSize: 19,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
                               letterSpacing: 1.1,
+                              height: 1,
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
                       Text(
                         'Your Balance',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                           color: Colors.white.withOpacity(0.95),
+                          height: 1,
                         ),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         _formatTopAmount(_home.balanceAmount),
-                        style: GoogleFonts.abhayaLibre(
+                        style: GoogleFonts.poppins(
                           fontSize: 56,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -501,23 +505,29 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(
-              fontSize: 12,
+            style: GoogleFonts.poppins(
+              fontSize: 11,
               fontWeight: FontWeight.w700,
               color: Colors.white.withOpacity(0.92),
+              height: 1,
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 6),
           Text(
             _formatTopAmount(value),
-            style: GoogleFonts.abhayaLibre(
-              fontSize: 24,
+            style: GoogleFonts.poppins(
+              fontSize: 22,
               fontWeight: FontWeight.w600,
               color: Colors.white,
-              height: 0.95,
+              height: 1,
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            softWrap: false,
           ),
         ],
       ),
@@ -541,7 +551,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
             const SizedBox(height: 12),
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
                 color: const Color(0xFF191919),
@@ -603,8 +613,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                       sheet.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                        fontSize: 17,
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF0A0A0A),
                       ),
@@ -614,7 +624,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                       _formatSheetDate(sheet.lastUpdate),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
                         color: Colors.black.withOpacity(0.34),
@@ -626,8 +636,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
               const SizedBox(width: 8),
               Text(
                 '-${_formatSheetAmount(sheet.amount)}',
-                style: GoogleFonts.inter(
-                  fontSize: 24,
+                style: GoogleFonts.poppins(
+                  fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: const Color(0xFFFF1421),
                 ),

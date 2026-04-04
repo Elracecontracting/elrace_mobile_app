@@ -137,6 +137,19 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
     return value.trim().toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
   }
 
+  String _titleCaseSimple(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return '';
+    final words = trimmed
+        .split(RegExp(r'[_\s]+'))
+        .where((w) => w.trim().isNotEmpty)
+        .map((w) {
+      final lower = w.toLowerCase();
+      return '${lower[0].toUpperCase()}${lower.substring(1)}';
+    }).toList();
+    return words.join(' ');
+  }
+
   int? _toInt(dynamic value) {
     if (value == null || value == false || value == true) return null;
     if (value is int) return value;
@@ -371,15 +384,17 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
       case 'temporary_permission':
         return makeItems([
           ...common,
+          const _FieldDef('Start Date', ['start_date', 'request_date_from']),
+          const _FieldDef('End Date', ['end_date', 'request_date_to']),
           const _FieldDef('Available Days', ['available_days']),
-          const _FieldDef('Remaining Leave Days', [
+          const _FieldDef('Leave Balance', [
             'remaining_leave_days',
             'leave_balance',
             'balance_leave',
           ]),
-          const _FieldDef('Temp Hours', ['temp_hours']),
-          const _FieldDef('Temp Selection', ['temp_selection']),
-          const _FieldDef('Start Time', ['start_time', 'hour_from']),
+          const _FieldDef(
+              'Start Hour', ['start_time', 'hour_from', 'temp_hours']),
+          const _FieldDef('Duration Type', ['duration_type', 'temp_selection']),
           const _FieldDef('Note', ['note', 'description'], multiline: true),
         ]);
       case 'clearance':
@@ -868,9 +883,20 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
       requestName: rawRequestType,
       requestMaps: requestMaps,
     );
-    final requestType = rawRequestType == 'HR Request'
-        ? (_caseTitle[caseKey] ?? rawRequestType)
-        : rawRequestType;
+    final leaveSubtype = _pickFromMaps(requestMaps, [
+      'leave_request_subtype',
+      'leave_type',
+      'leave_type_code',
+      'holiday_status_name',
+    ]);
+    final normalizedRawType = _normalizeToken(rawRequestType);
+    final requestType = normalizedRawType == 'leave'
+        ? (leaveSubtype.isNotEmpty
+            ? _titleCaseSimple(leaveSubtype)
+            : (_caseTitle[caseKey] ?? rawRequestType))
+        : (rawRequestType == 'HR Request'
+            ? (_caseTitle[caseKey] ?? rawRequestType)
+            : rawRequestType);
 
     final employeeName = _pick([
       _pickFromMaps(employeeMaps, [
