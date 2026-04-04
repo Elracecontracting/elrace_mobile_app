@@ -2,6 +2,7 @@ import Firebase
 import FirebaseCore
 import FirebaseMessaging
 import Flutter
+import NetworkExtension
 import UIKit
 import UserNotifications
 
@@ -32,6 +33,38 @@ import UserNotifications
 
     // Register for remote notifications
     application.registerForRemoteNotifications()
+
+    // VPN Detection Channel using NEVPNManager (accurate, no false positives)
+    let controller = window?.rootViewController as! FlutterViewController
+    let vpnChannel = FlutterMethodChannel(
+      name: "com.elrace/vpn_check",
+      binaryMessenger: controller.binaryMessenger
+    )
+    vpnChannel.setMethodCallHandler { call, result in
+      if call.method == "isVpnActive" {
+        // Check IKEv2 / IPSec VPN profiles
+        let sysVpnStatus = NEVPNManager.shared().connection.status
+        let sysVpnActive = sysVpnStatus == .connected || sysVpnStatus == .connecting
+        if sysVpnActive {
+          result(true)
+          return
+        }
+        // Check Tunnel Provider VPN apps (most VPN apps use this)
+        NETunnelProviderManager.loadAllFromPreferences { managers, error in
+          guard error == nil, let managers = managers else {
+            result(false)
+            return
+          }
+          let vpnActive = managers.contains {
+            let status = $0.connection.status
+            return status == .connected || status == .connecting
+          }
+          result(vpnActive)
+        }
+      } else {
+        result(FlutterMethodNotImplemented)
+      }
+    }
 
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)

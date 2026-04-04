@@ -23,8 +23,43 @@ class PrayerAudioService {
     // debugPrint('🕌 PrayerAudioService: Initializing...');
     _currentPrayerTimes = prayerTimes;
     await _notificationService.initialize();
+
+    // عندما يكون التطبيق في المقدمة، نلغي جميع إشعارات الأذان المجدولة
+    // لأن الـ foreground timer + AudioPlayer سيتولى التشغيل.
+    // هذا يمنع تشغيل صوت الأذان مرتين (مرة من الإشعار المجدول ومرة من AudioPlayer).
+    await _cancelAllScheduledPrayerNotifications();
+
     await _startChecking();
     // debugPrint('🕌 PrayerAudioService: Initialized successfully');
+  }
+
+  /// إلغاء جميع إشعارات الأذان المجدولة لليوم (التي لم يحن وقتها بعد).
+  /// نفعل هذا عندما يكون التطبيق في المقدمة لأن الـ foreground timer
+  /// سيتولى تشغيل الأذان عبر AudioPlayer + إشعار صامت.
+  Future<void> _cancelAllScheduledPrayerNotifications() async {
+    if (_currentPrayerTimes == null) return;
+
+    final now = DateTime.now();
+    final prayers = [
+      {'name': 'fajr', 'time': _currentPrayerTimes!.fajr},
+      {'name': 'dhuhr', 'time': _currentPrayerTimes!.dhuhr},
+      {'name': 'asr', 'time': _currentPrayerTimes!.asr},
+      {'name': 'maghrib', 'time': _currentPrayerTimes!.maghrib},
+      {'name': 'isha', 'time': _currentPrayerTimes!.isha},
+    ];
+
+    for (final p in prayers) {
+      final time = p['time'] as DateTime;
+      if (time.isAfter(now)) {
+        try {
+          await _notificationService.cancelScheduledAdhan(
+            p['name'] as String,
+            time.millisecondsSinceEpoch,
+          );
+        } catch (_) {}
+      }
+    }
+    // debugPrint('🔕 Cancelled all scheduled prayer notifications (foreground active)');
   }
 
   // بدء التحقق الدوري من أوقات الصلاة
@@ -113,6 +148,16 @@ class PrayerAudioService {
               _lastPlayedTime!.difference(prayerTime).abs().inMinutes > 10) {
             // debugPrint('✅ Time for $prayerName prayer! Playing adhan...');
             _isPlaying = true; // تعيين الحالة قبل التشغيل
+
+            // Cancel the scheduled notification for this prayer to avoid
+            // a duplicate (foreground handles it now with audio).
+            try {
+              await _notificationService.cancelScheduledAdhan(
+                normalizedPrayerName,
+                prayerTime.millisecondsSinceEpoch,
+              );
+            } catch (_) {}
+
             await _notificationService.showAdhanNotification(prayerName);
             await _playAdhan();
             _lastPlayedTime = prayerTime;
@@ -183,6 +228,8 @@ class PrayerAudioService {
   void updatePrayerTimes(PrayerTimes prayerTimes) {
     _currentPrayerTimes = prayerTimes;
     _lastPlayedTime = null; // إعادة تعيين آخر وقت تشغيل
+    // إلغاء الإشعارات المجدولة للأوقات الجديدة أيضاً (التطبيق مفتوح)
+    _cancelAllScheduledPrayerNotifications();
   }
 
   // الحصول على اسم الصلاة

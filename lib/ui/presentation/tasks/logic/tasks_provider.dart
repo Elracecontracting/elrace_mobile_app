@@ -2,6 +2,7 @@ import 'package:el_race/ui/presentation/tasks/data/assignable_user_model.dart';
 import 'package:el_race/ui/presentation/tasks/data/task_model.dart';
 import 'package:el_race/ui/presentation/tasks/data/tasks_api_service.dart';
 import 'package:el_race/ui/presentation/tasks/data/tasks_repository.dart';
+import 'package:el_race/data/services/task_notification_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 
@@ -107,6 +108,18 @@ class TasksProvider extends ChangeNotifier {
       status = TasksStatus.loaded;
       notifyListeners();
 
+      // Fire new-task-assigned notification
+      try {
+        final currentUserName =
+            SharedPref.getLoginData().result?.data?.name ?? '';
+        await TaskNotificationService().showNewTaskNotification(
+          taskId: '${taskWithData.id ?? 0}',
+          taskTitle: name,
+          assignedBy: currentUserName,
+          isFirebaseTask: false,
+        );
+      } catch (_) {}
+
       // Refresh from server after a longer delay to get project/team info
       await Future.delayed(const Duration(milliseconds: 1500));
       await loadTasks(forceRefresh: true);
@@ -165,6 +178,18 @@ class TasksProvider extends ChangeNotifier {
       status = TasksStatus.loaded;
       notifyListeners();
 
+      // Fire new-task notification for report tasks
+      try {
+        final currentUserName =
+            SharedPref.getLoginData().result?.data?.name ?? '';
+        await TaskNotificationService().showNewTaskNotification(
+          taskId: '${created.id ?? 0}',
+          taskTitle: name,
+          assignedBy: currentUserName,
+          isFirebaseTask: false,
+        );
+      } catch (_) {}
+
       if (created.id != null && reportId.isNotEmpty) {
         await _repository.linkReportToTask(
           taskId: created.id!,
@@ -192,6 +217,22 @@ class TasksProvider extends ChangeNotifier {
     notifyListeners();
     try {
       final message = await _repository.submitTask(taskId: taskId);
+
+      // Find the task name before refreshing the list
+      final taskName = tasks
+              .where((t) => t.id == taskId)
+              .map((t) => t.name)
+              .firstOrNull ??
+          'Task #$taskId';
+
+      // Fire task-completed notification
+      try {
+        await TaskNotificationService().showTaskCompletedNotification(
+          taskId: '$taskId',
+          taskTitle: taskName,
+          isFirebaseTask: false,
+        );
+      } catch (_) {}
 
       await loadTasks(forceRefresh: true);
       return message;

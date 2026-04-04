@@ -1,8 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_jailbreak_detection/flutter_jailbreak_detection.dart';
 import 'package:safe_device/safe_device.dart';
 import 'package:vpn_connection_detector/vpn_connection_detector.dart';
+import 'package:el_race/core/services/app_config_service.dart';
+
+const _vpnChannel = MethodChannel('com.elrace/vpn_check');
 
 /// Security check result containing all security statuses
 class SecurityCheckResult {
@@ -96,11 +100,23 @@ class DeviceSecurityService {
       }
 
       // Check VPN
-      try {
-        isUsingVpn = await VpnConnectionDetector.isVpnActive();
-        print('🔒 VPN check: $isUsingVpn');
-      } catch (e) {
-        print('⚠️ Error checking VPN: $e');
+      // Skip VPN check if backend or test-mode says so
+      if (AppConfigService.instance.shouldSkipVpnCheck) {
+        print('🔒 VPN check: SKIPPED (shouldSkipVpnCheck=true)');
+      } else {
+        // iOS: use NEVPNManager via platform channel (accurate, no false positives)
+        // Android: use vpn_connection_detector
+        try {
+          if (Platform.isIOS) {
+            isUsingVpn =
+                await _vpnChannel.invokeMethod<bool>('isVpnActive') ?? false;
+          } else {
+            isUsingVpn = await VpnConnectionDetector.isVpnActive();
+          }
+          print('🔒 VPN check: $isUsingVpn');
+        } catch (e) {
+          print('⚠️ Error checking VPN: $e');
+        }
       }
 
       // Check Mock Location (Android only, iOS doesn't allow mock locations easily)
@@ -220,26 +236,64 @@ class DeviceSecurityService {
           actions: [
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  // Exit the app
-                  exit(0);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+              child: Column(
+                children: [
+                  // Retry button – re-run security check without killing the app
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        Navigator.of(context).pop(); // dismiss dialog
+                        final newResult = await DeviceSecurityService.instance
+                            .performSecurityCheck();
+                        if (!newResult.isSecure && context.mounted) {
+                          showSecurityBlockDialog(context, newResult);
+                        }
+                      },
+                      icon: const Icon(Icons.refresh),
+                      label: const Text(
+                        'Retry',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.orange,
+                        side: const BorderSide(color: Colors.orange),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                child: const Text(
-                  'Close App',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                  const SizedBox(height: 10),
+                  // Close button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        exit(0);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        'Close App',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ],

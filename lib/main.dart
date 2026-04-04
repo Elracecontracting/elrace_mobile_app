@@ -36,10 +36,13 @@ import 'package:el_race/core/biometric/face_recognition/face_recognition_di.dart
 import 'package:el_race/data/services/auto_checkout_service.dart';
 import 'package:el_race/data/services/checkin_reminder_notification_service.dart';
 import 'package:el_race/data/services/counter_reset_service.dart';
+import 'package:el_race/data/services/task_notification_service.dart';
+import 'package:el_race/data/services/unified_workmanager_dispatcher.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:workmanager/workmanager.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -190,6 +193,40 @@ void main() async {
     }
   } catch (e) {
     print('❌ Error getting FCM token: $e');
+  }
+
+  // Initialize WorkManager ONCE with the unified dispatcher.
+  // CRITICAL: Only one callbackDispatcher can be active per app.
+  // All background tasks (prayer, auto-checkout, counter-reset) are handled
+  // by the single unifiedCallbackDispatcher in unified_workmanager_dispatcher.dart.
+  try {
+    await Workmanager().initialize(
+      unifiedCallbackDispatcher,
+      isInDebugMode: false,
+    );
+    debugPrint('✅ WorkManager initialized with unified dispatcher');
+  } catch (e) {
+    print('❌ Error initializing WorkManager: $e');
+  }
+
+  // Initialize task notification service & schedule periodic deadline checks
+  try {
+    await TaskNotificationService().initialize();
+    await Workmanager().registerPeriodicTask(
+      'taskDeadlineCheck',
+      taskDeadlineCheckTaskName,
+      frequency: const Duration(hours: 6),
+      constraints: Constraints(
+        networkType: NetworkType.notRequired,
+        requiresBatteryNotLow: false,
+        requiresCharging: false,
+        requiresDeviceIdle: false,
+      ),
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+    );
+    debugPrint('✅ Task notification service initialized & deadline check scheduled');
+  } catch (e) {
+    print('❌ Error initializing task notification service: $e');
   }
 
   // تهيئة خدمة الأذان في الخلفية
@@ -409,9 +446,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _enableAndroidImmersiveMode();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FirebaseService.processPendingNotificationTap();
-    });
+    // NOTE: Do NOT call FirebaseService.processPendingNotificationTap() here.
+    // At this point the SplashScreen is still running. Notification taps
+    // require the full app context (HomeBloc, providers, auth session) that is
+    // only available after the splash completes. markHomeReady() in
+    // SplashScreen._navigateToNextScreen() will replay any queued tap.
   }
 
   @override
@@ -456,6 +495,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _isRestartingFromTimeout = false;
       return;
     }
+
+    // Reset home-ready flag so notification taps are re-queued until
+    // the splash screen finishes and auth is confirmed again.
+    FirebaseService.markHomeNotReady();
 
     navigator.pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const SplashScreen()),

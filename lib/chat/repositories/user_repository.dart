@@ -275,6 +275,84 @@ class UserRepository {
     return null;
   }
 
+  /// Bulk-hydrate missing email/phone/job for ALL users in Firestore
+  /// by matching against the employee directory API.
+  /// Runs in background — safe to fire-and-forget.
+  Future<int> hydrateAllUsersFromDirectory() async {
+    try {
+      final members = await TeamMembersApiService.instance.getTeamMembers();
+      if (members.isEmpty) {
+        print('⚠️ UserRepository: employee directory is empty, skipping bulk hydration');
+        return 0;
+      }
+
+      // Fetch all Firestore users
+      final snapshot = await _usersCollection.get();
+      int updatedCount = 0;
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final email = _normalizeNullableString(data['email']?.toString() ?? data['work_email']?.toString());
+        final phone = _normalizeNullableString(data['phone']?.toString() ?? data['mobile_phone']?.toString());
+        final job = _normalizeNullableString(data['job_title']?.toString());
+
+        // Skip if already has all fields
+        if (email != null && phone != null && job != null) continue;
+
+        // Build a lightweight ChatUser for matching
+        final tempUser = ChatUser(
+          uid: doc.id,
+          odooUserId: data['odoo_user_id'] ?? 0,
+          employeeId: data['employee_id'],
+          name: data['name'] ?? '',
+          email: email,
+          phoneNumber: phone,
+          jobTitle: job,
+          roleId: data['role_id'] ?? 0,
+          companyId: data['company_id'] ?? 0,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        final match = _findBestDirectoryMatch(tempUser, members);
+        if (match == null) continue;
+
+        final patch = <String, dynamic>{
+          'updated_at': FieldValue.serverTimestamp(),
+        };
+
+        final resolvedEmail = _normalizeNullableString(match.email);
+        final resolvedPhone = _normalizeNullableString(match.phone);
+        final resolvedJob = _normalizeNullableString(match.jobPosition);
+
+        if (email == null && resolvedEmail != null) {
+          patch['email'] = resolvedEmail;
+          patch['work_email'] = resolvedEmail;
+        }
+        if (phone == null && resolvedPhone != null) {
+          patch['phone'] = resolvedPhone;
+          patch['mobile_phone'] = resolvedPhone;
+        }
+        if (job == null && resolvedJob != null) {
+          patch['job_title'] = resolvedJob;
+        }
+
+        if (patch.length <= 1) continue; // only 'updated_at'
+
+        await _usersCollection.doc(doc.id).set(patch, SetOptions(merge: true));
+        _userCache.remove(doc.id);
+        _cacheTimestamps.remove(doc.id);
+        updatedCount++;
+      }
+
+      print('✅ UserRepository: Bulk hydration complete — updated $updatedCount users');
+      return updatedCount;
+    } catch (e) {
+      print('❌ UserRepository: Error during bulk hydration: $e');
+      return 0;
+    }
+  }
+
   /// Search users by fetching all and filtering client-side.
   /// No Firestore index required.
   Future<UserSearchResult> searchUsers({
@@ -300,12 +378,17 @@ class UserRepository {
 
       final snapshot = await queryBuilder.get();
 
-      // Filter client-side by name or email
+      // Filter client-side by name, email, employee ID, or odoo user ID
       final allUsers =
           snapshot.docs.map((doc) => ChatUser.fromFirestore(doc)).where((user) {
         final name = user.name.toLowerCase();
         final email = (user.email ?? '').toLowerCase();
-        return name.contains(searchTerm) || email.contains(searchTerm);
+        final employeeId = user.employeeId?.toString() ?? '';
+        final odooUserId = user.odooUserId.toString();
+        return name.contains(searchTerm) ||
+            email.contains(searchTerm) ||
+            employeeId == searchTerm ||
+            odooUserId == searchTerm;
       }).toList();
 
       // Sort by name

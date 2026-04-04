@@ -1,219 +1,26 @@
 import 'dart:async';
 import 'package:adhan/adhan.dart';
-import 'package:audioplayers/audioplayers.dart';
-import 'package:el_race/core/constants/hive_constants.dart';
-import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/data/services/prayer_notification_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:workmanager/workmanager.dart';
 
 // اسم المهمة
 const String prayerCheckTaskName = 'prayerCheckTask';
 const String rescheduleTaskName = 'reschedulePrayerTasks';
 
-// Background callback - يجب أن يكون top-level function
-@pragma('vm:entry-point')
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    // Ensure binding available in background isolate
-    WidgetsFlutterBinding.ensureInitialized();
+// NOTE: The background callbackDispatcher has been moved to
+// unified_workmanager_dispatcher.dart to avoid conflicts between
+// prayer, auto-checkout, and counter-reset services.
+// Only ONE callbackDispatcher can be active per app.
 
-    // debugPrint('Background task started: $task');
-
-    // if this is a reschedule task (unique name like reschedule-prayers-<day>)
-    if (task == rescheduleTaskName ||
-        task.toString().startsWith('reschedule-prayers-')) {
-      try {
-        await PrayerBackgroundService.reschedule();
-        return Future.value(true);
-      } catch (e) {
-        // debugPrint('Error rescheduling: $e');
-        return Future.value(false);
-      }
-    }
-
-    try {
-      // تهيئة Hive إذا لم يكن مهيأ
-      if (!Hive.isBoxOpen(HiveConstants.preferencesBox)) {
-        await Hive.initFlutter();
-      }
-
-      // التحقق من تسجيل الدخول
-      final isLoggedIn = await HiveService.isUserLoggedIn();
-      if (!isLoggedIn) {
-        // debugPrint('🚫 User not logged in, skipping adhan (background)');
-        return Future.value(true);
-      }
-
-      // التحقق من حالة كتم الصوت
-      final isMuted = await HiveService.isPrayerSoundMuted();
-      if (isMuted) {
-        // debugPrint('Prayer sound is muted, skipping adhan');
-        return Future.value(true);
-      }
-
-      // If task corresponds to a scheduled prayer
-      final prayerName = inputData?['prayer'] as String?;
-      final rawMs = inputData?['ms'];
-      final parsedMs = rawMs is int ? rawMs : int.tryParse('$rawMs');
-
-      if (prayerName != null && parsedMs != null) {
-        try {
-          final ms = parsedMs;
-
-          // Prevent duplicates by checking if already played
-          final playedKey = 'played_${prayerName}_$ms';
-          final alreadyPlayed = await HiveService.hasPlayedPrayer(playedKey);
-          if (!alreadyPlayed) {
-            // تحديد إشارة أن الأذان قيد التشغيل
-            await HiveService.markPrayerPlayed(playedKey);
-            // Keep scheduled notification intact to guarantee delivery/sound
-            // even if background audio execution fails.
-            await _playAdhanInBackground(prayerName, ms);
-          } else {
-            // debugPrint(
-            //     '🔁 Prayer $prayerName at ${scheduledTime.toIso8601String()} already handled');
-          }
-        } catch (e) {
-          // debugPrint('Error handling prayer task: $e');
-        }
-      }
-
-      return Future.value(true);
-    } catch (e) {
-      // debugPrint('Error in background task: $e');
-      return Future.value(false);
-    }
-  });
-}
-
-Future<void> _showAdhanNotificationInBackground(
-    String prayerName, int ms) async {
-  try {
-    final notificationsPlugin = await _ensureNotificationsInitialized();
-
-    await notificationsPlugin.show(
-      0,
-      '🕌 Prayer Time',
-      '🔔 It\'s now time for ${_englishPrayerName(prayerName)} prayer',
-      _defaultNotificationDetails,
-    );
-
-    // debugPrint('🔔 Background notification shown');
-  } catch (e) {
-    // debugPrint('Error showing notification: $e');
-  }
-}
-
-Future<FlutterLocalNotificationsPlugin>
-    _ensureNotificationsInitialized() async {
-  final plugin = FlutterLocalNotificationsPlugin();
-
-  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-  const iosSettings = DarwinInitializationSettings(
-    requestAlertPermission: true,
-    requestBadgePermission: true,
-    requestSoundPermission: true,
-  );
-
-  const settings = InitializationSettings(
-    android: androidSettings,
-    iOS: iosSettings,
-  );
-
-  await plugin.initialize(settings);
-  return plugin;
-}
-
-const NotificationDetails _defaultNotificationDetails = NotificationDetails(
-  android: AndroidNotificationDetails(
-    PrayerNotificationService.prayerAdhanChannelId,
-    'Prayer Adhan',
-    channelDescription: 'Notifications for prayer adhan times',
-    importance: Importance.high,
-    priority: Priority.high,
-    icon: '@mipmap/ic_launcher',
-    playSound: true,
-    sound: RawResourceAndroidNotificationSound('athan'),
-    enableVibration: true,
-    visibility: NotificationVisibility.public,
-    autoCancel: false,
-    ongoing: false,
-  ),
-  iOS: DarwinNotificationDetails(
-    presentAlert: true,
-    presentBadge: true,
-    presentSound: true,
-    interruptionLevel: InterruptionLevel.timeSensitive,
-  ),
-);
-
-Future<void> _playAdhanInBackground(String prayerName, int ms) async {
-  try {
-    final player = AudioPlayer();
-
-    // إعداد AudioPlayer
-    await player.setReleaseMode(ReleaseMode.stop);
-    await player
-        .setPlayerMode(PlayerMode.mediaPlayer); // استخدام media player mode
-
-    // start with low volume and fade in for clarity
-    await player.setVolume(0.1);
-    await player.play(AssetSource('mp3/athan.mp3'));
-
-    // debugPrint('Background adhan started playing (fade-in)');
-
-    // Gradually increase volume to full over 3 seconds
-    for (int i = 1; i <= 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      try {
-        await player.setVolume(0.1 * i);
-      } catch (_) {}
-    }
-
-    // Wait until a reasonable max length (keep 4 minutes to ensure full adhan)
-    await Future.delayed(const Duration(minutes: 4));
-    await player.stop();
-    await player.dispose();
-  } catch (e) {
-    // debugPrint('Error playing adhan in background: $e');
-  }
-}
-
-String _englishPrayerName(String prayerName) {
-  switch (prayerName.toLowerCase()) {
-    case 'fajr':
-      return 'Fajr';
-    case 'dhuhr':
-    case 'duhr':
-    case 'zuhr':
-    case 'zhuhr':
-      return 'Dhuhr';
-    case 'asr':
-      return 'Asr';
-    case 'maghrib':
-    case 'magrib':
-      return 'Maghrib';
-    case 'isha':
-    case 'isha\'':
-    case 'ishaa':
-    case 'esha':
-      return 'Isha';
-    default:
-      return prayerName;
-  }
-}
+// Background notification / audio helpers have been moved to
+// unified_workmanager_dispatcher.dart
 
 class PrayerBackgroundService {
   static Future<void> initialize() async {
-    // تهيئة Workmanager
-    await Workmanager().initialize(
-      callbackDispatcher,
-      isInDebugMode: false,
-    );
+    // NOTE: Workmanager().initialize() is now called once from main.dart
+    // with the unified dispatcher. Do NOT call it here.
 
     // جدولة المهام على أوقات الصلاة
     await _schedulePrayerTasks();

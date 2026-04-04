@@ -15,6 +15,7 @@ import 'package:el_race/ui/presentation/todo_list/services/team_members_api_serv
 import 'package:el_race/ui/presentation/todo_list/data/todo_model.dart';
 import 'package:el_race/ui/presentation/todo_list/data/task_member_model.dart';
 import 'package:el_race/ui/presentation/todo_list/services/todo_firebase_service.dart';
+import 'package:el_race/data/services/task_notification_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
@@ -262,7 +263,41 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       );
 
       // Save to Firebase
-      await TodoFirebaseService.instance.insertTodo(todo);
+      final docId = await TodoFirebaseService.instance.insertTodo(todo);
+
+      // ── Fire task notifications ──
+      try {
+        final notifService = TaskNotificationService();
+        final currentUserName =
+            SharedPref.getLoginData().result?.data?.name ?? '';
+
+        // Notify each assigned member
+        if (assignedMembers != null) {
+          for (final member in assignedMembers) {
+            // Skip self-assignment notification
+            if (member.name.toLowerCase() ==
+                currentUserName.toLowerCase()) {
+              continue;
+            }
+            await notifService.showNewTaskNotification(
+              taskId: docId,
+              taskTitle: title,
+              assignedBy: currentUserName,
+            );
+          }
+        }
+
+        // Schedule deadline reminders if due date is set
+        if (_endDate != null) {
+          await notifService.scheduleDeadlineReminders(
+            taskId: docId,
+            taskTitle: title,
+            dueDate: _endDate!,
+          );
+        }
+      } catch (e) {
+        debugPrint('⚠️ Task notification error (non-blocking): $e');
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -68,73 +68,86 @@ class _ChatUserProfileScreenState extends State<ChatUserProfileScreen> {
                     final mediaItems =
                         _extractMedia(messageSnapshot.data ?? const []);
 
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(10, 6, 10, 18),
-                      child: Container(
-                        clipBehavior: Clip.antiAlias,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFECECEE),
-                          borderRadius: BorderRadius.circular(30),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _TopIdentityCard(
-                              displayName: user?.name.trim().isNotEmpty == true
-                                  ? user!.name
-                                  : widget.fallbackName,
-                              avatarUrl: user?.avatarUrl,
-                              initials: _initials(
-                                user?.name.trim().isNotEmpty == true
-                                    ? user!.name
-                                    : widget.fallbackName,
-                              ),
-                              isOnline: isOnline,
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              minHeight: constraints.maxHeight - 6,
                             ),
-                            Padding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(18, 16, 18, 14),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _InfoRow(
-                                    label: 'Display Name',
-                                    value:
-                                        (user?.name.trim().isNotEmpty == true)
+                            child: IntrinsicHeight(
+                              child: Container(
+                                clipBehavior: Clip.antiAlias,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFECECEE),
+                                  borderRadius: BorderRadius.circular(30),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    _TopIdentityCard(
+                                      displayName: user?.name.trim().isNotEmpty == true
+                                          ? user!.name
+                                          : widget.fallbackName,
+                                      avatarUrl: user?.avatarUrl,
+                                      initials: _initials(
+                                        user?.name.trim().isNotEmpty == true
                                             ? user!.name
                                             : widget.fallbackName,
-                                  ),
-                                  _InfoRow(
-                                    label: 'Email Address',
-                                    value: _displayEmail(user),
-                                  ),
-                                  _InfoRow(
-                                    label: 'Jobtitle',
-                                    value: _resolveJobTitle(user),
-                                  ),
-                                  _InfoRow(
-                                    label: 'ID',
-                                    value: _resolveUserId(user),
-                                  ),
-                                  _InfoRow(
-                                    label: 'Phone Number',
-                                    value: _displayPhone(user),
-                                  ),
-                                ],
+                                      ),
+                                      isOnline: isOnline,
+                                    ),
+                                    Padding(
+                                      padding:
+                                          const EdgeInsets.fromLTRB(22, 22, 22, 8),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          _InfoRow(
+                                            label: 'Display Name',
+                                            value:
+                                                (user?.name.trim().isNotEmpty == true)
+                                                    ? user!.name
+                                                    : widget.fallbackName,
+                                          ),
+                                          _InfoRow(
+                                            label: 'Email Address',
+                                            value: _displayEmail(user),
+                                          ),
+                                          _InfoRow(
+                                            label: 'Jobtitle',
+                                            value: _resolveJobTitle(user),
+                                          ),
+                                          _InfoRow(
+                                            label: 'ID',
+                                            value: _resolveUserId(user),
+                                          ),
+                                          _InfoRow(
+                                            label: 'Phone Number',
+                                            value: _displayPhone(user),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: _MediaSection(
+                                        items: mediaItems,
+                                        onTapItem: (item) =>
+                                            _openMediaPreview(context, item),
+                                        onViewAll: mediaItems.isEmpty
+                                            ? null
+                                            : () => _showAllMediaBottomSheet(
+                                                context, mediaItems),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                            _MediaSection(
-                              items: mediaItems,
-                              onTapItem: (item) =>
-                                  _openMediaPreview(context, item),
-                              onViewAll: mediaItems.isEmpty
-                                  ? null
-                                  : () => _showAllMediaBottomSheet(
-                                      context, mediaItems),
-                            ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      },
                     );
                   },
                 );
@@ -345,14 +358,14 @@ class _TopIdentityCard extends StatelessWidget {
           Stack(
             children: [
               Container(
-                padding: const EdgeInsets.all(1.3),
+                padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border:
-                      Border.all(color: const Color(0xFFE9B23A), width: 1.2),
+                      Border.all(color: const Color(0xFFE9B23A), width: 2),
                 ),
                 child: CircleAvatar(
-                  radius: 23,
+                  radius: 28,
                   backgroundColor: const Color(0xFFE7E7E7),
                   backgroundImage: (avatarUrl?.trim().isNotEmpty == true)
                       ? NetworkImage(avatarUrl!.trim())
@@ -427,7 +440,7 @@ class _InfoRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 11),
+      padding: const EdgeInsets.only(bottom: 18),
       child: SizedBox(
         width: double.infinity,
         child: Column(
@@ -443,15 +456,15 @@ class _InfoRow extends StatelessWidget {
                 fontWeight: FontWeight.w400,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             Text(
               value,
               textAlign: TextAlign.start,
               style: const TextStyle(
                 color: Color(0xFF121212),
-                fontSize: 14,
-                height: 1,
-                fontWeight: FontWeight.w600,
+                fontSize: 16,
+                height: 1.2,
+                fontWeight: FontWeight.w700,
               ),
             ),
           ],

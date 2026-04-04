@@ -76,7 +76,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                 children: [
                   GestureDetector(
                     onTap: () async {
-                      SharedPref.saveSelectedCompany(1);
+                      await SharedPref.saveSelectedCompany(1);
                       await CompanyRepository().getCompany();
                       await getSelectedCompanyData();
                       setState(() {});
@@ -98,7 +98,7 @@ class _CompanyInfoScreenState extends State<CompanyInfoScreen> {
                   const SizedBox(width: 12),
                   GestureDetector(
                     onTap: () async {
-                      SharedPref.saveSelectedCompany(2);
+                      await SharedPref.saveSelectedCompany(2);
                       await CompanyRepository().getCompany();
                       await getSelectedCompanyData();
                       setState(() {});

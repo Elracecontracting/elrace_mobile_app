@@ -12,6 +12,7 @@ import 'package:dio/dio.dart' as dio;
 import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -29,6 +30,39 @@ class ReportProvider extends ChangeNotifier {
   List<ReportModel> _reports = [];
 
   bool _isLoading = false;
+
+  // ── Local report-type cache (survives app restart) ──────────────
+  static const _reportTypePrefix = 'report_type_';
+
+  Future<void> _saveReportType(String reportId, String reportType) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('$_reportTypePrefix$reportId', reportType);
+  }
+
+  Future<String?> _getReportType(String reportId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('$_reportTypePrefix$reportId');
+  }
+
+  Future<void> _restoreReportTypes() async {
+    final prefs = await SharedPreferences.getInstance();
+    for (int i = 0; i < _reports.length; i++) {
+      if (_reports[i].reportType == null) {
+        final cached = prefs.getString('$_reportTypePrefix${_reports[i].id}');
+        if (cached != null) {
+          _reports[i] = ReportModel(
+            id: _reports[i].id,
+            name: _reports[i].name,
+            companyId: _reports[i].companyId,
+            folderId: _reports[i].folderId,
+            createdAt: _reports[i].createdAt,
+            updatedAt: _reports[i].updatedAt,
+            reportType: cached,
+          );
+        }
+      }
+    }
+  }
 
   int _compareReportsNewestFirst(ReportModel a, ReportModel b) {
     final createdAtOrder = b.createdAt.compareTo(a.createdAt);
@@ -147,6 +181,10 @@ class ReportProvider extends ChangeNotifier {
         updatedAt: createdReport.updatedAt,
         reportType: reportType,
       );
+    }
+    // Persist report type locally so it survives app restart
+    if (createdReport.reportType != null) {
+      _saveReportType(createdReport.id, createdReport.reportType!);
     }
     _reports.insert(0, createdReport);
     _sortReportsNewestFirst();
@@ -286,7 +324,7 @@ class ReportProvider extends ChangeNotifier {
     }
 
     _reports = filteredList.map(ReportModel.fromJson).toList();
-    // Re-apply preserved reportTypes if API didn't return them
+    // Re-apply preserved reportTypes from in-memory cache first
     for (int i = 0; i < _reports.length; i++) {
       if (_reports[i].reportType == null &&
           oldTypes.containsKey(_reports[i].id)) {
@@ -301,6 +339,8 @@ class ReportProvider extends ChangeNotifier {
         );
       }
     }
+    // Then restore any remaining null types from persistent local storage
+    await _restoreReportTypes();
 
     // Always show newest reports first in My Report screens.
     _sortReportsNewestFirst();
@@ -336,51 +376,16 @@ class ReportProvider extends ChangeNotifier {
     return true;
   }
 
+  /// Fetches generated PDF reports from the server.
+  ///
+  /// The `/api/get_report_list` endpoint is unreliable (often returns
+  /// "No reports found"), so we use `/api/get_folder_report_list` instead
+  /// and filter for items that have a valid `s3_key` and `report_link`
+  /// (these are the generated PDF artifacts).
   Future<List<ReportPdfModel>> fetchReports(
       {required String empId,
       required String reportId,
       required String folderId}) async {
-    final url = Uri.parse('$baseUrl/api/get_report_list');
-    final response = await http.post(
-      headers: {"Content-Type": "application/x-www-form-urlencoded"},
-      url,
-      body: {
-        'emp_id': empId,
-        'report_id': reportId,
-        'folder_id': folderId,
-      },
-    );
-    print('body: $empId $reportId $folderId');
-    print('fetchReports raw response: ${response.body}');
-    if (response.statusCode == 200) {
-      final body = jsonDecode(response.body);
-      final List<dynamic> data = body['data'];
-      for (int i = 0; i < data.length; i++) {
-        print('📄 fetchReports item[$i] ALL FIELDS: ${data[i]}');
-      }
-      final pdfs = data.map((json) => ReportPdfModel.fromJson(json)).toList();
-      // Enrich with integer IDs from /reports/list
-      return await _enrichPdfsWithIds(
-        pdfs: pdfs,
-        empId: empId,
-        reportId: reportId,
-        folderId: folderId,
-      );
-    } else {
-      showFlushBar(navKey.currentContext!,
-          message: jsonDecode(response.body)['message']);
-      return [];
-    }
-  }
-
-  /// Calls /api/get_folder_report_list to get integer IDs and matches them
-  /// onto the PDF list by s3_key == file_id (hash).
-  Future<List<ReportPdfModel>> _enrichPdfsWithIds({
-    required List<ReportPdfModel> pdfs,
-    required String empId,
-    required String reportId,
-    required String folderId,
-  }) async {
     try {
       var request = http.MultipartRequest(
           'POST', Uri.parse('$baseUrl/api/get_folder_report_list'))
@@ -391,27 +396,60 @@ class ReportProvider extends ChangeNotifier {
         });
       final streamed = await request.send();
       final res = await streamed.stream.bytesToString();
-      print('📋 get_folder_report_list response: $res');
-      final listBody = jsonDecode(res);
-      final List<dynamic> listData = listBody['data'] ?? [];
-      // Build a map of s3_key (hash) → id (integer report id)
-      final Map<String, String> idMap = {};
-      for (final item in listData) {
-        final s3Key = item['s3_key']?.toString() ?? '';
-        final intId = (item['id'] ?? '').toString();
-        if (s3Key.isNotEmpty && intId.isNotEmpty) {
-          idMap[s3Key] = intId;
-        }
-      }
-      print('📋 get_folder_report_list idMap: $idMap');
-      return pdfs.map((p) => p.copyWith(id: idMap[p.fileId] ?? p.id)).toList();
+      print('📋 fetchReports (via get_folder_report_list) response: $res');
+
+      if (streamed.statusCode != 200) return [];
+
+      final body = jsonDecode(res);
+      if (body['status'] != 'success' || body['data'] == null) return [];
+
+      final List<dynamic> data = body['data'];
+
+      // Filter: generated PDFs have a non-empty s3_key and/or report_link
+      final pdfItems = data.where((item) {
+        final rawS3 = item['s3_key'];
+        final hasS3 = rawS3 != null &&
+            rawS3 != false &&
+            rawS3.toString().trim().isNotEmpty;
+        final rawLink = item['report_link'];
+        final hasLink = rawLink != null &&
+            rawLink != false &&
+            rawLink.toString().trim().isNotEmpty;
+        return hasS3 || hasLink;
+      }).toList();
+
+      print('📋 Found ${pdfItems.length} generated PDFs out of ${data.length} items');
+
+      return pdfItems.map((item) {
+        return ReportPdfModel(
+          fileId: (item['s3_key'] ?? '').toString(),
+          id: (item['id'] ?? '').toString(),
+          fileName: (item['name'] ?? '').toString(),
+          createdAt: (item['create_at'] ?? item['created_at'] ?? '').toString(),
+          reportLink: (item['report_link'] ?? '').toString(),
+        );
+      }).toList();
     } catch (e) {
-      print('📋 _enrichPdfsWithIds error: $e');
-      return pdfs;
+      print('📋 fetchReports error: $e');
+      return [];
     }
   }
 
-  Future<bool> uploadReportPdf({
+  /// No longer needed — fetchReports now uses get_folder_report_list directly.
+  // ignore: unused_element
+  Future<List<ReportPdfModel>> _enrichPdfsWithIds({
+    required List<ReportPdfModel> pdfs,
+    required String empId,
+    required String reportId,
+    required String folderId,
+  }) async {
+    return pdfs;
+  }
+
+  /// Uploads a report PDF and returns the resulting [ReportPdfModel] on
+  /// success, or `null` on failure.  The server appends `.pdf` to the
+  /// filename automatically, so we send the raw name without extension.
+  Future<ReportPdfModel?> uploadReportPdf({
     required String empId,
     required Uint8List pdfBytes,
     required String reportId,
@@ -419,6 +457,9 @@ class ReportProvider extends ChangeNotifier {
     required String fileName,
     UploadProgressCallback? onProgress,
   }) async {
+    // Do NOT append .pdf here — the server adds the extension itself.
+    final cleanName = fileName.trim();
+
     try {
       final client = dio.Dio(
         dio.BaseOptions(
@@ -432,15 +473,15 @@ class ReportProvider extends ChangeNotifier {
         'emp_id': empId,
         'report_id': reportId,
         'folder_id': folderId,
-        'file_name': fileName,
-        'file': dio.MultipartFile.fromBytes(pdfBytes, filename: fileName),
+        'file_name': cleanName,
+        'file': dio.MultipartFile.fromBytes(pdfBytes, filename: cleanName),
       });
 
       final response = await client.post(
         '$baseUrl/api/upload_site_report',
         queryParameters: {
           'folder_id': folderId,
-          'file_name': fileName,
+          'file_name': cleanName,
         },
         data: formData,
         onSendProgress: (sent, total) {
@@ -452,6 +493,7 @@ class ReportProvider extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final data = response.data;
+        print('📤 upload_site_report response: $data');
         Map<String, dynamic>? body;
         if (data is Map<String, dynamic>) {
           body = data;
@@ -461,19 +503,29 @@ class ReportProvider extends ChangeNotifier {
             body = decoded;
           }
         }
-        return body?['status'] == 'success';
+        if (body?['status'] == 'success' && body?['data'] != null) {
+          final d = body!['data'] is Map<String, dynamic>
+              ? body['data'] as Map<String, dynamic>
+              : <String, dynamic>{};
+          return ReportPdfModel(
+            fileId: (d['file_id'] ?? '').toString(),
+            fileName: (d['file_name'] ?? cleanName).toString(),
+            createdAt: (d['created_at'] ?? '').toString(),
+            reportLink: (d['report_link'] ?? '').toString(),
+          );
+        }
       }
 
-      print('Upload failed with status: ${response.statusCode}');
-      return false;
+      print('Upload failed with status: ${response.statusCode} body: ${response.data}');
+      return null;
     } on dio.DioException catch (e) {
       print('Dio exception during PDF upload: ${e.message}');
       print('Dio response status: ${e.response?.statusCode}');
       print('Dio response data: ${e.response?.data}');
-      return false;
+      return null;
     } catch (e) {
       print("Exception caught during PDF upload: $e");
-      return false;
+      return null;
     }
   }
 

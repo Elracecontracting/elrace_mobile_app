@@ -13,6 +13,8 @@ import 'package:el_race/ui/presentation/Email%20Approval/screens/rfq_details_scr
 import 'package:el_race/ui/presentation/Notification/notification_screen.dart';
 import 'package:el_race/ui/presentation/circular_announcement/screens/circular_announcement_screen.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/main_screens.dart';
+import 'package:el_race/ui/presentation/tasks_dashboard/screens/task_details.dart'
+    as dashboard_task_details;
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/utils/string_utils.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -31,6 +33,24 @@ class FirebaseService {
   static final Set<String> _processedMessageIds = {};
   static String? _pendingTapPayload;
   static bool _isHandlingTap = false;
+
+  /// True once the home screen is fully loaded and ready for deep-link
+  /// navigation. Notification taps received before this point are queued
+  /// and replayed via [markHomeReady] to avoid navigating during splash.
+  static bool _isHomeReady = false;
+
+  /// Call this after the app navigates beyond SplashScreen to HomeScreen so
+  /// that any pending notification tap can be replayed with a proper context.
+  static void markHomeReady() {
+    _isHomeReady = true;
+    processPendingNotificationTap();
+  }
+
+  /// Call this when the app is restarted from the inactivity-timeout splash
+  /// so we wait again for the home screen before replaying any queued tap.
+  static void markHomeNotReady() {
+    _isHomeReady = false;
+  }
 
   static Future<void> initialize() async {
     await _firebaseMessaging.setAutoInitEnabled(true);
@@ -86,6 +106,26 @@ class FirebaseService {
       },
     );
 
+    // Create the high_importance_channel used by FCM foreground notifications.
+    // Without this, Android 8+ silently drops or demotes notifications because
+    // the channel referenced in AndroidManifest meta-data doesn't exist.
+    final androidImpl = _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+    if (androidImpl != null) {
+      await androidImpl.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'high_importance_channel',
+          'High Importance Notifications',
+          description: 'Used for general push notifications',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+          showBadge: true,
+        ),
+      );
+    }
+
     // Ensure iOS presents incoming FCM notifications while app is in foreground.
     await _firebaseMessaging.setForegroundNotificationPresentationOptions(
       alert: true,
@@ -100,7 +140,12 @@ class FirebaseService {
       print('   - Body: ${message.notification?.body}');
       print('   - Data: ${message.data}');
 
-      _showNotification(message);
+      // On iOS, setForegroundNotificationPresentationOptions already shows
+      // the notification natively — calling _showNotification here would
+      // create a duplicate. Only show local notification on Android.
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        _showNotification(message);
+      }
       // Save notification to storage
       _saveNotificationToStorage(message);
 
@@ -477,6 +522,17 @@ class FirebaseService {
       return;
     }
 
+    // Guard against navigating while the splash screen is still running.
+    // Detail screens (HrDetails, NotificationScreen, etc.) require the full
+    // app context (HomeBloc, providers, authenticated session) that is only
+    // available after the splash screen completes. Queue the tap so
+    // markHomeReady() can replay it once HomeScreen is mounted.
+    if (!_isHomeReady) {
+      _pendingTapPayload = payload;
+      print('⚠️ Home not ready yet (splash still active). Tap payload queued.');
+      return;
+    }
+
     _isHandlingTap = true;
     print('\n🔔 [HANDLE TAP] Starting to handle notification tap');
     print('   - Payload: $payload');
@@ -567,6 +623,27 @@ class FirebaseService {
         );
         print('   - ✅ Navigation to Circular/Announcement completed!');
         return;
+      }
+
+      // Task notification — open task details
+      if (category == 'task') {
+        final taskId = payloadData?['task_id']?.toString();
+        final isFirebaseTask =
+            payloadData?['is_firebase_task']?.toString() != 'false';
+        print('   - ✅ Task notification! taskId=$taskId, firebase=$isFirebaseTask');
+
+        if (taskId != null && taskId.isNotEmpty && isFirebaseTask) {
+          navigator.push(
+            MaterialPageRoute(
+              builder: (_) =>
+                  dashboard_task_details.TaskDetailsScreen(taskId: taskId),
+              settings: const RouteSettings(name: '/task_details'),
+            ),
+          );
+          print('   - ✅ Task navigation completed!');
+          return;
+        }
+        // For Odoo tasks, fall through to notification screen
       }
 
       final recordType = _resolveRecordTypeFromPayload(payloadData);

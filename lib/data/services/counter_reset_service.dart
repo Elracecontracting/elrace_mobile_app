@@ -18,11 +18,8 @@ class CounterResetService {
     try {
       debugPrint('🔄 CounterResetService: Initializing...');
 
-      // تهيئة Workmanager (إذا لم يتم تهيئته مسبقاً)
-      await Workmanager().initialize(
-        callbackDispatcher,
-        isInDebugMode: false,
-      );
+      // NOTE: Workmanager().initialize() is now called once from main.dart
+      // with the unified dispatcher. Do NOT call it here.
 
       // جدولة المهمة اليومية
       await scheduleDailyReset();
@@ -213,26 +210,5 @@ class CounterResetService {
   }
 }
 
-/// Callback dispatcher للـ WorkManager
-@pragma('vm:entry-point')
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    debugPrint('📱 WorkManager counter reset task started: $task');
-
-    try {
-      if (task == CounterResetService.taskName) {
-        // تهيئة SharedPref
-        await SharedPref().instantiatePreferences();
-
-        // تنفيذ التصفير
-        await CounterResetService._performReset();
-
-        debugPrint('✅ Counter reset task completed successfully');
-      }
-      return Future.value(true);
-    } catch (e) {
-      debugPrint('❌ Error in counter reset task: $e');
-      return Future.value(false);
-    }
-  });
-}
+// NOTE: The callbackDispatcher has been moved to
+// unified_workmanager_dispatcher.dart to avoid conflicts.

@@ -158,11 +158,14 @@ class SharedPref {
   }
 
   static int getSelectedCompany() {
-    return sharedPreferences.getInt("selectedCompany") ?? 1;
+    final id = sharedPreferences.getInt("selectedCompany") ?? 1;
+    print('🏢 SharedPref.getSelectedCompany() → $id');
+    return id;
   }
 
-  static saveSelectedCompany(int id) {
-    return sharedPreferences.setInt("selectedCompany", id);
+  static Future<void> saveSelectedCompany(int id) async {
+    print('🏢 SharedPref.saveSelectedCompany($id)');
+    await sharedPreferences.setInt("selectedCompany", id);
   }
 
   getUserBase64Image() {

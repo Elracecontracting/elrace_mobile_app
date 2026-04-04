@@ -1,17 +1,24 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' show min, max;
 
+import 'package:cookie_jar/cookie_jar.dart';
+import 'package:dio/dio.dart';
+import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../main.dart' show navKey;
 import '../../ui/chat/chat_screen.dart';
+import '../../utils/urll_utils.dart';
 import '../models/models.dart';
 import '../repositories/chat_repository.dart';
 import '../repositories/user_repository.dart';
+import 'chat_credential_storage.dart';
 import 'chat_session_storage.dart';
 import 'presence_service.dart';
 import 'chat_notification_service.dart';
@@ -82,45 +89,173 @@ class FirebaseChatAuthService {
   }
 
   /// Refresh the Firebase custom token from the backend.
-  /// 
-  /// Calls the login API endpoint with a special refresh request
-  /// using the stored backend JWT token to get a new Firebase custom token.
+  ///
+  /// Strategy:
+  /// 1. Try the dedicated refresh endpoint with Bearer token + session cookies.
+  /// 2. If that fails, try session cookies with login/new.
+  /// 3. If all else fails, do a **silent re-login** with stored credentials.
   Future<String?> refreshFirebaseCustomToken(String backendToken) async {
     try {
       print('🔄 FirebaseChatAuth: Requesting fresh Firebase token from backend...');
-      
-      final dio = Dio();
-      final response = await dio.post(
-        'https://erp.elrace.com/api/firebase/refresh_token',
-        data: jsonEncode({
-          "jsonrpc": "2.0",
-          "params": {}
-        }),
-        options: Options(
-          headers: {
+
+      // Use persistent cookies (same cookie jar as the rest of the app)
+      final appDocDir = await getApplicationDocumentsDirectory();
+      final cookieJar = PersistCookieJar(
+        ignoreExpires: true,
+        storage: FileStorage('${appDocDir.path}/.cookies/'),
+      );
+
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 15),
+      ));
+      dio.interceptors.add(CookieManager(cookieJar));
+
+      // ── Attempt 1: Dedicated refresh endpoint ──
+      try {
+        final refreshUrl = '${UrlUtil.baseUrl}${UrlUtil.firebaseRefreshToken}';
+        print('🔄 FirebaseChatAuth: Trying refresh endpoint: $refreshUrl');
+
+        final response = await dio.post(
+          refreshUrl,
+          data: jsonEncode({"jsonrpc": "2.0", "params": {}}),
+          options: Options(headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $backendToken',
-          },
-        ),
-      ).timeout(const Duration(seconds: 15));
+          }),
+        );
 
-      if (response.data != null) {
-        final result = response.data['result'];
-        if (result != null) {
-          final newToken = result['firebase_custom_token']?.toString();
-          if (newToken != null && newToken.isNotEmpty && newToken != 'false') {
-            print('✅ FirebaseChatAuth: Got fresh Firebase token (${newToken.length} chars)');
-            return newToken;
-          }
-        }
+        final token = _extractFirebaseToken(response.data);
+        if (token != null) return token;
+      } on DioException catch (e) {
+        print('⚠️ FirebaseChatAuth: Refresh endpoint returned ${e.response?.statusCode}');
       }
-      
-      print('⚠️ FirebaseChatAuth: Backend did not return a fresh Firebase token');
+
+      // ── Attempt 2: Session cookies with login endpoint ──
+      try {
+        final sessionUrl = '${UrlUtil.baseUrl}${UrlUtil.login}';
+        print('🔄 FirebaseChatAuth: Trying session-based refresh via $sessionUrl');
+
+        final response = await dio.post(
+          sessionUrl,
+          data: jsonEncode({"jsonrpc": "2.0", "params": {}}),
+          options: Options(headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $backendToken',
+          }),
+        );
+
+        final token = _extractFirebaseToken(response.data);
+        if (token != null) return token;
+      } on DioException catch (e) {
+        print('⚠️ FirebaseChatAuth: Session-based refresh failed: ${e.response?.statusCode}');
+      }
+
+      // ── Attempt 3: Silent re-login with stored credentials ──
+      try {
+        final creds = await ChatCredentialStorage.instance.load();
+        if (creds != null) {
+          print('🔄 FirebaseChatAuth: Attempting silent re-login...');
+
+          // Get FCM token for the login request
+          String fcmToken = '';
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            fcmToken = prefs.getString('fcm_token') ?? '';
+          } catch (_) {}
+
+          final loginUrl = '${UrlUtil.baseUrl}${UrlUtil.login}';
+          final response = await dio.post(
+            loginUrl,
+            data: jsonEncode({
+              "jsonrpc": "2.0",
+              "params": {
+                "db": "odoo.elrace.com",
+                "login": creds.email,
+                "password": creds.password,
+                "device_id": creds.deviceId,
+                "fcm_token": fcmToken,
+              }
+            }),
+            options: Options(headers: {
+              'Content-Type': 'application/json',
+            }),
+          );
+
+          print('🔄 FirebaseChatAuth: Silent re-login response status: ${response.statusCode}');
+
+          // Check if login was successful
+          final data = response.data;
+          if (data is Map<String, dynamic>) {
+            final result = data['result'];
+            if (result is Map<String, dynamic> && result['success'] == true) {
+              print('✅ FirebaseChatAuth: Silent re-login succeeded!');
+
+              // Update stored loginResponse so other parts of the app benefit
+              try {
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.setString('loginResponse', jsonEncode(data));
+                print('✅ FirebaseChatAuth: Updated stored loginResponse');
+              } catch (_) {}
+
+              // Extract the fresh Firebase token
+              final token = _extractFirebaseToken(data);
+              if (token != null) return token;
+            } else {
+              final msg = result?['message'] ?? 'unknown';
+              print('⚠️ FirebaseChatAuth: Silent re-login failed: $msg');
+            }
+          }
+        } else {
+          print('⚠️ FirebaseChatAuth: No stored credentials for silent re-login');
+        }
+      } catch (e) {
+        print('⚠️ FirebaseChatAuth: Silent re-login error: $e');
+      }
+
+      print('⚠️ FirebaseChatAuth: All refresh attempts failed');
       return null;
     } catch (e) {
       print('⚠️ FirebaseChatAuth: Could not refresh Firebase token: $e');
       return null;
     }
+  }
+
+  /// Extract firebase_custom_token from any response shape.
+  String? _extractFirebaseToken(dynamic data) {
+    try {
+      Map<String, dynamic>? payload;
+      if (data is Map<String, dynamic>) {
+        // jsonrpc envelope: { result: { data: { firebase_custom_token } } }
+        final result = data['result'];
+        if (result is Map<String, dynamic>) {
+          final inner = result['data'];
+          if (inner is Map<String, dynamic>) {
+            payload = inner;
+          } else {
+            payload = result;
+          }
+        } else {
+          payload = data;
+        }
+      } else if (data is String) {
+        final parsed = jsonDecode(data);
+        if (parsed is Map<String, dynamic>) {
+          return _extractFirebaseToken(parsed);
+        }
+      }
+
+      if (payload == null) return null;
+
+      final token = payload['firebase_custom_token']?.toString();
+      if (token != null && token.isNotEmpty && token != 'false' && token != 'null') {
+        print('✅ FirebaseChatAuth: Got fresh Firebase token (${token.length} chars)');
+        return token;
+      }
+    } catch (e) {
+      print('⚠️ FirebaseChatAuth: Error extracting token: $e');
+    }
+    return null;
   }
 
   /// Main setup method - call this after backend login success.
@@ -217,6 +352,15 @@ class FirebaseChatAuthService {
 
       _isSetupComplete = true;
       print('✅ FirebaseChatAuth: Setup complete!');
+
+      // Bulk-hydrate missing email/phone/job for all users (fire-and-forget)
+      UserRepository.instance.hydrateAllUsersFromDirectory().then((count) {
+        if (count > 0) {
+          print('✅ FirebaseChatAuth: Bulk hydrated $count user profiles');
+        }
+      }).catchError((e) {
+        print('⚠️ FirebaseChatAuth: Bulk hydration error (non-fatal): $e');
+      });
 
       // Cache session securely for fast restore on next app open
       await ChatSessionStorage.instance.saveSession(

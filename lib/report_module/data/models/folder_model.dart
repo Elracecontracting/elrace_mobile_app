@@ -24,6 +24,18 @@ class FolderModel {
       return 0;
     }
 
+    // Helper: check if a report item is a generated PDF artifact (not an editable report)
+    bool _isGeneratedArtifact(Map item) {
+      final rawS3 = item['s3_key'];
+      final hasS3Key =
+          rawS3 != null && rawS3 != false && rawS3.toString().trim().isNotEmpty;
+      final rawFileName = item['file_name'];
+      final hasFileName = rawFileName != null &&
+          rawFileName != false &&
+          rawFileName.toString().trim().isNotEmpty;
+      return hasS3Key || hasFileName;
+    }
+
     final dynamic reportsValue =
         json['report_count'] ??
         json['reports_count'] ??
@@ -31,9 +43,16 @@ class FolderModel {
         json['count'] ??
         json['reports'];
 
-    final int parsedReportCount = reportsValue is List
-        ? reportsValue.length
-        : _toInt(reportsValue);
+    int parsedReportCount;
+    if (reportsValue is List) {
+      // Filter out generated PDF artifacts — only count editable reports
+      parsedReportCount = reportsValue
+          .whereType<Map>()
+          .where((item) => !_isGeneratedArtifact(item))
+          .length;
+    } else {
+      parsedReportCount = _toInt(reportsValue);
+    }
 
     return FolderModel(
       id: json['id'].toString(),

@@ -265,16 +265,24 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
         orElse: () => cameras.first,
       );
 
-      _controller = CameraController(
+      final controller = CameraController(
         backCamera,
         ResolutionPreset.max,
         enableAudio: false,
       );
 
-      _initializeControllerFuture = _controller!.initialize();
-      if (mounted) {
-        setState(() {});
+      // Fully await initialization before setState so FutureBuilder sees a
+      // completed future immediately — prevents black-screen flash.
+      await controller.initialize();
+
+      if (!mounted) {
+        await controller.dispose();
+        return;
       }
+
+      _controller = controller;
+      _initializeControllerFuture = Future.value();
+      setState(() {});
     } catch (e) {
       debugPrint('Error initializing camera: $e');
     }
@@ -430,8 +438,8 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
       }
 
       // Draw date, time, and location text with shadow (all same font, aligned)
-      final font = img.arial48;
-      final shadowOffset = 2;
+      final font = img.arial24;
+      final shadowOffset = 1;
 
       // Measure actual text widths using font metrics
       int measureWidth(img.BitmapFont f, String text) {
@@ -597,11 +605,14 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
     try {
       await Gal.putImage(targetPath, album: 'RCC');
       if (mounted) {
+        // Navigate back first, then show snackbar on the previous screen
+        Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Scan saved to gallery ✓'),
             backgroundColor: Colors.green,
-            duration: Duration(seconds: 1),
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 2),
           ),
         );
       }
@@ -677,157 +688,42 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
       if (!mounted) return;
       if (pictures == null || pictures.isEmpty) return;
 
-      // Add logo, date, time, location overlay then save to gallery
-      final List<String> processedPaths = [];
+      // Navigate back immediately so the UI is responsive
+      Navigator.pop(context);
+
+      // Process overlays + save in background (no main-thread freeze)
+      int savedCount = 0;
       for (final picturePath in pictures) {
         try {
-          await _composeWithOverlay(picturePath);
+          await compute(
+            _applyOverlayIsolate,
+            _OverlayParams(
+              imagePath: picturePath,
+              logoBytes: _logoBytes,
+              currentTime: _currentTime,
+              currentDate: _currentDate,
+              currentLocation: _currentLocation,
+            ),
+          );
           await Gal.putImage(picturePath, album: 'RCC');
-          processedPaths.add(picturePath);
+          savedCount++;
         } catch (e) {
           debugPrint('Error processing scanned page: $e');
         }
       }
 
-      if (!mounted || processedPaths.isEmpty) return;
-
-      // Show bottom sheet with Save ✓ and Share options
-      showModalBottomSheet(
-        context: context,
-        backgroundColor: Colors.transparent,
-        builder: (ctx) => Container(
-          padding: EdgeInsets.all(20.w),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1A1A2E),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+      if (savedCount > 0 && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '$savedCount page${savedCount > 1 ? 's' : ''} scanned & saved',
+            ),
+            backgroundColor: Colors.green.shade700,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 2),
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40.w,
-                height: 4.h,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2.r),
-                ),
-              ),
-              SizedBox(height: 16.h),
-              Icon(Icons.check_circle_rounded,
-                  color: Colors.green, size: 48.sp),
-              SizedBox(height: 12.h),
-              Text(
-                '${processedPaths.length} page(s) scanned & saved ✓',
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              SizedBox(height: 20.h),
-              Row(
-                children: [
-                  // Share as Images
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        Navigator.pop(ctx);
-                        await Share.shareXFiles(
-                          processedPaths.map((p) => XFile(p)).toList(),
-                        );
-                      },
-                      icon: Icon(Icons.image_rounded, size: 20.sp),
-                      label: Text('Share Images',
-                          style: GoogleFonts.inter(fontSize: 13.sp)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacity(0.1),
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 14.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
-                          side: BorderSide(
-                              color: Colors.white.withOpacity(0.15)),
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: 12.w),
-                  // Share as PDF
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        Navigator.pop(ctx);
-                        try {
-                          final pages = processedPaths
-                              .asMap()
-                              .entries
-                              .map((e) => DocumentPage(
-                                    id: 'scan-${DateTime.now().millisecondsSinceEpoch}-${e.key}',
-                                    originalImagePath: e.value,
-                                    processedImagePath: e.value,
-                                    filterType: ImageFilterType.original,
-                                    pageNumber: e.key + 1,
-                                    capturedAt: DateTime.now(),
-                                    edgeDetectionSuccessful: false,
-                                  ))
-                              .toList();
-
-                          final exportDir =
-                              await _exportService.getExportDirectory();
-                          final pdfPath =
-                              '$exportDir/scan_${DateTime.now().millisecondsSinceEpoch}.pdf';
-
-                          await _exportService.exportToPdf(
-                              pages, pdfPath, ExportQuality.high);
-
-                          await Share.shareXFiles([XFile(pdfPath)]);
-                        } catch (e) {
-                          debugPrint('PDF export error: $e');
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('PDF share failed: $e'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                      icon: Icon(Icons.picture_as_pdf_rounded, size: 20.sp),
-                      label: Text('Share PDF',
-                          style: GoogleFonts.inter(fontSize: 13.sp)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.cyan.withOpacity(0.8),
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 14.h),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: 12.h),
-              // Done button
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(
-                    'Done',
-                    style: GoogleFonts.inter(
-                      color: Colors.white54,
-                      fontSize: 14.sp,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 8.h),
-            ],
-          ),
-        ),
-      );
+        );
+      }
     } on PlatformException catch (e) {
       debugPrint('Document scanner error: $e');
     }
@@ -835,17 +731,41 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
 
   void _openQrScanner() async {
     try {
-      // Navigate to QR scanner screen
-      await Navigator.push(
+      // Grab the current controller but don't null it yet — keep the frozen
+      // camera frame visible during the push transition (no loading flicker).
+      final oldController = _controller;
+
+      // Dispose silently so the hardware is released before QR scanner opens.
+      _controller = null;
+      await oldController?.dispose();
+
+      // Navigate to QR scanner screen; returns true on successful scan
+      final result = await Navigator.push<bool>(
         context,
         MaterialPageRoute(
           builder: (context) => const QrScannerScreen(),
           fullscreenDialog: true,
         ),
       );
+
+      // If QR was scanned successfully, leave the camera screen too
+      if (result == true && mounted) {
+        Navigator.pop(context);
+        return;
+      }
+
+      if (!mounted) return;
+
+      // Show a spinner while we wait for Android to fully release the hardware
+      // from MobileScanner before we reopen it.
+      setState(() {});
+      await Future.delayed(const Duration(milliseconds: 400));
+
+      if (mounted) await _initializeCamera();
     } catch (e) {
       debugPrint('QR scanner error: $e');
       if (mounted) {
+        await _initializeCamera();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('QR scanner error: $e'),
@@ -1146,100 +1066,51 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
 
   Widget _buildScanOverlay() {
     final previewPath = _scanFilteredPath ?? _scanOriginalPath;
+    const appBlue = Color(0xff2B2C74);
 
     return Positioned.fill(
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOutCubic,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              const Color(0xFF0D0D0D),
-              const Color(0xFF1A1A2E),
-              const Color(0xFF0D0D0D),
-            ],
-          ),
-        ),
+      child: Material(
+        color: Colors.white,
         child: SafeArea(
           child: Column(
             children: [
-              // Modern Top Bar
+              // ── App-style top bar ──────────────────────────────
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+                color: appBlue,
+                padding: EdgeInsets.symmetric(horizontal: 4.w, vertical: 6.h),
                 child: Row(
                   children: [
-                    // Back button with ripple
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(50),
-                        onTap: () {
-                          setState(() {
-                            _showScanOverlay = false;
-                          });
-                        },
-                        child: Container(
-                          padding: EdgeInsets.all(12.w),
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white.withOpacity(0.08),
-                          ),
-                          child: Icon(
-                            Icons.close_rounded,
-                            color: Colors.white,
-                            size: 24.sp,
-                          ),
-                        ),
-                      ),
+                    IconButton(
+                      icon: Icon(Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white, size: 20.sp),
+                      onPressed: () => setState(() => _showScanOverlay = false),
                     ),
-                    SizedBox(width: 12.w),
-                    // Title with gradient
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      child: Row(
                         children: [
                           Text(
                             'Document Scan',
                             style: GoogleFonts.inter(
                               color: Colors.white,
-                              fontSize: 18.sp,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -0.5,
+                              fontSize: 17.sp,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          if (_isProcessingFilter)
-                            TweenAnimationBuilder<double>(
-                              tween: Tween(begin: 0.0, end: 1.0),
-                              duration: const Duration(milliseconds: 600),
-                              builder: (context, value, child) {
-                                return Row(
-                                  children: [
-                                    SizedBox(
-                                      width: 10.w,
-                                      height: 10.w,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 1.5,
-                                        color: Colors.cyan.withOpacity(value),
-                                      ),
-                                    ),
-                                    SizedBox(width: 6.w),
-                                    Text(
-                                      'Enhancing...',
-                                      style: GoogleFonts.inter(
-                                        color: Colors.white54,
-                                        fontSize: 12.sp,
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
+                          if (_isProcessingFilter) ...
+                          [
+                            SizedBox(width: 10.w),
+                            SizedBox(
+                              width: 14.w,
+                              height: 14.w,
+                              child: const CircularProgressIndicator(
+                                strokeWidth: 1.5,
+                                color: Colors.white70,
+                              ),
                             ),
+                          ],
                         ],
                       ),
                     ),
-                    // Action buttons
                     _actionButton(
                       icon: Icons.save_alt_rounded,
                       label: 'Save',
@@ -1254,128 +1125,96 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                       isLoading: _isExportingPdf,
                       isPrimary: true,
                     ),
+                    SizedBox(width: 4.w),
                   ],
                 ),
               ),
 
-              // Image Preview with elegant frame
+              // ── Image preview ──────────────────────────────────
               Expanded(
                 child: Container(
-                  margin:
-                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                  color: const Color(0xffECECF2),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
                   child: previewPath == null
                       ? _buildLoadingSkeleton()
-                      : Hero(
-                          tag: 'scan_preview',
-                          child: AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 400),
-                            switchInCurve: Curves.easeOutCubic,
-                            switchOutCurve: Curves.easeInCubic,
-                            child: Stack(
-                              key: ValueKey(previewPath),
-                              alignment: Alignment.center,
-                              children: [
-                                // Glow effect behind image
-                                Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20.r),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.cyan.withOpacity(0.15),
-                                        blurRadius: 40,
-                                        spreadRadius: 5,
-                                      ),
-                                    ],
+                      : AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: Stack(
+                            key: ValueKey(previewPath),
+                            alignment: Alignment.center,
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  color: Colors.white,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.12),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  child: Image.file(
+                                    File(previewPath),
+                                    fit: BoxFit.contain,
+                                    filterQuality: FilterQuality.high,
                                   ),
                                 ),
-                                // Image with frame
+                              ),
+                              if (_isProcessingFilter)
                                 ClipRRect(
-                                  borderRadius: BorderRadius.circular(16.r),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      border: Border.all(
-                                        color: Colors.white.withOpacity(0.1),
-                                        width: 1,
-                                      ),
-                                      borderRadius: BorderRadius.circular(16.r),
-                                    ),
-                                    child: Image.file(
-                                      File(previewPath),
-                                      fit: BoxFit.contain,
-                                      filterQuality: FilterQuality.high,
+                                  borderRadius: BorderRadius.circular(12.r),
+                                  child: BackdropFilter(
+                                    filter: ui.ImageFilter.blur(
+                                        sigmaX: 3, sigmaY: 3),
+                                    child: Container(
+                                      color: Colors.white.withOpacity(0.4),
+                                      child: Center(
+                                          child: _buildProcessingIndicator()),
                                     ),
                                   ),
                                 ),
-                                // Processing overlay with blur
-                                if (_isProcessingFilter)
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(16.r),
-                                    child: BackdropFilter(
-                                      filter: ui.ImageFilter.blur(
-                                        sigmaX: 3,
-                                        sigmaY: 3,
-                                      ),
-                                      child: Container(
-                                        color: Colors.black.withOpacity(0.3),
-                                        child: Center(
-                                          child: _buildProcessingIndicator(),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
+                            ],
                           ),
                         ),
                 ),
               ),
 
-              // Modern Filter Bar
+              // ── Filter bar ────────────────────────────────────
               Container(
+                color: Colors.white,
                 padding: EdgeInsets.fromLTRB(16.w, 12.h, 16.w, 20.h),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.5),
-                    ],
-                  ),
-                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Icon(
-                          Icons.auto_fix_high_rounded,
-                          color: Colors.cyan,
-                          size: 16.sp,
-                        ),
+                        Icon(Icons.auto_fix_high_rounded,
+                            color: appBlue, size: 15.sp),
                         SizedBox(width: 6.w),
                         Text(
                           'Enhancement',
                           style: GoogleFonts.inter(
-                            color: Colors.white70,
+                            color: appBlue,
                             fontSize: 13.sp,
                             fontWeight: FontWeight.w600,
-                            letterSpacing: 0.5,
                           ),
                         ),
                       ],
                     ),
-                    SizedBox(height: 12.h),
+                    SizedBox(height: 10.h),
                     SizedBox(
-                      height: 80.h,
+                      height: 72.h,
                       child: ListView.builder(
                         scrollDirection: Axis.horizontal,
                         physics: const BouncingScrollPhysics(),
                         itemCount: ImageFilterType.values.length,
-                        itemBuilder: (context, index) {
-                          return _modernFilterCard(
-                              ImageFilterType.values[index]);
-                        },
+                        itemBuilder: (context, index) =>
+                            _modernFilterCard(ImageFilterType.values[index]),
                       ),
                     ),
                   ],
@@ -1389,97 +1228,83 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
   }
 
   Widget _buildLoadingSkeleton() {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.3, end: 0.7),
-      duration: const Duration(milliseconds: 800),
-      curve: Curves.easeInOut,
-      builder: (context, value, child) {
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16.r),
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withOpacity(value * 0.1),
-                Colors.white.withOpacity(0.05),
-                Colors.white.withOpacity(value * 0.1),
-              ],
-            ),
+    const appBlue = Color(0xff2B2C74);
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12.r),
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
           ),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                SizedBox(
-                  width: 40.w,
-                  height: 40.w,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.cyan.withOpacity(0.7),
-                  ),
-                ),
-                SizedBox(height: 16.h),
-                Text(
-                  'Processing scan...',
-                  style: GoogleFonts.inter(
-                    color: Colors.white54,
-                    fontSize: 14.sp,
-                  ),
-                ),
-              ],
+        ],
+      ),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 36.w,
+              height: 36.w,
+              child: const CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: appBlue,
+              ),
             ),
-          ),
-        );
-      },
+            SizedBox(height: 14.h),
+            Text(
+              'Processing scan...',
+              style: GoogleFonts.inter(
+                color: const Color(0xff2B2C74),
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildProcessingIndicator() {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 300),
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: 0.8 + (value * 0.2),
-          child: Opacity(
-            opacity: value,
-            child: Container(
-              padding: EdgeInsets.all(20.w),
-              decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
-                borderRadius: BorderRadius.circular(16.r),
-                border: Border.all(
-                  color: Colors.cyan.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 32.w,
-                    height: 32.w,
-                    child: const CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      color: Colors.cyan,
-                    ),
-                  ),
-                  SizedBox(height: 12.h),
-                  Text(
-                    'Applying filter...',
-                    style: GoogleFonts.inter(
-                      color: Colors.white,
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
+    const appBlue = Color(0xff2B2C74);
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 16.h),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 28.w,
+            height: 28.w,
+            child: const CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: appBlue,
             ),
           ),
-        );
-      },
+          SizedBox(height: 10.h),
+          Text(
+            'Applying filter...',
+            style: GoogleFonts.inter(
+              color: appBlue,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1490,29 +1315,21 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
     bool isLoading = false,
     bool isPrimary = false,
   }) {
+    // Primary = white fill (Save). Secondary = white outline (PDF).
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(8.r),
         onTap: onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 10.h),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
           decoration: BoxDecoration(
-            gradient: isPrimary
-                ? LinearGradient(
-                    colors: [
-                      Colors.cyan.withOpacity(0.8),
-                      Colors.blue.withOpacity(0.6),
-                    ],
-                  )
-                : null,
-            color: isPrimary ? null : Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(12.r),
+            color: isPrimary
+                ? Colors.white
+                : Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(8.r),
             border: Border.all(
-              color: isPrimary
-                  ? Colors.cyan.withOpacity(0.5)
-                  : Colors.white.withOpacity(0.15),
+              color: Colors.white.withOpacity(isPrimary ? 1.0 : 0.4),
               width: 1,
             ),
           ),
@@ -1521,20 +1338,28 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
             children: [
               if (isLoading)
                 SizedBox(
-                  width: 16.w,
-                  height: 16.w,
+                  width: 14.w,
+                  height: 14.w,
                   child: const CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: Colors.white,
+                    color: Color(0xff2B2C74),
                   ),
                 )
               else
-                Icon(icon, color: Colors.white, size: 18.sp),
-              SizedBox(width: 6.w),
+                Icon(
+                  icon,
+                  color: isPrimary
+                      ? const Color(0xff2B2C74)
+                      : Colors.white,
+                  size: 16.sp,
+                ),
+              SizedBox(width: 5.w),
               Text(
                 label,
                 style: GoogleFonts.inter(
-                  color: Colors.white,
+                  color: isPrimary
+                      ? const Color(0xff2B2C74)
+                      : Colors.white,
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1549,66 +1374,51 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
   Widget _modernFilterCard(ImageFilterType type) {
     final bool selected = _selectedFilter == type;
     final filterMeta = _getFilterMeta(type);
+    const appBlue = Color(0xff2B2C74);
 
     return GestureDetector(
       onTap: () => _applyScanFilter(type),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
+        duration: const Duration(milliseconds: 200),
         curve: Curves.easeOutCubic,
-        margin: EdgeInsets.only(right: 12.w),
-        width: 72.w,
+        margin: EdgeInsets.only(right: 10.w),
+        width: 68.w,
         decoration: BoxDecoration(
-          gradient: selected
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    filterMeta.color.withOpacity(0.4),
-                    filterMeta.color.withOpacity(0.2),
-                  ],
-                )
-              : null,
-          color: selected ? null : Colors.white.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(16.r),
+          color: selected ? appBlue : Colors.white,
+          borderRadius: BorderRadius.circular(12.r),
           border: Border.all(
-            color: selected
-                ? filterMeta.color.withOpacity(0.7)
-                : Colors.white.withOpacity(0.1),
-            width: selected ? 2 : 1,
+            color: selected ? appBlue : const Color(0xffDDDDE8),
+            width: 1.5,
           ),
           boxShadow: selected
               ? [
                   BoxShadow(
-                    color: filterMeta.color.withOpacity(0.3),
-                    blurRadius: 16,
-                    offset: const Offset(0, 4),
+                    color: appBlue.withOpacity(0.25),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
                 ]
-              : null,
+              : [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: EdgeInsets.all(10.w),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: selected
-                    ? filterMeta.color.withOpacity(0.25)
-                    : Colors.white.withOpacity(0.08),
-              ),
-              child: Icon(
-                filterMeta.icon,
-                color: selected ? filterMeta.color : Colors.white60,
-                size: 20.sp,
-              ),
+            Icon(
+              filterMeta.icon,
+              color: selected ? Colors.white : appBlue,
+              size: 20.sp,
             ),
-            SizedBox(height: 6.h),
+            SizedBox(height: 5.h),
             Text(
               filterMeta.label,
               style: GoogleFonts.inter(
-                color: selected ? Colors.white : Colors.white60,
+                color: selected ? Colors.white : const Color(0xff5A5A7A),
                 fontSize: 11.sp,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
               ),
@@ -1736,6 +1546,90 @@ class _FilterMeta {
   final IconData icon;
 
   _FilterMeta(this.label, this.color, this.icon);
+}
+
+/// Parameters for overlay compositing in isolate
+class _OverlayParams {
+  final String imagePath;
+  final Uint8List? logoBytes;
+  final String currentTime;
+  final String currentDate;
+  final String currentLocation;
+
+  _OverlayParams({
+    required this.imagePath,
+    required this.logoBytes,
+    required this.currentTime,
+    required this.currentDate,
+    required this.currentLocation,
+  });
+}
+
+/// Runs in a background isolate — applies logo + date/time/location onto image
+Future<void> _applyOverlayIsolate(_OverlayParams p) async {
+  try {
+    final bytes = await File(p.imagePath).readAsBytes();
+    img.Image? baseImage = img.decodeImage(bytes);
+    if (baseImage == null) return;
+
+    final int padding = (baseImage.width * 0.04).toInt();
+
+    if (p.logoBytes != null) {
+      img.Image? logo = img.decodeImage(p.logoBytes!);
+      if (logo != null) {
+        final int logoWidth = (baseImage.width * 0.22).toInt();
+        final int logoHeight =
+            (logoWidth * logo.height / logo.width).toInt();
+        logo = img.copyResize(logo,
+            width: logoWidth,
+            height: logoHeight,
+            interpolation: img.Interpolation.cubic);
+        img.compositeImage(baseImage, logo, dstX: padding, dstY: padding);
+      }
+    }
+
+    final font = img.arial24;
+    const shadowOffset = 1;
+
+    int measureWidth(img.BitmapFont f, String text) {
+      int w = 0;
+      for (var ch in text.codeUnits) {
+        if (f.characters.containsKey(ch)) w += f.characters[ch]!.xAdvance;
+      }
+      return w;
+    }
+
+    final timeW = measureWidth(font, p.currentTime);
+    final dateW = measureWidth(font, p.currentDate);
+    final locW =
+        p.currentLocation.isNotEmpty ? measureWidth(font, p.currentLocation) : 0;
+
+    final int rightEdge = baseImage.width - padding;
+    final int lineHeight = font.lineHeight + 6;
+    final int totalLines = p.currentLocation.isNotEmpty ? 3 : 2;
+    int y = baseImage.height - padding - (lineHeight * totalLines);
+
+    void drawLine(String text, int w) {
+      final x = rightEdge - w;
+      img.drawString(baseImage!, text,
+          font: font,
+          x: x + shadowOffset,
+          y: y + shadowOffset,
+          color: img.ColorRgb8(130, 130, 130));
+      img.drawString(baseImage, text,
+          font: font, x: x, y: y, color: img.ColorRgb8(205, 205, 205));
+      y += lineHeight;
+    }
+
+    drawLine(p.currentTime, timeW);
+    drawLine(p.currentDate, dateW);
+    if (p.currentLocation.isNotEmpty) drawLine(p.currentLocation, locW);
+
+    final outputBytes = img.encodeJpg(baseImage, quality: 95);
+    await File(p.imagePath).writeAsBytes(outputBytes);
+  } catch (e) {
+    debugPrint('Overlay isolate error: $e');
+  }
 }
 
 /// Parameters for RGBA → JPG encoding in isolate

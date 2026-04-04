@@ -34,7 +34,6 @@ class HeaderWidget extends StatefulWidget implements PreferredSizeWidget {
 
 class _HeaderWidgetState extends State<HeaderWidget>
     with WidgetsBindingObserver {
-  static const String _heroTag = 'global_header_widget_hero';
   static String _cachedImageBase64 = '';
   static int _cachedNotificationCount = 0;
   static int _cachedApprovalCount = 0;
@@ -203,12 +202,12 @@ class _HeaderWidgetState extends State<HeaderWidget>
   @override
   Widget build(BuildContext context) {
     var bloc = HomeBloc.get(context);
-    return Hero(
-      tag: _heroTag,
-      transitionOnUserGestures: true,
-      child: AppBar(
+    return AppBar(
         automaticallyImplyLeading: false,
         backgroundColor: Colors.transparent,
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        scrolledUnderElevation: 0,
         centerTitle: true,
         elevation: 0,
         toolbarHeight: SizeConfig().getHeight(100),
@@ -225,43 +224,31 @@ class _HeaderWidgetState extends State<HeaderWidget>
           child: Stack(
             alignment: Alignment.center,
             children: [
-              PositionedDirectional(
-                top: SizeConfig().getHeight(40.w),
-                start: SizeConfig().getWidth(10),
-                //left: SizeConfig().getWidth(15),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        // Navigate to home screen from anywhere
-                        // First pop all pushed routes back to the home screen
-                        Navigator.of(context)
-                            .popUntil((route) => route.isFirst);
-                        // Then reset to the main home tab
-                        final bloc = HomeBloc.get(context);
-                        bloc.add(ChangeCurrentIndex(index: 1));
-                      },
-                      child: Image.asset(
-                        'assets/gif/el-race-logo.gif',
-                        fit: BoxFit.cover,
-                        height: SizeConfig().getHeight(55),
-                        width: SizeConfig().getWidth(110),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
               SafeArea(
                 bottom: false,
                 child: Padding(
                   padding: EdgeInsets.symmetric(
-                      horizontal: SizeConfig().getWidth(20), vertical: 0),
+                      horizontal: SizeConfig().getWidth(15), vertical: 0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      SizedBox(
-                        width: SizeConfig().getWidth(200),
+                      GestureDetector(
+                        onTap: () {
+                          // Navigate to home screen from anywhere
+                          // First pop all pushed routes back to the home screen
+                          Navigator.of(context)
+                              .popUntil((route) => route.isFirst);
+                          // Then reset to the main home tab
+                          final bloc = HomeBloc.get(context);
+                          bloc.add(ChangeCurrentIndex(index: 1));
+                        },
+                        child: Image.asset(
+                          'assets/gif/el-race-logo.gif',
+                          fit: BoxFit.cover,
+                          height: SizeConfig().getHeight(55),
+                          width: SizeConfig().getWidth(110),
+                        ),
                       ),
                       Row(
                         children: [
@@ -545,7 +532,6 @@ class _HeaderWidgetState extends State<HeaderWidget>
             ],
           ),
         ),
-      ),
     );
   }
 }

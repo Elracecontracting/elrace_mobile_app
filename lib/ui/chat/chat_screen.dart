@@ -238,6 +238,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
+        bottom: false,
         child: ChatIdProvider(
           chatId: widget.chatId,
           child: Column(
@@ -256,18 +257,24 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               ),
               _buildTypingIndicator(),
               _buildReplyBar(),
-              ChatInputBar(
-                controller: _messageController,
-                isLoading: false,
-                isRecording: _isRecording,
-                onSendText: _sendTextMessage,
-                onPickImage: _pickImage,
-                onPickGallery: _pickImagesFromGallery,
-                onPickFile: _pickFile,
-                onPickSignableDoc: _pickSignableDocument,
-                onStartRecording: _startRecording,
-                onStopRecording: _stopRecording,
-                onCancelRecording: _cancelRecording,
+              Container(
+                color: Colors.white,
+                padding: EdgeInsets.only(
+                  bottom: (MediaQuery.of(context).padding.bottom / 2).clamp(0.0, 6.0),
+                ),
+                child: ChatInputBar(
+                  controller: _messageController,
+                  isLoading: false,
+                  isRecording: _isRecording,
+                  onSendText: _sendTextMessage,
+                  onPickImage: _pickImage,
+                  onPickGallery: _pickImagesFromGallery,
+                  onPickFile: _pickFile,
+                  onPickSignableDoc: _pickSignableDocument,
+                  onStartRecording: _startRecording,
+                  onStopRecording: _stopRecording,
+                  onCancelRecording: _cancelRecording,
+                ),
               ),
             ],
           ),

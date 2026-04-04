@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart' hide Message;
 
 import '../models/models.dart';
@@ -54,18 +54,12 @@ class ChatNotificationService {
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(androidChannel);
 
-    // Initialize with settings
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-    );
-
-    await _notificationsPlugin.initialize(
-      const InitializationSettings(android: androidSettings, iOS: iosSettings),
-      onDidReceiveNotificationResponse: _onNotificationResponse,
-    );
+    // NOTE: Do NOT call _notificationsPlugin.initialize() here.
+    // FirebaseService.initialize() already set up the shared native platform
+    // with a unified tap-handler. A second initialize() call would OVERRIDE
+    // that handler, breaking notification-tap routing for FCM and other services.
+    // Chat notification taps are now routed through FirebaseService's handler
+    // using a JSON payload with category = "chat_message".
 
     print('✅ ChatNotificationService: Initialized');
   }
@@ -201,8 +195,15 @@ class ChatNotificationService {
       iOS: iosDetails,
     );
 
-    // Payload contains chat info for navigation
-    final payload = '$chatId|$title|${chatType.name}';
+    // JSON payload compatible with FirebaseService's unified tap-handler.
+    // FirebaseService._handleNotificationTap parses this and routes to ChatScreen
+    // when category == 'chat_message'.
+    final payload = jsonEncode({
+      'category': 'chat_message',
+      'chat_id': chatId,
+      'chat_title': title,
+      'chat_type': chatType.name,
+    });
 
     await _notificationsPlugin.show(
       notificationId,
@@ -213,23 +214,6 @@ class ChatNotificationService {
     );
 
     print('🔔 ChatNotificationService: Showed notification for $chatId');
-  }
-
-  /// Handle notification tap
-  void _onNotificationResponse(NotificationResponse response) {
-    final payload = response.payload;
-    if (payload == null || payload.isEmpty) return;
-
-    final parts = payload.split('|');
-    if (parts.length < 3) return;
-
-    final chatId = parts[0];
-    final chatTitle = parts[1];
-    final chatType = ChatType.fromString(parts[2]);
-
-    print('🔔 ChatNotificationService: Notification tapped - $chatId');
-
-    onNotificationTap?.call(chatId, chatTitle, chatType);
   }
 
   /// Set the active chat ID (to suppress notifications)

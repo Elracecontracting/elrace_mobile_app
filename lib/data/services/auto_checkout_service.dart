@@ -18,12 +18,8 @@ class AutoCheckoutService {
   /// تهيئة خدمة الـ Auto Check-out
   static Future<void> initialize() async {
     try {
-      // تهيئة Workmanager
-      await Workmanager().initialize(
-        callbackDispatcher,
-        isInDebugMode: false,
-      );
-
+      // NOTE: Workmanager().initialize() is now called once from main.dart
+      // with the unified dispatcher. Do NOT call it here.
       debugPrint('✅ AutoCheckoutService initialized successfully');
     } catch (e) {
       debugPrint('❌ Error initializing AutoCheckoutService: $e');
@@ -143,27 +139,5 @@ class AutoCheckoutService {
   }
 }
 
-/// Callback dispatcher للـ WorkManager
-@pragma('vm:entry-point')
-void callbackDispatcher() {
-  Workmanager().executeTask((task, inputData) async {
-    debugPrint('📱 WorkManager task started: $task');
-
-    try {
-      if (task == AutoCheckoutService.taskName) {
-        // تنفيذ Auto Check-out
-        await AutoCheckoutService._performAutoCheckout();
-
-        // إعادة جدولة المهمة للغد
-        await AutoCheckoutService.scheduleAutoCheckout();
-
-        return Future.value(true);
-      }
-
-      return Future.value(false);
-    } catch (e) {
-      debugPrint('❌ Error in WorkManager task: $e');
-      return Future.value(false);
-    }
-  });
-}
+// NOTE: The callbackDispatcher has been moved to
+// unified_workmanager_dispatcher.dart to avoid conflicts.

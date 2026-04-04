@@ -48,9 +48,6 @@
               android:name="io.flutter.embedding.android.NormalTheme"
               android:resource="@style/NormalTheme"
               />
-            <meta-data
-                android:name="com.google.firebase.messaging.default_notification_channel_id"
-                android:value="high_importance_channel"/>
 
             <meta-data
                 android:name="com.google.android.gms.ads.AD_ID_OPT_OUT"
@@ -109,12 +106,36 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- FCM default notification channel – MUST be a direct child of <application>.
+             When inside <activity>, Firebase cannot find it and falls back to a
+             low-priority "Miscellaneous" channel for background/killed notifications. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="high_importance_channel"/>
         
         <!-- WorkManager receiver for background tasks -->
         <receiver android:name="androidx.work.impl.background.systemalarm.RescheduleReceiver"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- flutter_local_notifications: fires scheduled alarms -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false" />
+
+        <!-- flutter_local_notifications: reschedules daily alarms after device reboot -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
             </intent-filter>
         </receiver>
     </application>

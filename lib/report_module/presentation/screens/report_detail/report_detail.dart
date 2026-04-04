@@ -607,7 +607,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         },
       );
 
-      if (mounted && success) {
+      if (mounted && success != null) {
         setState(() {
           _loadingProgress = 100;
           loadingText = 'Updated report ready 100%';
@@ -618,7 +618,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              success
+              success != null
                   ? 'Report regenerated with the latest images'
                   : 'Failed to upload regenerated report',
             ),

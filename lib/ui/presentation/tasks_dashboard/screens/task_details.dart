@@ -12,6 +12,7 @@ import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:el_race/ui/presentation/todo_list/data/todo_model.dart';
 import 'package:el_race/ui/presentation/todo_list/data/task_member_model.dart';
 import 'package:el_race/ui/presentation/todo_list/services/todo_firebase_service.dart';
+import 'package:el_race/data/services/task_notification_service.dart';
 import 'package:el_race/ui/presentation/todo_list/services/team_members_api_service.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
@@ -495,6 +496,18 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       );
       _commentController.clear();
       await _loadComments();
+
+      // Fire new-message notification
+      try {
+        final senderName = TodoFirebaseService.instance.currentUserNamePublic;
+        await TaskNotificationService().showTaskMessageNotification(
+          taskId: _task!.firebaseId!,
+          taskTitle: _task!.title,
+          senderName: senderName,
+          messagePreview:
+              content.length > 80 ? '${content.substring(0, 80)}...' : content,
+        );
+      } catch (_) {}
     } catch (e) {
       print('❌ Error sending comment: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1099,6 +1112,15 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
       setState(() {
         _task = updatedTask;
       });
+
+      // Fire task-completed notification
+      try {
+        await TaskNotificationService().showTaskCompletedNotification(
+          taskId: task.firebaseId ?? '',
+          taskTitle: task.title,
+        );
+      } catch (_) {}
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(

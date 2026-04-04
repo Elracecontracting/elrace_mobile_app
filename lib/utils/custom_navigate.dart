@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class CustomPageRoute<T> extends MaterialPageRoute<T> {
@@ -73,17 +74,32 @@ class CustomPageRoute<T> extends MaterialPageRoute<T> {
 }
 
 // Animation خاصة للصفحات الجانبية (Notifications, My Notes)
-class SlideRightPageRoute<T> extends MaterialPageRoute<T> {
+// يمتد من PageRoute مع CupertinoRouteTransitionMixin لدعم iOS swipe-back
+class SlideRightPageRoute<T> extends PageRoute<T>
+    with CupertinoRouteTransitionMixin<T> {
   final Widget child;
 
-  SlideRightPageRoute({required this.child, super.settings})
-      : super(builder: (_) => child);
+  SlideRightPageRoute({required this.child, super.settings});
+
+  // مطلوب من CupertinoRouteTransitionMixin
+  @override
+  Widget buildContent(BuildContext context) => child;
+
+  @override
+  String? get title => null;
+
+  @override
+  bool get maintainState => true;
+
+  // iOS swipe-back مفعّل دائماً
+  @override
+  bool get popGestureEnabled => true;
 
   @override
   Duration get transitionDuration => const Duration(milliseconds: 400);
 
   @override
-  Duration get reverseTransitionDuration => const Duration(milliseconds: 500);
+  Duration get reverseTransitionDuration => const Duration(milliseconds: 350);
 
   @override
   Widget buildTransitions(
@@ -96,9 +112,10 @@ class SlideRightPageRoute<T> extends MaterialPageRoute<T> {
     final isApple =
         platform == TargetPlatform.iOS || platform == TargetPlatform.macOS;
 
-    // Preserve iOS interactive back gesture.
+    // على iOS/macOS: نستخدم Cupertino transition الأصلية (تشمل swipe-back)
     if (isApple) {
-      return super.buildTransitions(
+      return CupertinoRouteTransitionMixin.buildPageTransitions(
+        this,
         context,
         animation,
         secondaryAnimation,
@@ -106,6 +123,7 @@ class SlideRightPageRoute<T> extends MaterialPageRoute<T> {
       );
     }
 
+    // على Android: animation مخصصة
     final isPopping = animation.status == AnimationStatus.reverse;
 
     if (isPopping) {
@@ -114,20 +132,13 @@ class SlideRightPageRoute<T> extends MaterialPageRoute<T> {
         curve: Curves.easeOut,
       );
 
-      final slide = Tween<Offset>(
-        begin: const Offset(0, 1),
-        end: Offset.zero,
-      ).animate(curved);
-
-      final fade = Tween<double>(
-        begin: 0.0,
-        end: 1.0,
-      ).animate(curved);
-
       return SlideTransition(
-        position: slide,
+        position: Tween<Offset>(
+          begin: const Offset(0, 1),
+          end: Offset.zero,
+        ).animate(curved),
         child: FadeTransition(
-          opacity: fade,
+          opacity: Tween<double>(begin: 0.0, end: 1.0).animate(curved),
           child: child,
         ),
       );
@@ -138,20 +149,13 @@ class SlideRightPageRoute<T> extends MaterialPageRoute<T> {
       curve: Curves.easeOutCubic,
     );
 
-    final slideIn = Tween<Offset>(
-      begin: const Offset(1.0, 0.0),
-      end: Offset.zero,
-    ).animate(curved);
-
-    final fade = Tween<double>(
-      begin: 0.85,
-      end: 1.0,
-    ).animate(curved);
-
     return SlideTransition(
-      position: slideIn,
+      position: Tween<Offset>(
+        begin: const Offset(1.0, 0.0),
+        end: Offset.zero,
+      ).animate(curved),
       child: FadeTransition(
-        opacity: fade,
+        opacity: Tween<double>(begin: 0.85, end: 1.0).animate(curved),
         child: child,
       ),
     );

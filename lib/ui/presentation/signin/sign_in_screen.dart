@@ -5,6 +5,7 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/auth/uaepass_auth_cubit.dart';
 import 'package:el_race/ui/auth/auth_loading_screen.dart';
 import 'package:el_race/chat/chat.dart';
+import 'package:el_race/chat/services/chat_credential_storage.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/signin/bloc/sign_in_bloc.dart';
 import 'package:el_race/utils/Util.dart';
@@ -194,6 +195,13 @@ class _SignInScreenState extends State<SignInScreen> {
           SharedPref().setPreferencesString(
               'loginResponse', jsonEncode(state.loginResponse.toJson()));
           SharedPref().setPreferencesBoolean('isRegistered', true);
+
+          // Save credentials securely for silent re-login (chat token refresh)
+          ChatCredentialStorage.instance.save(
+            email: usernameController.text,
+            password: passwordController.text,
+            deviceId: '776655',
+          );
 
           // Initialize chat module immediately after login
           ChatModuleHelper.instance

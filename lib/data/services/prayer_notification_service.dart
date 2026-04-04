@@ -21,22 +21,15 @@ class PrayerNotificationService {
     // تهيئة منطقة التوقيت لـ zonedSchedule
     tz.initializeTimeZones();
 
-    const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    // Channel creation and permission requests don't require initialize().
 
-    const DarwinInitializationSettings iosSettings =
-        DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-
-    const InitializationSettings settings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
-
-    await _notificationsPlugin.initialize(settings);
+    // NOTE: Do NOT call _notificationsPlugin.initialize() here.
+    // FirebaseService.initialize() already initialised the shared native
+    // platform with the unified tap-handler. Calling initialize() again
+    // would OVERRIDE that handler (only the last one wins), breaking
+    // notification-tap navigation for FCM and other services.
+    // Channel creation + permission requests work without a second init
+    // because they go through the static platform singleton.
 
     final androidImpl =
         _notificationsPlugin.resolvePlatformSpecificImplementation<
@@ -148,6 +141,7 @@ class PrayerNotificationService {
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
+          sound: 'athan.mp3',
           interruptionLevel: InterruptionLevel.timeSensitive,
         ),
       ),

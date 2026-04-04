@@ -245,6 +245,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
+        bottom: false,
         child: Stack(
           children: [
             StreamBuilder<List<UserChat>>(
@@ -341,9 +342,21 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                             _topTabNotifier.value = 0;
                                         },
                                       ),
-                                      const SizedBox(width: 14),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 10),
+                                        child: Text(
+                                          '|',
+                                          style: TextStyle(
+                                            color:
+                                                Colors.white.withOpacity(0.4),
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.w300,
+                                          ),
+                                        ),
+                                      ),
                                       _TopTab(
-                                        label: 'Support',
+                                        label: 'Supports',
                                         isActive: tabIndex == 1,
                                         onTap: () {
                                           if (tabIndex != 1)
@@ -615,6 +628,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         hasScrollBody: false,
                         child: Container(color: Colors.white),
                       ),
+                      // Bottom safe area padding (iOS home indicator)
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: (MediaQuery.of(context).padding.bottom / 2).clamp(0.0, 6.0),
+                        ),
+                      ),
                     ],
                   ),
                 );
@@ -809,15 +828,39 @@ class _ChatListTile extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            userChat.title ?? 'Chat',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: const Color(0xFF171717),
-                              fontWeight: FontWeight.w700,
+                          // For DM chats, always show the peer's actual name
+                          // from the users collection (avoids showing role name duplicates)
+                          if (userChat.type == ChatType.dm &&
+                              userChat.peerUid != null)
+                            FutureBuilder<ChatUser?>(
+                              future: UserRepository.instance
+                                  .getUser(userChat.peerUid!),
+                              builder: (context, snap) {
+                                final displayName = snap.data?.name ??
+                                    userChat.title ??
+                                    'Chat';
+                                return Text(
+                                  displayName,
+                                  style:
+                                      theme.textTheme.titleMedium?.copyWith(
+                                    color: const Color(0xFF171717),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                );
+                              },
+                            )
+                          else
+                            Text(
+                              userChat.title ?? 'Chat',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                color: const Color(0xFF171717),
+                                fontWeight: FontWeight.w700,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 1,
                             ),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
                           const SizedBox(height: 4),
                           DefaultTextStyle.merge(
                             style: theme.textTheme.bodySmall?.copyWith(
@@ -946,7 +989,7 @@ class _ChatListTile extends StatelessWidget {
                       : null,
                   child: avatarUrl == null || avatarUrl.isEmpty
                       ? Text(
-                          _getInitials(userChat.title ?? '?'),
+                          _getInitials(peerUser?.name ?? userChat.title ?? '?'),
                           style: const TextStyle(
                             color: Color(0xFF2E2E2E),
                             fontWeight: FontWeight.w700,
@@ -1421,20 +1464,14 @@ class _TopTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 7),
-        decoration: BoxDecoration(
-          color: isActive
-              ? const Color(0xFFE9B23A)
-              : Colors.white.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(20),
-        ),
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
         child: Text(
           label,
           style: TextStyle(
-            color: isActive ? const Color(0xFF1D2449) : Colors.white70,
-            fontSize: 15,
+            color: isActive ? Colors.white : Colors.white.withOpacity(0.45),
+            fontSize: isActive ? 20 : 17,
             fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
           ),
         ),

@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/models.dart';
 import 'services/services.dart';
+import 'services/chat_credential_storage.dart';
 import 'services/chat_session_storage.dart';
 
 /// Chat module initialization helper.
@@ -210,67 +211,87 @@ class ChatModuleHelper {
         }
       }
       
-      // Try to initialize with stored data (token may be expired)
+      // ── Step A: Try to get a FRESH token from backend before using the stale one ──
+      final backendToken = decoded['result']?['token']?.toString();
+      if (backendToken != null && backendToken.isNotEmpty) {
+        print('🔄 ChatModuleHelper: Requesting fresh Firebase token FIRST...');
+        final freshToken = await FirebaseChatAuthService.instance
+            .refreshFirebaseCustomToken(backendToken);
+
+        if (freshToken != null) {
+          // Inject fresh token into the decoded response
+          if (decoded['result']?['data'] != null) {
+            (decoded['result']['data']
+                as Map<String, dynamic>)['firebase_custom_token'] = freshToken;
+          }
+          // Persist updated token
+          try {
+            await prefs.setString('loginResponse', jsonEncode(decoded));
+            print('✅ ChatModuleHelper: Updated stored login response with fresh token');
+          } catch (_) {}
+        }
+      }
+
+      // ── Step B: Initialize with (hopefully fresh) token ──
       final result = await initializeFromLoginResponse(decoded);
-      
-      // If failed due to token expiry, try to get a fresh token from backend  
-      if (result.error != null && result.error!.contains('custom-token')) {
-        print('🔄 ChatModuleHelper: Stored token expired, attempting to refresh...');
-        
-        // Get the backend JWT token from stored login data
-        final backendToken = decoded['result']?['token']?.toString();
-        
+
+      // ── Step C: If still failed due to token issue, try one more time ──
+      if (result.error != null && _isTokenError(result.error!)) {
+        print('🔄 ChatModuleHelper: Token error detected, attempting backend refresh...');
+
         if (backendToken != null && backendToken.isNotEmpty) {
-          // Try to get fresh Firebase custom token from backend
           final freshToken = await FirebaseChatAuthService.instance
               .refreshFirebaseCustomToken(backendToken);
-          
+
           if (freshToken != null) {
-            // Update the decoded login response with fresh token
             if (decoded['result']?['data'] != null) {
-              (decoded['result']['data'] as Map<String, dynamic>)['firebase_custom_token'] = freshToken;
+              (decoded['result']['data']
+                  as Map<String, dynamic>)['firebase_custom_token'] = freshToken;
             }
-            
-            // Also update SharedPreferences with fresh token
             try {
               await prefs.setString('loginResponse', jsonEncode(decoded));
-              print('✅ ChatModuleHelper: Updated stored login response with fresh token');
-            } catch (e) {
-              print('⚠️ ChatModuleHelper: Could not update stored response: $e');
-            }
-            
-            // Retry initialization with fresh token
+            } catch (_) {}
+
             print('🔄 ChatModuleHelper: Retrying with fresh Firebase token...');
             final retryResult = await initializeFromLoginResponse(decoded);
-            
             if (retryResult.success && retryResult.chatEnabled) {
               print('✅ ChatModuleHelper: Chat restored with refreshed token!');
               return retryResult;
-            } else {
-              print('⚠️ ChatModuleHelper: Retry also failed: ${retryResult.error}');
             }
+            print('⚠️ ChatModuleHelper: Retry also failed: ${retryResult.error}');
           }
         }
-        
-        print('⚠️ ChatModuleHelper: Token expired and could not refresh. User needs to login again.');
+
+        print('⚠️ ChatModuleHelper: Token expired and could not refresh.');
         return ChatSetupResult.failed(
           'Chat session expired. Please logout and login again to restore chat.',
         );
       }
-      
+
       return result;
     } catch (e) {
       print('❌ ChatModuleHelper: Error restoring session: $e');
       
       // Provide user-friendly error message
-      if (e.toString().contains('custom-token') || e.toString().contains('auth/')) {
+      if (_isTokenError(e.toString()) || e.toString().contains('auth/')) {
         return ChatSetupResult.failed(
           'Chat session expired. Please logout and login again.',
         );
       }
-      
+
       return ChatSetupResult.failed('Unable to restore chat: $e');
     }
+  }
+
+  /// Check if an error message relates to an invalid / expired custom token.
+  static bool _isTokenError(String error) {
+    final lower = error.toLowerCase();
+    return lower.contains('custom-token') ||
+        lower.contains('custom token') ||
+        lower.contains('invalid-custom-token') ||
+        lower.contains('token format') ||
+        lower.contains('token expired') ||
+        lower.contains('token-expired');
   }
 
   /// Cleanup on logout.
@@ -290,6 +311,9 @@ class ChatModuleHelper {
       
       // Sign out from Firebase and cleanup (also clears secure cache)
       await FirebaseChatAuthService.instance.signOut();
+
+      // Clear stored credentials
+      await ChatCredentialStorage.instance.clear();
       
       _isInitialized = false;
       chatEnabledNotifier.value = false;
@@ -314,10 +338,10 @@ class ChatModuleHelper {
     }
     if (!isChatEnabled) {
       final error = _lastResult?.error ?? 'Chat not available';
-      
+
       // Provide user-friendly messages
-      if (error.contains('invalid-custom-token') || error.contains('token format')) {
-        return 'Chat service error: Invalid authentication token from server.\nBackend needs to fix token generation.\nPlease contact IT support.';
+      if (_isTokenError(error)) {
+        return 'Chat session expired. Please logout and login again.';
       }
       if (error.contains('expired') || error.contains('login again')) {
         return 'Chat session expired. Please logout and login again.';
@@ -325,7 +349,7 @@ class ChatModuleHelper {
       if (error.contains('custom token not provided')) {
         return 'Chat not configured on server. Contact IT support.';
       }
-      
+
       return error;
     }
     return 'Chat ready';

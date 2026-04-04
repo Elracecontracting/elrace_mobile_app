@@ -46,7 +46,8 @@ service cloud.firestore {
     match /chats/{chatId} {
       allow create: if isSignedIn();
       allow read: if isSignedIn() &&
-                     (resource.data.member_ids == null ||
+                     (resource.data.type == 'role' ||
+                      resource.data.member_ids == null ||
                       request.auth.uid in resource.data.member_ids);
       allow update: if isSignedIn() &&
                        (resource.data.member_ids == null ||

@@ -785,7 +785,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
         },
       );
 
-      if (uploaded) {
+      if (uploaded != null) {
         if (mounted) {
           setState(() {
             _generationProgress = 100;
@@ -1168,11 +1168,17 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                     if (response.statusCode == 200) {
                       final name =
                           pdf.fileName.isEmpty ? 'report.pdf' : pdf.fileName;
-                      await Share.shareXFiles([
-                        XFile.fromData(response.bodyBytes,
-                            name: name.endsWith('.pdf') ? name : '$name.pdf',
-                            mimeType: 'application/pdf'),
-                      ]);
+                      final fileName = name.endsWith('.pdf') ? name : '$name.pdf';
+                      final dir = await getTemporaryDirectory();
+                      final file = File('${dir.path}/$fileName');
+                      await file.writeAsBytes(response.bodyBytes);
+                      final box = context.findRenderObject() as RenderBox?;
+                      await Share.shareXFiles(
+                        [XFile(file.path, mimeType: 'application/pdf')],
+                        sharePositionOrigin: box != null
+                            ? box.localToGlobal(Offset.zero) & box.size
+                            : const Rect.fromLTWH(0, 0, 100, 100),
+                      );
                     }
                   } catch (e) {
                     debugPrint('Share error: $e');

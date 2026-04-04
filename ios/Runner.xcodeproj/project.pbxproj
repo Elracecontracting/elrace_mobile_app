@@ -17,6 +17,7 @@
 		97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FD1CF9000F007C117D /* Assets.xcassets */; };
 		97C147011CF9000F007C117D /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 97C146FF1CF9000F007C117D /* LaunchScreen.storyboard */; };
 		DFEEFE2B2F950BF55A6D7E95 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = E332E46CA502CCCCE8CD414B /* Pods_Runner.framework */; };
+		AA0ATHAN0MP3BUILDFILE01 /* athan.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = AA0ATHAN0MP3FILEREFER01 /* athan.mp3 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -67,6 +68,7 @@
 		C4F95108B8274B3C2412D395 /* Pods-Runner.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.release.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"; sourceTree = "<group>"; };
 		E2368747CC96CBC804D20637 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 		E332E46CA502CCCCE8CD414B /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA0ATHAN0MP3FILEREFER01 /* athan.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = athan.mp3; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -141,6 +143,7 @@
 		97C146F01CF9000F007C117D /* Runner */ = {
 			isa = PBXGroup;
 			children = (
+				AA0ATHAN0MP3FILEREFER01 /* athan.mp3 */,
 				15F94F632E37CBB900E419CD /* GoogleService-Info.plist */,
 				97C146FA1CF9000F007C117D /* Main.storyboard */,
 				97C146FD1CF9000F007C117D /* Assets.xcassets */,
@@ -268,6 +271,7 @@
 				15F94F642E37CBB900E419CD /* GoogleService-Info.plist in Resources */,
 				97C146FE1CF9000F007C117D /* Assets.xcassets in Resources */,
 				97C146FC1CF9000F007C117D /* Main.storyboard in Resources */,
+				AA0ATHAN0MP3BUILDFILE01 /* athan.mp3 in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

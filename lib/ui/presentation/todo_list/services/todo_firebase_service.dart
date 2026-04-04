@@ -52,6 +52,9 @@ class TodoFirebaseService {
     return loginData.result?.data?.name ?? 'Unknown';
   }
 
+  /// Public accessor for current user name (used by notification services).
+  String get currentUserNamePublic => _currentUserName;
+
   // Get current user photo URL from SharedPref
   String? get _currentUserPhoto {
     return SharedPref.preferences.getUserBase64Image();

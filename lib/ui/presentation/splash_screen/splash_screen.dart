@@ -1,4 +1,5 @@
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/firebase_service.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
@@ -147,14 +148,17 @@ class _SplashScreenState extends State<SplashScreen> {
             SharedPref()
                 .setPreferencesBoolean('isFaceRegistrationInProgress', false);
             Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
+            FirebaseService.markHomeReady();
             return;
           }
 
           // User needs to register face - go to home, it will be triggered from there
           Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
+          FirebaseService.markHomeReady();
         } else {
           // User already registered or no pending verification
           Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
+          FirebaseService.markHomeReady();
         }
       } else {
         Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
@@ -165,6 +169,7 @@ class _SplashScreenState extends State<SplashScreen> {
       if (mounted) {
         if (SharedPref.isUserAuthenticated()) {
           Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
+          FirebaseService.markHomeReady();
         } else {
           Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
         }

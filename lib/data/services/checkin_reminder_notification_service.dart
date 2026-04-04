@@ -38,29 +38,20 @@ class CheckInReminderNotificationService {
     tz.initializeTimeZones();
 
     // تعيين توقيت الإمارات (GMT+4)
-    tz.setLocalLocation(tz.getLocation('Asia/Dubai'));
+    try {
+      tz.setLocalLocation(tz.getLocation('Asia/Dubai'));
+    } catch (e) {
+      print('⚠️ Could not set Asia/Dubai timezone, falling back to UTC+4 offset: $e');
+      // Fallback: use a fixed UTC+4 offset so notifications still fire at the right Dubai time
+      try {
+        tz.setLocalLocation(tz.getLocation('Etc/GMT-4'));
+      } catch (_) {}
+    }
 
     // طلب صلاحية الإشعارات
     await _requestNotificationPermissions();
 
-    const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    const DarwinInitializationSettings iosSettings =
-        DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-
-    const InitializationSettings settings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
-
-    await _notificationsPlugin.initialize(settings);
-
-    // إنشاء قنوات الإشعارات لـ Android
+    // NOTE: Do NOT call _notificationsPlugin.initialize() here.\n    // FirebaseService.initialize() already set up the shared native platform\n    // with the unified tap-handler. A second initialize() call would OVERRIDE\n    // that handler, breaking notification-tap routing for all other services.\n    // Channel creation + permission requests work via the static singleton.\n\n    // إنشاء قنوات الإشعارات لـ Android
     await _createNotificationChannels();
 
     _initialized = true;
@@ -183,18 +174,6 @@ class CheckInReminderNotificationService {
     print('✅ Check-in/out notification channels created');
   }
 
-  /// تحديد وضع الجدولة المناسب حسب صلاحية exact alarm
-  AndroidScheduleMode get _scheduleMode {
-    if (_exactAlarmGranted) {
-      return AndroidScheduleMode.exactAllowWhileIdle;
-    } else {
-      // Fallback: inexact alarm - يعمل بدون صلاحية exact alarm
-      // مهم لأجهزة Samsung اللي ما تعطي صلاحية exact alarm
-      print('⚠️ Using inexactAllowWhileIdle mode (exact alarm not granted)');
-      return AndroidScheduleMode.inexactAllowWhileIdle;
-    }
-  }
-
   /// جدولة إشعارات التذكير بـ check out (من 4 مساءً - 5 مساءً)
   Future<void> scheduleCheckOutReminders() async {
     await initialize();
@@ -228,6 +207,10 @@ class CheckInReminderNotificationService {
 
     int idCounter = _checkOutReminderId;
     int scheduledCount = 0;
+    // Capture exact-alarm capability ONCE; never mutate the shared instance field
+    // inside the loop — a single failure must not force ALL remaining notifications
+    // into inexact mode for the rest of the app session.
+    final bool useExactAlarm = _exactAlarmGranted;
     for (var scheduledTime in reminderTimes) {
       // إذا كان الوقت قد مضى اليوم، جدول لليوم التالي
       var targetTime = scheduledTime;
@@ -260,7 +243,9 @@ class CheckInReminderNotificationService {
               presentSound: true,
             ),
           ),
-          androidScheduleMode: _scheduleMode,
+          androidScheduleMode: useExactAlarm
+              ? AndroidScheduleMode.exactAllowWhileIdle
+              : AndroidScheduleMode.inexactAllowWhileIdle,
           matchDateTimeComponents: DateTimeComponents.time, // يتكرر يومياً
         );
         scheduledCount++;
@@ -269,9 +254,9 @@ class CheckInReminderNotificationService {
       } catch (e) {
         print('❌ Error scheduling check-out reminder #${idCounter}: $e');
         // محاولة ثانية بوضع inexact إذا فشل exact
-        if (_exactAlarmGranted) {
+        // NOTE: Do NOT modify _exactAlarmGranted here; use the captured local value.
+        if (useExactAlarm) {
           try {
-            _exactAlarmGranted = false;
             await _notificationsPlugin.zonedSchedule(
               idCounter,
               '⏰ Check Out Reminder',
@@ -347,6 +332,10 @@ class CheckInReminderNotificationService {
 
     int idCounter = _checkInReminderId;
     int scheduledCount = 0;
+    // Capture exact-alarm capability ONCE; never mutate the shared instance field
+    // inside the loop — a single failure must not force ALL remaining notifications
+    // into inexact mode for the rest of the app session.
+    final bool useExactAlarm = _exactAlarmGranted;
     for (var scheduledTime in reminderTimes) {
       // إذا كان الوقت قد مضى اليوم، جدول لليوم التالي
       var targetTime = scheduledTime;
@@ -379,7 +368,9 @@ class CheckInReminderNotificationService {
               presentSound: true,
             ),
           ),
-          androidScheduleMode: _scheduleMode,
+          androidScheduleMode: useExactAlarm
+              ? AndroidScheduleMode.exactAllowWhileIdle
+              : AndroidScheduleMode.inexactAllowWhileIdle,
           matchDateTimeComponents: DateTimeComponents.time, // يتكرر يومياً
         );
         scheduledCount++;
@@ -388,9 +379,9 @@ class CheckInReminderNotificationService {
       } catch (e) {
         print('❌ Error scheduling check-in reminder #${idCounter}: $e');
         // محاولة ثانية بوضع inexact إذا فشل exact
-        if (_exactAlarmGranted) {
+        // NOTE: Do NOT modify _exactAlarmGranted here; use the captured local value.
+        if (useExactAlarm) {
           try {
-            _exactAlarmGranted = false;
             await _notificationsPlugin.zonedSchedule(
               idCounter,
               '⏰ Check In Reminder',
