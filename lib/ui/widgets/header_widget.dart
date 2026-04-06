@@ -75,9 +75,11 @@ class _HeaderWidgetState extends State<HeaderWidget>
     };
 
     // Register callback for notification count changes
+    // Use fast local count (no API call) to avoid race condition
+    // where the API hasn't indexed the new notification yet.
     NotificationStorageService.onCountChanged = () {
       if (mounted) {
-        _loadNotificationCount();
+        _loadNotificationCountLocal();
       }
     };
   }
@@ -116,6 +118,19 @@ class _HeaderWidgetState extends State<HeaderWidget>
 
   Future<void> _loadNotificationCount() async {
     final count = await NotificationStorageService.getTotalCount();
+    if (mounted) {
+      setState(() {
+        _notificationCount = count;
+        _cachedNotificationCount = count;
+      });
+    }
+  }
+
+  /// Fast local badge update — reads cached count from SharedPreferences
+  /// without making an API call. Used by the [onCountChanged] callback
+  /// so the badge updates instantly after a push notification is saved.
+  Future<void> _loadNotificationCountLocal() async {
+    final count = await NotificationStorageService.getLocalStoredCount();
     if (mounted) {
       setState(() {
         _notificationCount = count;

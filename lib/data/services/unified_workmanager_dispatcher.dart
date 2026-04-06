@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:el_race/core/constants/hive_constants.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/auto_checkout_service.dart';
@@ -82,8 +84,20 @@ Future<bool> _handlePrayerTask(
 
   try {
     // Ensure Hive is ready
+    // Hive.initFlutter() uses path_provider internally, which fails on iOS
+    // background isolates (WorkManager) because the platform channel is not
+    // available. We fall back to Hive.init() with a manually derived path.
     if (!Hive.isBoxOpen(HiveConstants.preferencesBox)) {
-      await Hive.initFlutter();
+      try {
+        await Hive.initFlutter();
+      } catch (_) {
+        // iOS background isolate: derive Documents dir from systemTemp
+        // systemTemp = <sandbox>/tmp  →  parent = <sandbox>
+        final docsDir = Directory(
+            '${Directory.systemTemp.parent.path}/Documents');
+        if (!docsDir.existsSync()) docsDir.createSync(recursive: true);
+        Hive.init(docsDir.path);
+      }
     }
 
     // Skip if user not logged in

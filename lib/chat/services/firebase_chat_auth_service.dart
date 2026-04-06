@@ -20,6 +20,7 @@ import '../repositories/chat_repository.dart';
 import '../repositories/user_repository.dart';
 import 'chat_credential_storage.dart';
 import 'chat_session_storage.dart';
+import 'firebase_token_api_service.dart';
 import 'presence_service.dart';
 import 'chat_notification_service.dart';
 
@@ -50,6 +51,8 @@ class FirebaseChatAuthService {
   ChatUserSession? _currentSession;
   String? _currentRoleChatId;
   bool _isSetupComplete = false;
+  StreamSubscription<User?>? _idTokenSub;
+  bool _isRefreshing = false;
 
   // Configuration
   static const bool groupByBranch = false; // Match with ChatRepository
@@ -91,48 +94,39 @@ class FirebaseChatAuthService {
   /// Refresh the Firebase custom token from the backend.
   ///
   /// Strategy:
-  /// 1. Try the dedicated refresh endpoint with Bearer token + session cookies.
-  /// 2. If that fails, try session cookies with login/new.
+  /// 1. Try the dedicated refresh endpoint (`/api/firebase/refresh_token`).
+  /// 2. If that fails, try session cookies with `login/new`.
   /// 3. If all else fails, do a **silent re-login** with stored credentials.
   Future<String?> refreshFirebaseCustomToken(String backendToken) async {
     try {
       print('🔄 FirebaseChatAuth: Requesting fresh Firebase token from backend...');
 
-      // Use persistent cookies (same cookie jar as the rest of the app)
-      final appDocDir = await getApplicationDocumentsDirectory();
-      final cookieJar = PersistCookieJar(
-        ignoreExpires: true,
-        storage: FileStorage('${appDocDir.path}/.cookies/'),
-      );
+      // ── Attempt 1: Dedicated refresh endpoint via FirebaseTokenApiService ──
+      final refreshResponse = await FirebaseTokenApiService.instance
+          .refreshToken(backendToken: backendToken);
 
-      final dio = Dio(BaseOptions(
-        connectTimeout: const Duration(seconds: 15),
-        receiveTimeout: const Duration(seconds: 15),
-      ));
-      dio.interceptors.add(CookieManager(cookieJar));
-
-      // ── Attempt 1: Dedicated refresh endpoint ──
-      try {
-        final refreshUrl = '${UrlUtil.baseUrl}${UrlUtil.firebaseRefreshToken}';
-        print('🔄 FirebaseChatAuth: Trying refresh endpoint: $refreshUrl');
-
-        final response = await dio.post(
-          refreshUrl,
-          data: jsonEncode({"jsonrpc": "2.0", "params": {}}),
-          options: Options(headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer $backendToken',
-          }),
-        );
-
-        final token = _extractFirebaseToken(response.data);
-        if (token != null) return token;
-      } on DioException catch (e) {
-        print('⚠️ FirebaseChatAuth: Refresh endpoint returned ${e.response?.statusCode}');
+      if (refreshResponse != null && refreshResponse.isSuccess) {
+        final token = refreshResponse.firebaseCustomToken;
+        if (token != null) {
+          print('✅ FirebaseChatAuth: Got token from refresh endpoint');
+          // Persist the fresh token into loginResponse
+          await _persistFreshToken(token);
+          return token;
+        }
       }
 
       // ── Attempt 2: Session cookies with login endpoint ──
       try {
+        final appDocDir = await getApplicationDocumentsDirectory();
+        final cookieJar = PersistCookieJar(
+          ignoreExpires: true,
+          storage: FileStorage('${appDocDir.path}/.cookies/'),
+        );
+        final dio = Dio(BaseOptions(
+          connectTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+        ))..interceptors.add(CookieManager(cookieJar));
+
         final sessionUrl = '${UrlUtil.baseUrl}${UrlUtil.login}';
         print('🔄 FirebaseChatAuth: Trying session-based refresh via $sessionUrl');
 
@@ -157,12 +151,21 @@ class FirebaseChatAuthService {
         if (creds != null) {
           print('🔄 FirebaseChatAuth: Attempting silent re-login...');
 
-          // Get FCM token for the login request
           String fcmToken = '';
           try {
             final prefs = await SharedPreferences.getInstance();
             fcmToken = prefs.getString('fcm_token') ?? '';
           } catch (_) {}
+
+          final appDocDir = await getApplicationDocumentsDirectory();
+          final cookieJar = PersistCookieJar(
+            ignoreExpires: true,
+            storage: FileStorage('${appDocDir.path}/.cookies/'),
+          );
+          final dio = Dio(BaseOptions(
+            connectTimeout: const Duration(seconds: 15),
+            receiveTimeout: const Duration(seconds: 15),
+          ))..interceptors.add(CookieManager(cookieJar));
 
           final loginUrl = '${UrlUtil.baseUrl}${UrlUtil.login}';
           final response = await dio.post(
@@ -184,21 +187,18 @@ class FirebaseChatAuthService {
 
           print('🔄 FirebaseChatAuth: Silent re-login response status: ${response.statusCode}');
 
-          // Check if login was successful
           final data = response.data;
           if (data is Map<String, dynamic>) {
             final result = data['result'];
             if (result is Map<String, dynamic> && result['success'] == true) {
               print('✅ FirebaseChatAuth: Silent re-login succeeded!');
 
-              // Update stored loginResponse so other parts of the app benefit
               try {
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.setString('loginResponse', jsonEncode(data));
                 print('✅ FirebaseChatAuth: Updated stored loginResponse');
               } catch (_) {}
 
-              // Extract the fresh Firebase token
               final token = _extractFirebaseToken(data);
               if (token != null) return token;
             } else {
@@ -218,6 +218,31 @@ class FirebaseChatAuthService {
     } catch (e) {
       print('⚠️ FirebaseChatAuth: Could not refresh Firebase token: $e');
       return null;
+    }
+  }
+
+  /// Persist a fresh Firebase token into the stored loginResponse.
+  Future<void> _persistFreshToken(String freshToken) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('loginResponse');
+      if (raw == null || raw.isEmpty) return;
+
+      final decoded = jsonDecode(raw) as Map<String, dynamic>;
+
+      if (decoded['result']?['data'] is Map<String, dynamic>) {
+        (decoded['result']['data']
+            as Map<String, dynamic>)['firebase_custom_token'] = freshToken;
+      }
+      if (decoded['result'] is Map<String, dynamic>) {
+        (decoded['result']
+            as Map<String, dynamic>)['firebase_custom_token'] = freshToken;
+      }
+
+      await prefs.setString('loginResponse', jsonEncode(decoded));
+      print('✅ FirebaseChatAuth: Persisted fresh Firebase token');
+    } catch (e) {
+      print('⚠️ FirebaseChatAuth: Could not persist token: $e');
     }
   }
 
@@ -353,6 +378,9 @@ class FirebaseChatAuthService {
       _isSetupComplete = true;
       print('✅ FirebaseChatAuth: Setup complete!');
 
+      // Start proactive token refresh listener
+      _startAutoTokenRefresh();
+
       // Bulk-hydrate missing email/phone/job for all users (fire-and-forget)
       UserRepository.instance.hydrateAllUsersFromDirectory().then((count) {
         if (count > 0) {
@@ -391,6 +419,45 @@ class FirebaseChatAuthService {
       print('❌ FirebaseChatAuth: Setup error: $e');
       return ChatSetupResult.failed('Chat setup failed: $e');
     }
+  }
+
+  /// Start listening to Firebase ID-token changes.
+  ///
+  /// When Firebase detects the ID-token is about to expire it emits an event.
+  /// We use that as a trigger to proactively fetch a new custom token from the
+  /// backend and re-sign-in, so chat never loses connectivity.
+  void _startAutoTokenRefresh() {
+    _idTokenSub?.cancel();
+    _idTokenSub = _auth.idTokenChanges().listen((user) async {
+      if (user == null || _isRefreshing || !_isSetupComplete) return;
+
+      // Firebase ID tokens are valid for 1 hour. We refresh proactively
+      // when we receive a token-change event (Firebase SDK triggers this
+      // ~5 min before expiry when the app is in the foreground).
+      try {
+        _isRefreshing = true;
+        print('🔄 FirebaseChatAuth: ID token changed – refreshing custom token...');
+
+        final backendToken = _currentSession?.backendJwt ?? '';
+        if (backendToken.isEmpty) {
+          print('⚠️ FirebaseChatAuth: No backend JWT for auto-refresh');
+          return;
+        }
+
+        final freshToken = await FirebaseTokenApiService.instance
+            .fetchFreshFirebaseToken(backendToken: backendToken);
+
+        if (freshToken != null) {
+          await _auth.signInWithCustomToken(_cleanFirebaseToken(freshToken));
+          await _persistFreshToken(freshToken);
+          print('✅ FirebaseChatAuth: Auto-refreshed Firebase token');
+        }
+      } catch (e) {
+        print('⚠️ FirebaseChatAuth: Auto-refresh error (non-fatal): $e');
+      } finally {
+        _isRefreshing = false;
+      }
+    });
   }
 
   /// Lightweight restore from cached session.
@@ -564,6 +631,13 @@ class FirebaseChatAuthService {
       // Dispose presence service
       await PresenceService.instance.dispose();
 
+      // Cancel auto-refresh listener
+      await _idTokenSub?.cancel();
+      _idTokenSub = null;
+
+      // Dispose token API service
+      FirebaseTokenApiService.instance.dispose();
+
       // Clear cached session from secure storage
       await ChatSessionStorage.instance.clearSession();
 
@@ -573,6 +647,7 @@ class FirebaseChatAuthService {
       _currentSession = null;
       _currentRoleChatId = null;
       _isSetupComplete = false;
+      _isRefreshing = false;
 
       print('✅ FirebaseChatAuth: Signed out successfully');
     } catch (e) {

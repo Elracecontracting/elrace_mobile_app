@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -27,11 +26,19 @@ class MediaItemWidget extends StatelessWidget {
 
   Rect _shareOriginRect(BuildContext context) {
     final box = context.findRenderObject();
-    if (box is RenderBox) {
+    if (box is RenderBox && box.hasSize) {
       final origin = box.localToGlobal(Offset.zero);
-      return origin & box.size;
+      final rect = origin & box.size;
+      // Ensure non-zero rect (iOS requirement)
+      if (rect.width > 0 && rect.height > 0) return rect;
     }
-    return const Rect.fromLTWH(0, 0, 1, 1);
+    // Fallback: center of screen
+    final size = MediaQuery.of(context).size;
+    return Rect.fromCenter(
+      center: Offset(size.width / 2, size.height / 2),
+      width: 1,
+      height: 1,
+    );
   }
 
   Widget _buildThumbnail() {
@@ -241,6 +248,8 @@ class MediaItemWidget extends StatelessWidget {
 
   // Share media with thumbnail and video URL
   Future<void> _shareMediaAsLink(BuildContext context) async {
+    // Capture origin rect immediately (before async gaps invalidate context)
+    final originRect = _shareOriginRect(context);
     try {
       print('🚀 Starting share process for media: ${media.id} - ${media.name}');
 
@@ -334,29 +343,24 @@ class MediaItemWidget extends StatelessWidget {
       }
 
       // 4. Share the thumbnail image + video URL
-      final originRect = _shareOriginRect(context);
       if (thumbnailFile != null) {
         // Share with both thumbnail and URL
         print('📤 Sharing thumbnail + URL');
-        try {
-          await Share.shareXFiles(
-            [thumbnailFile],
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [thumbnailFile],
             text: shareableUrl,
             sharePositionOrigin: originRect,
-          );
-        } on PlatformException catch (e) {
-          print('⚠️ iOS shareXFiles failed, fallback to URL share: $e');
-          await Share.share(
-            shareableUrl,
-            sharePositionOrigin: originRect,
-          );
-        }
+          ),
+        );
       } else {
         // Share only the URL if thumbnail download failed
         print('📤 Sharing URL only');
-        await Share.share(
-          shareableUrl,
-          sharePositionOrigin: originRect,
+        await SharePlus.instance.share(
+          ShareParams(
+            text: shareableUrl,
+            sharePositionOrigin: originRect,
+          ),
         );
       }
 

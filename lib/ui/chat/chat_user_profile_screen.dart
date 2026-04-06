@@ -72,20 +72,18 @@ class _ChatUserProfileScreenState extends State<ChatUserProfileScreen> {
                       builder: (context, constraints) {
                         return SingleChildScrollView(
                           padding: const EdgeInsets.fromLTRB(10, 6, 10, 0),
-                          child: ConstrainedBox(
+                          child: Container(
+                            clipBehavior: Clip.antiAlias,
                             constraints: BoxConstraints(
                               minHeight: constraints.maxHeight - 6,
                             ),
-                            child: IntrinsicHeight(
-                              child: Container(
-                                clipBehavior: Clip.antiAlias,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFECECEE),
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                                  children: [
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFECECEE),
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
                                     _TopIdentityCard(
                                       displayName: user?.name.trim().isNotEmpty == true
                                           ? user!.name
@@ -130,23 +128,19 @@ class _ChatUserProfileScreenState extends State<ChatUserProfileScreen> {
                                         ],
                                       ),
                                     ),
-                                    Expanded(
-                                      child: _MediaSection(
-                                        items: mediaItems,
-                                        onTapItem: (item) =>
-                                            _openMediaPreview(context, item),
-                                        onViewAll: mediaItems.isEmpty
-                                            ? null
-                                            : () => _showAllMediaBottomSheet(
-                                                context, mediaItems),
-                                      ),
+                                    _MediaSection(
+                                      items: mediaItems,
+                                      onTapItem: (item) =>
+                                          _openMediaPreview(context, item),
+                                      onViewAll: mediaItems.isEmpty
+                                          ? null
+                                          : () => _showAllMediaBottomSheet(
+                                              context, mediaItems),
                                     ),
                                   ],
                                 ),
                               ),
-                            ),
-                          ),
-                        );
+                          );
                       },
                     );
                   },

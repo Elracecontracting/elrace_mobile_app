@@ -38,7 +38,7 @@ class AppConfigService {
       ));
 
       const String url = '${UrlUtil.baseUrl}app/config';
-      final resp = await dio.get(url, data: {});
+      final resp = await dio.get(url);
 
       print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       print('🔧 AppConfigService API Response:');

@@ -275,40 +275,44 @@ void main() async {
     print('❌ Error initializing counter reset service: $e');
   }
 
-  // تهيئة خدمة إشعارات التذكير بـ Check In/Out
-  try {
-    await CheckInReminderNotificationService().initialize().timeout(
-      const Duration(seconds: 5),
-      onTimeout: () {
-        print('⚠️ Check-in reminder init timeout');
-      },
-    );
-  } catch (e) {
-    print('❌ Error initializing check-in reminder: $e');
-  }
-
-  // جدولة Auto Check-out اليومي
-  try {
-    final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
-    if (isCheckedIn) {
-      await AutoCheckoutService.scheduleAutoCheckout();
-      debugPrint('✅ Auto checkout scheduled for 5:00 PM');
-
-      // جدولة إشعارات التذكير حسب حالة check in/out
-      await CheckInReminderNotificationService().scheduleCheckOutReminders();
-      debugPrint('✅ Check-out reminder notifications scheduled');
-
-      // اختبار: إرسال إشعار تجريبي عند التشغيل
-      // await CheckInReminderNotificationService().sendTestNotification(isCheckIn: false);
-    } else {
-      await CheckInReminderNotificationService().scheduleCheckInReminders();
-      debugPrint('✅ Check-in reminder notifications scheduled');
-
-      // اختبار: إرسال إشعار تجريبي عند التشغيل
-      // await CheckInReminderNotificationService().sendTestNotification(isCheckIn: true);
+  // تهيئة وجدولة إشعارات التذكير بـ Check In/Out - فقط إذا كان المستخدم مسجّل دخوله
+  if (SharedPref.isUserAuthenticated()) {
+    try {
+      await CheckInReminderNotificationService().initialize().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          print('⚠️ Check-in reminder init timeout');
+        },
+      );
+    } catch (e) {
+      print('❌ Error initializing check-in reminder: $e');
     }
-  } catch (e) {
-    print('❌ Error scheduling notifications: $e');
+
+    // جدولة Auto Check-out اليومي
+    try {
+      final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
+      if (isCheckedIn) {
+        await AutoCheckoutService.scheduleAutoCheckout();
+        debugPrint('✅ Auto checkout scheduled for 5:00 PM');
+
+        // جدولة إشعارات التذكير حسب حالة check in/out
+        await CheckInReminderNotificationService().scheduleCheckOutReminders();
+        debugPrint('✅ Check-out reminder notifications scheduled');
+
+        // اختبار: إرسال إشعار تجريبي عند التشغيل
+        // await CheckInReminderNotificationService().sendTestNotification(isCheckIn: false);
+      } else {
+        await CheckInReminderNotificationService().scheduleCheckInReminders();
+        debugPrint('✅ Check-in reminder notifications scheduled');
+
+        // اختبار: إرسال إشعار تجريبي عند التشغيل
+        // await CheckInReminderNotificationService().sendTestNotification(isCheckIn: true);
+      }
+    } catch (e) {
+      print('❌ Error scheduling notifications: $e');
+    }
+  } else {
+    debugPrint('ℹ️ User not logged in — skipping check-in/out reminder & auto-checkout scheduling');
   }
 
   // Initialize chat module if user is already logged in
@@ -361,13 +365,26 @@ Future<void> _configureAppSystemUi() async {
   );
 }
 
+const _systemUiChannel = MethodChannel('com.el_race.app/system_ui');
+
 Future<void> _enableAndroidImmersiveMode() async {
   if (!Platform.isAndroid) return;
 
-  await SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  // إخفاء النافيقيشن بار (تحت) فقط مع إبقاء الستاتس بار (فوق) ظاهر
+  // نستخدم native MethodChannel لأن Flutter لا يدعم إخفاء النافيقيشن بار
+  // فقط مع سلوك edge-swipe (BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE)
+  try {
+    await _systemUiChannel.invokeMethod('hideNavigationBar');
+  } catch (e) {
+    // fallback to Flutter API if native channel fails
+    await SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.manual,
+      overlays: [SystemUiOverlay.top],
+    );
+  }
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
-      systemNavigationBarColor: Colors.black,
+      systemNavigationBarColor: Colors.transparent,
       systemNavigationBarIconBrightness: Brightness.light,
       statusBarColor: Colors.transparent,
     ),

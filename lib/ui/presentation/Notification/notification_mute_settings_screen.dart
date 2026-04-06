@@ -71,6 +71,11 @@ class _NotificationMuteSettingsScreenState
       icon: Icons.warning_amber_rounded,
       color: Color(0xFFEF6C00),
     ),
+    'weather': _CategoryUiMeta(
+      title: 'Weather',
+      icon: Icons.cloud_rounded,
+      color: Color(0xFF0288D1),
+    ),
   };
 
   List<NotificationCategoryModel> _categories =
@@ -106,13 +111,22 @@ class _NotificationMuteSettingsScreenState
     return parts.join(' ');
   }
 
-  NotificationCategoryModel _toCategoryModel(String model, bool muted) {
+  NotificationCategoryModel _toCategoryModel(
+    String model,
+    bool muted, {
+    String? apiTitle,
+  }) {
     final key = model.trim().toLowerCase();
     final meta = _knownCategories[key];
 
+    // Use API-provided title first, then hardcoded meta, then humanized model
+    final title = (apiTitle != null && apiTitle.trim().isNotEmpty)
+        ? apiTitle.trim()
+        : meta?.title ?? _humanizeModel(key);
+
     return NotificationCategoryModel(
       model: key,
-      title: meta?.title ?? _humanizeModel(key),
+      title: title,
       icon: meta?.icon ?? Icons.notifications_active_rounded,
       color: meta?.color ?? const Color(0xFF1565C0),
       muted: muted,
@@ -142,10 +156,13 @@ class _NotificationMuteSettingsScreenState
         forceRefresh: forceRefresh,
       );
 
+      // Build a map of API-provided titles keyed by normalized model
+      final apiTitles = <String, String>{};
       final merged = <String, bool>{};
       for (final category in categories) {
         final key = category.model.trim().toLowerCase();
         if (key.isEmpty) continue;
+        apiTitles[key] = category.title;
         if (_isAlwaysOnCategory(key)) continue;
         merged[key] = settings[key] ?? false;
       }
@@ -160,7 +177,11 @@ class _NotificationMuteSettingsScreenState
           .toList(growable: false);
 
       final dynamicCategoryModels = merged.entries
-          .map((entry) => _toCategoryModel(entry.key, entry.value))
+          .map((entry) => _toCategoryModel(
+                entry.key,
+                entry.value,
+                apiTitle: apiTitles[entry.key],
+              ))
           .toList(growable: false)
         ..sort((a, b) => a.title.compareTo(b.title));
 
@@ -395,8 +416,10 @@ class _NotificationMuteSettingsScreenState
           else
             Switch.adaptive(
               value: isAlwaysOn ? false : category.muted,
-              activeTrackColor: category.color.withValues(alpha: 0.35),
-              activeColor: category.color,
+              activeColor: const Color(0xFFE53935),
+              activeTrackColor: const Color(0xFFEF9A9A),
+              inactiveThumbColor: const Color(0xFF43A047),
+              inactiveTrackColor: const Color(0xFFA5D6A7),
               onChanged: _isBulkUpdating || isAlwaysOn
                   ? null
                   : (value) => _toggleMute(category, value),

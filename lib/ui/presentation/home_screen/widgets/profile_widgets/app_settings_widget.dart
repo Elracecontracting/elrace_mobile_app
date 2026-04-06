@@ -1,6 +1,8 @@
 import 'package:el_race/chat/chat.dart';
+import 'package:el_race/core/services/notification_api_service.dart';
 import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/data/services/checkin_reminder_notification_service.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/auth/uaepass_auth_cubit.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
@@ -36,30 +38,27 @@ class AppSettingsWidget extends StatelessWidget {
   }
 
   Future<void> _showMuteControlPopup(BuildContext context) async {
-    final settings = await NotificationStorageService.getMuteSettings();
+    final results = await Future.wait([
+      NotificationStorageService.getMuteSettings(),
+      NotificationStorageService.getNotificationCategories(),
+    ]);
     final dialogHostContext =
         navKey.currentState?.overlay?.context ?? navKey.currentContext;
     if (dialogHostContext == null) return;
 
-    final channels = <_MuteChannelItem>[
-      _MuteChannelItem(
-        label: 'Announcement',
-        key:
-            _pickExistingKey(settings, const ['announcement', 'announcements']),
-      ),
-      _MuteChannelItem(
-        label: 'Circular',
-        key: _pickExistingKey(settings, const ['circular', 'circulars']),
-      ),
-      _MuteChannelItem(
-        label: 'Notifications',
-        key: _pickExistingKey(settings, const ['notification', 'alert']),
-      ),
-      _MuteChannelItem(
-        label: 'Azan',
-        key: _pickExistingKey(settings, const ['prayer', 'azan']),
-      ),
-    ];
+    final settings = results[0] as Map<String, bool>;
+    final apiCategories =
+        results[1] as List<NotificationCategoryApiModel>;
+
+    final channels = apiCategories
+        .where((c) => c.model.trim().isNotEmpty)
+        .map(
+          (c) => _MuteChannelItem(
+            label: c.title.trim().isNotEmpty ? c.title : c.model,
+            key: c.model.trim().toLowerCase(),
+          ),
+        )
+        .toList(growable: false);
 
     final valueByKey = <String, bool>{
       for (final channel in channels)
@@ -141,10 +140,10 @@ class AppSettingsWidget extends StatelessWidget {
                                 onChanged: isSaving
                                     ? null
                                     : (value) => updateChannel(item, value),
-                                activeThumbColor: const Color(0xFF454545),
-                                activeTrackColor: const Color(0xFFD1D2D4),
-                                inactiveThumbColor: const Color(0xFF454545),
-                                inactiveTrackColor: const Color(0xFFD1D2D4),
+                                activeThumbColor: const Color(0xFFE53935),
+                                activeTrackColor: const Color(0xFFEF9A9A),
+                                inactiveThumbColor: const Color(0xFF43A047),
+                                inactiveTrackColor: const Color(0xFFA5D6A7),
                               ),
                             ),
                           ],
@@ -556,6 +555,14 @@ class AppSettingsWidget extends StatelessWidget {
                             );
                       } catch (e) {
                         print('⚠️ UAE Pass logout failed (continuing): $e');
+                      }
+
+                      // إلغاء إشعارات التذكير بـ check in/out عند تسجيل الخروج
+                      try {
+                        await CheckInReminderNotificationService().cancelAllReminders();
+                        print('✅ Check-in/out reminders cancelled');
+                      } catch (e) {
+                        print('⚠️ Failed to cancel reminders (continuing): $e');
                       }
 
                       // Clear user preferences

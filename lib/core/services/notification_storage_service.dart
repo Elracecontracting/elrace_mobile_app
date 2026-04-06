@@ -24,6 +24,19 @@ class NotificationStorageService {
   /// Callback to notify when notification count changes.
   static void Function()? onCountChanged;
 
+  /// Fast badge count from local cache (no API call).
+  /// Use this for real-time badge updates (e.g. after a push notification
+  /// is saved locally) to avoid a race condition where the API has not yet
+  /// indexed the new notification.
+  static Future<int> getLocalStoredCount() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt(_unreadCountKey) ?? 0;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   static String _normalizeKey(String value) {
     return value.trim().toLowerCase();
   }
@@ -392,7 +405,9 @@ class NotificationStorageService {
       }
 
       await _saveStoredNotifications(notifications, prefs);
-      await _updateUnreadCount();
+      // Store total local count (consistent with what getTotalCount writes)
+      // so the badge updates immediately without an API round-trip.
+      await prefs.setInt(_unreadCountKey, notifications.length);
       onCountChanged?.call();
     } catch (_) {
       // Keep silent to avoid crashing push pipeline.

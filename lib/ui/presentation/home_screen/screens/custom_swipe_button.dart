@@ -463,14 +463,15 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
     if ((!isCheckedIn && dragOffset >= threshold) ||
         (isCheckedIn && dragOffset <= (buttonWidth - knobSize - threshold))) {
       // التحقق من وقت Check-in قبل السماح (فقط عند محاولة check-in وليس check-out)
-      if (!isCheckedIn && !_isCheckInAllowed()) {
-        final dubaiTime = _getDubaiTime();
-        final timeStr =
-            '${dubaiTime.hour.toString().padLeft(2, '0')}:${dubaiTime.minute.toString().padLeft(2, '0')}';
-        _showCheckInNotAvailablePopup(currentTime: timeStr);
-        _resetPosition();
-        return;
-      }
+      // ⚠️ تم تعطيل شرط الوقت مؤقتاً
+      // if (!isCheckedIn && !_isCheckInAllowed()) {
+      //   final dubaiTime = _getDubaiTime();
+      //   final timeStr =
+      //       '${dubaiTime.hour.toString().padLeft(2, '0')}:${dubaiTime.minute.toString().padLeft(2, '0')}';
+      //   _showCheckInNotAvailablePopup(currentTime: timeStr);
+      //   _resetPosition();
+      //   return;
+      // }
 
       final targetOffset = isCheckedIn ? 0.0 : (buttonWidth - knobSize);
       SharedPref()

@@ -262,9 +262,8 @@ class FaceDetectorService {
     // This handles the most common case for selfie/face registration
     const rotation = InputImageRotation.rotation270deg;
 
-    // Get image format - Android typically uses NV21
-    final format = InputImageFormatValue.fromRawValue(image.format.raw) ??
-        InputImageFormat.nv21;
+    // Get image format - force NV21 on Android for ML Kit compatibility
+    final format = InputImageFormat.nv21;
 
     // Create metadata
     final inputImageMetadata = InputImageMetadata(

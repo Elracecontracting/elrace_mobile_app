@@ -146,8 +146,9 @@ class FirebaseService {
       if (defaultTargetPlatform == TargetPlatform.android) {
         _showNotification(message);
       }
-      // Save notification to storage
-      _saveNotificationToStorage(message);
+      // Save notification to storage (await to ensure badge count
+      // is persisted before the onCountChanged callback fires).
+      await _saveNotificationToStorage(message);
 
       await _refreshAttendanceFromPushIfNeeded(
         message,
@@ -174,7 +175,7 @@ class FirebaseService {
           '   - ✅ Processing message (${_processedMessageIds.length} total processed)');
 
       // Save notification to storage if not already saved
-      _saveNotificationToStorage(message);
+      await _saveNotificationToStorage(message);
       await _refreshAttendanceFromPushIfNeeded(
         message,
         source: 'background_tap',
@@ -203,7 +204,7 @@ class FirebaseService {
         print(
             '   - ✅ Processing message (${_processedMessageIds.length} total processed)');
 
-        _saveNotificationToStorage(message);
+        await _saveNotificationToStorage(message);
         await _refreshAttendanceFromPushIfNeeded(
           message,
           source: 'terminated_tap',
@@ -601,6 +602,14 @@ class FirebaseService {
           ),
           (_) => false,
         );
+
+        // Schedule a post-frame attendance refresh so the newly created
+        // widget tree (CustomSwipeButton / HomeBloc) picks up latest data.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          AttendanceStatusSyncService.refreshFromServer(
+            reason: 'attendance_notification_tap',
+          );
+        });
         return;
       }
 

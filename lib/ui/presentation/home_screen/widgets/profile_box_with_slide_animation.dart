@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:el_race/core/services/notification_api_service.dart';
 import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/main.dart';
@@ -138,30 +139,25 @@ class _ProfileBoxWithSlideAnimationState
   }
 
   Future<void> _openMuteControlPopup() async {
-    final settings = await NotificationStorageService.getMuteSettings();
+    final results = await Future.wait([
+      NotificationStorageService.getMuteSettings(),
+      NotificationStorageService.getNotificationCategories(),
+    ]);
     if (!mounted) return;
 
-    final channels = <_MuteChannelConfig>[
-      _MuteChannelConfig(
-        label: 'Announcement',
-        key: _pickExistingMuteKey(
-          settings,
-          const ['announcement', 'announcements'],
-        ),
-      ),
-      _MuteChannelConfig(
-        label: 'Circular',
-        key: _pickExistingMuteKey(settings, const ['circular', 'circulars']),
-      ),
-      _MuteChannelConfig(
-        label: 'Notifications',
-        key: _pickExistingMuteKey(settings, const ['notification', 'alert']),
-      ),
-      _MuteChannelConfig(
-        label: 'Azan',
-        key: _pickExistingMuteKey(settings, const ['prayer', 'azan']),
-      ),
-    ];
+    final settings = results[0] as Map<String, bool>;
+    final apiCategories =
+        results[1] as List<NotificationCategoryApiModel>;
+
+    final channels = apiCategories
+        .where((c) => c.model.trim().isNotEmpty)
+        .map(
+          (c) => _MuteChannelConfig(
+            label: c.title.trim().isNotEmpty ? c.title : c.model,
+            key: c.model.trim().toLowerCase(),
+          ),
+        )
+        .toList(growable: false);
 
     setState(() {
       _muteChannels = channels;
@@ -917,16 +913,16 @@ class _ProfileBoxWithSlideAnimationState
                                                 : (value) => _updateMuteChannel(
                                                     item, value),
                                             activeThumbColor:
-                                                const Color(0xFF454545),
+                                                const Color(0xFFE53935),
                                             activeTrackColor:
-                                                const Color(0xFFC8C8CB),
+                                                const Color(0xFFEF9A9A),
                                             inactiveThumbColor:
-                                                const Color(0xFF454545),
+                                                const Color(0xFF43A047),
                                             inactiveTrackColor:
-                                                const Color(0xFFC8C8CB),
+                                                const Color(0xFFA5D6A7),
                                             trackOutlineColor:
                                                 const WidgetStatePropertyAll(
-                                              Color(0xFFC8C8CB),
+                                              Colors.transparent,
                                             ),
                                           ),
                                         ),

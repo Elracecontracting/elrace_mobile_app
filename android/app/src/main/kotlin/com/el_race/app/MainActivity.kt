@@ -9,6 +9,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -16,6 +19,7 @@ import io.flutter.plugin.common.MethodChannel
 class MainActivity : FlutterFragmentActivity() {
 
     private val BATTERY_CHANNEL = "com.el_race.app/battery_optimization"
+    private val SYSTEM_UI_CHANNEL = "com.el_race.app/system_ui"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -44,10 +48,29 @@ class MainActivity : FlutterFragmentActivity() {
                     else -> result.notImplemented()
                 }
             }
+
+        // System UI channel: hide only navigation bar with edge-swipe behavior
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, SYSTEM_UI_CHANNEL)
+            .setMethodCallHandler { call, result ->
+                when (call.method) {
+                    "hideNavigationBar" -> {
+                        hideNavigationBarOnly()
+                        result.success(true)
+                    }
+                    else -> result.notImplemented()
+                }
+            }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Draw app content behind system bars (edge-to-edge)
+        // This prevents layout shift/lag when navigation bar appears
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        // Hide navigation bar immediately on launch
+        hideNavigationBarOnly()
         
         // Create notification channels for Android 8.0+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -91,5 +114,25 @@ class MainActivity : FlutterFragmentActivity() {
         super.onNewIntent(intent)
         setIntent(intent) // Important: update the activity's intent
         // Flutter will handle the notification through its listeners
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            hideNavigationBarOnly()
+        }
+    }
+
+    /**
+     * Hide only the navigation bar (bottom) while keeping the status bar (top) visible.
+     * Uses BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE so the nav bar only appears
+     * when the user swipes from the very bottom edge, and auto-hides after.
+     */
+    private fun hideNavigationBarOnly() {
+        val decorView = window.decorView
+        val controller = WindowInsetsControllerCompat(window, decorView)
+        controller.hide(WindowInsetsCompat.Type.navigationBars())
+        controller.systemBarsBehavior =
+            WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
     }
 }

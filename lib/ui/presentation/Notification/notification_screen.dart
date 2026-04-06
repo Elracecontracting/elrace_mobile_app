@@ -385,6 +385,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
     });
   }
 
+  Future<bool> _dismissNotification(String notificationId) async {
+    if (notificationId.trim().isEmpty) return false;
+    try {
+      await NotificationStorageService.markAsRead(notificationId);
+    } catch (_) {}
+    if (!mounted) return false;
+    setState(() {
+      notifications.removeWhere(
+        (n) => n['id']?.toString() == notificationId,
+      );
+    });
+    return true;
+  }
+
   Map<String, dynamic> _extractNotificationData(Map<String, dynamic> item) {
     final rawData = item['data'];
     if (rawData is Map<String, dynamic>) {
@@ -949,31 +963,26 @@ class _NotificationScreenState extends State<NotificationScreen> {
             ? _notificationTabs[currentIndex].icon
             : 'assets/png/notification_icon.png';
         final notificationId = (item['id'] ?? '').toString();
-        final isRead = _isRead(item);
 
         return Dismissible(
           key: ValueKey('notification-$notificationId-$index'),
-          direction:
-              isRead ? DismissDirection.none : DismissDirection.endToStart,
-          confirmDismiss: (_) async {
-            await _markNotificationAsRead(notificationId);
-            return false;
-          },
+          direction: DismissDirection.endToStart,
+          confirmDismiss: (_) => _dismissNotification(notificationId),
           background: Container(
             margin: const EdgeInsets.only(bottom: 6),
             padding: const EdgeInsets.symmetric(horizontal: 20),
             alignment: Alignment.centerRight,
             decoration: BoxDecoration(
-              color: const Color(0xFF1C7A46),
+              color: Colors.red.shade600,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                const Icon(Icons.done_all, color: Colors.white),
+                const Icon(Icons.delete_outline, color: Colors.white),
                 const SizedBox(width: 8),
                 Text(
-                  'Mark as read',
+                  'Delete',
                   style: GoogleFonts.inter(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,

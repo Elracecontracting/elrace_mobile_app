@@ -194,47 +194,72 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
 
     final liveDocs = _liveFamilyDocuments();
 
-    return WillPopScope(
-      onWillPop: () async {
-        if (_selectedFolder != null) {
-          _goBackToFolders();
-          return false;
-        }
+    final isFolderView = _selectedFolder != null && _folderSelectedByUser;
+
+    return Navigator(
+      pages: [
+        MaterialPage(
+          key: const ValueKey('family_folders'),
+          child: _buildFoldersList(liveDocs),
+        ),
+        if (isFolderView)
+          MaterialPage(
+            key: ValueKey('family_docs_$_selectedFolder'),
+            child: Builder(
+              builder: (pageContext) =>
+                  _buildDocumentsList(pageContext, liveDocs),
+            ),
+          ),
+      ],
+      onPopPage: (route, result) {
+        if (!route.didPop(result)) return false;
+        setState(() {
+          _selectedFolder = null;
+          _folderSelectedByUser = false;
+        });
         return true;
       },
-      child: (_selectedFolder != null && _folderSelectedByUser)
-          ? _buildDocumentsList(liveDocs)
-          : _buildFoldersList(liveDocs),
     );
   }
 
-  Widget _buildLiveDocumentsList(List<Map<String, dynamic>> docs) {
+  Widget _buildLiveDocumentsList(BuildContext pageContext, List<Map<String, dynamic>> docs) {
     return Column(
       children: [
         Padding(
-          padding: EdgeInsets.only(left: 20.w, top: 8.h, bottom: 8.h),
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(30.18),
-                border: Border.all(color: const Color(0xffD9D9D9)),
+          padding: EdgeInsets.only(left: 8.w, right: 20.w, top: 8.h, bottom: 8.h),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: () => Navigator.of(pageContext).pop(),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                color: const Color(0xFF27304E),
+                tooltip: 'Back to folders',
               ),
-              child: Padding(
-                padding:
-                    EdgeInsets.symmetric(horizontal: 13.5.w, vertical: 8.5.h),
-                child: Text(
-                  'Files No.  |  ${docs.length + 1}',
-                  style: GoogleFonts.aBeeZee(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w400,
-                    fontStyle: FontStyle.italic,
-                    letterSpacing: .10,
-                    color: const Color(0xff949494),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30.18),
+                    border: Border.all(color: const Color(0xffD9D9D9)),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: 13.5.w, vertical: 8.5.h),
+                    child: Text(
+                      '${_selectedFolder ?? 'Documents'}  |  ${docs.length + 1}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.aBeeZee(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w400,
+                        fontStyle: FontStyle.italic,
+                        letterSpacing: .10,
+                        color: const Color(0xff949494),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
         Expanded(
@@ -474,39 +499,50 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
   }
 
   // ── Documents Grid (Inside folder view) ──
-  Widget _buildDocumentsList(List<Map<String, dynamic>> liveDocs) {
+  Widget _buildDocumentsList(BuildContext pageContext, List<Map<String, dynamic>> liveDocs) {
     final docs = _documentsForSelectedFolder(liveDocs);
     if (liveDocs.isNotEmpty) {
-      return _buildLiveDocumentsList(docs);
+      return _buildLiveDocumentsList(pageContext, docs);
     }
 
     return Column(
       children: [
-        // Files count
+        // Back button + Files count
         Padding(
-          padding: EdgeInsets.only(left: 20.w, top: 8.h, bottom: 8.h),
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(30.18),
-                border: Border.all(color: const Color(0xffD9D9D9)),
+          padding: EdgeInsets.only(left: 8.w, right: 20.w, top: 8.h, bottom: 8.h),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: () => Navigator.of(pageContext).pop(),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                color: const Color(0xFF27304E),
+                tooltip: 'Back to folders',
               ),
-              child: Padding(
-                padding:
-                    EdgeInsets.symmetric(horizontal: 13.5.w, vertical: 8.5.h),
-                child: Text(
-                  'Files No.  |  ${docs.length + 1}',
-                  style: GoogleFonts.aBeeZee(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w400,
-                    fontStyle: FontStyle.italic,
-                    letterSpacing: .10,
-                    color: const Color(0xff949494),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(30.18),
+                    border: Border.all(color: const Color(0xffD9D9D9)),
+                  ),
+                  child: Padding(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 13.5.w, vertical: 8.5.h),
+                    child: Text(
+                      '${_selectedFolder ?? 'Documents'}  |  ${docs.length + 1}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.aBeeZee(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w400,
+                        fontStyle: FontStyle.italic,
+                        letterSpacing: .10,
+                        color: const Color(0xff949494),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ],
           ),
         ),
         // Documents grid
