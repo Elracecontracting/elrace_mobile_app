@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'config/face_recognition_config.dart';
 import 'data/services/face_detector_service.dart';
 import 'data/services/facenet_service.dart';
 import 'data/services/face_embedding_storage_service.dart';
@@ -60,15 +61,15 @@ class FaceRecognitionDI {
       () => LivenessService(_getIt<FaceDetectorService>()),
     );
 
-    // Repository (Singleton)
+    // Repository (Singleton) — uses centralized config values
     _getIt.registerLazySingleton<FaceRecognitionRepository>(
       () => FaceRecognitionRepositoryImpl(
         faceDetectorService: _getIt<FaceDetectorService>(),
         faceNetService: _getIt<FaceNetService>(),
         storageService: _getIt<FaceEmbeddingStorageService>(),
         verificationThreshold:
-            0.6, // Stricter matching for check-in/out (lower = more strict)
-        useCosineSimilarity: false, // true for cosine, false for Euclidean
+            FaceRecognitionConfig.matchingThreshold,
+        useCosineSimilarity: FaceRecognitionConfig.useCosineSimilarity,
         enableLivenessCheck:
             true, // ✅ REQUIRED: Anti-spoofing enabled to prevent photo attacks
       ),

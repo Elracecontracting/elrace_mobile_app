@@ -32,7 +32,7 @@ class ChatRepository {
   final Uuid _uuid = const Uuid();
 
   // Configuration
-  static const bool groupByBranch = false; // Set to true to group by branch
+  static const bool groupByBranch = true; // Group role chats by branch/city
   static const int defaultPageSize = 25;
 
   // Collection references
@@ -108,32 +108,10 @@ class ChatRepository {
           },
           SetOptions(merge: true));
 
-      // Create userChats entries for both users
-      final currentUserChatRef = _userChatsCollection(currentUid).doc(chatId);
-      batch.set(
-          currentUserChatRef,
-          {
-            'type': 'dm',
-            'peer_uid': otherUid,
-            'title': otherName,
-            'updated_at': FieldValue.serverTimestamp(),
-            'pinned': false,
-            'muted': false,
-          },
-          SetOptions(merge: true));
-
-      final otherUserChatRef = _userChatsCollection(otherUid).doc(chatId);
-      batch.set(
-          otherUserChatRef,
-          {
-            'type': 'dm',
-            'peer_uid': currentUid,
-            'title': currentUserName,
-            'updated_at': FieldValue.serverTimestamp(),
-            'pinned': false,
-            'muted': false,
-          },
-          SetOptions(merge: true));
+      // NOTE: userChats entries are NOT created here.
+      // They will be created when the first message is sent
+      // (via _ensureDmChatExists / sendText / _sendMedia).
+      // This prevents empty chats from appearing in the chat list.
 
       await batch.commit();
       print('✅ ChatRepository: Created/updated DM chat $chatId');
@@ -448,7 +426,24 @@ class ChatRepository {
         ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 
       if (roleChats.isNotEmpty) {
-        return roleChats;
+        // De-duplicate by roleId — keep the most recently updated chat per role
+        final Map<int, Chat> uniqueByRole = {};
+        for (final chat in roleChats) {
+          final rid = chat.roleId!;
+          if (!uniqueByRole.containsKey(rid)) {
+            uniqueByRole[rid] = chat;
+          }
+        }
+        // Also de-duplicate by title (case-insensitive) in case different
+        // roleIds resolve to the same display name
+        final Map<String, Chat> uniqueByTitle = {};
+        for (final chat in uniqueByRole.values) {
+          final key = (chat.title ?? '').trim().toLowerCase();
+          if (!uniqueByTitle.containsKey(key)) {
+            uniqueByTitle[key] = chat;
+          }
+        }
+        return uniqueByTitle.values.toList();
       }
 
       // Fallback for legacy data when role chat docs are not available yet.
@@ -513,13 +508,48 @@ class ChatRepository {
     }
   }
 
-  /// Get user's chat list stream
+  /// Get user's chat list stream.
+  /// For DM/support chats without `has_messages`, checks the actual chat
+  /// document for `last_message` to maintain backward compatibility.
   Stream<List<UserChat>> subscribeToUserChats(String uid) {
     return _userChatsCollection(uid)
         .orderBy('updated_at', descending: true)
         .snapshots()
-        .map((snapshot) {
-      return snapshot.docs.map((doc) => UserChat.fromFirestore(doc)).toList();
+        .asyncMap((snapshot) async {
+      final chats =
+          snapshot.docs.map((doc) => UserChat.fromFirestore(doc)).toList();
+
+      // For chats missing has_messages, check the actual chat doc
+      final needsCheck = chats
+          .where((c) =>
+              !c.hasMessages &&
+              (c.type == ChatType.dm || c.type == ChatType.support))
+          .toList();
+
+      if (needsCheck.isEmpty) return chats;
+
+      // Batch-check chat docs for last_message existence
+      final updatedChatIds = <String>{};
+      await Future.wait(needsCheck.map((c) async {
+        try {
+          final chatDoc = await _chatsCollection.doc(c.chatId).get();
+          final data = chatDoc.data();
+          if (data != null && data['last_message'] != null) {
+            updatedChatIds.add(c.chatId);
+            // Backfill has_messages flag so this check is skipped next time
+            _userChatsCollection(uid)
+                .doc(c.chatId)
+                .set({'has_messages': true}, SetOptions(merge: true));
+          }
+        } catch (_) {}
+      }));
+
+      return chats.map((c) {
+        if (updatedChatIds.contains(c.chatId)) {
+          return c.copyWith(hasMessages: true);
+        }
+        return c;
+      }).toList();
     });
   }
 
@@ -996,6 +1026,7 @@ class ChatRepository {
       final senderChatUpdate = <String, dynamic>{
         'type': chatId.startsWith('dm_') ? 'dm' : 'role',
         'updated_at': FieldValue.serverTimestamp(),
+        'has_messages': true,
       };
       if (_dmOtherUid != null && _dmOtherUid.isNotEmpty) {
         senderChatUpdate['peer_uid'] = _dmOtherUid;
@@ -1178,6 +1209,7 @@ class ChatRepository {
         'peer_uid': currentUid,
         'title': currentName,
         'updated_at': FieldValue.serverTimestamp(),
+        'has_messages': true,
         'pinned': false,
         'muted': false,
       }, SetOptions(merge: true));
@@ -1543,6 +1575,7 @@ class ChatRepository {
           {
             'type': chatId.startsWith('dm_') ? 'dm' : 'role',
             'updated_at': FieldValue.serverTimestamp(),
+            'has_messages': true,
           },
           SetOptions(merge: true));
 
@@ -1621,11 +1654,14 @@ class ChatRepository {
     if (currentUid == null) return;
 
     try {
-      // Use set(merge) instead of update — update fails if doc doesn't exist
-      await _userChatsCollection(currentUid).doc(chatId).set({
+      // Use update() so we don't accidentally create a userChats doc
+      // for a chat where no messages have been sent yet.
+      await _userChatsCollection(currentUid).doc(chatId).update({
         'last_read_at': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      });
     } catch (e) {
+      // Ignore "not-found" — the doc doesn't exist yet (no messages sent)
+      if (e is FirebaseException && e.code == 'not-found') return;
       print('❌ ChatRepository: Error marking chat as read: $e');
     }
   }

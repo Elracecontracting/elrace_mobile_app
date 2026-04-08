@@ -1,6 +1,7 @@
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:el_race/core/services/attendance_status_sync_service.dart';
 import 'package:el_race/ui/presentation/News%20Banner/news_screen.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/widget_container.dart';
 import 'package:el_race/utils/Util.dart';
@@ -47,6 +48,12 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
         // Fetch new data
         await Util.fetchHomeScreenData(context);
         await sliderProvider.refresh();
+
+        // Sync attendance status from server so any external check-in/out
+        // is reflected immediately in the timer and swipe button.
+        await AttendanceStatusSyncService.refreshFromServer(
+          reason: 'pull_to_refresh',
+        );
       },
       child: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),

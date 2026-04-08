@@ -372,61 +372,81 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
             : null,
         builder: (context, snapshot) {
           final isOnline = snapshot.data?.online ?? false;
-          final avatarUrl = _peerUser?.avatarUrl;
-          return Stack(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(1.3),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border:
-                      Border.all(color: const Color(0xFFE9B23A), width: 1.2),
-                ),
-                child: CircleAvatar(
-                  radius: 22,
-                  backgroundColor: const Color(0xFFECECEC),
-                  backgroundImage: avatarUrl != null && avatarUrl.isNotEmpty
-                      ? NetworkImage(avatarUrl)
-                      : null,
-                  child: avatarUrl == null || avatarUrl.isEmpty
-                      ? Text(
-                          _getInitials(widget.title),
-                          style: const TextStyle(
-                            color: Color(0xFF2E2E2E),
-                            fontWeight: FontWeight.w700,
-                          ),
-                        )
-                      : null,
-                ),
-              ),
-              if (isOnline)
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: 11,
-                    height: 11,
+          // Use FutureBuilder to always get the latest avatar from Firestore,
+          // matching the chat list behavior exactly
+          return FutureBuilder<ChatUser?>(
+            future: widget.peerUid != null
+                ? UserRepository.instance.getUser(widget.peerUid!)
+                : null,
+            builder: (context, userSnapshot) {
+              final avatarUrl =
+                  userSnapshot.data?.avatarUrl ?? _peerUser?.avatarUrl;
+              return Stack(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(1.3),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF2DD65B),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 1.5),
+                      border: Border.all(
+                          color: const Color(0xFFE9B23A), width: 1.2),
+                    ),
+                    child: CircleAvatar(
+                      radius: 22,
+                      backgroundColor: const Color(0xFFECECEC),
+                      backgroundImage:
+                          avatarUrl != null && avatarUrl.isNotEmpty
+                              ? NetworkImage(avatarUrl)
+                              : null,
+                      child: avatarUrl == null || avatarUrl.isEmpty
+                          ? Text(
+                              _getInitials(
+                                  userSnapshot.data?.name ?? widget.title),
+                              style: const TextStyle(
+                                color: Color(0xFF2E2E2E),
+                                fontWeight: FontWeight.w700,
+                              ),
+                            )
+                          : null,
                     ),
                   ),
-                ),
-            ],
+                  if (isOnline)
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: 11,
+                        height: 11,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2DD65B),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.5),
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           );
         },
       );
     }
+    // Group / Role / Support chats — show the RCC logo (same as chat list)
     return Container(
       padding: const EdgeInsets.all(1.3),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         border: Border.all(color: const Color(0xFFE9B23A), width: 1.2),
       ),
-      child: const CircleAvatar(
+      child: CircleAvatar(
         radius: 22,
-        backgroundImage: AssetImage('assets/logo/rcc2.png'),
+        backgroundColor: Colors.white,
+        child: Padding(
+          padding: const EdgeInsets.all(6),
+          child: Image.asset(
+            'assets/logo/rcc2.png',
+            fit: BoxFit.contain,
+          ),
+        ),
       ),
     );
   }

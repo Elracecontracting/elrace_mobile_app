@@ -16,11 +16,11 @@ class FaceRecognitionConfig {
   /// Labels for enrollment samples
   static const List<String> enrollmentLabels = ['front', 'left15', 'right15'];
 
-  /// Instructions for each enrollment step (Arabic)
+  /// Instructions for each enrollment step
   static const List<String> enrollmentInstructions = [
-    'انظر مباشرة للكاميرا',
-    'لف رأسك قليلاً لليسار',
-    'لف رأسك قليلاً لليمين',
+    'Look directly at the camera',
+    'Turn your head slightly to the left',
+    'Turn your head slightly to the right',
   ];
 
   // ==================== VERIFICATION CONFIG ====================

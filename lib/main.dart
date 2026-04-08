@@ -52,6 +52,7 @@ import 'package:provider/provider.dart';
 import 'package:app_links/app_links.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'core/services/app_config_service.dart';
+import 'core/services/attendance_status_sync_service.dart';
 import 'firebase_service.dart';
 import 'report_module/data/provider/reports_provider.dart';
 import 'ui/presentation/Email Approval/bloc/approval_bloc.dart';
@@ -318,6 +319,11 @@ void main() async {
   // Initialize chat module if user is already logged in
   await _initializeChatIfLoggedIn();
 
+  // Sync today's attendance status from the server (fire-and-forget).
+  // Runs during the splash screen delay so TimerController picks up the
+  // correct check-in time when HomeScreen opens.
+  _syncAttendanceStatusIfLoggedIn();
+
   // debugPrint = (String? message, {int? wrapWidth}) {};
   // Get saved language from SharedPref
   final delegate = await LocalizationDelegate.create(
@@ -423,6 +429,20 @@ Future<void> _requestEssentialPermissions() async {
   } catch (e) {
     print('⚠️ Error requesting permissions: $e');
   }
+}
+
+/// Sync today's attendance status if the user is logged in.
+/// Called on every app startup so external check-ins/outs are reflected
+/// in the app's timer and UI without requiring the user to manually refresh.
+Future<void> _syncAttendanceStatusIfLoggedIn() async {
+  try {
+    if (!SharedPref.isUserAuthenticated()) return;
+    await AttendanceStatusSyncService.refreshFromServer(reason: 'app_startup')
+        .timeout(
+      const Duration(seconds: 10),
+      onTimeout: () => null,
+    );
+  } catch (_) {}
 }
 
 /// Initialize chat module if user is already logged in.

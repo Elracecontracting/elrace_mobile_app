@@ -25,6 +25,7 @@ class UserChat {
   final DateTime? lastReadAt;
   final bool pinned;
   final bool muted;
+  final bool hasMessages;
 
   UserChat({
     required this.chatId,
@@ -40,6 +41,7 @@ class UserChat {
     this.lastReadAt,
     this.pinned = false,
     this.muted = false,
+    this.hasMessages = false,
   });
 
   factory UserChat.fromFirestore(DocumentSnapshot doc) {
@@ -58,6 +60,7 @@ class UserChat {
       lastReadAt: (data['last_read_at'] as Timestamp?)?.toDate(),
       pinned: data['pinned'] ?? false,
       muted: data['muted'] ?? false,
+      hasMessages: data['has_messages'] ?? false,
     );
   }
 
@@ -69,6 +72,7 @@ class UserChat {
       'muted': muted,
     };
 
+    if (hasMessages) map['has_messages'] = true;
     if (title != null) map['title'] = title;
     if (peerUid != null) map['peer_uid'] = peerUid;
     if (roleId != null) map['role_id'] = roleId;
@@ -106,6 +110,7 @@ class UserChat {
     DateTime? lastReadAt,
     bool? pinned,
     bool? muted,
+    bool? hasMessages,
   }) {
     return UserChat(
       chatId: chatId ?? this.chatId,
@@ -121,6 +126,7 @@ class UserChat {
       lastReadAt: lastReadAt ?? this.lastReadAt,
       pinned: pinned ?? this.pinned,
       muted: muted ?? this.muted,
+      hasMessages: hasMessages ?? this.hasMessages,
     );
   }
 

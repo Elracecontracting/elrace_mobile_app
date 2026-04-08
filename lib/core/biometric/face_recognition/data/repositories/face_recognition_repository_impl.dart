@@ -257,6 +257,7 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
       final face = detectResult.getOrElse(() => throw Exception());
       
       // 🆕 Step 2.5: Multi-frame variation analysis for anti-spoofing
+      bool multiFrameLivenessPassed = false;
       if (allFrames != null && allFrames.length >= 10) {
         print('🎬 Step 2.5: Analyzing blink detection (anti-spoof)...');
         final variationScore = await _analyzeFrameVariation(allFrames);
@@ -276,34 +277,42 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
             ),
           );
         }
+        multiFrameLivenessPassed = true;
         print('✅ Natural blink detected - confirmed live person');
       }
 
-      // Step 3: 🔒 Basic Liveness Check - RELAXED THRESHOLDS
+      // Step 3: 🔒 Basic Liveness Check
+      // If multi-frame blink analysis already passed, skip single-frame eye check
+      // because the last frame might catch the user mid-blink
       bool hasLiveness = false;
-      print('🔒 Step 3: Starting liveness check (relaxed mode)...');
-      
-      // ✅ Basic liveness check with relaxed thresholds
-      hasLiveness = _faceDetectorService.checkLiveness(
-        face,
-        eyeOpenThreshold: 0.5, // Relaxed from 0.6
-        maxHeadEulerAngleY: 20.0, // Relaxed from 12.0
-        maxHeadEulerAngleZ: 20.0, // Relaxed from 12.0
-      );
-      
-      print('🔒 Liveness result: ${hasLiveness ? "PASSED ✅" : "FAILED ❌"}');
-      
-      if (!hasLiveness) {
-        print('❌ SECURITY: Liveness check FAILED - eyes closed or head turned away');
-        return const Right(
-          FaceVerificationResult(
-            isVerified: false,
-            confidence: 0.0,
-            message:
-                '🚫 Please keep your eyes open and look at the camera.',
-            hasLiveness: false,
-          ),
+      if (multiFrameLivenessPassed) {
+        print('🔒 Step 3: Skipping single-frame liveness (multi-frame blink already confirmed ✅)');
+        hasLiveness = true;
+      } else {
+        print('🔒 Step 3: Starting liveness check (relaxed mode)...');
+        
+        // ✅ Basic liveness check with relaxed thresholds
+        hasLiveness = _faceDetectorService.checkLiveness(
+          face,
+          eyeOpenThreshold: 0.5, // Relaxed from 0.6
+          maxHeadEulerAngleY: 20.0, // Relaxed from 12.0
+          maxHeadEulerAngleZ: 20.0, // Relaxed from 12.0
         );
+        
+        print('🔒 Liveness result: ${hasLiveness ? "PASSED ✅" : "FAILED ❌"}');
+        
+        if (!hasLiveness) {
+          print('❌ SECURITY: Liveness check FAILED - eyes closed or head turned away');
+          return const Right(
+            FaceVerificationResult(
+              isVerified: false,
+              confidence: 0.0,
+              message:
+                  '🚫 Please keep your eyes open and look at the camera.',
+              hasLiveness: false,
+            ),
+          );
+        }
       }
       
       print('✅ Liveness check PASSED - proceeding with verification');
@@ -325,6 +334,10 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
         threshold: _verificationThreshold,
         useCosineSimilarity: _useCosineSimilarity,
       );
+
+      print('📊 Matching method: ${_useCosineSimilarity ? "Cosine Similarity" : "Euclidean Distance"}');
+      print('📊 Best score: ${matchResult['bestScore']}, Threshold: $_verificationThreshold');
+      print('📊 Best match index: ${matchResult['bestIndex']}');
 
       // Step 7: Calculate confidence score
       final confidence = EmbeddingComparisonHelper.getConfidenceScore(
@@ -367,8 +380,8 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
     final List<double> faceXPositions = [];
     final List<double> faceYPositions = [];
     
-    // Sample 10-15 frames evenly distributed
-    final sampleSize = frames.length > 15 ? 15 : frames.length;
+    // Sample 5-8 frames evenly distributed (reduced for faster verification)
+    final sampleSize = frames.length > 8 ? 8 : frames.length;
     final step = frames.length ~/ sampleSize;
     
     for (int i = 0; i < frames.length; i += step) {

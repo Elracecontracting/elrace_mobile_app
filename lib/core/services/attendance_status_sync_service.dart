@@ -4,7 +4,9 @@ import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/checkin_reminder_notification_service.dart';
 import 'package:el_race/ui/presentation/Attendace_list/repository/attendance_repository.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
+import 'package:el_race/ui/presentation/home_screen/widgets/timer_controller.dart';
 import 'package:el_race/utils/di.dart';
+import 'package:get/get.dart';
 
 class AttendanceStatusSnapshot {
   final bool checkedIn;
@@ -35,8 +37,6 @@ class AttendanceStatusSyncService {
     String reason = 'manual',
   }) async {
     if (!SharedPref.isUserAuthenticated()) {
-      print(
-          'ℹ️ Attendance sync skipped (reason=$reason): user is not authenticated');
       return null;
     }
 
@@ -48,16 +48,8 @@ class AttendanceStatusSyncService {
       _updatesController.add(snapshot);
       _refreshHomeAttendanceSummary();
 
-      print(
-        '✅ Attendance today_status synced (reason=$reason): '
-        'checkedIn=${snapshot.checkedIn}, checkedOut=${snapshot.checkedOut}, '
-        'checkIn=${snapshot.checkInDisplayTime}, '
-        'checkOut=${snapshot.checkOutDisplayTime}',
-      );
-
       return snapshot;
-    } catch (e) {
-      print('❌ Attendance sync failed (reason=$reason): $e');
+    } catch (_) {
       return null;
     }
   }
@@ -109,28 +101,28 @@ class AttendanceStatusSyncService {
       await SharedPref().setPreferenceInt('checkInRecordId', 0);
     }
 
+    // Reload the timer controller so it reflects the server's check-in time.
+    // This handles the case where the user checked in/out from outside the app.
+    try {
+      final timerController = Get.find<TimerController>();
+      await timerController.reloadState();
+    } catch (_) {
+      // TimerController is not yet registered (e.g., app startup before HomeScreen).
+      // It will read the correct SharedPref values when it initializes.
+    }
+
     try {
       await CheckInReminderNotificationService().updateReminders();
-    } catch (e) {
-      print('⚠️ Failed to update attendance reminders after sync: $e');
-    }
+    } catch (_) {}
   }
 
   static void _refreshHomeAttendanceSummary() {
     try {
-      if (!sl.isRegistered<HomeBloc>()) {
-        return;
-      }
-
+      if (!sl.isRegistered<HomeBloc>()) return;
       final homeBloc = sl<HomeBloc>();
-      if (homeBloc.isClosed) {
-        return;
-      }
-
+      if (homeBloc.isClosed) return;
       homeBloc.add(const FetchLastMonthAttendanceSummary());
-    } catch (e) {
-      print('⚠️ Failed to trigger HomeBloc attendance refresh: $e');
-    }
+    } catch (_) {}
   }
 
   static bool _asBool(dynamic value) {

@@ -14,24 +14,9 @@ void showLeftToRightPopupClean({
   required VoidCallback onConfirmed,
   required VoidCallback onCancelled,
 }) {
-  // If checking out, use the saved project from check-in directly
-  if (isCheckedIn) {
-    _handleCheckOutWithSavedProject(
-      context: context,
-      onConfirmed: onConfirmed,
-      onCancelled: onCancelled,
-    );
-    return;
-  }
-
-  // Check-in flow: show project selection dialog
-  _showProjectSelectionDialog(
-    context: context,
-    loginResponseModel: loginResponseModel,
-    isCheckedIn: isCheckedIn,
-    onConfirmed: onConfirmed,
-    onCancelled: onCancelled,
-  );
+  // The backend matches the user to the nearest project using the coordinates
+  // sent in the check-in/out API call — no manual project selection needed.
+  onConfirmed();
 }
 
 /// Handles check-out using the saved project from check-in

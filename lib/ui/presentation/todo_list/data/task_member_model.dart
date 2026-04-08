@@ -3,13 +3,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 /// Model for assigned member with completion status
 class TaskMember {
   final String name;
-  final String? odooId;
+  final String? odooId;   // employee_id (hr.employee)
+  final String? userId;   // odoo_user_id (res.users) — used for matching the logged-in user
   final bool isCompleted;
   final DateTime? completedAt;
 
   const TaskMember({
     required this.name,
     this.odooId,
+    this.userId,
     this.isCompleted = false,
     this.completedAt,
   });
@@ -18,6 +20,7 @@ class TaskMember {
     return TaskMember(
       name: map['name'] as String? ?? '',
       odooId: map['odoo_id'] as String?,
+      userId: map['user_id'] as String?,
       isCompleted: map['is_completed'] as bool? ?? false,
       completedAt: map['completed_at'] != null
           ? (map['completed_at'] is Timestamp
@@ -31,6 +34,7 @@ class TaskMember {
     return {
       'name': name,
       'odoo_id': odooId,
+      'user_id': userId,
       'is_completed': isCompleted,
       'completed_at': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
     };
@@ -39,12 +43,14 @@ class TaskMember {
   TaskMember copyWith({
     String? name,
     String? odooId,
+    String? userId,
     bool? isCompleted,
     DateTime? completedAt,
   }) {
     return TaskMember(
       name: name ?? this.name,
       odooId: odooId ?? this.odooId,
+      userId: userId ?? this.userId,
       isCompleted: isCompleted ?? this.isCompleted,
       completedAt: completedAt ?? this.completedAt,
     );

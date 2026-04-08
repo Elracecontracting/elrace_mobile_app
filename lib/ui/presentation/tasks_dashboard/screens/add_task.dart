@@ -201,11 +201,23 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
       List<TaskMember>? assignedMembers;
       if (_selectedMembers.isNotEmpty) {
         assignedMembers = _selectedMembers
-            .map((m) => TaskMember(
-                  name: m.name,
-                  odooId: m.id.toString(),
-                  isCompleted: false,
-                ))
+            .map((m) {
+              // Prefer explicit employee_id; fallback to id
+              final empId = (m.employeeId != null && m.employeeId! > 0)
+                  ? m.employeeId.toString()
+                  : m.id.toString();
+              // odooUserId = res.users ID; used to build "odoo_{id}" firebase_uid format
+              final oUserId = (m.odooUserId != null && m.odooUserId! > 0)
+                  ? m.odooUserId.toString()
+                  : null;
+              print('📋 [TaskAssign] Assigning to: ${m.name} | employeeId=$empId | odooUserId=$oUserId');
+              return TaskMember(
+                name: m.name,
+                odooId: empId,
+                userId: oUserId,
+                isCompleted: false,
+              );
+            })
             .toList();
       }
 
@@ -221,7 +233,12 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
         followedUpBy = _selectedFollowers
             .map((m) => TaskMember(
                   name: m.name,
-                  odooId: m.id.toString(),
+                  odooId: (m.employeeId != null && m.employeeId! > 0)
+                      ? m.employeeId.toString()
+                      : m.id.toString(),
+                  userId: (m.odooUserId != null && m.odooUserId! > 0)
+                      ? m.odooUserId.toString()
+                      : null,
                   isCompleted: false,
                 ))
             .toList();

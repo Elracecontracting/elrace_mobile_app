@@ -354,21 +354,21 @@ extension QualityFailureReasonExtension on QualityFailureReason {
   String get message {
     switch (this) {
       case QualityFailureReason.faceTooSmall:
-        return 'وجهك صغير جداً، اقترب من الكاميرا';
+        return 'Your face is too small, move closer to the camera';
       case QualityFailureReason.headNotFrontal:
-        return 'حرك رأسك للأمام (لا تلتفت يميناً أو يساراً)';
+        return 'Face the camera directly (do not turn left or right)';
       case QualityFailureReason.headTilted:
-        return 'ارفع/اخفض رأسك قليلاً للأمام';
+        return 'Tilt your head slightly forward';
       case QualityFailureReason.headRolled:
-        return 'عدّل ميل رأسك (لا تميل على الجانب)';
+        return 'Straighten your head (do not tilt sideways)';
       case QualityFailureReason.tooBlurry:
-        return 'الصورة غير واضحة، ثبّت هاتفك';
+        return 'Image is blurry, hold your phone steady';
       case QualityFailureReason.tooDark:
-        return 'الإضاءة ضعيفة جداً';
+        return 'Lighting is too dark';
       case QualityFailureReason.tooBright:
-        return 'الإضاءة قوية جداً';
+        return 'Lighting is too bright';
       case QualityFailureReason.lowContrast:
-        return 'الإضاءة غير كافية، حسّن الإضاءة';
+        return 'Insufficient lighting, please improve lighting';
     }
   }
 }

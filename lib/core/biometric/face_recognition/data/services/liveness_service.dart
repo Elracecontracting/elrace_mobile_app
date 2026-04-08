@@ -21,7 +21,7 @@ import 'face_detector_service.dart';
 class LivenessService {
   final FaceDetectorService _faceDetectorService;
   
-  /// تتبع حالة التحديات
+  /// Challenge state tracking
   List<LivenessChallenge> _currentChallenges = [];
   int _currentChallengeIndex = 0;
   List<LivenessChallenge> _completedChallenges = [];
@@ -29,18 +29,18 @@ class LivenessService {
 
   LivenessService(this._faceDetectorService);
 
-  /// إنشاء تحديات عشوائية للتحقق (3 تحديات)
+  /// Generate random challenge sequence (3 challenges)
   List<LivenessChallenge> generateChallengeSequence() {
     final random = math.Random();
     
-    // التحديات الأساسية الثلاثة المطلوبة
+    // The three required base challenges
     final requiredChallenges = [
-      LivenessChallenge.blinkEyes,      // التحدي الأول: الرمش
-      LivenessChallenge.turnHeadLeft,   // التحدي الثاني: حركة الرأس
-      LivenessChallenge.rapidEyeMovement, // التحدي الثالث: حركة العين
+      LivenessChallenge.blinkEyes,      // Challenge 1: Blink
+      LivenessChallenge.turnHeadLeft,   // Challenge 2: Head turn
+      LivenessChallenge.rapidEyeMovement, // Challenge 3: Eye movement
     ];
     
-    // تبديل التحديات عشوائياً
+    // Shuffle challenges randomly
     requiredChallenges.shuffle(random);
     
     _currentChallenges = requiredChallenges;
@@ -51,22 +51,22 @@ class LivenessService {
     return requiredChallenges;
   }
 
-  /// الحصول على التحدي الحالي
+  /// Get current challenge
   LivenessChallenge? getCurrentChallenge() {
     if (_currentChallengeIndex >= _currentChallenges.length) return null;
     return _currentChallenges[_currentChallengeIndex];
   }
 
-  /// الحصول على عدد التحديات المكتملة
+  /// Get number of completed challenges
   int getCompletedCount() => _completedChallenges.length;
 
-  /// الحصول على التحديات المكتملة
+  /// Get completed challenges list
   List<LivenessChallenge> get completedChallenges => _completedChallenges;
 
-  /// الحصول على إجمالي التحديات
+  /// Get total challenges count
   int getTotalChallenges() => _currentChallenges.length;
 
-  /// إعادة تعيين التحديات
+  /// Reset challenges
   void resetChallenges() {
     _currentChallenges = [];
     _currentChallengeIndex = 0;
@@ -157,10 +157,10 @@ class LivenessService {
     print('  📊 Left eye range: min=${leftEyeMin.toStringAsFixed(3)}, max=${leftEyeMax.toStringAsFixed(3)}, range=${leftEyeRange.toStringAsFixed(3)}');
     print('  📊 Right eye range: min=${rightEyeMin.toStringAsFixed(3)}, max=${rightEyeMax.toStringAsFixed(3)}, range=${rightEyeRange.toStringAsFixed(3)}');
     
-    // Photos have very constant eye probability (< 0.10 range)
-    // Real eyes fluctuate naturally (> 0.12 range with blink)
+    // Photos have very constant eye probability (< 0.06 range)
+    // Real eyes fluctuate naturally even with soft blinks
     // Relaxed for better user experience while maintaining security
-    if (leftEyeRange < 0.10 && rightEyeRange < 0.10) {
+    if (leftEyeRange < 0.06 && rightEyeRange < 0.06) {
       print('❌ LAYER 2 FAILED: Eye probability too constant - likely a photo');
       return LivenessResult(
         passed: false,
@@ -182,11 +182,11 @@ class LivenessService {
     print('  🔄 Pitch variation: ${pitchVariation.toStringAsFixed(3)}°');
     print('  🔄 Roll variation: ${rollVariation.toStringAsFixed(3)}°');
 
-    // Real face has at least 0.1° of natural movement (relaxed from 0.5°)
+    // Real face has at least slight natural movement
     // Photo/video of photo has near 0° movement
-    // More forgiving for stationary users
+    // Very forgiving - just checks for any slight movement
     final totalMovement = yawVariation + pitchVariation + rollVariation;
-    if (totalMovement < 0.3) {
+    if (totalMovement < 0.15) {
       print('❌ LAYER 3 FAILED: Head is too static - likely a photo');
       return LivenessResult(
         passed: false,
@@ -252,10 +252,10 @@ class LivenessService {
     List<double> leftEyeValues, 
     List<double> rightEyeValues,
   ) {
-    const double openThreshold = 0.5;  // Eye considered open
-    const double closedThreshold = 0.3; // Eye considered closed
+    const double openThreshold = 0.45;  // Eye considered open (relaxed from 0.5)
+    const double closedThreshold = 0.42; // Eye considered closed (relaxed from 0.3 → catches soft blinks)
     const int minBlinkFrames = 1; // Minimum frames for closed eyes
-    const int maxBlinkFrames = 8; // Maximum frames for closed eyes (avoid held closed)
+    const int maxBlinkFrames = 10; // Maximum frames for closed eyes (relaxed from 8)
     
     bool foundOpen = false;
     bool foundClosed = false;
@@ -308,7 +308,7 @@ class LivenessService {
       final leftMax = leftEyeValues.reduce(math.max);
       final eyeRange = leftMax - leftMin;
       
-      if (eyeRange >= 0.35) { // Significant eye movement
+      if (eyeRange >= 0.18) { // Relaxed: accepts soft blinks (range >= 0.18 vs old 0.35)
         print('    ✅ Partial blink with significant range (${eyeRange.toStringAsFixed(2)}) accepted');
         return _BlinkDetectionResult(
           blinkDetected: true,
@@ -350,8 +350,8 @@ class LivenessService {
   /// 🆕 Detect a real blink in the eye probability sequence
   /// A blink is: eyes open (>0.5) -> eyes closed (<0.3) -> eyes open (>0.5)
   bool _detectBlinkInSequence(List<double> leftEyeValues, List<double> rightEyeValues) {
-    const double openThreshold = 0.5;  // Eye considered open
-    const double closedThreshold = 0.3; // Eye considered closed
+    const double openThreshold = 0.45;  // Eye considered open (relaxed)
+    const double closedThreshold = 0.42; // Eye considered closed (relaxed - catches soft blinks)
     
     // Track state machine for blink detection
     bool foundOpen = false;
@@ -396,8 +396,8 @@ class LivenessService {
       
       print('  📊 Eye range: min=$minEye, max=$maxEye, range=$eyeRange');
       
-      // If there's significant eye movement (>0.3 range), consider it a blink
-      if (eyeRange >= 0.3) {
+      // If there's significant eye movement (>0.18 range), consider it a blink (relaxed from 0.3)
+      if (eyeRange >= 0.18) {
         print('  ✅ Significant eye movement detected as blink');
         return true;
       }
@@ -612,7 +612,7 @@ class LivenessService {
         return _detectBlinkInSequence(leftEyeValues, rightEyeValues);
 
       case LivenessChallenge.blinkTwice:
-        return _detectBlinks(recentFrames) >= 2;
+        return _detectBlinks(recentFrames) >= 1;
 
       case LivenessChallenge.turnHeadLeft:
         return _detectHeadTurn(recentFrames, direction: 'left');
@@ -716,7 +716,7 @@ class LivenessService {
     return directionChanges >= 2;
   }
 
-  /// 🆕 التحقق من تحدي واحد باستخدام قائمة الإطارات
+  /// Verify a single challenge using a list of face frames
   Future<ChallengeResult> verifySingleChallenge({
     required LivenessChallenge challenge,
     required List<Face> faceSequence,
@@ -725,11 +725,11 @@ class LivenessService {
       return ChallengeResult(
         passed: false,
         challenge: challenge,
-        message: 'لم يتم جمع إطارات كافية',
+        message: 'Not enough frames collected',
       );
     }
 
-    // تحويل الوجوه إلى تحليلات
+    // Convert faces to frame analyses
     final frames = faceSequence.map((face) => _FrameAnalysis(
           timestamp: DateTime.now(),
           face: face,
@@ -745,42 +745,42 @@ class LivenessService {
 
     switch (challenge) {
       case LivenessChallenge.blinkEyes:
-        // التحقق من الرمش الكامل
+        // Detect full blink
         final leftEyeValues = frames.map((f) => f.leftEyeOpen).toList();
         final rightEyeValues = frames.map((f) => f.rightEyeOpen).toList();
         passed = _detectBlinkInSequence(leftEyeValues, rightEyeValues);
-        message = passed ? '✅ تم اكتشاف رمش العينين' : '❌ لم يتم اكتشاف رمش العينين';
+        message = passed ? '✅ Blink detected' : '❌ No blink detected - please blink';
         break;
 
       case LivenessChallenge.blinkTwice:
         final blinkCount = _detectBlinks(frames);
-        passed = blinkCount >= 2;
-        message = passed ? '✅ تم اكتشاف رمشتين' : '❌ الرجاء الرمش مرتين';
+        passed = blinkCount >= 1;
+        message = passed ? '✅ Blink detected' : '❌ Please blink';
         break;
 
       case LivenessChallenge.turnHeadLeft:
         passed = _detectHeadTurn(frames, direction: 'left');
-        message = passed ? '✅ تم اكتشاف دوران الرأس لليسار' : '❌ الرجاء لف رأسك لليسار';
+        message = passed ? '✅ Head turn left detected' : '❌ Please turn your head to the left';
         break;
 
       case LivenessChallenge.turnHeadRight:
         passed = _detectHeadTurn(frames, direction: 'right');
-        message = passed ? '✅ تم اكتشاف دوران الرأس لليمين' : '❌ الرجاء لف رأسك لليمين';
+        message = passed ? '✅ Head turn right detected' : '❌ Please turn your head to the right';
         break;
 
       case LivenessChallenge.lookUp:
         passed = _detectLookDirection(frames, direction: 'up');
-        message = passed ? '✅ تم اكتشاف النظر للأعلى' : '❌ الرجاء النظر للأعلى';
+        message = passed ? '✅ Look up detected' : '❌ Please look up';
         break;
 
       case LivenessChallenge.lookDown:
         passed = _detectLookDirection(frames, direction: 'down');
-        message = passed ? '✅ تم اكتشاف النظر للأسفل' : '❌ الرجاء النظر للأسفل';
+        message = passed ? '✅ Look down detected' : '❌ Please look down';
         break;
 
       case LivenessChallenge.rapidEyeMovement:
         passed = _detectRapidEyeMovement(frames);
-        message = passed ? '✅ تم اكتشاف حركة العين السريعة' : '❌ حرك عينيك بسرعة يمين ويسار';
+        message = passed ? '✅ Eye movement detected' : '❌ Move your eyes quickly left and right';
         break;
     }
 
@@ -798,7 +798,7 @@ class LivenessService {
     );
   }
 
-  /// 🆕 التحقق من جميع التحديات باستخدام تسلسل الإطارات
+  /// Verify all challenges using frame sequence
   Future<LivenessResult> verifyAllChallenges({
     required List<Face> faceSequence,
     int minFramesPerChallenge = 15,
@@ -811,7 +811,7 @@ class LivenessService {
     print('📸 Total frames: ${faceSequence.length}');
     print('🎯 Challenges: ${_currentChallenges.map((c) => c.displayText).join(", ")}');
 
-    // تقسيم الإطارات على التحديات
+    // Split frames across challenges
     final framesPerChallenge = faceSequence.length ~/ _currentChallenges.length;
 
     for (int i = 0; i < _currentChallenges.length; i++) {
@@ -844,7 +844,7 @@ class LivenessService {
     return LivenessResult(
       passed: true,
       reason: LivenessFailureReason.none,
-      message: 'تم اجتياز جميع التحديات بنجاح',
+      message: 'All challenges passed successfully',
       completedChallenges: _completedChallenges,
     );
   }
@@ -939,32 +939,32 @@ class _FrameAnalysis {
 
 /// Liveness challenge types
 enum LivenessChallenge {
-  blinkEyes,         // إغلاق وفتح العينين
-  blinkTwice,        // ارمش مرتين
-  turnHeadLeft,      // لف الرأس لليسار
-  turnHeadRight,     // لف الرأس لليمين
-  lookUp,            // انظر للأعلى
-  lookDown,          // انظر للأسفل
-  rapidEyeMovement,  // تحريك العين بسرعة
+  blinkEyes,         // Close and open eyes
+  blinkTwice,        // Blink once (kept name for compatibility)
+  turnHeadLeft,      // Turn head to the left
+  turnHeadRight,     // Turn head to the right
+  lookUp,            // Look up
+  lookDown,          // Look down
+  rapidEyeMovement,  // Move eyes quickly
 }
 
 extension LivenessChallengeExtension on LivenessChallenge {
   String get displayText {
     switch (this) {
       case LivenessChallenge.blinkEyes:
-        return 'أغلق عينيك ثم افتحهما';
+        return 'Blink Your Eyes';
       case LivenessChallenge.blinkTwice:
-        return 'ارمش مرتين';
+        return 'Blink Once';
       case LivenessChallenge.turnHeadLeft:
-        return 'لف رأسك لليسار';
+        return 'Turn Head Left';
       case LivenessChallenge.turnHeadRight:
-        return 'لف رأسك لليمين';
+        return 'Turn Head Right';
       case LivenessChallenge.lookUp:
-        return 'انظر للأعلى';
+        return 'Look Up';
       case LivenessChallenge.lookDown:
-        return 'انظر للأسفل';
+        return 'Look Down';
       case LivenessChallenge.rapidEyeMovement:
-        return 'حرك عينيك بسرعة يمين ويسار';
+        return 'Move Your Eyes';
     }
   }
 
@@ -973,7 +973,7 @@ extension LivenessChallengeExtension on LivenessChallenge {
       case LivenessChallenge.blinkEyes:
         return 'Close your eyes completely, then open them';
       case LivenessChallenge.blinkTwice:
-        return 'Blink twice';
+        return 'Blink once';
       case LivenessChallenge.turnHeadLeft:
         return 'Turn your head slowly to the left';
       case LivenessChallenge.turnHeadRight:
@@ -990,19 +990,19 @@ extension LivenessChallengeExtension on LivenessChallenge {
   String get instruction {
     switch (this) {
       case LivenessChallenge.blinkEyes:
-        return 'يرجى إغلاق عينيك تمامًا ثم فتحهما مرة أخرى بسرعة وبشكل طبيعي';
+        return 'Close your eyes fully then open them naturally';
       case LivenessChallenge.blinkTwice:
-        return 'ارمش بعينيك مرتين بشكل طبيعي';
+        return 'Blink your eyes once naturally';
       case LivenessChallenge.turnHeadLeft:
-        return 'لف رأسك ببطء إلى اليسار';
+        return 'Slowly turn your head to the left';
       case LivenessChallenge.turnHeadRight:
-        return 'لف رأسك ببطء إلى اليمين';
+        return 'Slowly turn your head to the right';
       case LivenessChallenge.lookUp:
-        return 'انظر إلى الأعلى';
+        return 'Look up';
       case LivenessChallenge.lookDown:
-        return 'انظر إلى الأسفل';
+        return 'Look down';
       case LivenessChallenge.rapidEyeMovement:
-        return 'حرك عينيك بسرعة بين اليمين واليسار';
+        return 'Move your eyes quickly between left and right';
     }
   }
 
@@ -1054,16 +1054,16 @@ enum LivenessFailureReason {
   timeout,
   staticFace,
   noBlink,
-  noBlinkDetected, // 🆕 لم يتم اكتشاف رمش العينين
-  noHeadMovement,  // 🆕 لم يتم اكتشاف حركة الرأس
-  noEyeMovement,   // 🆕 لم يتم اكتشاف حركة العين
+  noBlinkDetected, // No blink detected
+  noHeadMovement,  // No head movement detected
+  noEyeMovement,   // No eye movement detected
   eyesClosed,
   challengeFailed,
   insufficientFrames,
   error,
 }
 
-/// 🆕 نتيجة تحدي واحد
+/// Result of a single challenge
 class ChallengeResult {
   final bool passed;
   final LivenessChallenge challenge;
@@ -1086,5 +1086,146 @@ class _BlinkDetectionResult {
     required this.blinkDetected,
     required this.durationValid,
     required this.closedFrameCount,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// 🆕 SIMPLE REAL-TIME LIVENESS TRACKER
+// Professional yet easy: just blink once + slight face movement
+// ═══════════════════════════════════════════════════════════════════════
+
+/// Tracks liveness in real-time frame by frame.
+/// Only requires: 1 blink + slight head movement.
+/// Provides status updates for UI feedback.
+class SimpleLivenessTracker {
+  // ── Configuration ──
+  static const int requiredBlinks = 1;
+  static const double eyeOpenThreshold = 0.50;
+  static const double eyeClosedThreshold = 0.30;
+  static const double minHeadMovementDeg = 3.0; // very slight movement
+
+  // ── Internal state ──
+  int _blinkCount = 0;
+  bool _eyesWereOpen = false;
+  bool _eyesAreClosed = false;
+  
+  double _minYaw = double.infinity;
+  double _maxYaw = double.negativeInfinity;
+  double _minPitch = double.infinity;
+  double _maxPitch = double.negativeInfinity;
+
+  int _frameCount = 0;
+  bool _faceVisible = false;
+
+  // ── Public getters ──
+  int get blinkCount => _blinkCount;
+  int get frameCount => _frameCount;
+  bool get faceVisible => _faceVisible;
+
+  bool get blinksComplete => _blinkCount >= requiredBlinks;
+
+  bool get movementComplete {
+    if (_minYaw == double.infinity) return false;
+    final yawRange = _maxYaw - _minYaw;
+    final pitchRange = _maxPitch - _minPitch;
+    return yawRange >= minHeadMovementDeg || pitchRange >= minHeadMovementDeg;
+  }
+
+  bool get isComplete => blinksComplete && movementComplete;
+
+  /// Get current step (0 = waiting, 1 = blink step, 2 = movement step)
+  int get currentStep {
+    if (!blinksComplete) return 1;
+    if (!movementComplete) return 2;
+    return 3; // all done
+  }
+
+  /// Current status for UI
+  SimpleLivenessStatus get status => SimpleLivenessStatus(
+    blinkCount: _blinkCount,
+    requiredBlinks: requiredBlinks,
+    blinksComplete: blinksComplete,
+    movementComplete: movementComplete,
+    isComplete: isComplete,
+    faceVisible: _faceVisible,
+    currentStep: currentStep,
+  );
+
+  /// Feed a detected face to the tracker. Call this every frame.
+  void addFace(Face face) {
+    _frameCount++;
+    _faceVisible = true;
+    _trackBlinks(face);
+    _trackMovement(face);
+  }
+
+  /// Call when no face is detected in a frame.
+  void noFace() {
+    _frameCount++;
+    _faceVisible = false;
+  }
+
+  void _trackBlinks(Face face) {
+    final leftEye = face.leftEyeOpenProbability ?? 0.5;
+    final rightEye = face.rightEyeOpenProbability ?? 0.5;
+    final avgEye = (leftEye + rightEye) / 2;
+
+    if (avgEye >= eyeOpenThreshold) {
+      if (_eyesAreClosed) {
+        // Transition: closed → open = one blink completed
+        _blinkCount++;
+        _eyesAreClosed = false;
+        print('👁️ SimpleLiveness: Blink #$_blinkCount detected');
+      }
+      _eyesWereOpen = true;
+    } else if (avgEye <= eyeClosedThreshold) {
+      if (_eyesWereOpen) {
+        _eyesAreClosed = true;
+      }
+    }
+  }
+
+  void _trackMovement(Face face) {
+    final yaw = face.headEulerAngleY ?? 0.0;
+    final pitch = face.headEulerAngleX ?? 0.0;
+
+    if (yaw < _minYaw) _minYaw = yaw;
+    if (yaw > _maxYaw) _maxYaw = yaw;
+    if (pitch < _minPitch) _minPitch = pitch;
+    if (pitch > _maxPitch) _maxPitch = pitch;
+  }
+
+  /// Reset tracker for retry.
+  void reset() {
+    _blinkCount = 0;
+    _eyesWereOpen = false;
+    _eyesAreClosed = false;
+    _minYaw = double.infinity;
+    _maxYaw = double.negativeInfinity;
+    _minPitch = double.infinity;
+    _maxPitch = double.negativeInfinity;
+    _frameCount = 0;
+    _faceVisible = false;
+  }
+}
+
+/// Immutable snapshot of liveness tracking status for UI updates.
+class SimpleLivenessStatus {
+  final int blinkCount;
+  final int requiredBlinks;
+  final bool blinksComplete;
+  final bool movementComplete;
+  final bool isComplete;
+  final bool faceVisible;
+  final int currentStep; // 1=blink, 2=movement, 3=done
+
+  const SimpleLivenessStatus({
+    required this.blinkCount,
+    required this.requiredBlinks,
+    required this.blinksComplete,
+    required this.movementComplete,
+    required this.isComplete,
+    required this.faceVisible,
+    required this.currentStep,
   });
 }

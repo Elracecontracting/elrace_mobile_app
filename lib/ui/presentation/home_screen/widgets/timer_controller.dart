@@ -181,6 +181,12 @@ class TimerController extends GetxController {
     print('   ✅ Timer stopped successfully');
   }
 
+  /// Reload timer state from SharedPreferences.
+  ///
+  /// Call this after an external check-in/check-out sync so the timer
+  /// reflects the server's authoritative check-in time.
+  Future<void> reloadState() => _loadState();
+
   @override
   void onClose() {
     _timer?.cancel();

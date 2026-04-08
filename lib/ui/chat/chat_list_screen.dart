@@ -277,7 +277,16 @@ class _ChatListScreenState extends State<ChatListScreen> {
                   );
                 }
 
-                final allChats = snapshot.data ?? [];
+                // Filter out chats that have no messages sent yet
+                // (ghost entries created when opening a chat before sending anything)
+                final allChats = (snapshot.data ?? []).where((c) {
+                  // Role/group chats always show (they are system-managed)
+                  if (c.type == ChatType.role || c.type == ChatType.group) {
+                    return true;
+                  }
+                  // DM and support chats: only show if at least one message was sent
+                  return c.hasMessages;
+                }).toList();
 
                 // Pre-warm user cache for all DM peer avatars
                 final peerUids = allChats

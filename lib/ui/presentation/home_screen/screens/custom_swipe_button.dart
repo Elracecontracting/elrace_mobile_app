@@ -66,17 +66,26 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   void initState() {
     super.initState();
     _loadCheckInState();
-    _loadDisplayTimes(); // Load saved times on init
+    _loadDisplayTimes();
     _attendanceSyncSubscription = AttendanceStatusSyncService.updates.listen(
-      (_) {
-        if (!mounted) {
-          return;
-        }
+      (snapshot) {
+        if (!mounted) return;
 
         _loadDisplayTimes();
         _loadCheckInState();
+
+        if (snapshot.checkedIn && !snapshot.checkedOut) {
+          _startLiveTimer();
+        } else {
+          _stopLiveTimer();
+        }
       },
     );
+
+    // Trigger a fresh sync immediately after subscribing to the stream.
+    // This guarantees the counter starts on every app open regardless of
+    // whether the main.dart fire-and-forget sync already completed.
+    AttendanceStatusSyncService.refreshFromServer(reason: 'widget_init');
     _arrowController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),

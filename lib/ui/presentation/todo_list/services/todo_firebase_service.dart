@@ -119,20 +119,36 @@ class TodoFirebaseService {
 
   List<String> get _currentUserIdentifiers {
     final data = SharedPref.getLoginData().result?.data;
-    final values = <String?>[
+    // Build numeric IDs
+    final numericIds = <String?>[
       data?.odoo_user_id?.toString(),
       data?.uid?.toString(),
       data?.employee_id?.toString(),
       data?.emp_id?.toString(),
       data?.emp_profile_id?.toString(),
-    ];
-    final cleaned = values
-        .whereType<String>()
+    ].whereType<String>()
         .map((e) => e.trim())
         .where((e) => e.isNotEmpty && e.toLowerCase() != 'false')
-        .toSet()
-        .toList();
-    return cleaned;
+        .toSet();
+
+    // Also add firebase_uid (e.g. "odoo_123") — most reliable cross-user identifier
+    final firebaseUid = data?.firebase_uid?.trim();
+    // And derive "odoo_{id}" format from every numeric odoo_user_id / uid
+    final derived = <String>{};
+    for (final id in [data?.odoo_user_id?.toString(), data?.uid?.toString()]) {
+      final clean = id?.trim();
+      if (clean != null && clean.isNotEmpty && clean.toLowerCase() != 'false') {
+        derived.add('odoo_$clean');
+      }
+    }
+    if (firebaseUid != null &&
+        firebaseUid.isNotEmpty &&
+        firebaseUid.toLowerCase() != 'false') {
+      derived.add(firebaseUid);
+    }
+
+    print('🔍 [TaskAssign] _currentUserIdentifiers: ${[...numericIds, ...derived]}');
+    return [...numericIds, ...derived];
   }
 
   List<String> get _currentUserNames {
@@ -152,20 +168,35 @@ class TodoFirebaseService {
     return cleaned;
   }
 
+  /// Build all identifiers for a single TaskMember:
+  /// odooId, userId (numeric), and "odoo_{userId}" (firebase_uid format).
+  List<String> _memberAllIds(TaskMember m) {
+    final ids = <String>{};
+    final oId = m.odooId?.trim();
+    if (oId != null && oId.isNotEmpty) ids.add(oId);
+    final uId = m.userId?.trim();
+    if (uId != null && uId.isNotEmpty) {
+      ids.add(uId);
+      ids.add('odoo_$uId'); // firebase_uid format → most reliable match
+    }
+    return ids.toList();
+  }
+
   Map<String, dynamic> _withMembershipFields(TodoModel todo) {
     final data = todo.toFirestore();
+
+    // Collect ALL identifiers for each assigned member
     final assignedIds = (todo.assignedMembers ?? const <TaskMember>[])
-        .map((m) => m.odooId?.trim())
-        .whereType<String>()
-        .where((id) => id.isNotEmpty)
+        .expand(_memberAllIds)
         .toSet()
         .toList();
+
+    // Collect ALL identifiers for each follower
     final followerIds = (todo.followedUpBy ?? const <TaskMember>[])
-        .map((m) => m.odooId?.trim())
-        .whereType<String>()
-        .where((id) => id.isNotEmpty)
+        .expand(_memberAllIds)
         .toSet()
         .toList();
+
     final assignedNames = (todo.assignedMembers ?? const <TaskMember>[])
         .map((m) => m.name.trim().toLowerCase())
         .where((name) => name.isNotEmpty)
@@ -211,16 +242,61 @@ class TodoFirebaseService {
     if (ids.isEmpty && names.isEmpty) return const [];
 
     try {
-      final snapshot = await _firestore.collectionGroup('todos').get();
+      final Map<String, TodoModel> seen = {};
 
-      final all =
-          snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
-      return all.where(_isAssignedToCurrentUser).toList();
+      void addUnique(DocumentSnapshot<Map<String, dynamic>> doc) {
+        if (!seen.containsKey(doc.id)) {
+          seen[doc.id] = TodoModel.fromFirestore(doc);
+        }
+      }
+
+      // ── Query by assigned_member_ids (covers both odooId + userId) ──
+      if (ids.isNotEmpty) {
+        // arrayContainsAny max 10 items per query
+        final chunks = _chunkedList(ids, 10);
+        for (final chunk in chunks) {
+          final snap = await _firestore
+              .collectionGroup('todos')
+              .where('assigned_member_ids', arrayContainsAny: chunk)
+              .get();
+          for (final doc in snap.docs) addUnique(doc);
+        }
+      }
+
+      // ── Query by assigned_member_names (name-based fallback) ──
+      if (names.isNotEmpty) {
+        final chunks = _chunkedList(names, 10);
+        for (final chunk in chunks) {
+          final snap = await _firestore
+              .collectionGroup('todos')
+              .where('assigned_member_names', arrayContainsAny: chunk)
+              .get();
+          for (final doc in snap.docs) addUnique(doc);
+        }
+      }
+
+      return seen.values.toList();
     } catch (e) {
-      print(
-          '❌ TodoFirebaseService: Error loading assigned tasks from all users: $e');
-      return const [];
+      print('❌ TodoFirebaseService: arrayContainsAny query failed ($e), falling back to full scan');
+      // Fallback: full scan + client-side filter
+      try {
+        final snapshot = await _firestore.collectionGroup('todos').get();
+        final all = snapshot.docs.map((doc) => TodoModel.fromFirestore(doc)).toList();
+        return all.where(_isAssignedToCurrentUser).toList();
+      } catch (e2) {
+        print('❌ TodoFirebaseService: Error loading assigned tasks from all users: $e2');
+        return const [];
+      }
     }
+  }
+
+  /// Split a list into chunks of [size].
+  List<List<T>> _chunkedList<T>(List<T> list, int size) {
+    final chunks = <List<T>>[];
+    for (var i = 0; i < list.length; i += size) {
+      chunks.add(list.sublist(i, i + size > list.length ? list.length : i + size));
+    }
+    return chunks;
   }
 
   bool _isAssignedToCurrentUser(TodoModel todo) {
@@ -228,18 +304,26 @@ class TodoFirebaseService {
     final names = _currentUserNames;
     if (ids.isEmpty && names.isEmpty) return false;
 
+    // Collect all stored IDs from assignedMembers (odooId + userId + firebase_uid format)
     final memberIds = (todo.assignedMembers ?? const <TaskMember>[])
-        .map((m) => m.odooId?.trim())
-        .whereType<String>()
+        .expand(_memberAllIds)
         .toSet();
 
-    if (memberIds.any(ids.contains)) return true;
+    print('🔍 [TaskAssign] Checking "${todo.title}" | storedIds=$memberIds | myIds=$ids | storedNames=${(todo.assignedMembers ?? []).map((m) => m.name).toSet()} | myNames=$names');
+
+    if (memberIds.any(ids.contains)) {
+      print('✅ [TaskAssign] ID match for "${todo.title}"');
+      return true;
+    }
 
     final memberNames = (todo.assignedMembers ?? const <TaskMember>[])
         .map((m) => m.name.trim().toLowerCase())
         .where((name) => name.isNotEmpty)
         .toSet();
-    if (memberNames.any(names.contains)) return true;
+    if (memberNames.any(names.contains)) {
+      print('✅ [TaskAssign] Name match for "${todo.title}"');
+      return true;
+    }
 
     final assignedTo = todo.assignedTo?.trim();
     if (assignedTo != null &&
@@ -263,7 +347,66 @@ class TodoFirebaseService {
 
   // ==================== TODO OPERATIONS ====================
 
-  /// Insert a new todo
+  /// Resolve Firestore UID for an assigned member.
+  /// Tries "odoo_{userId}" first; if userId is absent, queries Firestore
+  /// `users` collection by `odoo_user_id` or `employee_id` matching odooId.
+  Future<String?> _resolveFirebaseUid(TaskMember member) async {
+    // 1️⃣ Build "odoo_{userId}" if userId is available
+    final uId = member.userId?.trim();
+    if (uId != null && uId.isNotEmpty) {
+      return 'odoo_$uId';
+    }
+
+    // 2️⃣ Fallback: query Firestore users by odoo_user_id
+    final oId = member.odooId?.trim();
+    if (oId == null || oId.isEmpty) return null;
+
+    final intId = int.tryParse(oId);
+    if (intId != null) {
+      try {
+        final snap = await _firestore
+            .collection('users')
+            .where('odoo_user_id', isEqualTo: intId)
+            .limit(1)
+            .get();
+        if (snap.docs.isNotEmpty) {
+          return snap.docs.first.id; // document ID = firebase_uid
+        }
+
+        // 3️⃣ try employee_id
+        final snap2 = await _firestore
+            .collection('users')
+            .where('employee_id', isEqualTo: intId)
+            .limit(1)
+            .get();
+        if (snap2.docs.isNotEmpty) {
+          return snap2.docs.first.id;
+        }
+      } catch (e) {
+        print('⚠️ _resolveFirebaseUid: query error for odooId=$oId: $e');
+      }
+    }
+
+    // 4️⃣ Try name-based lookup as last resort
+    final name = member.name.trim();
+    if (name.isNotEmpty) {
+      try {
+        final snap = await _firestore
+            .collection('users')
+            .where('name', isEqualTo: name)
+            .limit(1)
+            .get();
+        if (snap.docs.isNotEmpty) {
+          return snap.docs.first.id;
+        }
+      } catch (_) {}
+    }
+
+    return null;
+  }
+
+  /// Insert a new todo — saves under the creator AND under every assigned
+  /// member's Firestore path so each user sees it in `_getOwnTodos`.
   Future<String> insertTodo(TodoModel todo) async {
     await _ensureSignedIn();
     final uid = _currentUid;
@@ -271,10 +414,28 @@ class TodoFirebaseService {
 
     try {
       final todoWithOwner = todo.copyWith(ownerUid: uid);
-      final docRef = await _userTodosCollection(uid)
-          .add(_withMembershipFields(todoWithOwner));
-      print('✅ TodoFirebaseService: Created todo ${docRef.id}');
-      return docRef.id;
+      final data = _withMembershipFields(todoWithOwner);
+
+      // Save under creator
+      final docRef = await _userTodosCollection(uid).add(data);
+      final todoId = docRef.id;
+      print('✅ TodoFirebaseService: Created todo $todoId under creator $uid');
+
+      // Also save a copy under each assigned member's path
+      final assignedMembers = todo.assignedMembers ?? const <TaskMember>[];
+      for (final member in assignedMembers) {
+        final memberUid = await _resolveFirebaseUid(member);
+        if (memberUid != null && memberUid != uid) {
+          try {
+            await _userTodosCollection(memberUid).doc(todoId).set(data);
+            print('✅ TodoFirebaseService: Saved todo $todoId under assignee $memberUid (${member.name})');
+          } catch (e) {
+            print('⚠️ TodoFirebaseService: Could not save under $memberUid: $e');
+          }
+        }
+      }
+
+      return todoId;
     } catch (e) {
       print('❌ TodoFirebaseService: Error creating todo: $e');
       rethrow;
@@ -347,7 +508,9 @@ class TodoFirebaseService {
     }
   }
 
-  /// Get all todos for current user
+  /// Get all todos for current user.
+  /// 1) Own todos from users/{uid}/todos
+  /// 2) Assigned todos from ALL users via collectionGroup (covers old + new tasks)
   Future<List<TodoModel>> getAllTodos() async {
     await _ensureSignedIn();
     final uid = _currentUid;
@@ -356,31 +519,36 @@ class TodoFirebaseService {
     try {
       final ownTodos = await _getOwnTodos(uid);
       final assignedTodos = await _getAssignedToCurrentUserFromAllCollections();
-
-      return _mergeUniqueTodos(ownTodos, assignedTodos);
+      final merged = _mergeUniqueTodos(ownTodos, assignedTodos);
+      print('📋 TodoFirebaseService: getAllTodos own=${ownTodos.length} assigned=${assignedTodos.length} merged=${merged.length} uid=$uid');
+      return merged;
     } catch (e) {
       print('❌ TodoFirebaseService: Error getting all todos: $e');
       rethrow;
     }
   }
 
-  /// Stream all todos for real-time updates
+  /// Stream all todos for real-time updates.
+  /// Combines own todos stream + collectionGroup stream for assigned tasks.
   Stream<List<TodoModel>> streamAllTodos() {
     return Stream.fromFuture(_ensureSignedIn()).asyncExpand((_) {
       final uid = _currentUid;
       if (uid == null) return Stream.value(const <TodoModel>[]);
 
+      print('📡 TodoFirebaseService: streaming todos for uid=$uid');
       final ownStream = _streamOwnTodos(uid);
 
-      final assignedStream =
-          (_currentUserIdentifiers.isEmpty && _currentUserNames.isEmpty)
-              ? Stream.value(const <TodoModel>[])
-              : _firestore.collectionGroup('todos').snapshots().map((snapshot) {
-                  final all = snapshot.docs
-                      .map((doc) => TodoModel.fromFirestore(doc))
-                      .toList();
-                  return all.where(_isAssignedToCurrentUser).toList();
-                });
+      // collectionGroup stream — filtered client-side for assigned tasks
+      final assignedStream = _firestore
+          .collectionGroup('todos')
+          .snapshots()
+          .map((snapshot) {
+        final all =
+            snapshot.docs.map((d) => TodoModel.fromFirestore(d)).toList();
+        return all.where(_isAssignedToCurrentUser).toList();
+      }).handleError((e) {
+        print('⚠️ TodoFirebaseService: collectionGroup stream error: $e');
+      });
 
       return Stream.multi((controller) {
         List<TodoModel> own = const [];
@@ -390,25 +558,27 @@ class TodoFirebaseService {
           controller.add(_mergeUniqueTodos(own, assigned));
         }
 
-        final ownSub = ownStream.listen(
+        final subs = <StreamSubscription>[];
+
+        subs.add(ownStream.listen(
           (data) {
             own = data;
             emit();
           },
           onError: controller.addError,
-        );
+        ));
 
-        final assignedSub = assignedStream.listen(
+        subs.add(assignedStream.listen(
           (data) {
             assigned = data;
             emit();
           },
-          onError: controller.addError,
-        );
+        ));
 
         controller.onCancel = () async {
-          await ownSub.cancel();
-          await assignedSub.cancel();
+          for (final sub in subs) {
+            await sub.cancel();
+          }
         };
       });
     });

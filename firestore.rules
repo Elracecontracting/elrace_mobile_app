@@ -28,7 +28,9 @@ service cloud.firestore {
 
       match /todos/{todoId} {
         allow read: if isSignedIn();
-        allow create, delete: if isSignedIn() && request.auth.uid == userId;
+        // Allow create by owner OR by any signed-in user (for task assignment)
+        allow create: if isSignedIn();
+        allow delete: if isSignedIn() && request.auth.uid == userId;
         allow update: if isSignedIn() &&
             (request.auth.uid == userId || isTodoStatusOnlyUpdate());
 
@@ -77,6 +79,13 @@ service cloud.firestore {
     match /presence/{userId} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // ── collectionGroup('todos') support ──
+    // Allows any signed-in user to READ todos across all user paths.
+    // Required for assigned-task queries via collectionGroup.
+    match /{path=**}/todos/{todoId} {
+      allow read: if isSignedIn();
     }
   }
 }

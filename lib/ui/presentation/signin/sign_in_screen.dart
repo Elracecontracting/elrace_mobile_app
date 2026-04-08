@@ -20,6 +20,7 @@ import 'package:hexcolor/hexcolor.dart';
 import 'package:el_race/core/biometric/face_recognition/face_recognition_di.dart';
 import 'package:el_race/core/biometric/face_recognition/data/services/face_embedding_storage_service.dart';
 import 'package:el_race/core/services/app_config_service.dart';
+import 'package:el_race/core/services/attendance_status_sync_service.dart';
 
 import '../home_screen/screens/home_screen.dart';
 
@@ -208,6 +209,11 @@ class _SignInScreenState extends State<SignInScreen> {
               .initializeFromLoginResponse(state.loginResponse.toJson())
               .then((_) => print('✅ Chat initialized after login'))
               .catchError((e) => print('⚠️ Chat init after login failed: $e'));
+
+          // Sync today attendance status from server after login.
+          // This reflects any check-in/out that happened before app open.
+          AttendanceStatusSyncService.refreshFromServer(reason: 'login')
+              .catchError((_) => null);
 
           // ✅ Face Recognition with LOCAL storage only
           // In Test Mode: skip face verification (Apple review compliance)

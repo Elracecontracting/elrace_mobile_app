@@ -77,17 +77,17 @@ class FaceDetectorService {
   /// Returns true if the face appears to be a live person
   bool checkLiveness(
     Face face, {
-    double eyeOpenThreshold = 0.55, // ⬆️ زيادة العتبة من 0.5 إلى 0.55 لمنع الصور
+    double eyeOpenThreshold = 0.55, // Raised from 0.5 to 0.55 to prevent photo attacks
     double? smilingThreshold,
-    double maxHeadEulerAngleY = 12.0, // ⬇️ تقليل الزاوية المسموحة من 15 إلى 12
-    double maxHeadEulerAngleZ = 12.0, // ⬇️ تقليل الزاوية المسموحة من 15 إلى 12
+    double maxHeadEulerAngleY = 12.0, // Reduced from 15 to 12 degrees
+    double maxHeadEulerAngleZ = 12.0, // Reduced from 15 to 12 degrees
   }) {
     // Check if classification data is available
     if (face.leftEyeOpenProbability == null ||
         face.rightEyeOpenProbability == null) {
       // If classification is disabled, we can't check liveness
       print('⚠️ SECURITY WARNING: Eye classification data not available!');
-      return false; // ❌ رفض التحقق إذا لم تكن بيانات العينين متاحة
+      return false; // Reject if eye classification data is not available
     }
 
     // 🆕 Enhanced Check: Verify eye values are in realistic range

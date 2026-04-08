@@ -105,9 +105,9 @@ class _FaceVerificationScreenState extends State<FaceVerificationScreen>
     _startAutoVerification();
   }
 
-  // 🔒 جمع إطارات متعددة لفحص الرمش
+  // Collect multiple frames for blink detection
   final List<CameraImage> _collectedFrames = [];
-  int _frameCollectionTarget = 15; // جمع 15 إطار (~1.5 ثانية)
+  int _frameCollectionTarget = 15; // Collect 15 frames (~1.5 seconds)
 
   void _captureAndVerify() async {
     if (_isProcessing || _cameraController == null) return;
@@ -116,7 +116,7 @@ class _FaceVerificationScreenState extends State<FaceVerificationScreen>
     _collectedFrames.clear();
 
     try {
-      // 📸 جمع إطارات متعددة لفحص الرمش
+      // Collect multiple frames for blink detection
       await _cameraController!.startImageStream((CameraImage image) async {
         if (_collectedFrames.length < _frameCollectionTarget) {
           _collectedFrames.add(image);
@@ -128,7 +128,7 @@ class _FaceVerificationScreenState extends State<FaceVerificationScreen>
           
           if (mounted) {
             print('✅ All frames collected, starting multi-frame verification...');
-            // إرسال جميع الإطارات للتحقق من الرمش
+            // Send all frames for blink verification
             context.read<FaceRecognitionBloc>().add(
                   StartMultiFrameVerification(
                     frames: List.from(_collectedFrames),
