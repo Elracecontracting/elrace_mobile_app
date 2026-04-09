@@ -493,8 +493,8 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           loginResponseModel: SharedPref.getLoginData(),
           isCheckedIn: isCheckedIn,
           onConfirmed: () async {
-            // In Test Mode, bypass authentication and perform action directly
-            if (AppConfigService.instance.isTestMode) {
+            // Bypass authentication if test mode OR faceIdEnabled=false from backend config
+            if (AppConfigService.instance.shouldSkipFaceId) {
               _performCheckInOut();
               _resetPosition();
               return;

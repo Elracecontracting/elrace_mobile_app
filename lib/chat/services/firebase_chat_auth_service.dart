@@ -55,7 +55,7 @@ class FirebaseChatAuthService {
   bool _isRefreshing = false;
 
   // Configuration
-  static const bool groupByBranch = false; // Match with ChatRepository
+  static const bool groupByBranch = true; // Match with ChatRepository
 
   /// Get current user session
   ChatUserSession? get currentSession => _currentSession;

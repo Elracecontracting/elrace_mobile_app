@@ -198,7 +198,7 @@ class _EmployeeShiftRequestPageState extends State<EmployeeShiftRequestPage> {
         "params": {},
       });
 
-      final url = Uri.parse("https://erp.elrace.com/api/employee/listx");
+      final url = Uri.parse("https://erp.elrace.com/api/employee/list");
 
       final request = http.Request('GET', url)
         ..headers.addAll(headers)

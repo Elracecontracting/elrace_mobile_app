@@ -216,14 +216,14 @@ class _SignInScreenState extends State<SignInScreen> {
               .catchError((_) => null);
 
           // ✅ Face Recognition with LOCAL storage only
-          // In Test Mode: skip face verification (Apple review compliance)
-          final isTestMode = AppConfigService.instance.isTestMode;
+          // Skip face verification if test mode OR faceIdEnabled=false from backend config
+          final skipFaceId = AppConfigService.instance.shouldSkipFaceId;
           SharedPref()
-              .setPreferencesBoolean('pendingFaceVerification', !isTestMode);
+              .setPreferencesBoolean('pendingFaceVerification', !skipFaceId);
           SharedPref()
               .setPreferencesBoolean('isFaceRegistrationInProgress', false);
-          if (isTestMode) {
-            print('🧪 TEST MODE: Skipping face verification after login');
+          if (skipFaceId) {
+            print('🧪 Face ID disabled: Skipping face verification after login');
           }
 
           // Navigate to HomeScreen - face registration will be triggered

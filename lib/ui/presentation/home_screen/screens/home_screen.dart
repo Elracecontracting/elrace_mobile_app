@@ -67,8 +67,8 @@ class _HomeScreenState extends State<HomeScreenPage>
     _checkLocationService(); // Check location service on initialization
     _locationBloc.add(GetCurrentLocationET());
 
-    // In Test Mode: skip face recognition entirely (Apple review compliance)
-    if (!AppConfigService.instance.isTestMode) {
+    // Skip face recognition if test mode OR faceIdEnabled=false from backend config
+    if (!AppConfigService.instance.shouldSkipFaceId) {
       // Pre-load face recognition models in background
       // This prevents lag when opening face registration for the first time
       _preloadFaceModels();
@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreenPage>
       // Check if face registration is pending
       _checkFaceRegistration();
     } else {
-      print('🧪 TEST MODE: Skipping face registration and model preloading');
+      print('🧪 Face ID disabled: Skipping face registration and model preloading');
       // Clear any pending face verification flags
       SharedPref().setPreferencesBoolean('pendingFaceVerification', false);
       SharedPref().setPreferencesBoolean('isFaceRegistrationInProgress', false);

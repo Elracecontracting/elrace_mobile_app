@@ -19,6 +19,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
 
   AttendanceBloc() : super(AttendanceInitial()) {
     on<GetAttendanceListET>(_getAttendanceMethod);
+    on<GetSelfAttendanceET>(_getSelfAttendanceMethod);
   }
 
   Future<void> _getAttendanceMethod(
@@ -69,6 +70,39 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
         final attendanceModel = attendanceModelFromJson(response.body);
         log(
           'AttendanceBloc parsed -> requestId=${event.requestId}, status=${attendanceModel.result.status}, mode=${attendanceModel.result.mode}, flatCount=${attendanceModel.result.data?.length ?? 0}, recordCount=${attendanceModel.result.records?.length ?? 0}',
+        );
+        if (event.requestId != _latestRequestId) return;
+        emit(AttendanceDataLoaded(attendanceData: attendanceModel.result));
+      } else {
+        if (event.requestId != _latestRequestId) return;
+        emit(AttendanceErrorState(
+            message: 'Failed to load attendance: ${response.statusCode}'));
+      }
+    } catch (e) {
+      if (event.requestId != _latestRequestId) return;
+      emit(AttendanceErrorState(message: 'Error: ${e.toString()}'));
+    }
+  }
+
+  Future<void> _getSelfAttendanceMethod(
+      GetSelfAttendanceET event, Emitter<AttendanceState> emit) async {
+    _latestRequestId = event.requestId;
+    log(
+      'AttendanceBloc selfAttendance -> requestId=${event.requestId}, employeeId=${event.employeeId}, month=${event.month}',
+    );
+    emit(const AttendanceLoadingState(isLoading: true));
+
+    try {
+      final response = await _attendanceRepo.getAttendanceDetail(
+        empId: event.employeeId,
+        month: event.month,
+      );
+
+      if (response.statusCode == 200) {
+        _logFirstRecordStatusFields(response.body);
+        final attendanceModel = attendanceModelFromJson(response.body);
+        log(
+          'AttendanceBloc selfAttendance parsed -> requestId=${event.requestId}, status=${attendanceModel.result.status}, mode=${attendanceModel.result.mode}, recordCount=${attendanceModel.result.records?.length ?? 0}',
         );
         if (event.requestId != _latestRequestId) return;
         emit(AttendanceDataLoaded(attendanceData: attendanceModel.result));

@@ -63,6 +63,21 @@ class Result {
   factory Result.fromJson(Map<String, dynamic> json) {
     final mode = json["mode"] ?? "grouped";
 
+    // Management list view: mode=grouped, role=management, has employees array
+    if (json["employees"] is List) {
+      return Result(
+        status: json["status"] ?? "",
+        mode: mode,
+        total: json["total_employees"] is int
+            ? json["total_employees"]
+            : int.tryParse(json["total_employees"]?.toString() ?? ''),
+        limit: json["limit"],
+        offset: json["offset"],
+        data: List<FlatAttendanceData>.from(
+            json["employees"].map((x) => FlatAttendanceData.fromJson(x))),
+      );
+    }
+
     if (mode == "flat") {
       // Manager view - flat list
       return Result(
@@ -77,7 +92,7 @@ class Result {
                 json["data"].map((x) => FlatAttendanceData.fromJson(x))),
       );
     } else {
-      // Employee view - grouped data
+      // Single employee grouped detail view
       return Result(
         status: json["status"] ?? "",
         mode: mode,
@@ -156,7 +171,7 @@ class FlatAttendanceData {
   factory FlatAttendanceData.fromJson(Map<String, dynamic> json) =>
       FlatAttendanceData(
         employeeName: json["employee_name"] ?? "",
-        empId: json["emp_id"] ?? "",
+        empId: (json["emp_id"] ?? json["employee_id"]?.toString() ?? "").toString(),
         employeeImageUrl: json["employee_image_url"] ?? "",
         checkIn: json["check_in"] ?? "",
         checkOut: json["check_out"],

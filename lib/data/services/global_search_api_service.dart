@@ -101,6 +101,9 @@ class GlobalSearchApiService {
 
       // Handle response
       if (response.statusCode == 200) {
+        if (category == 'projects') {
+          print('🔍 [GlobalSearch] Projects API response: ${response.data}');
+        }
         return _parseResponse(response.data, category);
       } else {
         throw GlobalSearchApiException(

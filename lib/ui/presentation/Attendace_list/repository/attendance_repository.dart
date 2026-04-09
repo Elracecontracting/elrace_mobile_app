@@ -27,7 +27,7 @@ class AttendanceRepo {
         "Authorization": "Bearer $token"
       };
 
-      var url = Uri.parse("https://erp.elrace.com/api/attendance/list");
+      var url = Uri.parse("https://erp.elrace.com/api/x_attendance/list");
       final body = jsonEncode({
         "jsonrpc": "2.0",
         "params": {
@@ -54,6 +54,52 @@ class AttendanceRepo {
       return response;
     } catch (e) {
       log('Error in getAttendanceList: $e');
+      rethrow;
+    }
+  }
+
+  Future<http.Response> getAttendanceDetail({
+    required int empId,
+    required int month,
+  }) async {
+    try {
+      final loginResponse = await userRepo.getLoginResponse();
+      final token = loginResponse?.result?.token;
+      if (token == null || token.isEmpty) {
+        throw Exception('Invalid token');
+      }
+
+      Map<String, String> headers = {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": "Bearer $token"
+      };
+
+      final url = Uri.parse("https://erp.elrace.com/api/attendance/detail");
+      final body = jsonEncode({
+        "jsonrpc": "2.0",
+        "params": {
+          "employee_id": empId,
+          "month": month,
+        }
+      });
+
+      log('Attendance Detail API request -> POST $url');
+      log('Attendance Detail API request body -> $body');
+
+      final request = http.Request('POST', url)
+        ..headers.addAll(headers)
+        ..body = body;
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      log('Attendance Detail API response status -> ${response.statusCode}');
+      log('Attendance Detail API response body -> ${response.body}');
+
+      return response;
+    } catch (e) {
+      log('Error in getAttendanceDetail: $e');
       rethrow;
     }
   }

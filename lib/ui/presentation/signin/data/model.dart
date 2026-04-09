@@ -87,7 +87,7 @@ class Data {
   final String? firebase_custom_token;
   final String? partnerDisplayName;
   final int? companyId;
-  final bool? branchId;
+  final int? branchId;
   final int? partnerId;
   final String? leaveBalance;
   final String? webBaseUrl;
@@ -212,7 +212,11 @@ class Data {
             : null,
         partnerDisplayName: json["partner_display_name"],
         companyId: json["company_id"],
-        branchId: json["branch_id"],
+        branchId: (json["branch_id"] is int)
+            ? json["branch_id"]
+            : (json["branch_id"] is String
+                ? int.tryParse(json["branch_id"])
+                : null),
         partnerId: json["partner_id"],
         leaveBalance: json["leave_balance"],
         webBaseUrl: json["web.base.url"],
@@ -447,19 +451,216 @@ class UserContext {
 }
 
 class DefaultWidgets {
-  final Map<String, dynamic>? data;
+  final String? status;
+  final String? message;
+  final WidgetsData? data;
 
   DefaultWidgets({
+    this.status,
+    this.message,
     this.data,
   });
 
   factory DefaultWidgets.fromJson(Map<String, dynamic> json) => DefaultWidgets(
-        data: json["data"],
+        status: json["status"]?.toString(),
+        message: json["message"]?.toString(),
+        data: json["data"] == null
+            ? null
+            : WidgetsData.fromJson(json["data"] as Map<String, dynamic>),
       );
 
   Map<String, dynamic> toJson() => {
-        "data": data,
+        "status": status,
+        "message": message,
+        "data": data?.toJson(),
       };
+}
+
+class WidgetsData {
+  final WidgetInfo? attendanceWidget;
+  final WidgetInfo? myRequestWidget;
+  final WidgetInfo? myDocumentsWidget;
+  final WidgetInfo? myProjectsWidget;
+  final WidgetInfo? mediaWidget;
+  final WidgetInfo? myReportsWidget;
+  final WidgetInfo? timesheetWidget;
+  final WidgetInfo? myNotesWidget;
+  final WidgetInfo? lpoWidget;
+
+  WidgetsData({
+    this.attendanceWidget,
+    this.myRequestWidget,
+    this.myDocumentsWidget,
+    this.myProjectsWidget,
+    this.mediaWidget,
+    this.myReportsWidget,
+    this.timesheetWidget,
+    this.myNotesWidget,
+    this.lpoWidget,
+  });
+
+  factory WidgetsData.fromJson(Map<String, dynamic> json) => WidgetsData(
+        attendanceWidget: json["attendance_widget"] == null
+            ? null
+            : WidgetInfo.fromJson(
+                json["attendance_widget"] as Map<String, dynamic>),
+        myRequestWidget: json["my_request_widget"] == null
+            ? null
+            : WidgetInfo.fromJson(
+                json["my_request_widget"] as Map<String, dynamic>),
+        myDocumentsWidget: json["my_documents_widget"] == null
+            ? null
+            : WidgetInfo.fromJson(
+                json["my_documents_widget"] as Map<String, dynamic>),
+        myProjectsWidget: json["my_projects_widget"] == null
+            ? null
+            : WidgetInfo.fromJson(
+                json["my_projects_widget"] as Map<String, dynamic>),
+        mediaWidget: json["media_widget"] == null
+            ? null
+            : WidgetInfo.fromJson(
+                json["media_widget"] as Map<String, dynamic>),
+        myReportsWidget: json["my_reports_widget"] == null
+            ? null
+            : WidgetInfo.fromJson(
+                json["my_reports_widget"] as Map<String, dynamic>),
+        timesheetWidget: json["timesheet_widget"] == null
+            ? null
+            : WidgetInfo.fromJson(
+                json["timesheet_widget"] as Map<String, dynamic>),
+        myNotesWidget: json["my_notes_widget"] == null
+            ? null
+            : WidgetInfo.fromJson(
+                json["my_notes_widget"] as Map<String, dynamic>),
+        lpoWidget: json["lpo_widget"] == null
+            ? null
+            : WidgetInfo.fromJson(json["lpo_widget"] as Map<String, dynamic>),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "attendance_widget": attendanceWidget?.toJson(),
+        "my_request_widget": myRequestWidget?.toJson(),
+        "my_documents_widget": myDocumentsWidget?.toJson(),
+        "my_projects_widget": myProjectsWidget?.toJson(),
+        "media_widget": mediaWidget?.toJson(),
+        "my_reports_widget": myReportsWidget?.toJson(),
+        "timesheet_widget": timesheetWidget?.toJson(),
+        "my_notes_widget": myNotesWidget?.toJson(),
+        "lpo_widget": lpoWidget?.toJson(),
+      };
+}
+
+/// Represents a single dashboard widget entry.
+/// [recordToShow] may be an [int] or a [Map<String, dynamic>] depending on
+/// the widget type – access the typed helpers for convenience.
+class WidgetInfo {
+  final int? widgetNumber;
+  final String? widgetName;
+  final dynamic recordToShow;
+  final bool? isDisabled;
+
+  WidgetInfo({
+    this.widgetNumber,
+    this.widgetName,
+    this.recordToShow,
+    this.isDisabled,
+  });
+
+  factory WidgetInfo.fromJson(Map<String, dynamic> json) => WidgetInfo(
+        widgetNumber: json["widget_number"] is int
+            ? json["widget_number"]
+            : int.tryParse(json["widget_number"]?.toString() ?? ''),
+        widgetName: json["widget_name"]?.toString(),
+        recordToShow: json["record_to_show"],
+        isDisabled: json["is_disabled"] is bool
+            ? json["is_disabled"]
+            : (json["is_disabled"]?.toString().toLowerCase() == 'true'),
+      );
+
+  Map<String, dynamic> toJson() => {
+        "widget_number": widgetNumber,
+        "widget_name": widgetName,
+        "record_to_show": recordToShow,
+        "is_disabled": isDisabled,
+      };
+
+  // ---------- typed helpers ----------
+
+  /// Returns the numeric value of [recordToShow] when it is a plain number.
+  int? get recordCount =>
+      recordToShow is int ? recordToShow as int : int.tryParse(recordToShow?.toString() ?? '');
+
+  /// Returns [recordToShow] as a key→value map when it is an object.
+  Map<String, dynamic>? get recordMap =>
+      recordToShow is Map ? Map<String, dynamic>.from(recordToShow as Map) : null;
+}
+
+// ── Typed record helpers ──────────────────────────────────────────────────────
+
+class AttendanceRecord {
+  final int present;
+  final int absent;
+  const AttendanceRecord({required this.present, required this.absent});
+  factory AttendanceRecord.fromMap(Map<String, dynamic> m) =>
+      AttendanceRecord(present: m["present"] ?? 0, absent: m["absent"] ?? 0);
+  Map<String, dynamic> toJson() => {"present": present, "absent": absent};
+}
+
+class MyRequestRecord {
+  final int totalRequestsCount;
+  final int waitingForApprovalCount;
+  const MyRequestRecord(
+      {required this.totalRequestsCount,
+      required this.waitingForApprovalCount});
+  factory MyRequestRecord.fromMap(Map<String, dynamic> m) => MyRequestRecord(
+      totalRequestsCount: m["total_requests_count"] ?? 0,
+      waitingForApprovalCount: m["waiting_for_approval_count"] ?? 0);
+  Map<String, dynamic> toJson() => {
+        "total_requests_count": totalRequestsCount,
+        "waiting_for_approval_count": waitingForApprovalCount
+      };
+}
+
+class MyProjectsRecord {
+  final int totalProjects;
+  final int delayedProjects;
+  const MyProjectsRecord(
+      {required this.totalProjects, required this.delayedProjects});
+  factory MyProjectsRecord.fromMap(Map<String, dynamic> m) => MyProjectsRecord(
+      totalProjects: m["total_projects"] ?? 0,
+      delayedProjects: m["delayed_projects"] ?? 0);
+  Map<String, dynamic> toJson() =>
+      {"total_projects": totalProjects, "delayed_projects": delayedProjects};
+}
+
+class MediaRecord {
+  final int mediaCount;
+  final int files;
+  const MediaRecord({required this.mediaCount, required this.files});
+  factory MediaRecord.fromMap(Map<String, dynamic> m) =>
+      MediaRecord(mediaCount: m["media_count"] ?? 0, files: m["files"] ?? 0);
+  Map<String, dynamic> toJson() =>
+      {"media_count": mediaCount, "files": files};
+}
+
+class MyNotesRecord {
+  final int savedCount;
+  final int draftCount;
+  const MyNotesRecord({required this.savedCount, required this.draftCount});
+  factory MyNotesRecord.fromMap(Map<String, dynamic> m) => MyNotesRecord(
+      savedCount: m["saved_count"] ?? 0, draftCount: m["draft_count"] ?? 0);
+  Map<String, dynamic> toJson() =>
+      {"saved_count": savedCount, "draft_count": draftCount};
+}
+
+class LpoRecord {
+  final int total;
+  final int completed;
+  const LpoRecord({required this.total, required this.completed});
+  factory LpoRecord.fromMap(Map<String, dynamic> m) =>
+      LpoRecord(total: m["total"] ?? 0, completed: m["completed"] ?? 0);
+  Map<String, dynamic> toJson() =>
+      {"total": total, "completed": completed};
 }
 
 Map<String, dynamic>? _tryDecodeCertificate(String value) {

@@ -199,6 +199,34 @@ class ChatRepository {
       print(
           '✅ ChatRepository: Ensured role chat membership for $uid in $chatId');
 
+      // Cleanup: remove old non-branch role chat if we switched to groupByBranch
+      if (groupByBranch && branchId != null) {
+        final oldChatId = 'role_$roleId';
+        if (oldChatId != chatId) {
+          try {
+            final oldUserChatDoc =
+                await _userChatsCollection(uid).doc(oldChatId).get();
+            if (oldUserChatDoc.exists) {
+              await _userChatsCollection(uid).doc(oldChatId).delete();
+              // Also remove user from old chat members
+              await _chatsCollection
+                  .doc(oldChatId)
+                  .collection('members')
+                  .doc(uid)
+                  .delete();
+              await _chatsCollection.doc(oldChatId).update({
+                'member_ids': FieldValue.arrayRemove([uid]),
+              });
+              print(
+                  '🧹 ChatRepository: Cleaned up old role chat $oldChatId for $uid');
+            }
+          } catch (e) {
+            print(
+                '⚠️ ChatRepository: Could not cleanup old role chat: $e');
+          }
+        }
+      }
+
       return chatId;
     } catch (e) {
       print('❌ ChatRepository: Error ensuring role chat membership: $e');

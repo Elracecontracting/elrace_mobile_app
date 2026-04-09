@@ -218,7 +218,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
         "params": {},
       });
 
-      final url = Uri.parse("https://erp.elrace.com/api/employee/listx");
+      final url = Uri.parse("https://erp.elrace.com/api/employee/list");
 
       final request = http.Request('GET', url)
         ..headers.addAll(headers)

@@ -847,6 +847,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
   Widget _buildProjectCard(GlobalSearchItem item) {
     final data = item.additionalData ?? {};
 
+    debugPrint('🔍 [GlobalSearch] Projects raw data: $data');
+
     final dynamic countRaw = data['total_projects'] ??
         data['project_count'] ??
         data['difference_days'];
@@ -862,13 +864,28 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         ? amountRaw.toDouble()
         : double.tryParse(amountRaw?.toString() ?? '0') ?? 0.0;
 
-    final String cardId = (data['agreement_id'] ??
+    final String cardId = (data['agreement_no'] ??
             data['analytic_account_id']?[1] ??
             data['wo_ref_no'] ??
             item.id)
         .toString();
 
-    final String photoUrl = (data['photo_url'] ??
+    // Extract real location from response fields
+    String location = '';
+    final stateId = data['state_id'];
+    final countryId = data['country_id'];
+    location = (data['location_id'] ??
+            data['city'] ??
+            data['location'] ??
+            data['partner_city'] ??
+            (stateId is List && stateId.length > 1 ? stateId[1] : null) ??
+            (countryId is List && countryId.length > 1 ? countryId[1] : null) ??
+            data['partner_location'] ??
+            '')
+        .toString();
+
+    final String photoUrl = (data['client_photo'] ??
+            data['photo_url'] ??
             data['partner_photo'] ??
             data['project_manager_photo'] ??
             '')
@@ -882,6 +899,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
         photoUrl: photoUrl,
         projectsCount: projectsCount,
         amountAed: amountAed,
+        location: location,
       ),
     );
   }

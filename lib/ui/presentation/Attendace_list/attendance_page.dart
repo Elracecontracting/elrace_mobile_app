@@ -123,14 +123,32 @@ class _AttendancePageState extends State<AttendancePage> {
   void _fetchAttendance({String? keyword}) {
     _requestSeq += 1;
     final monthToUse = selectedMonth ?? DateTime.now().month;
+
+    final isAttendanceManager =
+        SharedPref.getLoginDataOrNull()?.result?.data?.isAttendanceManager ==
+            true;
+    final myEmployeeId =
+        SharedPref.getLoginDataOrNull()?.result?.data?.employee_id;
+
     log(
-      'AttendancePage fetch -> requestId=$_requestSeq, keyword=$keyword, month=$monthToUse',
+      'AttendancePage fetch -> requestId=$_requestSeq, keyword=$keyword, month=$monthToUse, isManager=$isAttendanceManager, myEmployeeId=$myEmployeeId',
     );
-    _attendanceBloc.add(GetAttendanceListET(
-      keyword: keyword,
-      month: monthToUse,
-      requestId: _requestSeq,
-    ));
+
+    if (isAttendanceManager) {
+      // Manager: fetch all employees grouped list
+      _attendanceBloc.add(GetAttendanceListET(
+        keyword: keyword,
+        month: monthToUse,
+        requestId: _requestSeq,
+      ));
+    } else {
+      // Non-manager: fetch only own attendance via /api/attendance/detail
+      _attendanceBloc.add(GetSelfAttendanceET(
+        employeeId: myEmployeeId ?? 0,
+        month: monthToUse,
+        requestId: _requestSeq,
+      ));
+    }
 
     setState(() {
       expandedRecords.clear();
@@ -262,8 +280,8 @@ class _AttendancePageState extends State<AttendancePage> {
     });
 
     try {
-      final response = await _attendanceRepo.getAttendanceList(
-        keyword: empKey,
+      final response = await _attendanceRepo.getAttendanceDetail(
+        empId: int.tryParse(empKey) ?? 0,
         month: selectedMonth ?? DateTime.now().month,
       );
 
@@ -358,8 +376,7 @@ class _AttendancePageState extends State<AttendancePage> {
       attendanceData = state.attendanceData;
     }
 
-    final hasFlatData = attendanceData?.mode == "flat" &&
-        (attendanceData?.data?.isNotEmpty ?? false);
+    final hasFlatData = attendanceData?.data?.isNotEmpty ?? false;
     final hasGroupedData = attendanceData?.mode == "grouped" &&
         (attendanceData?.records?.isNotEmpty ?? false);
 
@@ -462,7 +479,7 @@ class _AttendancePageState extends State<AttendancePage> {
               ),
             ),
           )
-        else if (attendanceData.mode == "flat" && attendanceData.data != null)
+        else if (attendanceData.data != null && attendanceData.data!.isNotEmpty)
           _buildFlatEmployeeList(_filterEmployeesLocally(attendanceData.data!))
         else if (attendanceData.mode == "grouped" &&
             attendanceData.records != null)

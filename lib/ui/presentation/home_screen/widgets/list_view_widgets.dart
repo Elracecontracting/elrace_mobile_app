@@ -143,12 +143,13 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
     final timesheetCount =
-        widgetData?['timesheet_widget']?['record_to_show']?.toString() ?? '0';
+        widgetData?.timesheetWidget?.recordCount?.toString() ?? '0';
+    final isDisabled = widgetData?.timesheetWidget?.isDisabled == true;
 
     return Stack(
       children: [
         GrayCardComponent(
-          onClick: isReorderMode
+          onClick: (isReorderMode || isDisabled)
               ? null
               : () => Util.pushPage(const TaskSheetPage(), context),
           cardTitle: 'Timesheet',
@@ -232,11 +233,11 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
     final lpoTotal =
-        widgetData?['lpo_widget']?['record_to_show']?['total']?.toString() ??
-            '0';
+        widgetData?.lpoWidget?.recordMap?['total']?.toString() ?? '0';
+    final isDisabled = widgetData?.lpoWidget?.isDisabled == true;
 
     return GrayCardComponent(
-      onClick: isReorderMode
+      onClick: (isReorderMode || isDisabled)
           ? null
           : () => Util.pushPage(const LpoListScreen(), context),
       cardTitle: translate('home.lpo'),
@@ -262,13 +263,13 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
     final docsCount =
-        widgetData?['my_documents_widget']?['record_to_show']?.toString() ??
-            '0';
+        widgetData?.myDocumentsWidget?.recordCount?.toString() ?? '0';
+    final isDisabled = widgetData?.myDocumentsWidget?.isDisabled == true;
 
     return Stack(
       children: [
         GrayCardComponent(
-          onClick: isReorderMode
+          onClick: (isReorderMode || isDisabled)
               ? null
               : () => Util.pushPage(const MyDocumentsScreen(), context),
           cardTitle: translate(''),
@@ -292,17 +293,18 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   Widget _buildMyNotesWidget({bool isReorderMode = false}) {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
-    final notesData = widgetData?['my_notes_widget']?['record_to_show'];
+    final notesData = widgetData?.myNotesWidget?.recordMap;
     final totalNotes =
         ((notesData?['saved_count'] ?? 0) + (notesData?['draft_count'] ?? 0))
             .toString();
+    final isDisabled = widgetData?.myNotesWidget?.isDisabled == true;
 
     return Stack(
       children: [
         GrayCardComponent(
           cardTitle: translate('home.my_notes'),
           backgroundImagePath: 'assets/png/blue_card.png',
-          onClick: isReorderMode
+          onClick: (isReorderMode || isDisabled)
               ? null
               : () => Navigator.push(
                     context,
@@ -424,10 +426,11 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   Widget _buildProjectsWidget({bool isReorderMode = false}) {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
-    final projectsData = widgetData?['my_projects_widget']?['record_to_show'];
+    final projectsData = widgetData?.myProjectsWidget?.recordMap;
     final totalProjects = projectsData?['total_projects']?.toString() ?? '0';
     final delayedProjects =
         projectsData?['delayed_projects']?.toString() ?? '0';
+    final isDisabled = widgetData?.myProjectsWidget?.isDisabled == true;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(23.r),
@@ -443,7 +446,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                 Color(0xFFADB2BD),
               ],
             ),
-            onClick: isReorderMode
+            onClick: (isReorderMode || isDisabled)
                 ? null
                 : () => Util.pushPage(const MyProject(), context),
             childWidget: Directionality(
@@ -524,11 +527,12 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   Widget _buildMyRequestWidget({bool isReorderMode = false}) {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
-    final requestData = widgetData?['my_request_widget']?['record_to_show'];
+    final requestData = widgetData?.myRequestWidget?.recordMap;
     final totalRequests =
         requestData?['total_requests_count']?.toString() ?? '0';
     final waitingApproval =
         requestData?['waiting_for_approval_count']?.toString() ?? '0';
+    final isDisabled = widgetData?.myRequestWidget?.isDisabled == true;
 
     return ClipRRect(
       borderRadius: BorderRadius.circular(23.r),
@@ -538,7 +542,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
             cardTitle: 'HR Requests',
             backgroundImagePath: 'assets/newapp/blue_widget_background.png',
             backgroundFit: BoxFit.fill,
-            onClick: isReorderMode
+            onClick: (isReorderMode || isDisabled)
                 ? null
                 : () => Util.pushPage(const HrRequestsMenuPage(), context),
             childWidget: const SizedBox.shrink(),
@@ -568,9 +572,10 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
   Widget _buildMediaWidget({bool isReorderMode = false}) {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
-    final mediaData = widgetData?['media_widget']?['record_to_show'];
+    final mediaData = widgetData?.mediaWidget?.recordMap;
     final mediaCount = mediaData?['media_count']?.toString() ?? '0';
     // final filesCount = mediaData?['files']?.toString() ?? '0';
+    final isDisabled = widgetData?.mediaWidget?.isDisabled == true;
 
     return Stack(
       children: [
@@ -578,7 +583,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           // Keep base component untouched; hide its title for this card only.
           cardTitle: '',
           backgroundImagePath: 'assets/newapp/media_widget_background.png',
-          onClick: isReorderMode
+          onClick: (isReorderMode || isDisabled)
               ? null
               : () => Util.pushPage(const MediaListScreen(), context),
           childWidget: Directionality(
@@ -633,14 +638,15 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
     final loginData = SharedPref.getLoginData();
     final widgetData = loginData.result?.data?.defaultWidgets?.data;
     final reportsCount =
-        widgetData?['my_reports_widget']?['record_to_show']?.toString() ?? '0';
+        widgetData?.myReportsWidget?.recordCount?.toString() ?? '0';
+    final isDisabled = widgetData?.myReportsWidget?.isDisabled == true;
 
     return GrayCardComponent(
       mainIcon: 'assets/png/my_documents.png',
       cardTitle: translate('home.my_report'),
       titleColor: Colors.white,
       backgroundImagePath: 'assets/newapp/my_report_widget_background.png',
-      onClick: isReorderMode
+      onClick: (isReorderMode || isDisabled)
           ? null
           : () => Util.pushPage(const ReportAppHomeScreen(), context),
       topPadding: true,
@@ -677,6 +683,9 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
         final monthAbbrev = bloc.monthName.length >= 3
             ? bloc.monthName.substring(0, 3).toUpperCase()
             : bloc.monthName.toUpperCase();
+        final widgetData =
+            SharedPref.getLoginData().result?.data?.defaultWidgets?.data;
+        final isDisabled = widgetData?.attendanceWidget?.isDisabled == true;
 
         return ClipRRect(
           borderRadius: BorderRadius.circular(23.r),
@@ -686,7 +695,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
               GrayCardComponent(
                 cardTitle: translate('home.attendance'),
                 backgroundImagePath: 'assets/newapp/blue_widget_background.png',
-                onClick: isReorderMode
+                onClick: (isReorderMode || isDisabled)
                     ? null
                     : () => Util.pushPage(const AttendancePage(), context),
                 childWidget: const SizedBox.shrink(),

@@ -11,6 +11,7 @@ class AppConfigService {
 
   static const _cacheKeyIsTestMode = 'app_config_is_test_mode';
   static const _cacheKeySkipVpnCheck = 'app_config_skip_vpn_check';
+  static const _cacheKeyFaceIdEnabled = 'app_config_face_id_enabled';
 
   bool _isTestMode = false;
   bool get isTestMode => _isTestMode;
@@ -21,6 +22,14 @@ class AppConfigService {
   /// Whether VPN check should be skipped (test mode OR backend flag)
   bool get shouldSkipVpnCheck => _isTestMode || _skipVpnCheck;
 
+  /// Whether face ID is enabled (default: true)
+  /// Backend key: faceIdEnabled
+  bool _faceIdEnabled = true;
+  bool get faceIdEnabled => _faceIdEnabled;
+
+  /// Whether face ID should be skipped (test mode OR faceIdEnabled=false)
+  bool get shouldSkipFaceId => _isTestMode || !_faceIdEnabled;
+
   /// Load config from remote API and cache locally
   Future<void> load() async {
     // Try read cached values first
@@ -28,6 +37,7 @@ class AppConfigService {
       final prefs = await SharedPreferences.getInstance();
       _isTestMode = prefs.getBool(_cacheKeyIsTestMode) ?? false;
       _skipVpnCheck = prefs.getBool(_cacheKeySkipVpnCheck) ?? false;
+      _faceIdEnabled = prefs.getBool(_cacheKeyFaceIdEnabled) ?? true;
     } catch (_) {}
 
     try {
@@ -38,7 +48,10 @@ class AppConfigService {
       ));
 
       const String url = '${UrlUtil.baseUrl}app/config';
-      final resp = await dio.get(url);
+      final resp = await dio.get(
+        url,
+        data: {'jsonrpc': '2.0', 'params': {}},
+      );
 
       print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
       print('🔧 AppConfigService API Response:');
@@ -51,7 +64,6 @@ class AppConfigService {
       final data = resp.data;
       bool? remoteIsTest;
       bool? remoteSkipVpn;
-
       Map<String, dynamic>? payload;
       if (data is Map<String, dynamic>) {
         payload = data['result'] is Map<String, dynamic>
@@ -71,6 +83,8 @@ class AppConfigService {
       if (payload != null) {
         remoteIsTest = payload['isTestMode'] as bool?;
         remoteSkipVpn = payload['skipVpnCheck'] as bool?;
+        final remoteFaceId = payload['faceIdEnabled'] as bool?;
+        if (remoteFaceId != null) _faceIdEnabled = remoteFaceId;
       }
 
       if (remoteIsTest != null) {
@@ -80,16 +94,17 @@ class AppConfigService {
         _skipVpnCheck = remoteSkipVpn;
       }
 
-      print('✅ AppConfigService: isTestMode=$_isTestMode, skipVpnCheck=$_skipVpnCheck');
+      print('✅ AppConfigService: isTestMode=$_isTestMode, skipVpnCheck=$_skipVpnCheck, faceIdEnabled=$_faceIdEnabled');
 
       try {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setBool(_cacheKeyIsTestMode, _isTestMode);
         await prefs.setBool(_cacheKeySkipVpnCheck, _skipVpnCheck);
+        await prefs.setBool(_cacheKeyFaceIdEnabled, _faceIdEnabled);
       } catch (_) {}
 
       if (kDebugMode) {
-        debugPrint('AppConfigService: isTestMode=$_isTestMode, skipVpnCheck=$_skipVpnCheck');
+        debugPrint('AppConfigService: isTestMode=$_isTestMode, skipVpnCheck=$_skipVpnCheck, faceIdEnabled=$_faceIdEnabled');
       }
     } catch (e) {
       if (kDebugMode) {

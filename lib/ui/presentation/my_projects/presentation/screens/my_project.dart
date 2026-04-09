@@ -370,6 +370,7 @@ Widget buildProjectCard({
   required String photoUrl,
   required int projectsCount,
   required double amountAed,
+  String location = '',
 }) {
   String? normalizedPhotoUrl = photoUrl.trim();
   if (normalizedPhotoUrl.isEmpty) normalizedPhotoUrl = null;
@@ -513,7 +514,7 @@ Widget buildProjectCard({
                             children: [
                               const TextSpan(text: 'Amount# '),
                               TextSpan(
-                                text: '$formattedAmount M',
+                                text: formattedAmount,
                                 style: GoogleFonts.inter(
                                   fontSize: 12.sp,
                                   fontWeight: FontWeight.w600,
@@ -533,15 +534,17 @@ Widget buildProjectCard({
                   children: [
                     Icon(Icons.location_on, size: 16.w, color: red),
                     SizedBox(width: 4.w),
-                    Text(
-                      'Abu Dhabi',
-                      style: GoogleFonts.inter(
-                        fontSize: 11.5.sp,
-                        fontWeight: FontWeight.w700,
-                        color: cardDataGray,
+                    Flexible(
+                      child: Text(
+                        location.trim().isNotEmpty ? location.trim() : '-',
+                        style: GoogleFonts.inter(
+                          fontSize: 11.5.sp,
+                          fontWeight: FontWeight.w700,
+                          color: cardDataGray,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
