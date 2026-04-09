@@ -157,10 +157,10 @@ class LivenessService {
     print('  📊 Left eye range: min=${leftEyeMin.toStringAsFixed(3)}, max=${leftEyeMax.toStringAsFixed(3)}, range=${leftEyeRange.toStringAsFixed(3)}');
     print('  📊 Right eye range: min=${rightEyeMin.toStringAsFixed(3)}, max=${rightEyeMax.toStringAsFixed(3)}, range=${rightEyeRange.toStringAsFixed(3)}');
     
-    // Photos have very constant eye probability (< 0.06 range)
+    // Photos have very constant eye probability (< 0.03 range)
     // Real eyes fluctuate naturally even with soft blinks
     // Relaxed for better user experience while maintaining security
-    if (leftEyeRange < 0.06 && rightEyeRange < 0.06) {
+    if (leftEyeRange < 0.03 && rightEyeRange < 0.03) {
       print('❌ LAYER 2 FAILED: Eye probability too constant - likely a photo');
       return LivenessResult(
         passed: false,
@@ -252,10 +252,10 @@ class LivenessService {
     List<double> leftEyeValues, 
     List<double> rightEyeValues,
   ) {
-    const double openThreshold = 0.45;  // Eye considered open (relaxed from 0.5)
-    const double closedThreshold = 0.42; // Eye considered closed (relaxed from 0.3 → catches soft blinks)
+    const double openThreshold = 0.35;  // Eye considered open (relaxed from 0.45)
+    const double closedThreshold = 0.30; // Eye considered closed (relaxed from 0.42 → catches very soft blinks)
     const int minBlinkFrames = 1; // Minimum frames for closed eyes
-    const int maxBlinkFrames = 10; // Maximum frames for closed eyes (relaxed from 8)
+    const int maxBlinkFrames = 15; // Maximum frames for closed eyes (relaxed from 10)
     
     bool foundOpen = false;
     bool foundClosed = false;
@@ -308,7 +308,7 @@ class LivenessService {
       final leftMax = leftEyeValues.reduce(math.max);
       final eyeRange = leftMax - leftMin;
       
-      if (eyeRange >= 0.18) { // Relaxed: accepts soft blinks (range >= 0.18 vs old 0.35)
+      if (eyeRange >= 0.08) { // Very relaxed: accepts very soft blinks (range >= 0.08 vs old 0.18)
         print('    ✅ Partial blink with significant range (${eyeRange.toStringAsFixed(2)}) accepted');
         return _BlinkDetectionResult(
           blinkDetected: true,
@@ -350,8 +350,8 @@ class LivenessService {
   /// 🆕 Detect a real blink in the eye probability sequence
   /// A blink is: eyes open (>0.5) -> eyes closed (<0.3) -> eyes open (>0.5)
   bool _detectBlinkInSequence(List<double> leftEyeValues, List<double> rightEyeValues) {
-    const double openThreshold = 0.45;  // Eye considered open (relaxed)
-    const double closedThreshold = 0.42; // Eye considered closed (relaxed - catches soft blinks)
+    const double openThreshold = 0.35;  // Eye considered open (relaxed)
+    const double closedThreshold = 0.30; // Eye considered closed (relaxed - catches very soft blinks)
     
     // Track state machine for blink detection
     bool foundOpen = false;
@@ -396,8 +396,8 @@ class LivenessService {
       
       print('  📊 Eye range: min=$minEye, max=$maxEye, range=$eyeRange');
       
-      // If there's significant eye movement (>0.18 range), consider it a blink (relaxed from 0.3)
-      if (eyeRange >= 0.18) {
+      // If there's significant eye movement (>0.08 range), consider it a blink (relaxed from 0.18)
+      if (eyeRange >= 0.08) {
         print('  ✅ Significant eye movement detected as blink');
         return true;
       }
@@ -638,7 +638,7 @@ class LivenessService {
 
     for (final frame in frames) {
       final avgEyeOpen = (frame.leftEyeOpen + frame.rightEyeOpen) / 2;
-      final isClosed = avgEyeOpen < 0.2; // Eyes closed threshold
+      final isClosed = avgEyeOpen < 0.4; // Eyes closed threshold (relaxed from 0.2)
 
       if (wasOpen && isClosed) {
         blinkCount++; // Detected a blink (transition from open to closed)
@@ -1100,9 +1100,9 @@ class _BlinkDetectionResult {
 class SimpleLivenessTracker {
   // ── Configuration ──
   static const int requiredBlinks = 1;
-  static const double eyeOpenThreshold = 0.50;
-  static const double eyeClosedThreshold = 0.30;
-  static const double minHeadMovementDeg = 3.0; // very slight movement
+  static const double eyeOpenThreshold = 0.3;   // relaxed from 0.50 — easier to detect open
+  static const double eyeClosedThreshold = 0.25; // relaxed from 0.30 — easier to detect blink
+  static const double minHeadMovementDeg = 2.0;  // relaxed from 3.0 — very slight movement
 
   // ── Internal state ──
   int _blinkCount = 0;
@@ -1113,6 +1113,9 @@ class SimpleLivenessTracker {
   double _maxYaw = double.negativeInfinity;
   double _minPitch = double.infinity;
   double _maxPitch = double.negativeInfinity;
+  
+  double _minEyeValue = 1.0;  // track min eye probability
+  double _maxEyeValue = 0.0;  // track max eye probability
 
   int _frameCount = 0;
   bool _faceVisible = false;
@@ -1122,7 +1125,14 @@ class SimpleLivenessTracker {
   int get frameCount => _frameCount;
   bool get faceVisible => _faceVisible;
 
-  bool get blinksComplete => _blinkCount >= requiredBlinks;
+  /// Blink is complete if state-machine detected a blink OR
+  /// if there was a significant enough eye range variation (soft blink).
+  bool get blinksComplete {
+    if (_blinkCount >= requiredBlinks) return true;
+    // Fallback: accept any significant eye value change as a blink
+    final eyeRange = _maxEyeValue - _minEyeValue;
+    return eyeRange >= 0.06; // very forgiving — any small blink counts
+  }
 
   bool get movementComplete {
     if (_minYaw == double.infinity) return false;
@@ -1175,14 +1185,19 @@ class SimpleLivenessTracker {
         // Transition: closed → open = one blink completed
         _blinkCount++;
         _eyesAreClosed = false;
-        print('👁️ SimpleLiveness: Blink #$_blinkCount detected');
+        print('👁️ SimpleLiveness: Blink #$_blinkCount detected (open→closed→open)');
       }
       _eyesWereOpen = true;
     } else if (avgEye <= eyeClosedThreshold) {
       if (_eyesWereOpen) {
         _eyesAreClosed = true;
+        print('👁️ SimpleLiveness: Eyes closed detected (avg=${avgEye.toStringAsFixed(2)})');
       }
     }
+    
+    // Also track min/max eye values for range-based blink detection
+    if (_minEyeValue > avgEye) _minEyeValue = avgEye;
+    if (_maxEyeValue < avgEye) _maxEyeValue = avgEye;
   }
 
   void _trackMovement(Face face) {
@@ -1204,6 +1219,8 @@ class SimpleLivenessTracker {
     _maxYaw = double.negativeInfinity;
     _minPitch = double.infinity;
     _maxPitch = double.negativeInfinity;
+    _minEyeValue = 1.0;
+    _maxEyeValue = 0.0;
     _frameCount = 0;
     _faceVisible = false;
   }

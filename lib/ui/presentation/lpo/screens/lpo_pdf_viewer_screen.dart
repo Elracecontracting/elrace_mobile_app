@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
@@ -234,29 +234,22 @@ class _LpoPdfViewerScreenState extends State<LpoPdfViewerScreen> {
     return Column(
       children: [
         Expanded(
-          child: PDFView(
-            pdfData: _pdfBytes,
-            enableSwipe: true,
-            swipeHorizontal: false,
-            autoSpacing: true,
-            pageFling: true,
-            backgroundColor: Colors.grey[200]!,
-            onRender: (pages) {
+          child: SfPdfViewer.memory(
+            _pdfBytes!,
+            canShowScrollHead: true,
+            canShowScrollStatus: true,
+            enableDoubleTapZooming: true,
+            enableTextSelection: true,
+            pageSpacing: 4,
+            onDocumentLoaded: (PdfDocumentLoadedDetails details) {
               setState(() {
-                _totalPages = pages ?? 0;
+                _totalPages = details.document.pages.count;
               });
             },
-            onPageChanged: (page, total) {
+            onPageChanged: (PdfPageChangedDetails details) {
               setState(() {
-                _currentPage = (page ?? 0) + 1;
-                _totalPages = total ?? 0;
+                _currentPage = details.newPageNumber;
               });
-            },
-            onError: (error) {
-              debugPrint('PDFView error: $error');
-            },
-            onPageError: (page, error) {
-              debugPrint('PDFView page $page error: $error');
             },
           ),
         ),

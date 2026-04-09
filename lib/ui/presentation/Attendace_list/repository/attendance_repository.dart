@@ -61,6 +61,7 @@ class AttendanceRepo {
   Future<http.Response> getAttendanceDetail({
     required int empId,
     required int month,
+    required int year,
   }) async {
     try {
       final loginResponse = await userRepo.getLoginResponse();
@@ -81,6 +82,7 @@ class AttendanceRepo {
         "params": {
           "employee_id": empId,
           "month": month,
+          "year": year,
         }
       });
 

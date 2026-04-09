@@ -34,6 +34,7 @@ class _AttendancePageState extends State<AttendancePage> {
   final Set<String> _managerEmployeeLoading = {};
   final Map<String, String> _managerEmployeeErrors = {};
   int? selectedMonth;
+  int selectedYear = DateTime.now().year;
 
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -146,6 +147,7 @@ class _AttendancePageState extends State<AttendancePage> {
       _attendanceBloc.add(GetSelfAttendanceET(
         employeeId: myEmployeeId ?? 0,
         month: monthToUse,
+        year: selectedYear,
         requestId: _requestSeq,
       ));
     }
@@ -283,6 +285,7 @@ class _AttendancePageState extends State<AttendancePage> {
       final response = await _attendanceRepo.getAttendanceDetail(
         empId: int.tryParse(empKey) ?? 0,
         month: selectedMonth ?? DateTime.now().month,
+        year: selectedYear,
       );
 
       if (response.statusCode != 200) {
@@ -324,7 +327,7 @@ class _AttendancePageState extends State<AttendancePage> {
       context: context,
       builder: (context) => _MonthPickerDialog(
         selectedMonth: selectedMonth,
-        currentYear: DateTime.now().year,
+        currentYear: selectedYear,
       ),
     );
 
@@ -953,7 +956,7 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'Yearly Calendar 2026',
+              'Yearly Calendar ${widget.currentYear}',
               style: GoogleFonts.inter(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,

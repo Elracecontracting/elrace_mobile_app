@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_pdfview/flutter_pdfview.dart';
+import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../../../core/constants/colors.dart';
@@ -82,23 +82,13 @@ class _PdfDisplayScreenState extends State<PdfDisplayScreen> {
                   height: 1,
                 ),
                 Expanded(
-                  child: PDFView(
-                    pdfData: bytes,
-                    enableSwipe: true,
-                    swipeHorizontal: false,
-                    autoSpacing: false,
-                    pageFling: false,
-                    backgroundColor: CustomColors.white,
-                    onRender: (pages) {},
-                    onError: (error) {
-                      debugPrint(error.toString());
-                    },
-                    onPageError: (page, error) {
-                      debugPrint('$page: ${error.toString()}');
-                    },
-                    onViewCreated: (PDFViewController pdfViewController) {
-                      setState(() {});
-                    },
+                  child: SfPdfViewer.memory(
+                    bytes,
+                    canShowScrollHead: true,
+                    canShowScrollStatus: true,
+                    enableDoubleTapZooming: true,
+                    enableTextSelection: true,
+                    pageSpacing: 4,
                   ),
                 ),
               ],

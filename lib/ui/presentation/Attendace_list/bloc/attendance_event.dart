@@ -26,14 +26,16 @@ class GetAttendanceListET extends AttendanceEvent {
 class GetSelfAttendanceET extends AttendanceEvent {
   final int employeeId;
   final int month;
+  final int year;
   final int requestId;
 
   const GetSelfAttendanceET({
     required this.employeeId,
     required this.month,
+    required this.year,
     this.requestId = 0,
   });
 
   @override
-  List<Object?> get props => [employeeId, month, requestId];
+  List<Object?> get props => [employeeId, month, year, requestId];
 }

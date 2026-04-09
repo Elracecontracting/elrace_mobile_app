@@ -229,29 +229,34 @@ class _SignaturesScreenState extends State<SignaturesScreen> {
         return extracted;
       }
 
+      final futures = <Future<List<_SignatureFileItem>>>[];
+
       for (final userChatDoc in userChatsSnapshot.docs) {
         final chatId = userChatDoc.id;
-
-        final Query<Map<String, dynamic>> signableQuery = FirebaseFirestore
-            .instance
+        final chatRef = FirebaseFirestore.instance
             .collection('chats')
             .doc(chatId)
-            .collection('messages')
+            .collection('messages');
+
+        final signableFuture = chatRef
             .where('type', isEqualTo: 'signable_doc')
-            .limit(80);
+            .limit(80)
+            .get()
+            .then(extractFromSnapshot);
 
-        final Query<Map<String, dynamic>> fileQuery = FirebaseFirestore.instance
-            .collection('chats')
-            .doc(chatId)
-            .collection('messages')
+        final fileFuture = chatRef
             .where('type', isEqualTo: 'file')
-            .limit(80);
+            .limit(80)
+            .get()
+            .then(extractFromSnapshot);
 
-        final signableSnapshot = await signableQuery.get();
-        final fileSnapshot = await fileQuery.get();
+        futures.add(signableFuture);
+        futures.add(fileFuture);
+      }
 
-        files.addAll(extractFromSnapshot(signableSnapshot));
-        files.addAll(extractFromSnapshot(fileSnapshot));
+      final results = await Future.wait(futures);
+      for (final batch in results) {
+        files.addAll(batch);
       }
 
       debugPrint(

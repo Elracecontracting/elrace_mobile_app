@@ -601,10 +601,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                     }
                     return false;
                   },
-                  child: GestureDetector(
+                  child: Listener(
                     behavior: HitTestBehavior.translucent,
-                    onVerticalDragUpdate: (details) {
-                      if (details.delta.dy < -4) {
+                    onPointerMove: (event) {
+                      if (event.delta.dy < -4) {
                         _showAndroidSystemBarsTemporarily();
                       }
                     },

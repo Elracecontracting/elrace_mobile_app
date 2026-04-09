@@ -88,7 +88,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       GetSelfAttendanceET event, Emitter<AttendanceState> emit) async {
     _latestRequestId = event.requestId;
     log(
-      'AttendanceBloc selfAttendance -> requestId=${event.requestId}, employeeId=${event.employeeId}, month=${event.month}',
+      'AttendanceBloc selfAttendance -> requestId=${event.requestId}, employeeId=${event.employeeId}, month=${event.month}, year=${event.year}',
     );
     emit(const AttendanceLoadingState(isLoading: true));
 
@@ -96,6 +96,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       final response = await _attendanceRepo.getAttendanceDetail(
         empId: event.employeeId,
         month: event.month,
+        year: event.year,
       );
 
       if (response.statusCode == 200) {

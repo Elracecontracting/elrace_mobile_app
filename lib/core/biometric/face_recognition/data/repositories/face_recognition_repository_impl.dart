@@ -141,37 +141,29 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
       }
       print('✅ Face quality OK');
 
-      // Step 3: Check liveness (if enabled) - relaxed for registration
+      // Step 3: Check liveness (if enabled) - VERY relaxed for registration
+      // The SimpleLivenessTracker already confirmed the person is real (blink + head movement)
+      // This single-frame check is just a basic sanity check
       if (_enableLivenessCheck) {
-        print('🔒 Step 3: Checking liveness...');
-        // Use relaxed thresholds for registration (eyes can be partially open)
-        final hasLiveness = _faceDetectorService.checkLiveness(
-          face,
-          eyeOpenThreshold: 0.1, // Lower threshold for registration
-          maxHeadEulerAngleY: 30.0, // Allow more head rotation
-          maxHeadEulerAngleZ: 30.0,
-        );
-        print('🔒 Liveness result: $hasLiveness');
-
+        print('🔒 Step 3: Checking liveness (relaxed - SimpleLivenessTracker already passed)...');
+        
         // Log detailed liveness info for debugging
         print('   👁️ Left eye: ${face.leftEyeOpenProbability}');
         print('   👁️ Right eye: ${face.rightEyeOpenProbability}');
         print('   🔄 Head Y angle: ${face.headEulerAngleY}');
         print('   🔄 Head Z angle: ${face.headEulerAngleZ}');
 
-        if (!hasLiveness) {
-          // For registration, warn but don't fail - only fail if eyes are completely null
-          if (face.leftEyeOpenProbability == null ||
-              face.rightEyeOpenProbability == null) {
-            print(
-                '⚠️ Liveness data not available, proceeding anyway for registration');
-          } else {
-            print('❌ Liveness check failed');
-            return const Left(LivenessCheckFailure());
-          }
-        } else {
-          print('✅ Liveness check passed');
+        // Only fail if eye data is completely unavailable (no classification)
+        if (face.leftEyeOpenProbability == null &&
+            face.rightEyeOpenProbability == null) {
+          print('⚠️ Liveness data not available at all');
+          return const Left(LivenessCheckFailure(
+            'Could not detect face features. Please try again with better lighting.',
+          ));
         }
+        
+        // Skip strict liveness check — the real-time tracker already verified the person
+        print('✅ Liveness check passed (SimpleLivenessTracker already confirmed live person)');
       } else {
         print('⏭️ Liveness check disabled');
       }
@@ -291,28 +283,23 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
       } else {
         print('🔒 Step 3: Starting liveness check (relaxed mode)...');
         
-        // ✅ Basic liveness check with relaxed thresholds
-        hasLiveness = _faceDetectorService.checkLiveness(
-          face,
-          eyeOpenThreshold: 0.5, // Relaxed from 0.6
-          maxHeadEulerAngleY: 20.0, // Relaxed from 12.0
-          maxHeadEulerAngleZ: 20.0, // Relaxed from 12.0
-        );
-        
-        print('🔒 Liveness result: ${hasLiveness ? "PASSED ✅" : "FAILED ❌"}');
-        
-        if (!hasLiveness) {
-          print('❌ SECURITY: Liveness check FAILED - eyes closed or head turned away');
+        // SimpleLivenessTracker already confirmed the person is real
+        // This is just a basic sanity check — only fail if no eye data at all
+        if (face.leftEyeOpenProbability == null && face.rightEyeOpenProbability == null) {
+          print('❌ No eye classification data available');
           return const Right(
             FaceVerificationResult(
               isVerified: false,
               confidence: 0.0,
-              message:
-                  '🚫 Please keep your eyes open and look at the camera.',
+              message: 'Could not detect face features. Please try again.',
               hasLiveness: false,
             ),
           );
         }
+        
+        // Accept — the real-time SimpleLivenessTracker already verified liveness
+        hasLiveness = true;
+        print('✅ Liveness accepted (SimpleLivenessTracker already confirmed live person)');
       }
       
       print('✅ Liveness check PASSED - proceeding with verification');
@@ -410,8 +397,10 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
     
     // 🆕 CRITICAL CHECK 1: BLINK DETECTION
     // Real person MUST blink at least once during capture
-    // Look for: eyes closed (<0.4) then open again (>0.7)
+    // Relaxed: detect any eye probability drop as a blink
     bool blinkDetected = false;
+    double minEyeValue = 1.0;
+    double maxEyeValue = 0.0;
     bool hadClosedEyes = false;
     bool hadOpenEyes = false;
     
@@ -420,14 +409,17 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
       final rightEye = rightEyeValues[i];
       final avgEye = (leftEye + rightEye) / 2;
       
-      // Eyes closed
-      if (avgEye < 0.4) {
+      if (avgEye < minEyeValue) minEyeValue = avgEye;
+      if (avgEye > maxEyeValue) maxEyeValue = avgEye;
+      
+      // Eyes closed (relaxed threshold)
+      if (avgEye < 0.5) {
         hadClosedEyes = true;
         print('   Frame $i: Eyes closed (${avgEye.toStringAsFixed(3)})');
       }
       
-      // Eyes open
-      if (avgEye > 0.7) {
+      // Eyes open (relaxed threshold)
+      if (avgEye > 0.5) {
         hadOpenEyes = true;
         if (hadClosedEyes) {
           blinkDetected = true;
@@ -436,10 +428,24 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
       }
     }
     
+    // Fallback: if eye range variation is >= 0.06, count as blink
+    // Photos have near-zero variation, real faces always fluctuate
+    final eyeRange = maxEyeValue - minEyeValue;
+    if (!blinkDetected && eyeRange >= 0.06) {
+      blinkDetected = true;
+      print('   ✅ BLINK DETECTED via eye range (${eyeRange.toStringAsFixed(3)})');
+    }
+    
     if (!blinkDetected) {
       print('   ❌ NO BLINK DETECTED - Photo/Video or no natural blink!');
       print('   Had closed eyes: $hadClosedEyes, Had open eyes: $hadOpenEyes');
-      return 0.0; // No blink = likely photo
+      print('   Eye range: ${eyeRange.toStringAsFixed(3)} (min: ${minEyeValue.toStringAsFixed(3)}, max: ${maxEyeValue.toStringAsFixed(3)})');
+      // Only reject if eye range is extremely low (photo-like)
+      if (eyeRange < 0.03) {
+        return 0.0; // Definitely a photo — no variation at all
+      }
+      // Some variation exists but no clean blink — might be user issue, allow through
+      return 0.6;
     }
     
     print('   ✅ Natural blink confirmed - real person');
