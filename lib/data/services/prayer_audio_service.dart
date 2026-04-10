@@ -232,6 +232,34 @@ class PrayerAudioService {
     _cancelAllScheduledPrayerNotifications();
   }
 
+  /// إعادة جدولة إشعارات الأذان المحلية للصلوات القادمة.
+  /// يُستدعى عندما ينتقل التطبيق إلى الخلفية لضمان وصول الإشعار
+  /// حتى لو أوقف النظام الـ foreground timer.
+  Future<void> rescheduleBackgroundNotifications() async {
+    if (_currentPrayerTimes == null) return;
+
+    final now = DateTime.now();
+    final prayers = [
+      {'name': 'fajr', 'time': _currentPrayerTimes!.fajr},
+      {'name': 'dhuhr', 'time': _currentPrayerTimes!.dhuhr},
+      {'name': 'asr', 'time': _currentPrayerTimes!.asr},
+      {'name': 'maghrib', 'time': _currentPrayerTimes!.maghrib},
+      {'name': 'isha', 'time': _currentPrayerTimes!.isha},
+    ];
+
+    for (final p in prayers) {
+      final time = p['time'] as DateTime;
+      if (time.isAfter(now)) {
+        try {
+          await _notificationService.scheduleAdhanNotification(
+            p['name'] as String,
+            time,
+          );
+        } catch (_) {}
+      }
+    }
+  }
+
   // الحصول على اسم الصلاة
   String _getPrayerName(Prayer prayer) {
     switch (prayer) {

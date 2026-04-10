@@ -32,25 +32,8 @@ class MediaRepository implements IMediaRepository {
         ..headers.addAll(headers)
         ..body = body;
 
-      debugPrint('\n========== [MEDIA] API REQUEST ==========');
-      debugPrint('🌐 URL: $url');
-      debugPrint('📤 Body: $body');
-      debugPrint('🔑 Token: $token');
-      debugPrint('=========================================\n');
-
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
-
-      debugPrint('\n========== [MEDIA] API RESPONSE ==========');
-      debugPrint('📊 Status Code: ${response.statusCode}');
-      debugPrint('📦 Full Response Body:');
-      try {
-        final prettyJson = const JsonEncoder.withIndent('  ').convert(jsonDecode(response.body));
-        debugPrint(prettyJson);
-      } catch (_) {
-        debugPrint(response.body);
-      }
-      debugPrint('==========================================\n');
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -103,16 +86,12 @@ class MediaRepository implements IMediaRepository {
   @override
   Future<String?> prepareShare(String mediaId) async {
     try {
-      print('🔄 Starting prepareShare for media ID: $mediaId');
-
       final loginResponse = await userRepo.getLoginResponse();
       if (loginResponse == null || loginResponse.result == null) {
-        print('❌ No login response available');
         return null;
       }
 
       var token = loginResponse.result!.token!;
-      print('✅ Got token: ${token.substring(0, 20)}...');
 
       Map<String, String> headers = {
         "Content-Type": "application/json",
@@ -134,22 +113,14 @@ class MediaRepository implements IMediaRepository {
 
       final url = Uri.parse("${UrlUtil.baseUrl}${UrlUtil.prepareShareApi}");
 
-      print('📡 Calling prepare_share API');
-      print('   URL: $url');
-      print('   Body: $body');
-
       final response = await http.post(
         url,
         headers: headers,
         body: body,
       );
 
-      print('📥 prepare_share API Response: ${response.statusCode}');
-      print('   Response body: ${response.body}');
-
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
-        print('📦 Parsed JSON: $json');
 
         // Check different possible response structures
         if (json['result'] != null) {
@@ -161,29 +132,19 @@ class MediaRepository implements IMediaRepository {
             // Prioritize share_url as it's the main field returned by the API
             shareUrl =
                 result['share_url'] ?? result['url'] ?? result['x_web_url'];
-            print('🔍 Result map keys: ${result.keys.toList()}');
-            print('🔍 share_url value: ${result['share_url']}');
           } else if (result is String) {
             shareUrl = result;
           }
 
           if (shareUrl != null && shareUrl.isNotEmpty) {
-            print('✅ Got shareable URL: $shareUrl');
             return shareUrl;
-          } else {
-            print('⚠️ No URL found in result: $result');
           }
-        } else {
-          print('⚠️ No result field in response');
         }
-      } else {
-        print('❌ API returned error status: ${response.statusCode}');
       }
 
       return null;
     } catch (e, stackTrace) {
-      print('❌ Error in prepareShare: $e');
-      print('Stack trace: $stackTrace');
+      log('Error in prepareShare: $e\n$stackTrace');
       return null;
     }
   }
@@ -203,11 +164,6 @@ class MediaRepository implements IMediaRepository {
       final body = jsonEncode({"jsonrpc": "2.0", "params": {}});
       final url = Uri.parse("${UrlUtil.baseUrl}${UrlUtil.getContentsGroupedApi}");
 
-      debugPrint('\n========== [GET_CONTENTS_GROUPED] API REQUEST ==========');
-      debugPrint('🌐 URL: $url');
-      debugPrint('📤 Body: $body');
-      debugPrint('=========================================================\n');
-
       // Use GET request with body (similar to other API calls in this app)
       final request = http.Request('GET', url)
         ..headers.addAll(headers)
@@ -216,34 +172,16 @@ class MediaRepository implements IMediaRepository {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      debugPrint('\n========== [GET_CONTENTS_GROUPED] API RESPONSE ==========');
-      debugPrint('📊 Status Code: ${response.statusCode}');
-      debugPrint('📦 Full Response Body:');
-      try {
-        final prettyJson = const JsonEncoder.withIndent('  ').convert(jsonDecode(response.body));
-        debugPrint(prettyJson);
-      } catch (_) {
-        debugPrint(response.body);
-      }
-      debugPrint('==========================================================\n');
-
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
 
         if (json['result'] != null && json['result']['status'] == 'success') {
-          log('✅ get_contents: Successfully parsed response');
           return ContentsResponse.fromJson(json);
-        } else {
-          log('⚠️ get_contents: Invalid response format or status not success');
-          log('⚠️ Result: ${json['result']}');
         }
-      } else {
-        log('❌ get_contents: HTTP ${response.statusCode}');
       }
       return null;
     } catch (e, stackTrace) {
-      log('❌ Error in getContents: $e');
-      log('Stack trace: $stackTrace');
+      log('Error in getContents: $e\n$stackTrace');
       return null;
     }
   }

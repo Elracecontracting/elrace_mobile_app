@@ -39,7 +39,6 @@ class _VideoPlayerScreenFullState extends State<VideoPlayerScreenFull> {
         _controller = VideoPlayerController.asset(videoUrl);
       } else {
         // Use streaming URL for video playback
-        print('🎥 Loading video from: $videoUrl');
         _controller = VideoPlayerController.networkUrl(
           Uri.parse(videoUrl),
           httpHeaders: {
@@ -54,7 +53,7 @@ class _VideoPlayerScreenFullState extends State<VideoPlayerScreenFull> {
           _isInitialized = true;
         });
       }).catchError((error) {
-        print('Video initialization error: $error');
+        // ignore
       });
 
       _controller.addListener(() {
@@ -63,7 +62,7 @@ class _VideoPlayerScreenFullState extends State<VideoPlayerScreenFull> {
         });
       });
     } catch (e) {
-      print('Error creating video controller: $e');
+      // ignore
     }
   }
 

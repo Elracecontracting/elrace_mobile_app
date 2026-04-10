@@ -3,6 +3,10 @@ import 'dart:typed_data';
 import 'package:el_race/core/services/notification_api_service.dart';
 import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/data/services/hive_service.dart';
+import 'package:el_race/data/services/prayer_notification_service.dart';
+import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:el_race/main.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/profile_widgets/app_settings_widget.dart';
@@ -138,18 +142,27 @@ class _ProfileBoxWithSlideAnimationState
     return candidates.first.trim().toLowerCase();
   }
 
+  /// Local-only categories that are not returned by the API.
+  static const List<_MuteChannelConfig> _localOnlyChannels = [
+    _MuteChannelConfig(label: 'Chat', key: 'chat_message'),
+    _MuteChannelConfig(label: 'Tasks', key: 'task'),
+    _MuteChannelConfig(label: 'Adhan', key: 'adhan'),
+  ];
+
   Future<void> _openMuteControlPopup() async {
     final results = await Future.wait([
       NotificationStorageService.getMuteSettings(),
       NotificationStorageService.getNotificationCategories(),
+      HiveService.isPrayerSoundMuted(),
     ]);
     if (!mounted) return;
 
     final settings = results[0] as Map<String, bool>;
     final apiCategories =
         results[1] as List<NotificationCategoryApiModel>;
+    final adhanMuted = results[2] as bool;
 
-    final channels = apiCategories
+    final apiChannels = apiCategories
         .where((c) => c.model.trim().isNotEmpty)
         .map(
           (c) => _MuteChannelConfig(
@@ -157,17 +170,32 @@ class _ProfileBoxWithSlideAnimationState
             key: c.model.trim().toLowerCase(),
           ),
         )
-        .toList(growable: false);
+        .toList();
+
+    // Merge: add local-only channels that are not already in the API list
+    final existingKeys = apiChannels.map((c) => c.key).toSet();
+    for (final local in _localOnlyChannels) {
+      if (!existingKeys.contains(local.key)) {
+        apiChannels.add(local);
+      }
+    }
 
     setState(() {
-      _muteChannels = channels;
+      _muteChannels = apiChannels;
       _muteValueByKey = <String, bool>{
-        for (final channel in channels)
-          channel.key: settings[channel.key] == true,
+        for (final channel in apiChannels)
+          channel.key: channel.key == 'adhan'
+              ? adhanMuted
+              : (settings[channel.key] == true),
       };
       _isMutePopupVisible = true;
       _isMutePopupSaving = false;
     });
+  }
+
+  /// Whether this key is a local-only category (not synced to API).
+  static bool _isLocalOnlyKey(String key) {
+    return _localOnlyChannels.any((c) => c.key == key);
   }
 
   Future<void> _updateMuteChannel(_MuteChannelConfig item, bool value) async {
@@ -178,7 +206,22 @@ class _ProfileBoxWithSlideAnimationState
     });
 
     try {
-      await NotificationStorageService.setMuteSetting(item.key, value);
+      if (_isLocalOnlyKey(item.key)) {
+        // Local-only: handle adhan separately via HiveService
+        if (item.key == 'adhan') {
+          await HiveService.setPrayerSoundMuted(value);
+          if (value) {
+            await PrayerNotificationService().cancelAllPendingAdhan();
+          }
+          // Sync prayer widget icon immediately
+          if (mounted) {
+            context.read<HomeBloc>().add(const LoadPrayerMuteStateEvent());
+          }
+        }
+        await NotificationStorageService.setLocalMuteSetting(item.key, value);
+      } else {
+        await NotificationStorageService.setMuteSetting(item.key, value);
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {

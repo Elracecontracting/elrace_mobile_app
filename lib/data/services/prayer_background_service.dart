@@ -70,32 +70,18 @@ class PrayerBackgroundService {
 
         // جدول المهمة فقط إذا كان الوقت لم يمر بعد
         if (prayerTime.isAfter(now)) {
-          final delay = prayerTime.difference(now);
-
-          final ms = prayerTime.millisecondsSinceEpoch;
-
           // جدولة إشعار محلي يشتغل حتى لو التطبيق مغلق
+          // هذا هو المسار الوحيد للأذان في الخلفية (بدون WorkManager)
+          // لتفادي تشغيل صوتين أو إشعارين في نفس الوقت.
           await notificationService.scheduleAdhanNotification(
             prayerName,
             prayerTime,
           );
 
+          // إلغاء أي مهمة WorkManager قديمة لهذه الصلاة (تنظيف)
+          final ms = prayerTime.millisecondsSinceEpoch;
           final taskUniqueName = 'prayer-$prayerName-$ms';
           await Workmanager().cancelByUniqueName(taskUniqueName);
-
-          await Workmanager().registerOneOffTask(
-            taskUniqueName,
-            prayerCheckTaskName,
-            inputData: {'prayer': prayerName, 'ms': ms},
-            initialDelay: delay,
-            constraints: Constraints(
-              networkType: NetworkType.notRequired,
-              requiresBatteryNotLow: false,
-              requiresCharging: false,
-              requiresDeviceIdle: false,
-              requiresStorageNotLow: false,
-            ),
-          );
 
           // debugPrint(
           //     '✅ Scheduled $prayerName at ${prayerTime.hour}:${prayerTime.minute} (in ${delay.inMinutes}m ${delay.inSeconds % 60}s)');

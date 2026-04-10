@@ -60,15 +60,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
     required String source,
     required String rawUrl,
     required Object error,
-  }) {
-    final safeUrl = _safeImageUrl(rawUrl);
-    final hasAuth = (_imageHeaders?['Authorization'] ?? '').isNotEmpty;
-    debugPrint('❌ [Media][Photo][$source] image load failed');
-    debugPrint('   rawUrl: $rawUrl');
-    debugPrint('   safeUrl: $safeUrl');
-    debugPrint('   hasAuthHeader: $hasAuth');
-    debugPrint('   error: $error');
-  }
+  }) {}
 
   Widget _buildPhotoLoadingPlaceholder(
     BuildContext context,
@@ -260,7 +252,6 @@ class _MediaListScreenState extends State<MediaListScreen> {
                                         media: media,
                                         onTap: () {
                                           if (media.isVideo) {
-                                            print(media.previewUrl);
                                             Navigator.of(context).push(
                                               MaterialPageRoute(
                                                 builder: (context) =>

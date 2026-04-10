@@ -5,6 +5,7 @@ import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/chat/chat.dart';
 import 'package:el_race/data/services/hive_service.dart';
+import 'package:el_race/data/services/prayer_audio_service.dart';
 import 'package:el_race/data/services/prayer_background_service.dart';
 import 'package:el_race/providers/announcements_provider.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
@@ -518,6 +519,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       _backgroundedAt ??= DateTime.now();
+
+      // عند الانتقال للخلفية: أعد جدولة إشعارات الأذان المحلية
+      // التي ألغيناها عند دخول المقدمة (لمنع التكرار).
+      // هذا يضمن وصول الإشعار حتى لو أُغلق التطبيق.
+      if (state == AppLifecycleState.paused) {
+        PrayerAudioService().rescheduleBackgroundNotifications();
+      }
     }
   }
 

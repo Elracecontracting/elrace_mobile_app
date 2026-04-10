@@ -135,10 +135,23 @@ class _NotificationScreenState extends State<NotificationScreen> {
           .whereType<_NotificationTabConfig>()
           .toList(growable: true);
 
+      // Rename the first dynamic tab to "Notifications" and put it first
+      final firstDynamic = dynamicTabs.isNotEmpty
+          ? _NotificationTabConfig(
+              category: dynamicTabs.first.category,
+              title: 'Notifications',
+              icon: dynamicTabs.first.icon,
+            )
+          : const _NotificationTabConfig(
+              category: 'notification',
+              title: 'Notifications',
+              icon: 'assets/png/notification_icon.png',
+            );
+
       final tabs = <_NotificationTabConfig>[
+        firstDynamic,
         ..._fixedNotificationTabs,
-        ...dynamicTabs,
-      ];
+      ].take(3).toList();
 
       if (tabs.length == _fixedNotificationTabs.length) {
         tabs.add(
@@ -163,12 +176,12 @@ class _NotificationScreenState extends State<NotificationScreen> {
       if (!mounted) return;
       setState(() {
         _notificationTabs = const [
-          ..._fixedNotificationTabs,
           _NotificationTabConfig(
             category: 'notification',
             title: 'Notifications',
             icon: 'assets/png/notification_icon.png',
           ),
+          ..._fixedNotificationTabs,
         ];
         _tabKeys = List.generate(_notificationTabs.length, (_) => GlobalKey());
         if (currentIndex >= _notificationTabs.length) {
@@ -291,38 +304,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
     try {
       final loadedNotifications =
           await NotificationStorageService.getNotifications();
-      final observedCategories = loadedNotifications
-          .map(
-            (item) => _normalizeCategory((item["category"] ?? "").toString()),
-          )
-          .where((category) => category.isNotEmpty)
-          .toSet();
 
       if (mounted) {
         setState(() {
           notifications = loadedNotifications;
-
-          for (final category in observedCategories) {
-            final exists = _notificationTabs.any(
-              (tab) => tab.category == category,
-            );
-            if (!exists) {
-              if (category == 'circular' || category == 'announcement') {
-                continue;
-              }
-              _notificationTabs = [
-                ..._notificationTabs,
-                _NotificationTabConfig(
-                  category: category,
-                  title: _humanizeCategory(category),
-                  icon: _tabIconForCategory(category),
-                ),
-              ];
-              _tabKeys =
-                  List.generate(_notificationTabs.length, (_) => GlobalKey());
-            }
-          }
-
           _isLoading = false;
         });
       }
@@ -391,12 +376,20 @@ class _NotificationScreenState extends State<NotificationScreen> {
       await NotificationStorageService.markAsRead(notificationId);
     } catch (_) {}
     if (!mounted) return false;
+    // Mark as read in local state (do not remove from list)
     setState(() {
-      notifications.removeWhere(
-        (n) => n['id']?.toString() == notificationId,
-      );
+      notifications = notifications.map((n) {
+        if (n['id']?.toString() == notificationId) {
+          final updated = Map<String, dynamic>.from(n);
+          updated['isRead'] = true;
+          updated['is_read'] = true;
+          return updated;
+        }
+        return n;
+      }).toList();
     });
-    return true;
+    // Return false so Dismissible snaps back (item stays visible, now marked read)
+    return false;
   }
 
   Map<String, dynamic> _extractNotificationData(Map<String, dynamic> item) {
@@ -719,7 +712,19 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     final selectedCategory = _notificationTabs[currentIndex].category;
 
-    // Filter notifications by category
+    // The first tab ("Notifications") shows everything that is not a
+    // circular or announcement, regardless of the category key returned
+    // by the categories API (which may differ from the category field
+    // stored on each notification item).
+    if (currentIndex == 0) {
+      return notifications.where((notification) {
+        final cat =
+            (notification['category'] ?? '').toString().toLowerCase().trim();
+        return cat != 'circular' && cat != 'announcement';
+      }).toList();
+    }
+
+    // Remaining tabs filter by exact category match
     return notifications.where((notification) {
       final notificationCategory =
           (notification['category'] ?? 'notification').toString().toLowerCase();
@@ -973,16 +978,16 @@ class _NotificationScreenState extends State<NotificationScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 20),
             alignment: Alignment.centerRight,
             decoration: BoxDecoration(
-              color: Colors.red.shade600,
+              color: Colors.green.shade600,
               borderRadius: BorderRadius.circular(16),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                const Icon(Icons.delete_outline, color: Colors.white),
+                const Icon(Icons.mark_email_read_outlined, color: Colors.white),
                 const SizedBox(width: 8),
                 Text(
-                  'Delete',
+                  'Mark as Read',
                   style: GoogleFonts.inter(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,

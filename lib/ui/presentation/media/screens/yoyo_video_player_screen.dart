@@ -131,15 +131,8 @@ class _YoYoVideoPlayerScreenState extends State<YoYoVideoPlayerScreen> {
               ),
               allowCacheFile: true,
               onCacheFileCompleted: (files) {
-                print('Cached file length ::: ${files?.length}');
-                if (files != null && files.isNotEmpty) {
-                  for (var file in files) {
-                    print('File path ::: ${file.path}');
-                  }
-                }
               },
               onCacheFileFailed: (error) {
-                print('Cache file error ::: $error');
               },
               onFullScreen: (value) {
                 setState(() {

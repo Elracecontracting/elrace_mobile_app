@@ -1,3 +1,4 @@
+import 'package:el_race/data/services/hive_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -114,6 +115,10 @@ class PrayerNotificationService {
   ) async {
     await initialize();
 
+    // لا تجدول الإشعار إذا كان صوت الأذان مكتوماً
+    final isMuted = await HiveService.isPrayerSoundMuted();
+    if (isMuted) return;
+
     // استخدم وقت محلي مباشر مع exactAllowWhileIdle لضمان العمل حتى في وضع Doze
     final tzTime = tz.TZDateTime.from(scheduledTime, tz.local);
 
@@ -154,6 +159,19 @@ class PrayerNotificationService {
     await initialize();
     final id = _buildId(prayerName, DateTime.fromMillisecondsSinceEpoch(ms));
     await _notificationsPlugin.cancel(id);
+  }
+
+  /// إلغاء جميع إشعارات الأذان المعلقة (يُستدعى عند كتم صوت الأذان).
+  Future<void> cancelAllPendingAdhan() async {
+    await initialize();
+    // إلغاء الإشعارات المعلقة فقط (المجدولة) وليس كل الإشعارات
+    final pending = await _notificationsPlugin.pendingNotificationRequests();
+    for (final p in pending) {
+      // الإشعارات المجدولة للأذان تحتوي على payload يبدأ بـ 'prayer:'
+      if (p.payload != null && p.payload!.startsWith('prayer:')) {
+        await _notificationsPlugin.cancel(p.id);
+      }
+    }
   }
 
   int _buildId(String prayerName, DateTime time) {

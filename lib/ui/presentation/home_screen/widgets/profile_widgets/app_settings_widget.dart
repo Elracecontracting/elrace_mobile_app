@@ -423,7 +423,7 @@ class AppSettingsWidget extends StatelessWidget {
                 ),
                 SizedBox(width: 10.w),
                 Text(
-                  'Mute Control',
+                  'Mute Notifications',
                   style: TextStyle(
                     color: const Color(0xffBA1719),
                     fontSize: 14.sp,

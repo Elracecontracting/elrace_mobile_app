@@ -1,4 +1,6 @@
 import 'package:el_race/core/services/notification_storage_service.dart';
+import 'package:el_race/data/services/hive_service.dart';
+import 'package:el_race/data/services/prayer_notification_service.dart';
 import 'package:el_race/ui/presentation/Notification/model/notification_category_listview_model.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
@@ -76,7 +78,29 @@ class _NotificationMuteSettingsScreenState
       icon: Icons.cloud_rounded,
       color: Color(0xFF0288D1),
     ),
+    'chat_message': _CategoryUiMeta(
+      title: 'Chat',
+      icon: Icons.chat_bubble_rounded,
+      color: Color(0xFF0097A7),
+    ),
+    'task': _CategoryUiMeta(
+      title: 'Tasks',
+      icon: Icons.task_alt_rounded,
+      color: Color(0xFF5C6BC0),
+    ),
+    'adhan': _CategoryUiMeta(
+      title: 'Adhan Sound',
+      icon: Icons.volume_up_rounded,
+      color: Color(0xFF2E7D32),
+    ),
   };
+
+  /// فئات محلية فقط (لا تأتي من الـ API) - تُضاف تلقائياً إلى قائمة الإعدادات.
+  static const List<String> _localOnlyCategories = <String>[
+    'chat_message',
+    'task',
+    'adhan',
+  ];
 
   List<NotificationCategoryModel> _categories =
       const <NotificationCategoryModel>[];
@@ -172,6 +196,19 @@ class _NotificationMuteSettingsScreenState
         merged[key] = entry.value;
       }
 
+      // إضافة الفئات المحلية فقط (chat, task, adhan) التي لا تأتي من الـ API
+      for (final localKey in _localOnlyCategories) {
+        if (!merged.containsKey(localKey)) {
+          if (localKey == 'adhan') {
+            // مزامنة حالة كتم الأذان من Hive
+            final adhanMuted = await HiveService.isPrayerSoundMuted();
+            merged[localKey] = adhanMuted;
+          } else {
+            merged[localKey] = settings[localKey] ?? false;
+          }
+        }
+      }
+
       final fixedCategoryModels = _alwaysOnCategories
           .map((model) => _toCategoryModel(model, false))
           .toList(growable: false);
@@ -228,6 +265,7 @@ class _NotificationMuteSettingsScreenState
 
     final model = category.model;
     final previous = category.muted;
+    final isLocalOnly = _localOnlyCategories.contains(model);
 
     _setCategoryMuted(model, muted);
     setState(() {
@@ -235,7 +273,21 @@ class _NotificationMuteSettingsScreenState
     });
 
     try {
-      await NotificationStorageService.setMuteSetting(model, muted);
+      // الفئات المحلية فقط: تخزين محلي بدون مزامنة API
+      if (isLocalOnly) {
+        if (model == 'adhan') {
+          // مزامنة حالة كتم الأذان مع Hive (المصدر الرسمي لـ PrayerAudioService)
+          await HiveService.setPrayerSoundMuted(muted);
+          // إلغاء الإشعارات المجدولة إذا تم الكتم
+          if (muted) {
+            await PrayerNotificationService().cancelAllPendingAdhan();
+          }
+        }
+        // حفظ في SharedPreferences أيضاً للفئات المحلية
+        await NotificationStorageService.setLocalMuteSetting(model, muted);
+      } else {
+        await NotificationStorageService.setMuteSetting(model, muted);
+      }
     } catch (e) {
       if (mounted) {
         _setCategoryMuted(model, previous);

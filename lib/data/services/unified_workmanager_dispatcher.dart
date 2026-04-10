@@ -6,11 +6,8 @@ import 'package:el_race/data/services/auto_checkout_service.dart';
 import 'package:el_race/data/services/counter_reset_service.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/data/services/prayer_background_service.dart';
-import 'package:el_race/data/services/prayer_notification_service.dart';
 import 'package:el_race/data/services/task_notification_service.dart';
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/widgets.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:workmanager/workmanager.dart';
 
@@ -104,21 +101,16 @@ Future<bool> _handlePrayerTask(
     final isLoggedIn = await HiveService.isUserLoggedIn();
     if (!isLoggedIn) return true;
 
-    // Skip if prayer sound muted
-    final isMuted = await HiveService.isPrayerSoundMuted();
-    if (isMuted) return true;
-
     final prayerName = inputData?['prayer'] as String?;
     final rawMs = inputData?['ms'];
     final parsedMs = rawMs is int ? rawMs : int.tryParse('$rawMs');
 
     if (prayerName != null && parsedMs != null) {
+      // فقط نعلّم الصلاة كـ "تم تشغيلها" لمنع التكرار.
+      // الإشعار المجدول (zonedSchedule) يتولى الصوت والإشعار بشكل مستقل.
+      // لا نشغل صوت أو إشعار من WorkManager لتفادي التكرار.
       final playedKey = 'played_${prayerName}_$parsedMs';
-      final alreadyPlayed = await HiveService.hasPlayedPrayer(playedKey);
-      if (!alreadyPlayed) {
-        await HiveService.markPrayerPlayed(playedKey);
-        await _playAdhanInBackground(prayerName);
-      }
+      await HiveService.markPrayerPlayed(playedKey);
     }
 
     return true;
@@ -128,69 +120,10 @@ Future<bool> _handlePrayerTask(
   }
 }
 
-Future<void> _playAdhanInBackground(String prayerName) async {
-  try {
-    // Show notification with sound channel
-    final plugin = FlutterLocalNotificationsPlugin();
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    await plugin.initialize(
-        const InitializationSettings(android: androidSettings, iOS: iosSettings));
-
-    await plugin.show(
-      0,
-      '🕌 Prayer Time',
-      '🔔 It\'s now time for ${_englishPrayerName(prayerName)} prayer',
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          PrayerNotificationService.prayerAdhanChannelId,
-          'Prayer Adhan (Sound)',
-          channelDescription: 'Sound notifications for prayer times',
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-          playSound: true,
-          sound: RawResourceAndroidNotificationSound('athan'),
-          enableVibration: true,
-          visibility: NotificationVisibility.public,
-          autoCancel: false,
-        ),
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentBadge: true,
-          presentSound: true,
-          sound: 'athan.mp3',
-          interruptionLevel: InterruptionLevel.timeSensitive,
-        ),
-      ),
-    );
-
-    // Play athan audio
-    final player = AudioPlayer();
-    await player.setReleaseMode(ReleaseMode.stop);
-    await player.setPlayerMode(PlayerMode.mediaPlayer);
-    await player.setVolume(0.1);
-    await player.play(AssetSource('mp3/athan.mp3'));
-
-    for (int i = 1; i <= 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 300));
-      try {
-        await player.setVolume(0.1 * i);
-      } catch (_) {}
-    }
-
-    await Future.delayed(const Duration(minutes: 4));
-    await player.stop();
-    await player.dispose();
-  } catch (e) {
-    debugPrint('❌ Error playing adhan in background: $e');
-  }
-}
+// _playAdhanInBackground removed: the scheduled local notification
+// (zonedSchedule with exactAllowWhileIdle + athan sound channel)
+// is now the sole background adhan mechanism, preventing the
+// duplicate-notification / two-sounds-at-once issue.
 
 // ──────────────────────────────────────────────────────────────────────────
 // Counter Reset

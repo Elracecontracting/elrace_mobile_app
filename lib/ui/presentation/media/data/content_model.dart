@@ -241,17 +241,12 @@ class ContentsResponse {
       _sortNewestFirst(photosList);
       _sortNewestFirst(view360List);
 
-      print(
-          '✅ ContentsResponse parsed: ${photosList.length} photos (${photoGroupsList.length} groups), ${view360List.length} 360 views');
-
       return ContentsResponse(
         photos: photosList,
         photoGroups: photoGroupsList,
         view360: view360List,
       );
     } catch (e) {
-      print('❌ Error parsing ContentsResponse: $e');
-      print('📦 JSON data: $json');
       rethrow;
     }
   }

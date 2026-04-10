@@ -44,6 +44,11 @@ class UpdatePrayerTickEvent extends HomeEvent {
   const UpdatePrayerTickEvent();
 }
 
+// App lifecycle event: re-schedule background prayer notifications
+class AppPausedEvent extends HomeEvent {
+  const AppPausedEvent();
+}
+
 // Reorder Mode Events
 class ToggleReorderModeEvent extends HomeEvent {
   const ToggleReorderModeEvent();

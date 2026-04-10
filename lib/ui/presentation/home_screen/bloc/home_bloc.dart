@@ -32,6 +32,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<LoadPrayerMuteStateEvent>(_loadPrayerMuteState);
     on<TogglePrayerMuteStateEvent>(_togglePrayerMuteState);
     on<UpdatePrayerTickEvent>(_updatePrayerTick);
+    on<AppPausedEvent>(_onAppPaused);
     on<ToggleReorderModeEvent>(_toggleReorderMode);
     monthName = DateFormat('MMMM').format(now);
   }
@@ -123,6 +124,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     } catch (e) {
       // debugPrint('Error toggling mute state: $e');
     }
+  }
+
+  /// عندما ينتقل التطبيق إلى الخلفية، نعيد جدولة إشعارات الأذان المحلية
+  /// التي تم إلغاؤها سابقاً عند دخول المقدمة.
+  Future<void> _onAppPaused(
+    AppPausedEvent event,
+    Emitter<HomeState> emit,
+  ) async {
+    try {
+      await _audioService.rescheduleBackgroundNotifications();
+    } catch (_) {}
   }
 
   Future<void> _initPrayerTimes(
