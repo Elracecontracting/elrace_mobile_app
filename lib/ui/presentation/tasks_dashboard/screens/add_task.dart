@@ -1715,7 +1715,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
               onTap: () async {
                 Navigator.pop(context);
-                final result = await FilePicker.platform.pickFiles(
+                final result = await FilePicker.pickFiles(
                   type: FileType.custom,
                   allowedExtensions: ['pdf'],
                 );
@@ -1739,7 +1739,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                   style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey)),
               onTap: () async {
                 Navigator.pop(context);
-                final result = await FilePicker.platform.pickFiles();
+                final result = await FilePicker.pickFiles();
                 if (result != null && result.files.single.path != null) {
                   setState(
                       () => _attachments.add(File(result.files.single.path!)));

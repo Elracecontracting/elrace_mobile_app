@@ -18,7 +18,7 @@ subprojects {
                 // Ensure all plugins use at least compileSdk 35 (required for lStar attribute and dependencies)
                 // This fixes the "resource android:attr/lStar not found" error
                 // Force compileSdk to 35 for all plugins to ensure compatibility with all dependencies
-                compileSdkVersion 35
+                compileSdkVersion 36
                 
                 // Ensure consistent JVM target across all plugins
                 compileOptions {

@@ -537,7 +537,7 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog>
     });
 
     try {
-      FilePickerResult? result = await FilePicker.platform.pickFiles(
+      FilePickerResult? result = await FilePicker.pickFiles(
         allowMultiple: true,
         type: FileType.custom,
         allowedExtensions: [
