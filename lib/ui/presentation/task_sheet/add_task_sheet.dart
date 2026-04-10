@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/task_sheet/task_sheet_screen.dart';
+import 'package:el_race/ui/presentation/todo_list/services/team_members_api_service.dart';
 import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -195,55 +196,23 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
 
   Future<void> _fetchEmployees() async {
     if (!mounted) return;
-
-    setState(() {
-      isLoading = true;
-    });
-
+    setState(() => isLoading = true);
     try {
-      final loginData = SharedPref.getLoginData();
-      final token = loginData.result?.token;
-      if (token == null || token.isEmpty) {
-        throw Exception('Authentication token missing');
-      }
-
-      final headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": "Bearer $token",
-      };
-
-      final body = jsonEncode({
-        "jsonrpc": "2.0",
-        "params": {},
-      });
-
-      final url = Uri.parse("https://erp.elrace.com/api/employee/list");
-
-      final request = http.Request('GET', url)
-        ..headers.addAll(headers)
-        ..body = body;
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (!mounted) return;
-        setState(() {
-          employees =
-              List<Map<String, dynamic>>.from(data['result']['employees']);
-          isLoading = false;
-        });
-      } else {
-        throw Exception("Failed to load employees: ${response.statusCode}");
-      }
-    } catch (e) {
+      final members = await TeamMembersApiService.instance
+          .getTeamMembers(forceRefresh: true);
       if (!mounted) return;
       setState(() {
+        employees = members.map((m) {
+          final cleanName = m.name.replaceFirst(RegExp(r'^\d+\s+'), '');
+          return <String, dynamic>{'id': m.id, 'name': cleanName};
+        }).toList();
         isLoading = false;
       });
-      print("Error fetching employees: $e");
+      print('[AddTaskSheet] Loaded ${employees.length} employees');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => isLoading = false);
+      print('[AddTaskSheet] Error fetching employees: $e');
     }
   }
 
@@ -307,7 +276,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                                   .map(
                                     (emp) => Chip(
                                       label: Text(
-                                        '${emp['id']} ${emp['name']}',
+                                        emp['name'],
                                         style: const TextStyle(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w600),
@@ -572,7 +541,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                                                     width: 8),
                                                 Expanded(
                                                   child: Text(
-                                                    '${employee['id']} ${employee['name']}',
+                                                    employee['name'],
                                                     style:
                                                         const TextStyle(
                                                             fontSize:

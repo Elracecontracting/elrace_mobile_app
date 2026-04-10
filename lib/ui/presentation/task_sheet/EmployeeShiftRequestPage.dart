@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:el_race/ui/presentation/signin/data/model.dart'; // Import login model
+import 'package:el_race/ui/presentation/todo_list/services/team_members_api_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../widgets/header_widget.dart';
@@ -179,50 +180,23 @@ class _EmployeeShiftRequestPageState extends State<EmployeeShiftRequestPage> {
 
   Future<void> _fetchEmployees() async {
     if (!mounted) return;
-
-    setState(() {
-      isLoading = true;
-    });
-
+    setState(() => isLoading = true);
     try {
-      final token = widget.loginResponseModel.result?.token;
-
-      final headers = {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": "Bearer $token",
-      };
-
-      final body = jsonEncode({
-        "jsonrpc": "2.0",
-        "params": {},
-      });
-
-      final url = Uri.parse("https://erp.elrace.com/api/employee/list");
-
-      final request = http.Request('GET', url)
-        ..headers.addAll(headers)
-        ..body = body;
-
-      final streamedResponse = await request.send();
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (!mounted) return;
-        setState(() {
-          employees = List<Map<String, dynamic>>.from(data['result']['employees']);
-          isLoading = false;
-        });
-      } else {
-        throw Exception("Failed to load employees: ${response.statusCode}");
-      }
-    } catch (e) {
+      final members = await TeamMembersApiService.instance
+          .getTeamMembers(forceRefresh: true);
       if (!mounted) return;
       setState(() {
+        employees = members.map((m) {
+          final cleanName = m.name.replaceFirst(RegExp(r'^\d+\s+'), '');
+          return <String, dynamic>{'id': m.id, 'name': cleanName};
+        }).toList();
         isLoading = false;
       });
-      print("Error fetching employees: $e");
+      print('[EmployeeShiftPage] Loaded ${employees.length} employees');
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => isLoading = false);
+      print('[EmployeeShiftPage] Error fetching employees: $e');
     }
   }
 
