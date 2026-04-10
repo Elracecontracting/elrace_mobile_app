@@ -110,17 +110,17 @@ class SharedPref {
     final data = checkLoginAndRegistration();
     final loginData = data['loginResponse'] as LoginResponseModel?;
 
-    // Debug: Print all user data fields
-    if (loginData?.result?.data != null) {
-      print('\n🔐 ===== LOGIN DATA DEBUG =====');
-      print('uid: ${loginData!.result!.data!.uid}');
-      print('emp_id: ${loginData.result!.data!.emp_id}');
-      print('emp_profile_id: ${loginData.result!.data!.emp_profile_id}');
-      print('username: ${loginData.result!.data!.username}');
-      print('name: ${loginData.result!.data!.name}');
-      print('emp_name: ${loginData.result!.data!.emp_name}');
-      print('===============================\n');
-    }
+    // Debug: Print all user data fields (silenced to reduce noise)
+    // if (loginData?.result?.data != null) {
+    //   print('\n🔐 ===== LOGIN DATA DEBUG =====');
+    //   print('uid: ${loginData!.result!.data!.uid}');
+    //   print('emp_id: ${loginData.result!.data!.emp_id}');
+    //   print('emp_profile_id: ${loginData.result!.data!.emp_profile_id}');
+    //   print('username: ${loginData.result!.data!.username}');
+    //   print('name: ${loginData.result!.data!.name}');
+    //   print('emp_name: ${loginData.result!.data!.emp_name}');
+    //   print('===============================\n');
+    // }
 
     // Return empty model if not authenticated (for guest mode)
     return loginData ?? LoginResponseModel();

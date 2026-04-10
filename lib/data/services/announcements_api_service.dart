@@ -64,9 +64,9 @@ class AnnouncementsApiService {
         }
       };
 
-      print('📤 API Request to $url');
-      print('📋 Request body: $requestBody');
-      print('🔑 Token: ${token.substring(0, 20)}...');
+      // print('📤 API Request to $url');
+      // print('📋 Request body: $requestBody');
+      // print('🔑 Token: ${token.substring(0, 20)}...');
 
       // Make API call
       final response = await _dio.post(
@@ -80,8 +80,8 @@ class AnnouncementsApiService {
         ),
       );
 
-      print('📥 Response status: ${response.statusCode}');
-      print('📦 Response data: ${response.data}');
+      // print('📥 Response status: ${response.statusCode}');
+      // print('📦 Response data: ${response.data}');
 
       // Handle response
       if (response.statusCode == 200) {

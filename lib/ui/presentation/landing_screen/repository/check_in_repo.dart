@@ -9,11 +9,6 @@ import '../../../../utils/urll_utils.dart';
 
 UserRepo _userRepo = UserRepo();
 
-DateTime now = DateTime.now();
-
-// Format it as 'YYYY-MM-DD HH:mm:ss'
-String formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
-
 ApiQuery _apiQuery = ApiQuery();
 
 /// Check-In Repository
@@ -42,11 +37,14 @@ class CheckInREpo {
       };
       var officeId = userResponse!.result!.data!.default_operating_unit_id;
 
+      // Compute fresh timestamp at call time (NOT at import time)
+      final String formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+
       Map<String, dynamic> data = {
         "jsonrpc": "2.0",
         "params": {
           "user_id": int.tryParse(userID.toString()) ?? 0,
-          "device_id": 'QKQ1.200209.002',
+          "device_id": deviceInfo,
           "checkin_date_time": formattedDate,
           "check_in_long": long,
           "check_in_lat": lat,

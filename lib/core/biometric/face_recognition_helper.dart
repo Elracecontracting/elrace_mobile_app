@@ -76,22 +76,10 @@ class FaceRecognitionHelper {
               isVerification: true,
               title: 'Verify for $actionType',
               subtitle: 'Position your face to complete $actionType',
-              onVerificationSuccess: () async {
-                // Trigger check-in/out after verification based on current state
-                if (context.mounted) {
-                  final currentlyCheckedIn = await _isCurrentlyCheckedIn();
-                  if (currentlyCheckedIn) {
-                    // User is checked in → perform check-out
-                    final checkInRecordId =
-                        SharedPref().getPreferenceInt('checkInRecordIdBloc');
-                    sl.get<CheckOutBloc>().add(
-                        CheckOutET(checkInRecordId, isAutoCheckout: false));
-                  } else {
-                    // User is NOT checked in → perform check-in
-                    sl.get<CheckInBloc>().add(CheckInET());
-                  }
-                }
-              },
+              // NOTE: check-in/check-out is handled by _performCheckInOut()
+              // in custom_swipe_button.dart AFTER this screen returns true.
+              // Do NOT duplicate that logic here.
+              onVerificationSuccess: null,
             ),
           ),
         ),

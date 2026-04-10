@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'package:bloc/bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/core/services/attendance_status_sync_service.dart';
 import 'package:el_race/ui/presentation/landing_screen/repository/check_in_repo.dart';
 import 'package:equatable/equatable.dart';
 import 'package:geolocator/geolocator.dart';
@@ -367,7 +368,6 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
         print('---- ${responseData.toString()}');
         if (responseData['status'] == 'success') {
           final checkInRecordId = responseData['check_in_record_id'];
-          print('checkInRecordIdBloc: $checkInRecordId');
           await SharedPref()
               .setPreferenceInt('checkInRecordId', checkInRecordId);
 
@@ -376,23 +376,33 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
           final displayTime =
               '${uaeTime.hour.toString().padLeft(2, '0')}:${uaeTime.minute.toString().padLeft(2, '0')}:${uaeTime.second.toString().padLeft(2, '0')}';
 
-          print('\n🟢 ===== CHECK-IN BLOC - SAVING TIME =====');
-          print('🟢 Key: checkInDisplayTime');
-          print('🟢 Value: $displayTime');
-          print('🟢 ========================================\n');
+          print('\n🟢 ===== CHECK-IN BLOC =====');
+          print('🟢 checkInDisplayTime = $displayTime');
+          print('🟢 checkInRecordId = $checkInRecordId');
+          print('🟢 isCheckedIn = true');
 
           await SharedPref()
               .setPreferencesString('checkInDisplayTime', displayTime);
-          print('✅ Check-in time saved to SharedPref: $displayTime');
 
           // Save check-in timestamp for 16-hour reset logic
-          await SharedPref().setPreferenceInt(
-              'checkInTime', DateTime.now().millisecondsSinceEpoch);
+          final checkInMs = DateTime.now().millisecondsSinceEpoch;
+          await SharedPref().setPreferenceInt('checkInTime', checkInMs);
 
           // Reset check-out time
-          print('🟢 Resetting checkOutDisplayTime to 00:00:00');
           await SharedPref()
               .setPreferencesString('checkOutDisplayTime', '00:00:00');
+
+          // Log final SharedPref state
+          print('🟢 --- SharedPref state after check-in ---');
+          print('🟢 isCheckedIn = ${SharedPref().getPreferenceBoolean('isCheckedIn')}');
+          print('🟢 checkInDisplayTime = ${SharedPref().getPreferenceString('checkInDisplayTime')}');
+          print('🟢 checkOutDisplayTime = ${SharedPref().getPreferenceString('checkOutDisplayTime')}');
+          print('🟢 checkInTime (ms) = $checkInMs');
+          print('🟢 lastLocalCheckOutTime = ${SharedPref().getPreferenceInt('lastLocalCheckOutTime')}');
+          print('🟢 ===== END CHECK-IN BLOC =====\n');
+
+          // Guard local state from being overwritten by stale server sync
+          AttendanceStatusSyncService.markLocalAction();
 
           emit(CheckedInST(responseData['message'], checkInRecordId));
         } else if (responseData['status'] == 'warning') {
@@ -406,15 +416,26 @@ class CheckInBloc extends Bloc<CheckInEvent, CheckInState> {
               '${uaeTime.hour.toString().padLeft(2, '0')}:${uaeTime.minute.toString().padLeft(2, '0')}:${uaeTime.second.toString().padLeft(2, '0')}';
           await SharedPref()
               .setPreferencesString('checkInDisplayTime', displayTime);
-          print('✅ Check-in time saved (warning): $displayTime');
+          print('🟢 Check-in time saved (warning): $displayTime');
 
           // Save check-in timestamp for 16-hour reset logic
-          await SharedPref().setPreferenceInt(
-              'checkInTime', DateTime.now().millisecondsSinceEpoch);
+          final checkInMs2 = DateTime.now().millisecondsSinceEpoch;
+          await SharedPref().setPreferenceInt('checkInTime', checkInMs2);
 
           // Reset check-out time
           await SharedPref()
               .setPreferencesString('checkOutDisplayTime', '00:00:00');
+
+          // Log final SharedPref state
+          print('🟢 --- SharedPref state after check-in (warning) ---');
+          print('🟢 isCheckedIn = ${SharedPref().getPreferenceBoolean('isCheckedIn')}');
+          print('🟢 checkInDisplayTime = ${SharedPref().getPreferenceString('checkInDisplayTime')}');
+          print('🟢 checkOutDisplayTime = ${SharedPref().getPreferenceString('checkOutDisplayTime')}');
+          print('🟢 checkInTime (ms) = $checkInMs2');
+          print('🟢 lastLocalCheckOutTime = ${SharedPref().getPreferenceInt('lastLocalCheckOutTime')}');
+
+          // Guard local state from being overwritten by stale server sync
+          AttendanceStatusSyncService.markLocalAction();
 
           emit(CheckInWarningST(responseData['message'], checkInRecordId));
         } else {

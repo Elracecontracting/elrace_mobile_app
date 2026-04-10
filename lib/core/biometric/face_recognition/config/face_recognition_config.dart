@@ -47,8 +47,8 @@ class FaceRecognitionConfig {
   /// Enable Firebase face verification
   static const bool enableFirebaseVerification = true;
 
-  /// Firebase cosine similarity threshold (stricter)
-  static const double firebaseCosineSimilarityThreshold = 0.65;
+  /// Firebase cosine similarity threshold
+  static const double firebaseCosineSimilarityThreshold = 0.50;
 
   // ==================== MATCHING CONFIG ====================
 
@@ -56,8 +56,9 @@ class FaceRecognitionConfig {
   static const bool useCosineSimilarity = true;
 
   /// Cosine similarity threshold (0.0 - 1.0, higher = stricter)
-  /// INCREASED from 0.55 to 0.65 for better security
-  static const double cosineSimilarityThreshold = 0.65;
+  /// Lowered from 0.65 to 0.50 for MobileFaceNet lightweight model
+  /// Multi-frame averaging + best-match scoring provide additional security
+  static const double cosineSimilarityThreshold = 0.50;
 
   /// Euclidean distance threshold (lower = stricter)
   /// DECREASED from 0.8 to 0.60 for better security

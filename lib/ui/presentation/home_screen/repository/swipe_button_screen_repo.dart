@@ -14,9 +14,9 @@ class CustomSwipeButtonRepo {
 
       final jsonData = jsonDecode(storedData);
       final storedLoginResponse = LoginResponseModel.fromJson(jsonData);
-      print(storedLoginResponse);
+      // print(storedLoginResponse);
       token = storedLoginResponse.result?.token;
-      print("🔁 Fallback token loaded from SharedPreferences: $token");
+      // print("🔁 Fallback token loaded from SharedPreferences: $token");
     }
 
     // 🚫 Still missing token?
@@ -44,8 +44,8 @@ class CustomSwipeButtonRepo {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      print("📡 Response: ${response.statusCode}");
-      print("📦 Body: ${response.body}\nToken: $token");
+      // print("📡 Response: ${response.statusCode}");
+      // print("📦 Body: ${response.body}\nToken: $token");
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -59,7 +59,7 @@ class CustomSwipeButtonRepo {
         throw Exception("Failed to load projects: ${response.statusCode}");
       }
     } catch (e) {
-      print('⚠️ Error in _fetchProjects: $e');
+      // print('⚠️ Error in _fetchProjects: $e');
       rethrow;
     }
   }
@@ -84,23 +84,23 @@ class CustomSwipeButtonRepo {
         "office": null
       }
     });
-    print('🌍 ════════════════════════════════════════════════════════');
-    print('📍 اللوكيشن تبعك الحين:');
-    print('   Latitude: $latitude');
-    print('   Longitude: $longitude');
-    print('🏗️ Project ID: $projectId');
-    print('📤 Request Body: $body');
+    // print('🌍 ════════════════════════════════════════════════════════');
+    // print('📍 اللوكيشن تبعك الحين:');
+    // print('   Latitude: $latitude');
+    // print('   Longitude: $longitude');
+    // print('🏗️ Project ID: $projectId');
+    // print('📤 Request Body: $body');
     try {
       final response = await http.post(url, headers: headers, body: body);
-      print('📥 Response Status: ${response.statusCode}');
-      print('📦 Response Body: ${response.body}');
+      // print('📥 Response Status: ${response.statusCode}');
+      // print('📦 Response Body: ${response.body}');
       final data = jsonDecode(response.body);
-      print('✅ Result: ${data['result']}');
-      print('🌍 ════════════════════════════════════════════════════════');
+      // print('✅ Result: ${data['result']}');
+      // print('🌍 ════════════════════════════════════════════════════════');
       return data['result'];
     } catch (e) {
-      print('❌ Error: $e');
-      print('🌍 ════════════════════════════════════════════════════════');
+      // print('❌ Error: $e');
+      // print('🌍 ════════════════════════════════════════════════════════');
       return {"status": "error", "message": "Failed to validate location: $e"};
     }
   }

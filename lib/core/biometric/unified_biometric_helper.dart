@@ -24,43 +24,44 @@ class UnifiedBiometricHelper {
       final loginData = SharedPref.getLoginData();
 
       // Debug: Print available data
-      debugPrint('🔍 UnifiedBiometricHelper: Getting user ID...');
-      debugPrint('  - uid: ${loginData.result?.data?.uid}');
-      debugPrint('  - username: ${loginData.result?.data?.username}');
-      debugPrint('  - emp_id: ${loginData.result?.data?.emp_id}');
+      // debugPrint('🔍 UnifiedBiometricHelper: Getting user ID...');
+      // debugPrint('  - uid: ${loginData.result?.data?.uid}');
+      // debugPrint('  - username: ${loginData.result?.data?.username}');
+      // debugPrint('  - emp_id: ${loginData.result?.data?.emp_id}');
       debugPrint(
           '  - emp_profile_id: ${loginData.result?.data?.emp_profile_id}');
 
       // Priority: emp_id > emp_profile_id > uid > username
-      final userId = loginData.result?.data?.emp_id ??
-          loginData.result?.data?.emp_profile_id ??
-          loginData.result?.data?.uid?.toString() ??
-          loginData.result?.data?.username;
-
-      if (userId == null || userId.isEmpty) {
-        debugPrint('❌ UnifiedBiometricHelper: No user ID found');
-        debugPrint('   Login data structure: ${loginData.result?.data}');
-        return null;
-      }
-
-      // Detailed logging about which field was selected
+      // Apply same null/empty/"null" checks as registration to ensure consistency
       final empId = loginData.result?.data?.emp_id;
       final empProfileId = loginData.result?.data?.emp_profile_id;
-      final uid = loginData.result?.data?.uid;
+      final uid = loginData.result?.data?.uid?.toString();
+      final username = loginData.result?.data?.username;
 
-      if (empId != null && empId.isNotEmpty) {
-        debugPrint('✅ Selected emp_id: $userId');
-      } else if (empProfileId != null && empProfileId.isNotEmpty) {
-        debugPrint('✅ Selected emp_profile_id: $userId');
-      } else if (uid != null) {
-        debugPrint('✅ Selected uid: $userId');
-      } else {
-        debugPrint('✅ Selected username: $userId');
+      String? userId;
+      if (empId != null && empId.isNotEmpty && empId != 'null') {
+        userId = empId;
+        // debugPrint('✅ Selected emp_id: $userId');
+      } else if (empProfileId != null && empProfileId.isNotEmpty && empProfileId != 'null') {
+        userId = empProfileId;
+        // debugPrint('✅ Selected emp_profile_id: $userId');
+      } else if (uid != null && uid.isNotEmpty && uid != 'null') {
+        userId = uid;
+        // debugPrint('✅ Selected uid: $userId');
+      } else if (username != null && username.isNotEmpty && username != 'null') {
+        userId = username;
+        // debugPrint('✅ Selected username: $userId');
+      }
+
+      if (userId == null || userId.isEmpty) {
+        // debugPrint('❌ UnifiedBiometricHelper: No user ID found');
+        // debugPrint('   Login data structure: ${loginData.result?.data}');
+        return null;
       }
 
       return userId;
     } catch (e) {
-      debugPrint('❌ UnifiedBiometricHelper: Error getting user ID: $e');
+      // debugPrint('❌ UnifiedBiometricHelper: Error getting user ID: $e');
       return null;
     }
   }
@@ -68,14 +69,14 @@ class UnifiedBiometricHelper {
   /// Authenticate for attendance (check-in/out)
   /// Now uses Face Recognition instead of platform biometrics
   static Future<bool> authenticateForAttendance(BuildContext context) async {
-    print('\n📍 ===== UnifiedBiometricHelper.authenticateForAttendance =====');
+    // print('\n📍 ===== UnifiedBiometricHelper.authenticateForAttendance =====');
     final userId = await _getCurrentUserId();
-    print('📍 Selected userId to pass: $userId');
+    // print('📍 Selected userId to pass: $userId');
     print(
         '====================================================================\n');
 
     if (userId == null) {
-      print('❌ authenticateForAttendance: userId is null, returning false');
+      // print('❌ authenticateForAttendance: userId is null, returning false');
       return false;
     }
 

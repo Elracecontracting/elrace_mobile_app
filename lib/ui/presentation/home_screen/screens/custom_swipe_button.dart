@@ -65,8 +65,10 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   @override
   void initState() {
     super.initState();
-    _loadCheckInState();
+    // IMPORTANT: Load display times FIRST so _checkInDisplayTime has a value
+    // before _loadCheckInState starts the live timer calculation.
     _loadDisplayTimes();
+    _loadCheckInState();
     _attendanceSyncSubscription = AttendanceStatusSyncService.updates.listen(
       (snapshot) {
         if (!mounted) return;
@@ -114,10 +116,10 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
     final checkIn = SharedPref().getPreferenceString('checkInDisplayTime');
     final checkOut = SharedPref().getPreferenceString('checkOutDisplayTime');
 
-    print('\n⏰ ===== LOADING DISPLAY TIMES =====');
-    print('⏰ Reading from SharedPref:');
-    print('⏰   checkInDisplayTime = "$checkIn"');
-    print('⏰   checkOutDisplayTime = "$checkOut"');
+    // print('\n⏰ ===== LOADING DISPLAY TIMES =====');
+    // print('⏰ Reading from SharedPref:');
+    // print('⏰   checkInDisplayTime = "$checkIn"');
+    // print('⏰   checkOutDisplayTime = "$checkOut"');
 
     setState(() {
       _checkInDisplayTime =
@@ -127,10 +129,10 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
       _calculateTotalHours();
     });
 
-    print('⏰ After setState:');
-    print('⏰   _checkInDisplayTime (GREEN/LEFT) = $_checkInDisplayTime');
-    print('⏰   _checkOutDisplayTime (RED/RIGHT) = $_checkOutDisplayTime');
-    print('⏰ ===================================\n');
+    // print('⏰ After setState:');
+    // print('⏰   _checkInDisplayTime (GREEN/LEFT) = $_checkInDisplayTime');
+    // print('⏰   _checkOutDisplayTime (RED/RIGHT) = $_checkOutDisplayTime');
+    // print('⏰ ===================================\n');
   }
 
   /// Calculate total hours between check-in and check-out
@@ -205,7 +207,8 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
   /// بدء العداد التصاعدي
   void _startLiveTimer() {
     _liveTimer?.cancel();
-    _liveTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+    // Update every second so the display is always current
+    _liveTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted && isCheckedIn) {
         setState(() {
           _calculateLiveTotalHours();
@@ -214,8 +217,10 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
         timer.cancel();
       }
     });
-    // Update immediately
-    _calculateLiveTotalHours();
+    // Update immediately on the first frame
+    setState(() {
+      _calculateLiveTotalHours();
+    });
   }
 
   /// إيقاف العداد التصاعدي
@@ -282,21 +287,21 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
             checkInDateTime.toUtc().add(const Duration(hours: 4));
 
         // DEBUG: طباعة معلومات التشخيص
-        debugPrint('⏰ ===== CHECK-IN RESET DEBUG =====');
-        debugPrint('⏰ Dubai Now: $dubaiNow');
-        debugPrint('⏰ Check-in Time (stored): $checkInDateTime');
-        debugPrint('⏰ Check-in Dubai Time: $checkInDubaiTime');
-        debugPrint('⏰ Last Reset Time (5 AM): $lastResetTime');
-        debugPrint(
-            '⏰ Should reset? ${checkInDubaiTime.isBefore(lastResetTime)}');
-        debugPrint('⏰ ================================');
+        // debugPrint('⏰ ===== CHECK-IN RESET DEBUG =====');
+        // debugPrint('⏰ Dubai Now: $dubaiNow');
+        // debugPrint('⏰ Check-in Time (stored): $checkInDateTime');
+        // debugPrint('⏰ Check-in Dubai Time: $checkInDubaiTime');
+        // debugPrint('⏰ Last Reset Time (5 AM): $lastResetTime');
+        // debugPrint(
+        //     '⏰ Should reset? ${checkInDubaiTime.isBefore(lastResetTime)}');
+        // debugPrint('⏰ ================================');
 
         // إذا كان check-in قبل آخر وقت reset، يجب reset الحالة
         if (checkInDubaiTime.isBefore(lastResetTime)) {
-          debugPrint(
-              '⏰ Check-in was before 5:00 AM reset time. Resetting state...');
-          debugPrint('⏰ Check-in Dubai time: $checkInDubaiTime');
-          debugPrint('⏰ Last reset time: $lastResetTime');
+          // debugPrint(
+          //     '⏰ Check-in was before 5:00 AM reset time. Resetting state...');
+          // debugPrint('⏰ Check-in Dubai time: $checkInDubaiTime');
+          // debugPrint('⏰ Last reset time: $lastResetTime');
 
           // Reset check in/out state
           SharedPref().setPreferencesBoolean('isCheckedIn', false);
@@ -494,7 +499,11 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           isCheckedIn: isCheckedIn,
           onConfirmed: () async {
             // Bypass authentication if test mode OR faceIdEnabled=false from backend config
+            print('🔐 Face ID check: shouldSkipFaceId=${AppConfigService.instance.shouldSkipFaceId}, '
+                'isTestMode=${AppConfigService.instance.isTestMode}, '
+                'faceIdEnabled=${AppConfigService.instance.faceIdEnabled}');
             if (AppConfigService.instance.shouldSkipFaceId) {
+              print('⏭️ Skipping face verification (shouldSkipFaceId=true)');
               _performCheckInOut();
               _resetPosition();
               return;
@@ -507,6 +516,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
             if (authenticated) {
               // Authentication successful - perform check-in/out
               _performCheckInOut();
+              _resetPosition();
             } else {
               // Authentication failed or cancelled - reset position
               _resetPosition();
@@ -540,33 +550,35 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
 
       // جدولة Auto Check-out في الساعة 5 مساءً
       await AutoCheckoutService.scheduleAutoCheckout();
-      debugPrint('✅ Auto checkout scheduled for 5:00 PM after check-in');
+      // debugPrint('✅ Auto checkout scheduled for 5:00 PM after check-in');
 
       // جدولة إشعارات التذكير بـ check out (من 4 مساءً - 5 مساءً)
       await CheckInReminderNotificationService().updateReminders();
-      debugPrint('✅ Check-out reminder notifications scheduled');
+      // debugPrint('✅ Check-out reminder notifications scheduled');
     } else {
       // Perform global check-out (manual)
       final checkInRecordId = SharedPref().getPreferenceInt('checkInRecordId');
-      if (checkInRecordId != 0) {
-        sl
-            .get<CheckOutBloc>()
-            .add(CheckOutET(checkInRecordId, isAutoCheckout: false));
-        Get.find<TimerController>().stopTimer();
-
-        // إلغاء جدولة Auto Check-out عند Check-out اليدوي
-        await AutoCheckoutService.cancelAutoCheckout();
-        debugPrint('✅ Auto checkout cancelled after manual check-out');
-
-        // Clear saved check-in project (used for display only)
-        SharedPref().removePreference('checkInProjectId');
-        SharedPref().removePreference('checkInBranchId');
-        SharedPref().removePreference('checkInAuthMethod');
-
-        // تحديث الإشعارات لجدولة تذكيرات check in (من 8 صباحاً - 9 صباحاً)
-        await CheckInReminderNotificationService().updateReminders();
-        debugPrint('✅ Check-in reminder notifications scheduled');
+      print('🔴 _performCheckInOut: CHECK-OUT requested, checkInRecordId=$checkInRecordId');
+      if (checkInRecordId == 0) {
+        print('⚠️ _performCheckInOut: checkInRecordId is 0! Sending anyway — backend should resolve.');
       }
+      sl
+          .get<CheckOutBloc>()
+          .add(CheckOutET(checkInRecordId, isAutoCheckout: false));
+      Get.find<TimerController>().stopTimer();
+
+      // إلغاء جدولة Auto Check-out عند Check-out اليدوي
+      await AutoCheckoutService.cancelAutoCheckout();
+      // debugPrint('✅ Auto checkout cancelled after manual check-out');
+
+      // Clear saved check-in project (used for display only)
+      SharedPref().removePreference('checkInProjectId');
+      SharedPref().removePreference('checkInBranchId');
+      SharedPref().removePreference('checkInAuthMethod');
+
+      // تحديث الإشعارات لجدولة تذكيرات check in (من 8 صباحاً - 9 صباحاً)
+      await CheckInReminderNotificationService().updateReminders();
+      // debugPrint('✅ Check-in reminder notifications scheduled');
     }
 
     setState(() {

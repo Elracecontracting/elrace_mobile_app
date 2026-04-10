@@ -269,7 +269,11 @@ class _FaceRegistrationScreenState extends State<FaceRegistrationScreen>
   void _stopLivenessStream() {
     _isStreamingForLiveness = false;
     try {
-      _cameraController?.stopImageStream();
+      if (_cameraController != null &&
+          _cameraController!.value.isInitialized &&
+          _cameraController!.value.isStreamingImages) {
+        _cameraController!.stopImageStream();
+      }
     } catch (e) {
       print('⚠️ Error stopping liveness stream: $e');
     }
