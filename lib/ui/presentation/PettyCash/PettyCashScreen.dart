@@ -23,6 +23,7 @@ class PettyCashScreen extends StatefulWidget {
 class _PettyCashScreenState extends State<PettyCashScreen> {
   bool _isLoading = true;
   String _error = '';
+  bool _isNotHolder = false;
   _PettyCashHomeData _home = const _PettyCashHomeData.empty();
 
   final NumberFormat _wholeAmountFormat = NumberFormat('#,##0.##');
@@ -64,18 +65,17 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
     try {
       final decoded = jsonDecode(loginJson) as Map<String, dynamic>;
       final result = decoded['result'];
-      if (result is! Map<String, dynamic>) {
-        return null;
-      }
+      if (result is! Map<String, dynamic>) return null;
 
       final data = result['data'];
-      if (data is! Map<String, dynamic>) {
-        return null;
-      }
+      if (data is! Map<String, dynamic>) return null;
 
       final rawHolderId = data['holder_id'];
-      if (rawHolderId is int) {
-        return rawHolderId;
+      if (rawHolderId is int) return rawHolderId;
+      if (rawHolderId is List &&
+          rawHolderId.isNotEmpty &&
+          rawHolderId.first is int) {
+        return rawHolderId.first as int;
       }
       return int.tryParse(rawHolderId?.toString() ?? '');
     } catch (_) {
@@ -89,6 +89,7 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
     setState(() {
       _isLoading = true;
       _error = '';
+      _isNotHolder = false;
     });
 
     try {
@@ -98,9 +99,14 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
       }
 
       final holderId = _resolveHolderId();
-      debugPrint('PettyCashHome holderId: $holderId');
       if (holderId == null) {
-        throw Exception('Petty cash holder_id is missing from login data');
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _isNotHolder = true;
+          });
+        }
+        return;
       }
 
       final url = Uri.parse('https://erp.elrace.com/api/petty_cash_home');
@@ -245,6 +251,42 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
       appBar: const HeaderWidget(),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
+          : _isNotHolder
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 64,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Not a Petty Cash Holder',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Your account is not assigned as a petty cash holder. Please contact your administrator.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black54,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                )
           : _error.isNotEmpty
               ? Center(
                   child: Padding(

@@ -93,18 +93,18 @@ class UserRepo {
 
   setLoginResponse(LoginResponseModel? loginResponse) async {
     if (loginResponse != null) {
-      print('\n💾 ========== SAVING LOGIN RESPONSE ==========');
+      // print('\n💾 ========== SAVING LOGIN RESPONSE ==========');
       SharedPreferences sharedPreferences =
           await SharedPreferences.getInstance();
       String userData = json.encode(loginResponse.toJson());
       await sharedPreferences.setString('loginResponse', userData);
 
-      print('✅ Login response saved to SharedPreferences');
-      print('📦 Saved Data:');
-      print(const JsonEncoder.withIndent('  ').convert(loginResponse.toJson()));
-      print('💾 ========== SAVE COMPLETE ==========\n');
+      // print('✅ Login response saved to SharedPreferences');
+      // print('📦 Saved Data:');
+      // print(const JsonEncoder.withIndent('  ').convert(loginResponse.toJson()));
+      // print('💾 ========== SAVE COMPLETE ==========\n');
     } else {
-      print('⚠️ Attempted to save NULL login response');
+      // print('⚠️ Attempted to save NULL login response');
     }
   }
 
@@ -113,18 +113,18 @@ class UserRepo {
     String? userData = sharedPreferences.getString('loginResponse');
 
     if (userData == null) {
-      print('⚠️ No login data found in SharedPreferences');
+      // print('⚠️ No login data found in SharedPreferences');
       return null;
     }
 
-    print('\n📖 Retrieved login data from SharedPreferences');
+    // print('\n📖 Retrieved login data from SharedPreferences');
     final loginData = LoginResponseModel.fromJson(jsonDecode(userData));
 
-    print('👤 Current User:');
-    print('  - Employee ID: ${loginData.result?.data?.emp_id}');
-    print('  - Employee Profile ID: ${loginData.result?.data?.emp_profile_id}');
-    print('  - Token: ${loginData.result?.token?.substring(0, 30)}...');
-    print('  - QR Status: ${loginData.result?.data?.qr_status}');
+    // print('👤 Current User:');
+    // print('  - Employee ID: ${loginData.result?.data?.emp_id}');
+    // print('  - Employee Profile ID: ${loginData.result?.data?.emp_profile_id}');
+    // print('  - Token: ${loginData.result?.token?.substring(0, 30)}...');
+    // print('  - QR Status: ${loginData.result?.data?.qr_status}');
 
     return loginData;
   }

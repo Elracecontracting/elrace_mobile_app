@@ -199,6 +199,14 @@ Future<void> _playAdhanInBackground(String prayerName) async {
 Future<bool> _handleCounterResetTask() async {
   try {
     await SharedPref().instantiatePreferences();
+
+    // إذا المستخدم مو مسجّل دخول، لا تصفّر ولا تجدول تذكيرات
+    final isLoggedIn = await HiveService.isUserLoggedIn();
+    if (!isLoggedIn) {
+      debugPrint('ℹ️ User not logged in — skipping counter reset & reminders');
+      return true;
+    }
+
     await CounterResetService.executeResetNow();
     debugPrint('✅ Counter reset task completed');
     return true;

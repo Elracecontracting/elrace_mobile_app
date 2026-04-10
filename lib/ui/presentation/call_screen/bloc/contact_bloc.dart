@@ -29,24 +29,24 @@ class ContactBloc extends Bloc<ContactEvent, ContactState> {
       GetEmployeeLisET event, Emitter<ContactState> emit) async {
     final currentUserKey = _resolveCurrentUserKey();
     if (_cachedUserKey != null && _cachedUserKey != currentUserKey) {
-      print('🔄 User changed in ContactBloc, clearing cached contacts');
+      // print('🔄 User changed in ContactBloc, clearing cached contacts');
       empList.clear();
       filteredEmpList.clear();
     }
 
-    print('\n🟢 ========== FETCHING CONTACTS ==========');
-    print('📊 Current empList size: ${empList.length}');
-    print('👤 Current user key: $currentUserKey');
+    // print('\\n🟢 ========== FETCHING CONTACTS ==========');
+    // print('📊 Current empList size: ${empList.length}');
+    // print('👤 Current user key: $currentUserKey');
 
     if (empList.isNotEmpty) {
-      print('✅ Using cached data');
+      // print('✅ Using cached data');
       filteredEmpList = List<Employee>.from(empList);
       emit(EmployeeListLoaded(List<Employee>.from(filteredEmpList)));
-      print('🟢 ========== END FETCHING CONTACTS ==========\n');
+      // print('🟢 ========== END FETCHING CONTACTS ==========\\n');
       return;
     }
 
-    print('⏳ Loading contacts from API...');
+    // print('⏳ Loading contacts from API...');
     emit(const ContactLoadingState(isLoading: true));
 
     log('empModel.result!.employees! 1');
@@ -55,12 +55,12 @@ class ContactBloc extends Bloc<ContactEvent, ContactState> {
     log('empModel.result!.employees! 2');
 
     if (response.statusCode == 200) {
-      print('✅ API Response Success (200)');
+      // print('✅ API Response Success (200)');
       final empModel = employeeModelFromJson(response.body);
 
       // Guard against error payloads and nulls
       final employees = empModel.result?.employees ?? [];
-      print('📊 Parsed ${employees.length} employees');
+      // print('📊 Parsed ${employees.length} employees');
 
       emit(const ContactLoadingState(isLoading: false));
       if (employees.isNotEmpty) {
@@ -68,27 +68,15 @@ class ContactBloc extends Bloc<ContactEvent, ContactState> {
         filteredEmpList = employees;
         _cachedUserKey = currentUserKey;
 
-        // Print first 3 employees for verification
-        print('\n📋 First 3 Employees:');
-        for (var i = 0;
-            i < (employees.length > 3 ? 3 : employees.length);
-            i++) {
-          final emp = employees[i];
-          print('  ${i + 1}. ${emp.name}');
-          print('     - Database ID: ${emp.id}');
-          print('     - Employee ID: ${emp.empId ?? "NULL"} ⚠️');
-          print('     - Job ID: ${emp.jobId}');
-          print('     - Mobile: ${emp.mobilePhone}');
-        }
-
+        // First 3 employees print silenced
         emit(EmployeeListLoaded(List<Employee>.from(filteredEmpList)));
-        print('✅ Emitted ${employees.length} employees to UI');
-        print('🟢 ========== END FETCHING CONTACTS ==========\n');
+        // print('✅ Emitted ${employees.length} employees to UI');
+        // print('🟢 ========== END FETCHING CONTACTS ==========\\n');
       }
       return;
     } else {
-      print('❌ API Response Failed: ${response.statusCode}');
-      print('🟢 ========== END FETCHING CONTACTS ==========\n');
+      // print('❌ API Response Failed: ${response.statusCode}');
+      // print('🟢 ========== END FETCHING CONTACTS ==========\\n');
     }
 
     log(response.body);

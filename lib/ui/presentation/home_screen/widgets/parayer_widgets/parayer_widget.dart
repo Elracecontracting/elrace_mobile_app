@@ -294,8 +294,7 @@ class _ParayerWidgetState extends State<ParayerWidget>
           nextTime = _lastNextTime;
         }
 
-        debugPrint(
-            '🕐 Prayer Widget Build - nextTime: $nextTime, nextPrayer: $nextPrayer');
+        // debugPrint('🕐 Prayer Widget Build - nextTime: $nextTime, nextPrayer: $nextPrayer');
 
         // If no prayer times yet, show loading
         // if (pt == null) {
@@ -561,8 +560,7 @@ class _ParayerWidgetState extends State<ParayerWidget>
                                           );
                                         }),
                                         Builder(builder: (context) {
-                                          debugPrint(
-                                              '🕐 Prayer Timer - nextTime: $nextTime');
+                                          // debugPrint('🕐 Prayer Timer - nextTime: $nextTime');
                                           return PrayerCountdownTimer(
                                             nextPrayerTime: nextTime,
                                           );

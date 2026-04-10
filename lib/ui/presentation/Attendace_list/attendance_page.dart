@@ -155,6 +155,7 @@ class _AttendancePageState extends State<AttendancePage> {
     setState(() {
       expandedRecords.clear();
       _selectedActionCards.clear();
+      _managerEmployeeRecords.clear();
       _managerEmployeeLoading.clear();
       _managerEmployeeErrors.clear();
     });

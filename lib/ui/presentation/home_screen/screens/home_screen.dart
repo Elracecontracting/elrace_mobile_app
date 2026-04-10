@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreenPage>
       // Check if face registration is pending
       _checkFaceRegistration();
     } else {
-      print('🧪 Face ID disabled: Skipping face registration and model preloading');
+      // print('🧪 Face ID disabled: Skipping face registration and model preloading');
       // Clear any pending face verification flags
       SharedPref().setPreferencesBoolean('pendingFaceVerification', false);
       SharedPref().setPreferencesBoolean('isFaceRegistrationInProgress', false);
@@ -88,7 +88,7 @@ class _HomeScreenState extends State<HomeScreenPage>
   /// This ensures smooth experience when opening face registration
   Future<void> _preloadFaceModels() async {
     try {
-      print('🔄 Pre-loading face recognition models in background...');
+      // print('🔄 Pre-loading face recognition models in background...');
 
       // Initialize FaceNet model (this is the slow part)
       final faceNetService = FaceNetService();
@@ -98,9 +98,9 @@ class _HomeScreenState extends State<HomeScreenPage>
       final faceDetectorService = FaceDetectorService();
       await faceDetectorService.initialize();
 
-      print('✅ Face recognition models pre-loaded successfully');
+      // print('✅ Face recognition models pre-loaded successfully');
     } catch (e) {
-      print('⚠️ Pre-loading face models failed (will retry when needed): $e');
+      // print('⚠️ Pre-loading face models failed (will retry when needed): $e');
     }
   }
 
@@ -115,98 +115,107 @@ class _HomeScreenState extends State<HomeScreenPage>
         SharedPref().getPreferenceBoolean('pendingFaceVerification');
     final isRegistered = SharedPref().getPreferenceBoolean('isFaceRegistered');
 
-    print('🔍 Face Registration Check:');
-    print('  - isInProgress: $isInProgress');
-    print('  - isPending: $isPending');
-    print('  - isRegistered: $isRegistered');
+    // print('🔍 Face Registration Check:');
+    // print('  - isInProgress: $isInProgress');
+    // print('  - isPending: $isPending');
+    // print('  - isRegistered: $isRegistered');
 
     // If registration is in progress or pending and not yet registered
     if (isInProgress || (isPending && !isRegistered)) {
-      print('✅ Opening face registration screen...');
+      // print('✅ Opening face registration screen...');
       // Get userId from SharedPref - MUST match UnifiedBiometricHelper priority order!
-      final loginDataStr = SharedPref().getPreferenceString('loginResponse');
-      if (loginDataStr.isNotEmpty) {
-        try {
-          final loginData = jsonDecode(loginDataStr);
-          final data = loginData['result']?['data'] ?? loginData;
+      // Use the same model-based approach as UnifiedBiometricHelper to ensure consistent userId
+      String? userId;
+      
+      try {
+        final loginData = SharedPref.getLoginData();
+        
+        final empId = loginData.result?.data?.emp_id;
+        final empProfileId = loginData.result?.data?.emp_profile_id;
+        final uid = loginData.result?.data?.uid?.toString();
+        final username = loginData.result?.data?.username;
 
-          // Priority order: emp_id > emp_profile_id > uid > username (same as UnifiedBiometricHelper)
-          String? userId;
+        // print('🔍 Available user ID fields (from model):');
+        // print('   - emp_id: $empId');
+        // print('   - emp_profile_id: $empProfileId');
+        // print('   - uid: $uid');
+        // print('   - username: $username');
 
-          final empId = data['emp_id']?.toString();
-          final empProfileId = data['emp_profile_id']?.toString();
-          final uid = data['uid']?.toString();
-          final username = data['username']?.toString();
-
-          print('🔍 Available user ID fields:');
-          print('   - emp_id: $empId');
-          print('   - emp_profile_id: $empProfileId');
-          print('   - uid: $uid');
-          print('   - username: $username');
-
-          if (empId != null && empId.isNotEmpty && empId != 'null') {
-            userId = empId;
-            print('✅ Using emp_id: $userId');
-          } else if (empProfileId != null &&
-              empProfileId.isNotEmpty &&
-              empProfileId != 'null') {
-            userId = empProfileId;
-            print('✅ Using emp_profile_id: $userId');
-          } else if (uid != null && uid.isNotEmpty && uid != 'null') {
-            userId = uid;
-            print('✅ Using uid: $userId');
-          } else if (username != null &&
-              username.isNotEmpty &&
-              username != 'null') {
-            userId = username;
-            print('✅ Using username: $userId');
-          } else {
-            userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
-            print('⚠️ No user ID found, using fallback: $userId');
-          }
-
-          // Ensure userId is not null (use fallback if still null)
-          final finalUserId = userId;
-          print('📱 User ID for face registration: $finalUserId');
-
-          // Set flag to indicate face registration is in progress
-          SharedPref()
-              .setPreferencesBoolean('isFaceRegistrationInProgress', true);
-
-          // Navigate to face registration with BLoC provider
-          // Use regular push - WillPopScope in FaceRegistrationScreen will prevent going back
-          final success = await Navigator.of(context).push<bool>(
-            MaterialPageRoute(
-              builder: (context) => BlocProvider(
-                create: (_) => FaceRecognitionDI.get<FaceRecognitionBloc>(),
-                child: FaceRegistrationScreen(
-                  userId: finalUserId,
-                  title: 'Register Your Face (Required)',
-                  subtitle: 'Face registration is required to use the app',
-                ),
-              ),
-            ),
-          );
-
-          if (success == true && mounted) {
-            // Mark as registered and clear in-progress flag
-            SharedPref().setPreferencesBoolean('isFaceRegistered', true);
-            SharedPref()
-                .setPreferencesBoolean('pendingFaceVerification', false);
-            SharedPref()
-                .setPreferencesBoolean('isFaceRegistrationInProgress', false);
-
-            // Force rebuild to show home content
-            setState(() {});
-          }
-        } catch (e) {
-          print('❌ Error parsing login data: $e');
+        // Priority: emp_id > emp_profile_id > uid > username (same as UnifiedBiometricHelper)
+        if (empId != null && empId.isNotEmpty && empId != 'null') {
+          userId = empId;
+          // print('✅ Using emp_id: $userId');
+        } else if (empProfileId != null && empProfileId.isNotEmpty && empProfileId != 'null') {
+          userId = empProfileId;
+          // print('✅ Using emp_profile_id: $userId');
+        } else if (uid != null && uid.isNotEmpty && uid != 'null') {
+          userId = uid;
+          // print('✅ Using uid: $userId');
+        } else if (username != null && username.isNotEmpty && username != 'null') {
+          userId = username;
+          // print('✅ Using username: $userId');
+        } else {
+          userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+          // print('⚠️ No user ID found, using fallback: $userId');
         }
-      } else {
-        print('⚠️ loginDataStr is empty!');
+      } catch (e) {
+        // print('⚠️ Error getting login data from model, trying raw JSON: $e');
+        // Fallback to raw JSON parsing
+        final loginDataStr = SharedPref().getPreferenceString('loginResponse');
+        if (loginDataStr.isNotEmpty) {
+          try {
+            final loginJson = jsonDecode(loginDataStr);
+            final data = loginJson['result']?['data'] ?? loginJson;
+            userId = data['emp_id']?.toString();
+            if (userId == null || userId.isEmpty || userId == 'null') {
+              userId = data['emp_profile_id']?.toString();
+            }
+            if (userId == null || userId.isEmpty || userId == 'null') {
+              userId = data['uid']?.toString();
+            }
+            if (userId == null || userId.isEmpty || userId == 'null') {
+              userId = data['username']?.toString();
+            }
+          } catch (_) {}
+        }
+        userId ??= 'user_${DateTime.now().millisecondsSinceEpoch}';
+      }
+
+      final finalUserId = userId;
+      // print('📱 User ID for face registration: $finalUserId');
+
+      // Set flag to indicate face registration is in progress
+      SharedPref()
+          .setPreferencesBoolean('isFaceRegistrationInProgress', true);
+
+      // Navigate to face registration with BLoC provider
+      // Use regular push - WillPopScope in FaceRegistrationScreen will prevent going back
+      final success = await Navigator.of(context).push<bool>(
+        MaterialPageRoute(
+          builder: (context) => BlocProvider(
+            create: (_) => FaceRecognitionDI.get<FaceRecognitionBloc>(),
+            child: FaceRegistrationScreen(
+              userId: finalUserId,
+              title: 'Register Your Face (Required)',
+              subtitle: 'Face registration is required to use the app',
+            ),
+          ),
+        ),
+      );
+
+      if (success == true && mounted) {
+        // Mark as registered and clear in-progress flag
+        SharedPref().setPreferencesBoolean('isFaceRegistered', true);
+        SharedPref()
+            .setPreferencesBoolean('pendingFaceVerification', false);
+        SharedPref()
+            .setPreferencesBoolean('isFaceRegistrationInProgress', false);
+
+        // Force rebuild to show home content
+        setState(() {});
       }
     } else {
-      print('⏭️ Skipping face registration (conditions not met)');
+      // print('⏭️ Skipping face registration (conditions not met)');
     }
   }
 

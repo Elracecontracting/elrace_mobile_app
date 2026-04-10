@@ -67,8 +67,8 @@ class TasksApiService {
       final result = decoded['result'];
       return result;
     } catch (e) {
-      print('Error decoding response: $e');
-      print('Response body: ${response.body}');
+      // print('Error decoding response: $e');
+      // print('Response body: ${response.body}');
       throw TasksApiException('Invalid response from server');
     }
   }
@@ -93,11 +93,11 @@ class TasksApiService {
       );
       final duration = DateTime.now().difference(startTime);
 
-      print('====== GET USER TASKS REQUEST ======');
-      print('URL: $uri');
-      print('Status Code: ${response.statusCode}');
-      print('Response Body: ${response.body}');
-      print('====================================');
+      // print('====== GET USER TASKS REQUEST ======');
+      // print('URL: $uri');
+      // print('Status Code: ${response.statusCode}');
+      // print('Response Body: ${response.body}');
+      // print('====================================');
 
       _guardStatus(response);
       if (response.statusCode != 200) {
@@ -117,13 +117,13 @@ class TasksApiService {
       );
 
       // Print response for debugging
-      print('====== GET USER TASKS RESPONSE ======');
-      print('Result: $result');
-      print('=====================================');
+      // print('====== GET USER TASKS RESPONSE ======');
+      // print('Result: $result');
+      // print('=====================================');
 
       if (result is Map && result['success'] == true) {
         final data = result['data'];
-        print('Tasks data: $data');
+        // print('Tasks data: $data');
         if (data is List) {
           return data
               .map((e) => e is Map<String, dynamic>
@@ -138,7 +138,7 @@ class TasksApiService {
           (result is Map ? result['message'] : null) ?? 'Unable to fetch tasks';
       throw TasksApiException(message);
     } catch (e) {
-      print('Error in fetchTasks: $e');
+      // print('Error in fetchTasks: $e');
       if (e is TasksApiException) {
         rethrow;
       }

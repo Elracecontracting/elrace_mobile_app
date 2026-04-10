@@ -206,6 +206,28 @@ exports.onNewChatMessage = onDocumentCreated(
     console.log(
       `Notifications sent: ${successCount} success, ${failCount} failed`
     );
+
+    // ── Update all members' userChats timestamps ──────────────
+    // This ensures the chat bubbles to the top of every member's chat list
+    // when a new message is sent (especially important for group/role chats).
+    try {
+      const tsBatch = db.batch();
+      for (const memberId of memberIds) {
+        if (memberId === senderId) continue; // Sender already updated client-side
+        tsBatch.set(
+          db.collection("users").doc(memberId).collection("user_chats").doc(chatId),
+          {
+            updated_at: require("firebase-admin/firestore").FieldValue.serverTimestamp(),
+            has_messages: true,
+          },
+          { merge: true }
+        );
+      }
+      await tsBatch.commit();
+      console.log(`Updated userChats timestamps for ${memberIds.length - 1} member(s)`);
+    } catch (tsErr) {
+      console.log(`Could not update member timestamps: ${tsErr}`);
+    }
   }
 );
 

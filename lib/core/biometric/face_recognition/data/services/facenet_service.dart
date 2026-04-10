@@ -74,9 +74,9 @@ class FaceNetService {
       _inputShape = _interpreter!.getInputTensor(0).shape;
       _outputShape = _interpreter!.getOutputTensor(0).shape;
 
-      print('FaceNet Model Loaded:');
-      print('Input Shape: $_inputShape');
-      print('Output Shape: $_outputShape');
+      // print('FaceNet Model Loaded:');
+      // print('Input Shape: $_inputShape');
+      // print('Output Shape: $_outputShape');
 
       _isInitialized = true;
 
@@ -115,7 +115,7 @@ class FaceNetService {
     });
 
     await _isolateReady.future;
-    print('Warm Isolate ready');
+    // print('Warm Isolate ready');
   }
 
   /// Generate face embedding (with throttling and caching)
@@ -175,7 +175,7 @@ class FaceNetService {
       final decodedImage = img.decodeImage(bytes);
 
       if (decodedImage == null) {
-        print('❌ Could not decode image file');
+        // print('❌ Could not decode image file');
         return null;
       }
 
@@ -198,7 +198,7 @@ class FaceNetService {
       // Generate embedding from cropped face
       return await generateEmbedding(croppedFace);
     } catch (e) {
-      print('❌ Error generating embedding from file: $e');
+      // print('❌ Error generating embedding from file: $e');
       return null;
     }
   }
@@ -455,7 +455,7 @@ class FaceNetService {
         }
       }
     } catch (e) {
-      print('Isolate error: $e');
+      // print('Isolate error: $e');
     } finally {
       interpreter?.close();
     }

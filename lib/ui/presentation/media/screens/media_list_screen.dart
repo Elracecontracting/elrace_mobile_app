@@ -219,7 +219,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                 )
               else
                 SliverPadding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  padding: EdgeInsets.only(left: 16.w, right: 16.w, bottom: 40.h),
                   sliver: SliverToBoxAdapter(
                     child: Column(
                       children: [
@@ -651,7 +651,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                       initialIndex: 0,
                     ),
                     child: Image.network(
-                      _safeImageUrl(content.previewUrl),
+                      _safeImageUrl(content.displayImageUrl),
                       headers: _imageHeaders,
                       fit: BoxFit.cover,
                       loadingBuilder: (context, child, loadingProgress) {
@@ -664,7 +664,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                       errorBuilder: (context, error, stackTrace) {
                         _logPhotoLoadError(
                           source: 'single-card',
-                          rawUrl: content.previewUrl,
+                          rawUrl: content.displayImageUrl,
                           error: error,
                         );
                         return Container(
@@ -830,7 +830,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                         itemBuilder: (context, index) {
                           final content = photos[index];
                           return Image.network(
-                            _safeImageUrl(content.previewUrl),
+                            _safeImageUrl(content.displayImageUrl),
                             headers: _imageHeaders,
                             fit: BoxFit.contain,
                             loadingBuilder: (context, child, loadingProgress) {
@@ -846,7 +846,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                             errorBuilder: (context, error, stackTrace) {
                               _logPhotoLoadError(
                                 source: 'preview',
-                                rawUrl: content.previewUrl,
+                                rawUrl: content.displayImageUrl,
                                 error: error,
                               );
                               return Container(

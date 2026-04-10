@@ -222,9 +222,9 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
     }
   }
 
-  // ─── Download / share ─────────────────────────────────────
+  // ─── Share ─────────────────────────────────────────────────
 
-  Future<void> _downloadPdf() async {
+  Future<void> _sharePdf() async {
     if (_pdfBytes == null) return;
     try {
       final dir = await getTemporaryDirectory();
@@ -237,7 +237,7 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
         );
       }
     } catch (e) {
-      _showError('Download failed: $e');
+      _showError('Share failed: $e');
     }
   }
 
@@ -285,11 +285,11 @@ class _SignDocumentScreenState extends State<SignDocumentScreen> {
           ],
         ),
         actions: [
-          // Download / share button
+          // Share button
           IconButton(
-            onPressed: _downloadPdf,
-            icon: const Icon(Icons.download),
-            tooltip: 'Download',
+            onPressed: _sharePdf,
+            icon: const Icon(Icons.share),
+            tooltip: 'Share',
           ),
           if (!isSigned && !_allSigned)
             Center(
@@ -772,10 +772,6 @@ class _SignaturePadDialogState extends State<_SignaturePadDialog> {
     }
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
-    canvas.drawRect(
-      const Rect.fromLTWH(0, 0, _padWidth, _padHeight),
-      Paint()..color = Colors.white,
-    );
     final paint = Paint()
       ..color = Colors.black
       ..strokeWidth = 2.5

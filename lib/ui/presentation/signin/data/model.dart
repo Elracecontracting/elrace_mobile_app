@@ -201,7 +201,11 @@ class Data {
                 : null),
         holder_id: json["holder_id"] is int
             ? json["holder_id"]
-            : int.tryParse(json["holder_id"]?.toString() ?? ''),
+            : (json["holder_id"] is List &&
+                    (json["holder_id"] as List).isNotEmpty &&
+                    (json["holder_id"] as List).first is int)
+                ? (json["holder_id"] as List).first as int
+                : int.tryParse(json["holder_id"]?.toString() ?? ''),
         firebase_uid:
             (json["firebase_uid"] != null && json["firebase_uid"] != false)
                 ? json["firebase_uid"].toString()

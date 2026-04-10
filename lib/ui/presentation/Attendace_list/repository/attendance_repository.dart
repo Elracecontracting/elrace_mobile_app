@@ -210,12 +210,19 @@ class AttendanceRepo {
           ? result['data'] as Map<String, dynamic>
           : result;
 
+      print('\n📡 ===== TODAY_STATUS RAW RESPONSE =====');
+      print('📡 rawData keys: ${rawData.keys.toList()}');
+      print('📡 rawData: $rawData');
+      print('📡 attendance_id: ${rawData['attendance_id']}');
+      print('📡 ========================================\n');
+
       return {
         'checked_in': _toBool(rawData['checked_in']),
         'checked_out': _toBool(rawData['checked_out']),
         'check_in_time': rawData['check_in_time']?.toString(),
         'check_out_time': rawData['check_out_time']?.toString(),
         'is_today': _toBool(rawData['is_today']),
+        'check_in_record_id': rawData['attendance_id'] ?? rawData['check_in_record_id'],
       };
     } catch (e) {
       log("Error in getTodayStatus: $e");

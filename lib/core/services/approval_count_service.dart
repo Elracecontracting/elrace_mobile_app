@@ -44,11 +44,10 @@ class ApprovalCountService {
       // Sum all counts
       final totalCount = results.reduce((a, b) => a + b);
       _cachedCount = totalCount;
-      print(
-          '📊 Total approval count: $totalCount (HR: ${results[0]}, RFQ: ${results[1]}, Invoice: ${results[2]}, Petty Cash: ${results[3]})');
+      // print('📊 Total approval count: $totalCount (HR: ${results[0]}, RFQ: ${results[1]}, Invoice: ${results[2]}, Petty Cash: ${results[3]})');
       return totalCount;
     } catch (e) {
-      print('❌ Error getting approval count: $e');
+      // print('❌ Error getting approval count: $e');
       return 0;
     }
   }
@@ -96,14 +95,14 @@ class ApprovalCountService {
           final data = result['data'][actualKey];
 
           if (data is List) {
-            print('📊 Category $category: ${data.length} total pending');
+            // print('📊 Category $category: ${data.length} total pending');
             return data.length;
           }
         }
       }
       return 0;
     } catch (e) {
-      print('⚠️ Error fetching $category count: $e');
+      // print('⚠️ Error fetching $category count: $e');
       return 0;
     }
   }

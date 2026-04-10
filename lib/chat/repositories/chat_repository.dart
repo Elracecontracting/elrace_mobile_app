@@ -1698,13 +1698,13 @@ class ChatRepository {
   Stream<int> subscribeToTotalUnreadCount() {
     final currentUid = _currentUid;
     if (currentUid == null) {
-      print('⚠️ subscribeToTotalUnreadCount: No current UID');
+      // print('⚠️ subscribeToTotalUnreadCount: No current UID');
       return Stream.value(0);
     }
 
-    print('🔔 subscribeToTotalUnreadCount: Subscribing for uid=$currentUid');
+    // print('🔔 subscribeToTotalUnreadCount: Subscribing for uid=$currentUid');
     return subscribeToUserChats(currentUid).asyncMap((chats) async {
-      print('🔔 subscribeToTotalUnreadCount: Got ${chats.length} chats');
+      // print('🔔 subscribeToTotalUnreadCount: Got ${chats.length} chats');
       int total = 0;
       for (final chat in chats) {
         if (chat.muted) continue;
@@ -1729,16 +1729,16 @@ class ChatRepository {
             return data?['sender_id'] != currentUid;
           }).length;
 
-          if (count > 0) {
-            print(
-                '🔔 Chat ${chat.chatId}: $count unread (lastReadAt=$lastReadAt)');
-          }
+          // if (count > 0) {
+          //   print(
+          //       '🔔 Chat ${chat.chatId}: $count unread (lastReadAt=$lastReadAt)');
+          // }
           total += count;
         } catch (e) {
-          print('⚠️ subscribeToTotalUnreadCount: Error for ${chat.chatId}: $e');
+          // print('⚠️ subscribeToTotalUnreadCount: Error for ${chat.chatId}: $e');
         }
       }
-      print('🔔 subscribeToTotalUnreadCount: Total unread = $total');
+      // print('🔔 subscribeToTotalUnreadCount: Total unread = $total');
       return total;
     });
   }

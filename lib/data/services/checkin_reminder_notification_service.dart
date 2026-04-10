@@ -41,7 +41,7 @@ class CheckInReminderNotificationService {
     try {
       tz.setLocalLocation(tz.getLocation('Asia/Dubai'));
     } catch (e) {
-      print('⚠️ Could not set Asia/Dubai timezone, falling back to UTC+4 offset: $e');
+      // print('⚠️ Could not set Asia/Dubai timezone, falling back to UTC+4 offset: $e');
       // Fallback: use a fixed UTC+4 offset so notifications still fire at the right Dubai time
       try {
         tz.setLocalLocation(tz.getLocation('Etc/GMT-4'));
@@ -55,7 +55,7 @@ class CheckInReminderNotificationService {
     await _createNotificationChannels();
 
     _initialized = true;
-    print('🔔 Check-in/out reminder notification service initialized');
+    // print('🔔 Check-in/out reminder notification service initialized');
   }
 
   /// طلب صلاحيات الإشعارات والإشعارات الدقيقة + إيقاف تحسين البطارية (Samsung)
@@ -63,7 +63,7 @@ class CheckInReminderNotificationService {
     try {
       // طلب صلاحية الإشعارات العادية (Android 13+)
       final notificationStatus = await Permission.notification.request();
-      print('📱 Notification permission: ${notificationStatus.isGranted}');
+      // print('📱 Notification permission: ${notificationStatus.isGranted}');
 
       if (Platform.isAndroid) {
         // طلب إيقاف تحسين البطارية (مهم جداً لـ Samsung)
@@ -74,19 +74,19 @@ class CheckInReminderNotificationService {
         // على Android 12 (API 31) وما فوق
         try {
           if (await Permission.scheduleExactAlarm.isDenied) {
-            print('⚠️ Requesting exact alarm permission...');
+            // print('⚠️ Requesting exact alarm permission...');
             await Permission.scheduleExactAlarm.request();
           }
 
           final alarmStatus = await Permission.scheduleExactAlarm.status;
           _exactAlarmGranted = alarmStatus.isGranted;
-          print('⏰ Exact alarm permission: $_exactAlarmGranted');
+          // print('⏰ Exact alarm permission: $_exactAlarmGranted');
 
           if (!_exactAlarmGranted) {
-            print('⚠️ Exact alarm NOT granted - will use inexact alarms as fallback');
+            // print('⚠️ Exact alarm NOT granted - will use inexact alarms as fallback');
           }
         } catch (e) {
-          print('⚠️ Error checking exact alarm permission: $e');
+          // print('⚠️ Error checking exact alarm permission: $e');
           _exactAlarmGranted = false;
         }
       } else {
@@ -94,7 +94,7 @@ class CheckInReminderNotificationService {
         _exactAlarmGranted = true;
       }
     } catch (e) {
-      print('⚠️ Error requesting permissions: $e');
+      // print('⚠️ Error requesting permissions: $e');
     }
   }
 
@@ -103,16 +103,16 @@ class CheckInReminderNotificationService {
   Future<void> _requestBatteryOptimizationExemption() async {
     try {
       final status = await Permission.ignoreBatteryOptimizations.status;
-      print('🔋 Battery optimization status: ${status.isGranted ? "EXEMPT" : "NOT EXEMPT"}');
+      // print('🔋 Battery optimization status: ${status.isGranted ? "EXEMPT" : "NOT EXEMPT"}');
 
       if (!status.isGranted) {
-        print('🔋 Requesting battery optimization exemption (important for Samsung)...');
+        // print('🔋 Requesting battery optimization exemption (important for Samsung)...');
         final result = await Permission.ignoreBatteryOptimizations.request();
-        print('🔋 Battery optimization exemption result: ${result.isGranted ? "GRANTED" : "DENIED"}');
+        // print('🔋 Battery optimization exemption result: ${result.isGranted ? "GRANTED" : "DENIED"}');
 
         if (!result.isGranted) {
-          print('⚠️ Battery optimization NOT disabled!');
-          print('💡 Samsung users: Go to Settings > Apps > El Race > Battery > Unrestricted');
+          // print('⚠️ Battery optimization NOT disabled!');
+          // print('💡 Samsung users: Go to Settings > Apps > El Race > Battery > Unrestricted');
         }
       }
 
@@ -120,19 +120,19 @@ class CheckInReminderNotificationService {
       try {
         final deviceInfo = DeviceInfoPlugin();
         final androidInfo = await deviceInfo.androidInfo;
-        print('📱 Device: ${androidInfo.manufacturer} ${androidInfo.model}');
-        print('📱 Android SDK: ${androidInfo.version.sdkInt}');
+        // print('📱 Device: ${androidInfo.manufacturer} ${androidInfo.model}');
+        // print('📱 Android SDK: ${androidInfo.version.sdkInt}');
 
         if (androidInfo.manufacturer.toLowerCase().contains('samsung')) {
-          print('⚠️ Samsung device detected - aggressive battery optimization may block notifications');
-          print('💡 Ensure app is NOT in "Sleeping apps" or "Deep sleeping apps"');
-          print('💡 Settings > Battery > Background usage limits > Never sleeping apps > Add El Race');
+          // print('⚠️ Samsung device detected - aggressive battery optimization may block notifications');
+          // print('💡 Ensure app is NOT in "Sleeping apps" or "Deep sleeping apps"');
+          // print('💡 Settings > Battery > Background usage limits > Never sleeping apps > Add El Race');
         }
       } catch (e) {
-        print('⚠️ Could not get device info: $e');
+        // print('⚠️ Could not get device info: $e');
       }
     } catch (e) {
-      print('⚠️ Error requesting battery optimization exemption: $e');
+      // print('⚠️ Error requesting battery optimization exemption: $e');
     }
   }
 
@@ -171,7 +171,7 @@ class CheckInReminderNotificationService {
             AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(checkOutChannel);
 
-    print('✅ Check-in/out notification channels created');
+    // print('✅ Check-in/out notification channels created');
   }
 
   /// جدولة إشعارات التذكير بـ check out (من 4 مساءً - 5 مساءً)
@@ -188,8 +188,8 @@ class CheckInReminderNotificationService {
     }
 
     final now = tz.TZDateTime.now(tz.local);
-    print('⏰ Current time: ${now.toString()}');
-    print('⏰ Schedule mode: ${_exactAlarmGranted ? "EXACT" : "INEXACT (fallback)"}');
+    // print('⏰ Current time: ${now.toString()}');
+    // print('⏰ Schedule mode: ${_exactAlarmGranted ? "EXACT" : "INEXACT (fallback)"}');
 
     // جدول إشعارات كل 15 دقيقة من الساعة 4 مساءً حتى 5 مساءً
     final reminderTimes = [
@@ -252,7 +252,7 @@ class CheckInReminderNotificationService {
         print(
             '✅ Scheduled check-out reminder #${idCounter - _checkOutReminderId + 1} at ${targetTime.toString()}');
       } catch (e) {
-        print('❌ Error scheduling check-out reminder #${idCounter}: $e');
+        // print('❌ Error scheduling check-out reminder #${idCounter}: $e');
         // محاولة ثانية بوضع inexact إذا فشل exact
         // NOTE: Do NOT modify _exactAlarmGranted here; use the captured local value.
         if (useExactAlarm) {
@@ -285,9 +285,9 @@ class CheckInReminderNotificationService {
               matchDateTimeComponents: DateTimeComponents.time,
             );
             scheduledCount++;
-            print('✅ Retry with inexact mode succeeded for #${idCounter}');
+            // print('✅ Retry with inexact mode succeeded for #${idCounter}');
           } catch (e2) {
-            print('❌ Retry also failed for #${idCounter}: $e2');
+            // print('❌ Retry also failed for #${idCounter}: $e2');
           }
         }
       }
@@ -313,8 +313,8 @@ class CheckInReminderNotificationService {
     }
 
     final now = tz.TZDateTime.now(tz.local);
-    print('⏰ Current time: ${now.toString()}');
-    print('⏰ Schedule mode: ${_exactAlarmGranted ? "EXACT" : "INEXACT (fallback)"}');
+    // print('⏰ Current time: ${now.toString()}');
+    // print('⏰ Schedule mode: ${_exactAlarmGranted ? "EXACT" : "INEXACT (fallback)"}');
 
     // جدول إشعارات كل 15 دقيقة من الساعة 8 صباحاً حتى 9 صباحاً
     final reminderTimes = [
@@ -377,7 +377,7 @@ class CheckInReminderNotificationService {
         print(
             '✅ Scheduled check-in reminder #${idCounter - _checkInReminderId + 1} at ${targetTime.toString()}');
       } catch (e) {
-        print('❌ Error scheduling check-in reminder #${idCounter}: $e');
+        // print('❌ Error scheduling check-in reminder #${idCounter}: $e');
         // محاولة ثانية بوضع inexact إذا فشل exact
         // NOTE: Do NOT modify _exactAlarmGranted here; use the captured local value.
         if (useExactAlarm) {
@@ -410,9 +410,9 @@ class CheckInReminderNotificationService {
               matchDateTimeComponents: DateTimeComponents.time,
             );
             scheduledCount++;
-            print('✅ Retry with inexact mode succeeded for #${idCounter}');
+            // print('✅ Retry with inexact mode succeeded for #${idCounter}');
           } catch (e2) {
-            print('❌ Retry also failed for #${idCounter}: $e2');
+            // print('❌ Retry also failed for #${idCounter}: $e2');
           }
         }
       }
@@ -431,7 +431,7 @@ class CheckInReminderNotificationService {
     for (int i = 0; i < 5; i++) {
       await _notificationsPlugin.cancel(_checkOutReminderId + i);
     }
-    print('🔕 Cancelled check-out reminders');
+    // print('🔕 Cancelled check-out reminders');
   }
 
   /// إلغاء تذكيرات check in
@@ -441,18 +441,26 @@ class CheckInReminderNotificationService {
     for (int i = 0; i < 5; i++) {
       await _notificationsPlugin.cancel(_checkInReminderId + i);
     }
-    print('🔕 Cancelled check-in reminders');
+    // print('🔕 Cancelled check-in reminders');
   }
 
   /// تحديث الإشعارات حسب حالة check in/out
+  /// يتحقق أولاً من حالة تسجيل الدخول — إذا كان المستخدم عامل logout يلغي كل التذكيرات
   Future<void> updateReminders() async {
+    // إذا المستخدم مو مسجّل دخول، ألغي كل التذكيرات ولا تجدول شي جديد
+    if (!SharedPref.isUserAuthenticated()) {
+      await cancelAllReminders();
+      print('📱 User not authenticated — cancelled all check-in/out reminders');
+      return;
+    }
+
     final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
 
     if (isCheckedIn) {
       // المستخدم عامل check in - جدول تذكيرات check out وألغي تذكيرات check in
       await cancelCheckInReminders();
       await scheduleCheckOutReminders();
-      print('📱 Updated: Scheduled check-out reminders (user is checked in)');
+      // print('📱 Updated: Scheduled check-out reminders (user is checked in)');
     } else {
       // المستخدم ما عامل check in - جدول تذكيرات check in وألغي تذكيرات check out
       await cancelCheckOutReminders();
@@ -466,7 +474,7 @@ class CheckInReminderNotificationService {
   Future<void> cancelAllReminders() async {
     await cancelCheckInReminders();
     await cancelCheckOutReminders();
-    print('🔕 Cancelled all check-in/out reminders');
+    // print('🔕 Cancelled all check-in/out reminders');
   }
 
   /// [للاختبار] إرسال إشعار تجريبي فوري
@@ -508,7 +516,7 @@ class CheckInReminderNotificationService {
       print(
           '✅ Test notification sent successfully (${isCheckIn ? "Check In" : "Check Out"})');
     } catch (e) {
-      print('❌ Error sending test notification: $e');
+      // print('❌ Error sending test notification: $e');
     }
   }
 }

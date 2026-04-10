@@ -39,26 +39,26 @@ class ApprovalViewedService {
       final normalizedType = _normalizeType(type);
       final key = '${normalizedType}_$id';
 
-      print('🔵 markAsViewed called:');
-      print('   - Original type: $type');
-      print('   - Normalized type: $normalizedType');
-      print('   - ID: $id');
-      print('   - Key: $key');
-      print('   - Already viewed: ${viewedItems.contains(key)}');
+      // print('🔵 markAsViewed called:');
+      // print('   - Original type: $type');
+      // print('   - Normalized type: $normalizedType');
+      // print('   - ID: $id');
+      // print('   - Key: $key');
+      // print('   - Already viewed: ${viewedItems.contains(key)}');
 
       if (!viewedItems.contains(key)) {
         viewedItems.add(key);
         await prefs.setString(_viewedItemsKey, json.encode(viewedItems));
-        print('✅ Marked as viewed: $key');
-        print('   - Total viewed items: ${viewedItems.length}');
+        // print('✅ Marked as viewed: $key');
+        // print('   - Total viewed items: ${viewedItems.length}');
 
         // Notify that approval count has changed
         _notifyCountChanged();
       } else {
-        print('⚠️ Already viewed: $key');
+        // print('⚠️ Already viewed: $key');
       }
     } catch (e) {
-      print('❌ Error marking item as viewed: $e');
+      // print('❌ Error marking item as viewed: $e');
     }
   }
 
@@ -66,19 +66,19 @@ class ApprovalViewedService {
   static void _notifyCountChanged() {
     // Import ApprovalCountService dynamically to avoid circular dependency
     try {
-      print('🔔 _notifyCountChanged called');
+      // print('🔔 _notifyCountChanged called');
       // This will trigger the header widget to reload the count
       final callback = _onCountChangedCallback;
-      print('   - Callback exists: ${callback != null}');
+      // print('   - Callback exists: ${callback != null}');
       if (callback != null) {
-        print('   - Calling callback...');
+        // print('   - Calling callback...');
         callback();
-        print('   - ✅ Callback executed');
+        // print('   - ✅ Callback executed');
       } else {
-        print('   - ⚠️ No callback registered');
+        // print('   - ⚠️ No callback registered');
       }
     } catch (e) {
-      print('⚠️ Error notifying count changed: $e');
+      // print('⚠️ Error notifying count changed: $e');
     }
   }
 
@@ -102,7 +102,7 @@ class ApprovalViewedService {
       }
       return [];
     } catch (e) {
-      print('❌ Error getting viewed items: $e');
+      // print('❌ Error getting viewed items: $e');
       return [];
     }
   }
@@ -116,7 +116,7 @@ class ApprovalViewedService {
           .map((key) => key.replaceFirst('${type}_', ''))
           .toList();
     } catch (e) {
-      print('❌ Error getting viewed items for type: $e');
+      // print('❌ Error getting viewed items for type: $e');
       return [];
     }
   }
@@ -128,7 +128,7 @@ class ApprovalViewedService {
       final key = '${type}_$id';
       return viewedItems.contains(key);
     } catch (e) {
-      print('❌ Error checking if item is viewed: $e');
+      // print('❌ Error checking if item is viewed: $e');
       return false;
     }
   }
@@ -138,9 +138,9 @@ class ApprovalViewedService {
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove(_viewedItemsKey);
-      print('✅ Cleared all viewed approval items');
+      // print('✅ Cleared all viewed approval items');
     } catch (e) {
-      print('❌ Error clearing viewed items: $e');
+      // print('❌ Error clearing viewed items: $e');
     }
   }
 
@@ -153,9 +153,9 @@ class ApprovalViewedService {
 
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_viewedItemsKey, json.encode(filtered));
-      print('✅ Cleared viewed items for type: $type');
+      // print('✅ Cleared viewed items for type: $type');
     } catch (e) {
-      print('❌ Error clearing viewed items for type: $e');
+      // print('❌ Error clearing viewed items for type: $e');
     }
   }
 }

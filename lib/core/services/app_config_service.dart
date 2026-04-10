@@ -27,8 +27,9 @@ class AppConfigService {
   bool _faceIdEnabled = true;
   bool get faceIdEnabled => _faceIdEnabled;
 
-  /// Whether face ID should be skipped (test mode OR faceIdEnabled=false)
-  bool get shouldSkipFaceId => _isTestMode || !_faceIdEnabled;
+  /// Whether face ID should be skipped (only when faceIdEnabled=false from backend)
+  /// Note: Test mode no longer bypasses face ID for security
+  bool get shouldSkipFaceId => !_faceIdEnabled;
 
   /// Load config from remote API and cache locally
   Future<void> load() async {
@@ -53,12 +54,12 @@ class AppConfigService {
         data: {'jsonrpc': '2.0', 'params': {}},
       );
 
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      print('🔧 AppConfigService API Response:');
-      print('📡 URL: $url');
-      print('📊 Status Code: ${resp.statusCode}');
-      print('📦 Raw Response: ${resp.data}');
-      print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      // print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+      // print('🔧 AppConfigService API Response:');
+      // print('📡 URL: $url');
+      // print('📊 Status Code: ${resp.statusCode}');
+      // print('📦 Raw Response: ${resp.data}');
+      // print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
       // Response can be jsonrpc envelope: { jsonrpc, id, result: { success, isTestMode } }
       final data = resp.data;
@@ -94,7 +95,7 @@ class AppConfigService {
         _skipVpnCheck = remoteSkipVpn;
       }
 
-      print('✅ AppConfigService: isTestMode=$_isTestMode, skipVpnCheck=$_skipVpnCheck, faceIdEnabled=$_faceIdEnabled');
+      // print('✅ AppConfigService: isTestMode=$_isTestMode, skipVpnCheck=$_skipVpnCheck, faceIdEnabled=$_faceIdEnabled');
 
       try {
         final prefs = await SharedPreferences.getInstance();
@@ -104,11 +105,11 @@ class AppConfigService {
       } catch (_) {}
 
       if (kDebugMode) {
-        debugPrint('AppConfigService: isTestMode=$_isTestMode, skipVpnCheck=$_skipVpnCheck, faceIdEnabled=$_faceIdEnabled');
+        // debugPrint('AppConfigService: isTestMode=$_isTestMode, skipVpnCheck=$_skipVpnCheck, faceIdEnabled=$_faceIdEnabled');
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('AppConfigService: failed to load config: $e');
+        // debugPrint('AppConfigService: failed to load config: $e');
       }
       // Keep cached value
     }
