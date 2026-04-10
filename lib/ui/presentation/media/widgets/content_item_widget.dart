@@ -20,7 +20,7 @@ class ContentItemWidget extends StatelessWidget {
   });
 
   Widget _buildThumbnail({bool withBorder = true}) {
-    final String imageUrl = content.previewUrl;
+    final String imageUrl = content.displayImageUrl;
     final borderRadius = BorderRadius.circular(18.r);
     const borderColor = Color(0xB8484848);
 

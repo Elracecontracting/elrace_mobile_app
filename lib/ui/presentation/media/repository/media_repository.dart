@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../../utils/di.dart';
@@ -30,14 +31,26 @@ class MediaRepository implements IMediaRepository {
       final request = http.Request('GET', url)
         ..headers.addAll(headers)
         ..body = body;
-      print(token);
-      print(url);
+
+      debugPrint('\n========== [MEDIA] API REQUEST ==========');
+      debugPrint('🌐 URL: $url');
+      debugPrint('📤 Body: $body');
+      debugPrint('🔑 Token: $token');
+      debugPrint('=========================================\n');
 
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      log('Media Attachments API Response: ${response.statusCode}');
-      log('Response body: ${response.body}');
+      debugPrint('\n========== [MEDIA] API RESPONSE ==========');
+      debugPrint('📊 Status Code: ${response.statusCode}');
+      debugPrint('📦 Full Response Body:');
+      try {
+        final prettyJson = const JsonEncoder.withIndent('  ').convert(jsonDecode(response.body));
+        debugPrint(prettyJson);
+      } catch (_) {
+        debugPrint(response.body);
+      }
+      debugPrint('==========================================\n');
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);
@@ -188,10 +201,12 @@ class MediaRepository implements IMediaRepository {
       };
 
       final body = jsonEncode({"jsonrpc": "2.0", "params": {}});
-      final url = Uri.parse("${UrlUtil.baseUrl}${UrlUtil.getContentsApi}");
+      final url = Uri.parse("${UrlUtil.baseUrl}${UrlUtil.getContentsGroupedApi}");
 
-      log('📡 Calling get_contents API: $url');
-      log('📤 Request body: $body');
+      debugPrint('\n========== [GET_CONTENTS_GROUPED] API REQUEST ==========');
+      debugPrint('🌐 URL: $url');
+      debugPrint('📤 Body: $body');
+      debugPrint('=========================================================\n');
 
       // Use GET request with body (similar to other API calls in this app)
       final request = http.Request('GET', url)
@@ -201,8 +216,16 @@ class MediaRepository implements IMediaRepository {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      log('📥 get_contents API Response: ${response.statusCode}');
-      log('📦 Response body: ${response.body}');
+      debugPrint('\n========== [GET_CONTENTS_GROUPED] API RESPONSE ==========');
+      debugPrint('📊 Status Code: ${response.statusCode}');
+      debugPrint('📦 Full Response Body:');
+      try {
+        final prettyJson = const JsonEncoder.withIndent('  ').convert(jsonDecode(response.body));
+        debugPrint(prettyJson);
+      } catch (_) {
+        debugPrint(response.body);
+      }
+      debugPrint('==========================================================\n');
 
       if (response.statusCode == 200) {
         final json = jsonDecode(response.body);

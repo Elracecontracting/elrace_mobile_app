@@ -85,18 +85,6 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
       return;
     }
 
-    // Validate: Job Mission must be at least 1 day in advance (not same day)
-    final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
-    final selectedDateOnly =
-        DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
-
-    if (selectedDateOnly.isBefore(todayDate.add(const Duration(days: 1)))) {
-      _showErrorDialog(
-          'Job Mission must be submitted at least 1 day in advance. Cannot select today.');
-      return;
-    }
-
     if (selectedMissionType == 'Client Visit') {
       if (clientDetails.trim().isEmpty || projectDetails.trim().isEmpty) {
         _showErrorDialog('Please fill client & project details.');
@@ -591,6 +579,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
+      resizeToAvoidBottomInset: true,
       appBar: const HeaderWidget(),
       body: SafeArea(
         child: Column(
@@ -623,14 +612,18 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                   ],
                 ),
                 child: SingleChildScrollView(
-                  child: Column(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(
+                      bottom:
+                          MediaQuery.of(context).viewInsets.bottom),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Center(child: _buildDropdownHeader()),
-                      if (dropdownOpen) ...[
-                        SizedBox(height: 10.h),
-                        Center(child: _buildDropdownList()),
-                      ],
                       SizedBox(height: 18.h),
                       Center(
                         child: Text(
@@ -856,6 +849,15 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                 ),
                         ),
                       ),
+                    ],
+                  ),
+                  if (dropdownOpen)
+                    Positioned(
+                      top: 48.h,
+                      left: 0,
+                      right: 0,
+                      child: Center(child: _buildDropdownList()),
+                    ),
                     ],
                   ),
                 ),

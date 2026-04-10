@@ -93,6 +93,7 @@ class _RequestPermissionState extends State<RequestPermission> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
+      resizeToAvoidBottomInset: true,
       appBar: const HeaderWidget(),
       body: SafeArea(
         child: Column(
@@ -125,6 +126,11 @@ class _RequestPermissionState extends State<RequestPermission> {
                   ],
                 ),
                 child: SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(
+                      bottom:
+                          MediaQuery.of(context).viewInsets.bottom),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

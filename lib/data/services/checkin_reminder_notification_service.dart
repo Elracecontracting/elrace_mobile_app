@@ -445,7 +445,15 @@ class CheckInReminderNotificationService {
   }
 
   /// تحديث الإشعارات حسب حالة check in/out
+  /// يتحقق أولاً من حالة تسجيل الدخول — إذا كان المستخدم عامل logout يلغي كل التذكيرات
   Future<void> updateReminders() async {
+    // إذا المستخدم مو مسجّل دخول، ألغي كل التذكيرات ولا تجدول شي جديد
+    if (!SharedPref.isUserAuthenticated()) {
+      await cancelAllReminders();
+      print('📱 User not authenticated — cancelled all check-in/out reminders');
+      return;
+    }
+
     final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
 
     if (isCheckedIn) {

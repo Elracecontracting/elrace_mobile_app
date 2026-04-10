@@ -157,6 +157,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
 
     return Scaffold(
       backgroundColor: bg,
+      resizeToAvoidBottomInset: true,
       appBar: const HeaderWidget(),
       body: SafeArea(
         child: Column(
@@ -189,78 +190,91 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                   ],
                 ),
                 child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(
+                      bottom:
+                          MediaQuery.of(context).viewInsets.bottom),
+                  child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      Center(child: _buildDropdownHeader()),
-                      if (dropdownOpen) ...[
-                        SizedBox(height: 10.h),
-                        Center(child: _buildDropdownList()),
-                      ],
-                      SizedBox(height: 16.h),
-                      _buildCalendar(),
-                      SizedBox(height: 20.h),
-                      _buildInfoRow('Joining Date', _formatDate(joinedDate)),
-                      if (_isWorkResumption) ...[
-                        SizedBox(height: 12.h),
-                        _buildInfoRow(
-                            'Late Days', '${calculateLateDays()} days'),
-                        SizedBox(height: 12.h),
-                        _buildInfoRow(
-                          'Leave End Date',
-                          _formatDate(leaveEndDate),
-                        ),
-                      ],
-                      SizedBox(height: 20.h),
-                      Text(
-                        translate('common.description'),
-                        style: GoogleFonts.inter(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      _buildDescriptionField(),
-                      SizedBox(height: 16.h),
-                      if (_isWorkResumption) ...[
-                        _buildNotice(primary),
-                        SizedBox(height: 24.h),
-                      ] else
-                        SizedBox(height: 8.h),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48.h,
-                        child: ElevatedButton(
-                          onPressed:
-                              isSubmitting ? null : _submitEffectiveDateRequest,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF5E5E5E),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24.r),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Center(child: _buildDropdownHeader()),
+                          SizedBox(height: 16.h),
+                          _buildCalendar(),
+                          SizedBox(height: 20.h),
+                          _buildInfoRow('Joining Date', _formatDate(joinedDate)),
+                          if (_isWorkResumption) ...[
+                            SizedBox(height: 12.h),
+                            _buildInfoRow(
+                                'Late Days', '${calculateLateDays()} days'),
+                            SizedBox(height: 12.h),
+                            _buildInfoRow(
+                              'Leave End Date',
+                              _formatDate(leaveEndDate),
                             ),
-                            elevation: 2,
+                          ],
+                          SizedBox(height: 20.h),
+                          Text(
+                            translate('common.description'),
+                            style: GoogleFonts.inter(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600],
+                            ),
                           ),
-                          child: isSubmitting
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor:
-                                        AlwaysStoppedAnimation(Colors.white),
-                                  ),
-                                )
-                              : Text(
-                                  'SUBMIT',
-                                  style: GoogleFonts.koulen(
-                                    fontSize: 16.sp,
-                                    letterSpacing: 1.5,
-                                    color: Colors.white,
-                                  ),
+                          SizedBox(height: 8.h),
+                          _buildDescriptionField(),
+                          SizedBox(height: 16.h),
+                          if (_isWorkResumption) ...[
+                            _buildNotice(primary),
+                            SizedBox(height: 24.h),
+                          ] else
+                            SizedBox(height: 8.h),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48.h,
+                            child: ElevatedButton(
+                              onPressed:
+                                  isSubmitting ? null : _submitEffectiveDateRequest,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF5E5E5E),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24.r),
                                 ),
-                        ),
+                                elevation: 2,
+                              ),
+                              child: isSubmitting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation(Colors.white),
+                                      ),
+                                    )
+                                  : Text(
+                                      'SUBMIT',
+                                      style: GoogleFonts.koulen(
+                                        fontSize: 16.sp,
+                                        letterSpacing: 1.5,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
                       ),
+                      if (dropdownOpen)
+                        Positioned(
+                          top: 48.h,
+                          left: 0,
+                          right: 0,
+                          child: Center(child: _buildDropdownList()),
+                        ),
                     ],
                   ),
                 ),

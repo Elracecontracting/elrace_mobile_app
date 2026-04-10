@@ -651,7 +651,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                       initialIndex: 0,
                     ),
                     child: Image.network(
-                      _safeImageUrl(content.previewUrl),
+                      _safeImageUrl(content.displayImageUrl),
                       headers: _imageHeaders,
                       fit: BoxFit.cover,
                       loadingBuilder: (context, child, loadingProgress) {
@@ -664,7 +664,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                       errorBuilder: (context, error, stackTrace) {
                         _logPhotoLoadError(
                           source: 'single-card',
-                          rawUrl: content.previewUrl,
+                          rawUrl: content.displayImageUrl,
                           error: error,
                         );
                         return Container(

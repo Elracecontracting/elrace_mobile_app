@@ -211,6 +211,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.transparent,
+      resizeToAvoidBottomInset: true,
       body: Stack(
         children: [
           // Main Content
@@ -221,6 +222,11 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                 const SizedBox(height: 50),
                 Expanded(
                   child: SingleChildScrollView(
+                    keyboardDismissBehavior:
+                        ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: EdgeInsets.only(
+                        bottom:
+                            MediaQuery.of(context).viewInsets.bottom),
                     child: Padding(
                       padding: const EdgeInsets.all(16),
                       child: Container(

@@ -500,6 +500,11 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                   ],
                 ),
                 child: SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(
+                      bottom:
+                          MediaQuery.of(context).viewInsets.bottom),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
