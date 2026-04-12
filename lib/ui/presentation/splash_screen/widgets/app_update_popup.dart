@@ -357,8 +357,8 @@ class _VersionChip extends StatelessWidget {
             Text(
               value,
               style: versionStyle,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              maxLines: null,
+              overflow: TextOverflow.visible,
             ),
           ],
         ),

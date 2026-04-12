@@ -313,7 +313,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                                     ? 'Unnamed project'
                                     : projectName,
                                 maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                                overflow: TextOverflow.visible,
                                 style: const TextStyle(
                                     fontSize: 13, fontWeight: FontWeight.w600),
                               ),

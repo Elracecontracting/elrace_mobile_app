@@ -512,8 +512,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
               height: 1,
             ),
             textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxLines: null,
+            overflow: TextOverflow.visible,
           ),
           const SizedBox(height: 6),
           Text(
@@ -525,8 +525,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
               height: 1,
             ),
             textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxLines: null,
+            overflow: TextOverflow.visible,
             softWrap: false,
           ),
         ],
@@ -611,8 +611,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                   children: [
                     Text(
                       sheet.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: null,
+                      overflow: TextOverflow.visible,
                       style: GoogleFonts.poppins(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
@@ -622,8 +622,8 @@ class _PettyCashScreenState extends State<PettyCashScreen> {
                     const SizedBox(height: 4),
                     Text(
                       _formatSheetDate(sheet.lastUpdate),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: null,
+                      overflow: TextOverflow.visible,
                       style: GoogleFonts.poppins(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,

@@ -31,20 +31,20 @@ class NoteItemWidget extends StatelessWidget {
               children: [
                 Text(
                   note.title,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     Text(
                       DateFormat('MMM dd, yyyy').format(note.date),
-                      style:  GoogleFonts.inter(
+                      style:  GoogleFonts.poppins(
                         fontSize: 13.sp,
                         color: const Color(0xff313131),
                         fontWeight: FontWeight.bold,
@@ -54,13 +54,13 @@ class NoteItemWidget extends StatelessWidget {
                     Expanded(
                       child: Text(
                         note.description,
-                        style:  GoogleFonts.inter(
+                        style:  GoogleFonts.poppins(
                           fontSize: 13.sp,
                           color: const Color(0xff313131),
                           fontWeight: FontWeight.bold,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: null,
+                        overflow: TextOverflow.visible,
                       ),
                     ),
                   ],

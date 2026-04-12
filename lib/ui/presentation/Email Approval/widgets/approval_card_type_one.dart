@@ -114,7 +114,7 @@ class ApprovalCardTypeOne extends StatelessWidget {
                           Text(
                             DateFormat('dd MMM yy').format(parsedDate),
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 16.sp,
                               fontWeight: FontWeight.bold,
                               color: appFontColor,
@@ -131,7 +131,7 @@ class ApprovalCardTypeOne extends StatelessWidget {
                             children: [
                               Text(
                                 translate('home.REQ_NO'),
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 12.sp,
                                   fontWeight: FontWeight.bold,
                                   color: appFontColor,
@@ -139,7 +139,7 @@ class ApprovalCardTypeOne extends StatelessWidget {
                               ),
                               Text(
                                 reqNo,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 15.sp,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.black,
@@ -157,13 +157,13 @@ class ApprovalCardTypeOne extends StatelessWidget {
                             child: Text(
                               title,
                               textAlign: TextAlign.center,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 17.sp,
                                 fontWeight: FontWeight.w500,
                                 color: Colors.black,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              maxLines: null,
+                              overflow: TextOverflow.visible,
                             ),
                           ),
                         ],

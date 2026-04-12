@@ -144,7 +144,7 @@ class TaskDetailsScreen extends StatelessWidget {
                         value: report.id.toString(),
                         child: Text(
                           report.name,
-                          overflow: TextOverflow.ellipsis,
+                          overflow: TextOverflow.visible,
                         ),
                       );
                     }).toList(),
@@ -242,7 +242,7 @@ class TaskDetailsScreen extends StatelessWidget {
                   Expanded(
                     child: Text(
                       'Task Details',
-                      style: GoogleFonts.koulen(
+                      style: GoogleFonts.poppins(
                         fontSize: 22.sp,
                         fontWeight: FontWeight.w500,
                         color: appFontColor,

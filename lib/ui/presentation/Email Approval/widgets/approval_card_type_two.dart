@@ -127,16 +127,16 @@ class ApprovalCardTypeTwo extends StatelessWidget {
                       child: Text(
                         requesterName,
                         style: const TextStyle(fontWeight: FontWeight.bold),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+                        overflow: TextOverflow.visible,
+                        maxLines: null,
                       ),
                     ),
                     SizedBox(height: 5.w),
                     Text(
                       name,
                       style: TextStyle(color: greyText, fontSize: 13.sp),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
+                      overflow: TextOverflow.visible,
+                      maxLines: null,
                     ),
                   ],
                 ),
@@ -203,13 +203,13 @@ class InfoContainer extends StatelessWidget {
           ],
           Text(
             text,
-            style: GoogleFonts.nunito(
+            style: GoogleFonts.poppins(
               fontSize: fontSize ?? 11.sp,
               fontWeight: FontWeight.bold,
               color: const Color(0xFF1A1A53),
             ),
             textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
+            overflow: TextOverflow.visible,
           ),
         ],
       ),

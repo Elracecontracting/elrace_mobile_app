@@ -165,7 +165,7 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                     Center(
                       child: Text(
                         'TIME SHEET',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 17.sp,
                           fontWeight: FontWeight.w700,
                           color: Colors.black,
@@ -270,7 +270,7 @@ class _TaskSheetPageState extends State<TaskSheetPage> {
                                     child: Center(
                                       child: Text(
                                         'Add a new request',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 16.sp,
                                           fontWeight: FontWeight.w500,
                                           color: Colors.black,
@@ -411,7 +411,7 @@ class _EmployeeDropdown extends StatelessWidget {
           value: options.contains(value) ? value : null,
           hint: Text(
             'Select an Employee',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 15.sp,
               fontWeight: FontWeight.w400,
               color: const Color(0xFFB0B0B0),
@@ -423,13 +423,13 @@ class _EmployeeDropdown extends StatelessWidget {
                   value: e,
                   child: Text(
                     e,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w400,
                       color: Colors.black,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
                   ),
                 ),
               )
@@ -548,14 +548,14 @@ class _GreenTimesheetCard extends StatelessWidget {
                       children: [
                         Text(
                           employeeName,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 17.sp,
                             fontWeight: FontWeight.w700,
                             color: Colors.black,
                             height: 1.15,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
                         ),
                         SizedBox(height: 8.h),
                         _LabelValue(
@@ -589,10 +589,10 @@ class _LabelValue extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return RichText(
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+      maxLines: null,
+      overflow: TextOverflow.visible,
       text: TextSpan(
-        style: GoogleFonts.inter(
+        style: GoogleFonts.poppins(
           fontSize: 13.sp,
           color: const Color(0xFF6F6F6F),
           height: 1.2,

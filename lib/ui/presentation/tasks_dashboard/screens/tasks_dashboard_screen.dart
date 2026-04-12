@@ -187,12 +187,12 @@ class _TasksDashboardScreenState extends State<TasksDashboardScreen> {
                           SizedBox(width: 4.w),
                           Text(
                             'TASKS DASHBOARD',
-                            style: GoogleFonts.koulen(
+                            style: GoogleFonts.poppins(
                               fontSize: 22.sp,
                               fontWeight: FontWeight.w500,
                               color: appFontColor,
                             ),
-                            overflow: TextOverflow.ellipsis,
+                            overflow: TextOverflow.visible,
                           ),
                         ],
                       ),
@@ -264,7 +264,7 @@ class _TasksDashboardScreenState extends State<TasksDashboardScreen> {
                         SizedBox(height: 16.h),
                         Text(
                           'No tasks',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 18.sp,
                             color: Colors.grey.shade500,
                           ),
@@ -386,8 +386,8 @@ class _TotalTasksCard extends StatelessWidget {
                     ],
                   ),
                   textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                 ),
               ],
             ),
@@ -411,8 +411,8 @@ class _TotalTasksCard extends StatelessWidget {
                     color: Colors.black,
                     fontSize: 12.0,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                 ),
                 const SizedBox(height: 6.0),
                 ClipRRect(
@@ -484,7 +484,7 @@ class _PendingReportsCard extends StatelessWidget {
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
-                  maxLines: 1,
+                  maxLines: null,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
@@ -716,8 +716,8 @@ class _TaskCardState extends State<_TaskCard> {
                             padding: const EdgeInsets.only(right: 32),
                             child: Text(
                               widget.todo.title.toUpperCase(),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              maxLines: null,
+                              overflow: TextOverflow.visible,
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
@@ -745,8 +745,8 @@ class _TaskCardState extends State<_TaskCard> {
                                     const SizedBox(width: 8),
                                     const Text(
                                       'Unassigned',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                                      maxLines: null,
+                                      overflow: TextOverflow.visible,
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w700,
@@ -770,8 +770,8 @@ class _TaskCardState extends State<_TaskCard> {
                                             Expanded(
                                               child: Text(
                                                 name,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
+                                                maxLines: null,
+                                                overflow: TextOverflow.visible,
                                                 style: const TextStyle(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w700,

@@ -109,7 +109,7 @@ class _NewsDetailScreenAPIState extends State<NewsDetailScreenAPI> {
                   SizedBox(width: 6.w),
                   Text(
                     translate('home.news'),
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 24.sp,
                       fontWeight: FontWeight.w400,
                       color: appFontColor,
@@ -150,7 +150,7 @@ class _NewsDetailScreenAPIState extends State<NewsDetailScreenAPI> {
                 child: Text(
                   _title.toUpperCase(),
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     color: appFontColor,
                     fontWeight: FontWeight.w400,
                     fontSize: 24.sp,
@@ -187,7 +187,7 @@ class _NewsDetailScreenAPIState extends State<NewsDetailScreenAPI> {
               child: Text(
                 _content,
                 textAlign: TextAlign.justify,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 15.sp,
                   color: Colors.black,
                   height: 1.85,

@@ -165,7 +165,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
               padding: EdgeInsets.symmetric(vertical: 16.h),
               child: Text(
                 'EFFECTIVE DATE',
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 18.sp,
                   fontWeight: FontWeight.w400,
                   letterSpacing: 1.5,
@@ -214,7 +214,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                       SizedBox(height: 20.h),
                       Text(
                         translate('common.description'),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.grey[600],
@@ -253,7 +253,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                                 )
                               : Text(
                                   'SUBMIT',
-                                  style: GoogleFonts.koulen(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 16.sp,
                                     letterSpacing: 1.5,
                                     color: Colors.white,
@@ -295,7 +295,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
           children: [
             Text(
               selectedMissionType,
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 color: Colors.white,
                 fontSize: 15.sp,
                 letterSpacing: 2,
@@ -346,7 +346,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       options[i],
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
@@ -471,7 +471,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
         Expanded(
           child: Text(
             'Please be aware that any late days will be deducted from your salary.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 9.sp,
               color: Colors.black87,
               fontWeight: FontWeight.w600,
@@ -647,7 +647,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
           children: [
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF151544),
@@ -657,7 +657,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
               children: [
                 Text(
                   value,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 12.sp,
                     fontWeight: FontWeight.w500,
                     color: Colors.black54,

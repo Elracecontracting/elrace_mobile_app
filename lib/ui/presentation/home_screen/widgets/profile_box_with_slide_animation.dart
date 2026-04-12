@@ -316,7 +316,7 @@ class _ProfileBoxWithSlideAnimationState
                         const SizedBox(height: 16),
                         Text(
                           certificateData?['error'] ?? 'No certificate found',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -338,7 +338,7 @@ class _ProfileBoxWithSlideAnimationState
                             ),
                             child: Text(
                               'OK',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -614,7 +614,7 @@ class _ProfileBoxWithSlideAnimationState
                                 }
                                 return translate('profile.name_not_available');
                               }(),
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                   fontWeight: FontWeight.w700, fontSize: 11.26),
                             ),
                             const SizedBox(height: 1),
@@ -630,7 +630,7 @@ class _ProfileBoxWithSlideAnimationState
                                 return translate(
                                     'profile.job_id_not_available');
                               }(),
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                   fontSize: 11.26, fontWeight: FontWeight.w400),
                             ),
                             const SizedBox(height: 1),
@@ -645,7 +645,7 @@ class _ProfileBoxWithSlideAnimationState
                                 }
                                 return translate('profile.id_not_available');
                               }(),
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                   fontSize: 11.26, fontWeight: FontWeight.w400),
                             ),
                             const SizedBox(height: 1),
@@ -680,7 +680,7 @@ class _ProfileBoxWithSlideAnimationState
                                 loginData.result?.data?.qr_status == true
                                     ? 'Status : Active'
                                     : 'Status : Not Active',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                     fontSize: 11.26,
                                     fontWeight: FontWeight.bold,
                                     color: loginData.result?.data?.qr_status ==
@@ -1203,7 +1203,7 @@ class _MuteChannelConfig {
                                     //                     translate(
                                     //                         'profile.mute_notifications'),
                                     //                     style:
-                                    //                         GoogleFonts.inter(
+                                    //                         GoogleFonts.poppins(
                                     //                             fontSize: 11)),
                                     //                 const Spacer(),
                                     //                 SizedBox(

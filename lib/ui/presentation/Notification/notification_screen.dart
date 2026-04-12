@@ -43,14 +43,19 @@ class _NotificationTabConfig {
 class _NotificationScreenState extends State<NotificationScreen> {
   static const List<_NotificationTabConfig> _fixedNotificationTabs = [
     _NotificationTabConfig(
-      category: 'circular',
-      title: 'Circulars',
-      icon: 'assets/png/urgent_icon.png',
+      category: 'notification',
+      title: 'Notification',
+      icon: 'assets/png/notification_icon.png',
     ),
     _NotificationTabConfig(
       category: 'announcement',
-      title: 'Announcements',
+      title: 'Announcement',
       icon: 'assets/png/announcement.png',
+    ),
+    _NotificationTabConfig(
+      category: 'circular',
+      title: 'Circular',
+      icon: 'assets/png/urgent_icon.png',
     ),
   ];
 
@@ -73,109 +78,11 @@ class _NotificationScreenState extends State<NotificationScreen> {
   @override
   void initState() {
     super.initState();
-    _loadDynamicCategories();
+    _notificationTabs = _fixedNotificationTabs;
+    _tabKeys = List.generate(_notificationTabs.length, (_) => GlobalKey());
     _loadMuteSettings();
     _loadNotifications();
     _loadCircularAnnouncements(); // Load from API
-  }
-
-  String _normalizeCategory(String value) {
-    return value.trim().toLowerCase();
-  }
-
-  String _humanizeCategory(String value) {
-    final category = value.trim();
-    if (category.isEmpty) return 'Notifications';
-
-    final parts = category
-        .split(RegExp(r'[._-]+'))
-        .where((part) => part.trim().isNotEmpty)
-        .map((part) {
-      final p = part.trim();
-      return '${p[0].toUpperCase()}${p.substring(1)}';
-    }).toList(growable: false);
-
-    if (parts.isEmpty) return 'Notifications';
-    return parts.join(' ');
-  }
-
-  String _tabIconForCategory(String category) {
-    final normalized = _normalizeCategory(category);
-    if (normalized == 'announcement') {
-      return 'assets/png/announcement.png';
-    }
-    if (normalized == 'circular') {
-      return 'assets/png/urgent_icon.png';
-    }
-    return 'assets/png/notification_icon.png';
-  }
-
-  Future<void> _loadDynamicCategories({bool forceRefresh = false}) async {
-    try {
-      final categories =
-          await NotificationStorageService.getNotificationCategories(
-              forceRefresh: forceRefresh);
-
-      final dynamicTabs = categories
-          .map((item) {
-            final category = _normalizeCategory(item.model);
-            if (category == 'circular' || category == 'announcement') {
-              return null;
-            }
-            final title = item.title.trim().isEmpty
-                ? _humanizeCategory(category)
-                : item.title.trim();
-
-            return _NotificationTabConfig(
-              category: category,
-              title: title,
-              icon: _tabIconForCategory(category),
-            );
-          })
-          .whereType<_NotificationTabConfig>()
-          .toList(growable: true);
-
-      final tabs = <_NotificationTabConfig>[
-        ..._fixedNotificationTabs,
-        ...dynamicTabs,
-      ];
-
-      if (tabs.length == _fixedNotificationTabs.length) {
-        tabs.add(
-          const _NotificationTabConfig(
-            category: 'notification',
-            title: 'Notifications',
-            icon: 'assets/png/notification_icon.png',
-          ),
-        );
-      }
-
-      if (!mounted) return;
-      setState(() {
-        _notificationTabs = tabs;
-        _tabKeys = List.generate(tabs.length, (_) => GlobalKey());
-        if (currentIndex >= tabs.length) {
-          currentIndex = 0;
-        }
-      });
-    } catch (e) {
-      debugPrint('Error loading notification categories: $e');
-      if (!mounted) return;
-      setState(() {
-        _notificationTabs = const [
-          ..._fixedNotificationTabs,
-          _NotificationTabConfig(
-            category: 'notification',
-            title: 'Notifications',
-            icon: 'assets/png/notification_icon.png',
-          ),
-        ];
-        _tabKeys = List.generate(_notificationTabs.length, (_) => GlobalKey());
-        if (currentIndex >= _notificationTabs.length) {
-          currentIndex = 0;
-        }
-      });
-    }
   }
 
   Future<void> _loadMuteSettings() async {
@@ -203,7 +110,6 @@ class _NotificationScreenState extends State<NotificationScreen> {
 
     if (!mounted) return;
     await _loadMuteSettings();
-    await _loadDynamicCategories(forceRefresh: true);
     await _loadNotifications();
     await _loadCircularAnnouncements();
   }
@@ -257,7 +163,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 children: [
                   Text(
                     'Notification Preferences',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       color: const Color(0xFF0D1F47),
                       fontWeight: FontWeight.w800,
                       fontSize: 13.sp,
@@ -266,7 +172,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   SizedBox(height: 2.h),
                   Text(
                     subtitle,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       color: const Color(0xFF5E6D88),
                       fontWeight: FontWeight.w500,
                       fontSize: 11.sp,
@@ -291,38 +197,10 @@ class _NotificationScreenState extends State<NotificationScreen> {
     try {
       final loadedNotifications =
           await NotificationStorageService.getNotifications();
-      final observedCategories = loadedNotifications
-          .map(
-            (item) => _normalizeCategory((item["category"] ?? "").toString()),
-          )
-          .where((category) => category.isNotEmpty)
-          .toSet();
 
       if (mounted) {
         setState(() {
           notifications = loadedNotifications;
-
-          for (final category in observedCategories) {
-            final exists = _notificationTabs.any(
-              (tab) => tab.category == category,
-            );
-            if (!exists) {
-              if (category == 'circular' || category == 'announcement') {
-                continue;
-              }
-              _notificationTabs = [
-                ..._notificationTabs,
-                _NotificationTabConfig(
-                  category: category,
-                  title: _humanizeCategory(category),
-                  icon: _tabIconForCategory(category),
-                ),
-              ];
-              _tabKeys =
-                  List.generate(_notificationTabs.length, (_) => GlobalKey());
-            }
-          }
-
           _isLoading = false;
         });
       }
@@ -831,7 +709,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                                             ),
                                             Text(
                                               notificationTitle.toUpperCase(),
-                                              style: GoogleFonts.koulen(
+                                              style: GoogleFonts.poppins(
                                                 color: index == currentIndex
                                                     ? Colors.white
                                                     : const Color(0xFF1A237E),
@@ -983,7 +861,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 const SizedBox(width: 8),
                 Text(
                   'Delete',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
                     fontSize: 12.sp,
@@ -1019,7 +897,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               const SizedBox(height: 16),
               Text(
                 'Failed to load data',
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                     fontSize: 18.sp, color: Colors.grey[600]),
               ),
               const SizedBox(height: 16),
@@ -1085,7 +963,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
             Text(
               message,
               style:
-                  GoogleFonts.koulen(fontSize: 18.sp, color: Colors.grey[600]),
+                  GoogleFonts.poppins(fontSize: 18.sp, color: Colors.grey[600]),
             ),
           ],
         ),
@@ -1166,7 +1044,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             color: isRead ? Colors.black54 : Colors.black87,
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          overflow: TextOverflow.visible,
                         ),
                       ],
                     ),
@@ -1242,7 +1120,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           color: Colors.black87,
                         ),
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        overflow: TextOverflow.visible,
                       ),
 
                       if (item.displayBody.isNotEmpty) ...[
@@ -1255,7 +1133,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                             color: Colors.black54,
                           ),
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          overflow: TextOverflow.visible,
                         ),
                       ],
 
@@ -1318,7 +1196,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
               children: [
                 Text(
                   item.displayTitle,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 20.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
@@ -1329,7 +1207,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                   const SizedBox(height: 6),
                   Text(
                     DateFormat('dd/MM/yyyy').format(item.date!),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 12.sp,
                       fontWeight: FontWeight.w500,
                       color: Colors.grey[600],
@@ -1344,7 +1222,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                       item.displayBody.isNotEmpty
                           ? item.displayBody
                           : item.displayTitle,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w400,
                         color: Colors.black87,
@@ -1386,7 +1264,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           const SizedBox(width: 6),
                           Text(
                             'VIEW ATTACHMENT',
-                            style: GoogleFonts.bebasNeue(
+                            style: GoogleFonts.poppins(
                               fontSize: 24.sp,
                               letterSpacing: 0.5,
                               color: Colors.white,
@@ -1449,7 +1327,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 // Title
                 Text(
                   title,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 22.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
@@ -1463,7 +1341,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                     physics: const BouncingScrollPhysics(),
                     child: Text(
                       content,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w400,
                         color: Colors.black87,
@@ -1499,7 +1377,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                           const SizedBox(width: 8),
                           Text(
                             'VIEW ATTACHMENT',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 13.sp,
                               fontWeight: FontWeight.w600,
                               color: Colors.white,

@@ -219,9 +219,9 @@ class _MyProjectState extends State<MyProject> {
                 alignment: Alignment.center,
                 child: Text(
                   isAllTab ? 'ALL' : company!.projectName.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.koulen(
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
+                  style: GoogleFonts.poppins(
                     fontSize: 12.sp,
                     fontWeight: FontWeight.w400,
                     color: Colors.white,
@@ -262,7 +262,7 @@ class _MyProjectState extends State<MyProject> {
                       SizedBox(width: 4.w),
                       Text(
                         translate('home.projects'),
-                        style: GoogleFonts.koulen(
+                        style: GoogleFonts.poppins(
                           fontSize: 22.sp,
                           fontWeight: FontWeight.w500,
                           color: appFontColor,
@@ -434,13 +434,13 @@ Widget buildProjectCard({
                         alignment: Alignment.topRight,
                         child: Text(
                           DateFormat('MM/dd/yyyy').format(DateTime.now()),
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 10.sp,
                             fontWeight: FontWeight.w600,
                             color: cardDataGray,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
                         ),
                       ),
                     ],
@@ -449,36 +449,36 @@ Widget buildProjectCard({
                 SizedBox(height: 10.h),
                 Text(
                   id.isNotEmpty ? id : '-',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
                   ),
                   textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                 ),
                 SizedBox(height: 10.h),
                 Text(
                   name.trim().isNotEmpty ? name.trim() : '-',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
                   ),
                   textAlign: TextAlign.center,
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  overflow: TextOverflow.visible,
                 ),
                 SizedBox(height: 14.h),
                 Row(
                   children: [
                     Expanded(
                       child: RichText(
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: null,
+                        overflow: TextOverflow.visible,
                         text: TextSpan(
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w700,
                             color: Colors.black,
@@ -487,7 +487,7 @@ Widget buildProjectCard({
                             const TextSpan(text: 'Work Order# '),
                             TextSpan(
                               text: '$projectsCount',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w600,
                                 color: cardDataGray,
@@ -502,10 +502,10 @@ Widget buildProjectCard({
                       child: Align(
                         alignment: Alignment.centerRight,
                         child: RichText(
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
                           text: TextSpan(
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w700,
                               color: Colors.black,
@@ -514,7 +514,7 @@ Widget buildProjectCard({
                               const TextSpan(text: 'Amount# '),
                               TextSpan(
                                 text: '$formattedAmount M',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 12.sp,
                                   fontWeight: FontWeight.w600,
                                   color: cardDataGray,
@@ -535,13 +535,13 @@ Widget buildProjectCard({
                     SizedBox(width: 4.w),
                     Text(
                       'Abu Dhabi',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 11.5.sp,
                         fontWeight: FontWeight.w700,
                         color: cardDataGray,
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: null,
+                      overflow: TextOverflow.visible,
                     ),
                   ],
                 ),

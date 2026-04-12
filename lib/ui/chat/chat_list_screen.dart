@@ -846,8 +846,8 @@ class _ChatListTile extends StatelessWidget {
                                     color: const Color(0xFF171717),
                                     fontWeight: FontWeight.w700,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
+                                  overflow: TextOverflow.visible,
+                                  maxLines: null,
                                 );
                               },
                             )
@@ -858,8 +858,8 @@ class _ChatListTile extends StatelessWidget {
                                 color: const Color(0xFF171717),
                                 fontWeight: FontWeight.w700,
                               ),
-                              overflow: TextOverflow.ellipsis,
-                              maxLines: 1,
+                              overflow: TextOverflow.visible,
+                              maxLines: null,
                             ),
                           const SizedBox(height: 4),
                           DefaultTextStyle.merge(
@@ -1053,8 +1053,8 @@ class _ChatListTile extends StatelessWidget {
     if (lastMessage == null) {
       return const Text(
         'No messages',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+        maxLines: null,
+        overflow: TextOverflow.visible,
       );
     }
 
@@ -1079,8 +1079,8 @@ class _ChatListTile extends StatelessWidget {
 
     return Text(
       text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+      maxLines: null,
+      overflow: TextOverflow.visible,
     );
   }
 
@@ -1432,8 +1432,8 @@ class _GroupQuickItem extends StatelessWidget {
               const SizedBox(height: 5),
               Text(
                 label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: null,
+                overflow: TextOverflow.visible,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 13,
@@ -1519,8 +1519,8 @@ class _SupportGroupQuickItem extends StatelessWidget {
               const SizedBox(height: 5),
               Text(
                 label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: null,
+                overflow: TextOverflow.visible,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 13,

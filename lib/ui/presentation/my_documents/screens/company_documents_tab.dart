@@ -279,7 +279,7 @@ class _CompanyDocumentsTabState extends State<CompanyDocumentsTab> {
                       EdgeInsets.symmetric(horizontal: 13.5.w, vertical: 8.5.h),
                   child: Text(
                     'Files No.  |  ${_documents.length}',
-                    style: GoogleFonts.aBeeZee(
+                    style: GoogleFonts.poppins(
                       fontSize: 11.sp,
                       fontWeight: FontWeight.w400,
                       fontStyle: FontStyle.italic,
@@ -314,7 +314,7 @@ class _CompanyDocumentsTabState extends State<CompanyDocumentsTab> {
                     Text(
                       _error!,
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.aBeeZee(
+                      style: GoogleFonts.poppins(
                         color: const Color(0xFFBA1719),
                         fontSize: 12.sp,
                       ),
@@ -361,7 +361,7 @@ class _CompanyDocumentsTabState extends State<CompanyDocumentsTab> {
                           SizedBox(height: 8.h),
                           Text(
                             'Add New',
-                            style: GoogleFonts.aBeeZee(
+                            style: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w400,
                               fontStyle: FontStyle.italic,
@@ -428,7 +428,7 @@ class _CompanyDocumentCard extends StatelessWidget {
                   ),
                   child: Text(
                     'PDF',
-                    style: GoogleFonts.aBeeZee(
+                    style: GoogleFonts.poppins(
                       fontSize: 9.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xffBA1719),
@@ -456,8 +456,8 @@ class _CompanyDocumentCard extends StatelessWidget {
                 item.title,
                 textAlign: TextAlign.center,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.aBeeZee(
+                overflow: TextOverflow.visible,
+                style: GoogleFonts.poppins(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w700,
                   color: Colors.black,
@@ -467,9 +467,9 @@ class _CompanyDocumentCard extends StatelessWidget {
               Text(
                 item.fileName,
                 textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.aBeeZee(
+                maxLines: null,
+                overflow: TextOverflow.visible,
+                style: GoogleFonts.poppins(
                   fontSize: 10.sp,
                   fontWeight: FontWeight.w400,
                   color: const Color(0xff949494),

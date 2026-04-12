@@ -47,8 +47,8 @@ class StatusStrip extends StatelessWidget {
               child: Text(
                 text,
                 textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: null,
+                overflow: TextOverflow.visible,
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,

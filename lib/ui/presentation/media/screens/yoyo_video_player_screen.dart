@@ -40,13 +40,13 @@ class _YoYoVideoPlayerScreenState extends State<YoYoVideoPlayerScreen> {
                   Expanded(
                     child: Text(
                       widget.media.name,
-                      style: GoogleFonts.koulen(
+                      style: GoogleFonts.poppins(
                         fontSize: 18.sp,
                         color: Colors.white,
                         letterSpacing: 1.5,
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.visible,
                     ),
                   ),
                   // Download button
@@ -119,7 +119,7 @@ class _YoYoVideoPlayerScreenState extends State<YoYoVideoPlayerScreen> {
                       SizedBox(height: 16.h),
                       Text(
                         "Loading video...",
-                        style: GoogleFonts.koulen(
+                        style: GoogleFonts.poppins(
                           fontSize: 16.sp,
                           color: Colors.white,
                           letterSpacing: 1.0,

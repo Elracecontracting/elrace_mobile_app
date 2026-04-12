@@ -78,7 +78,7 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
                       SizedBox(width: 4.w),
                       Text(
                         'ATTACHMENTS',
-                        style: GoogleFonts.koulen(
+                        style: GoogleFonts.poppins(
                           fontSize: 22.sp,
                           fontWeight: FontWeight.w500,
                           color: appFontColor,
@@ -117,7 +117,7 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
                             SizedBox(height: 12.h),
                             Text(
                               'No attachments',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.grey,
@@ -153,7 +153,7 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
                         children: [
                           Text(
                             'Error loading attachments',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 16.sp,
                               color: Colors.red,
                             ),
@@ -161,7 +161,7 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
                           SizedBox(height: 8.h),
                           Text(
                             state.message,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               color: Colors.grey,
                             ),
@@ -264,9 +264,9 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
                         child: Text(
                           name.isEmpty ? 'File Name' : name,
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          overflow: TextOverflow.visible,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF2E3445),
@@ -307,7 +307,7 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
             SizedBox(height: 10.h),
             Text(
               'Add New Document',
-              style: GoogleFonts.aBeeZee(
+              style: GoogleFonts.poppins(
                 fontSize: 10.sp,
                 fontWeight: FontWeight.w400,
                 fontStyle: FontStyle.italic,
@@ -385,7 +385,7 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
               // File Type Label
               Text(
                 fileType,
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 11.sp,
                   fontWeight: FontWeight.w600,
                   color: Colors.black,
@@ -399,13 +399,13 @@ class _AttachmentListScreenState extends State<AttachmentListScreen> {
                 padding: EdgeInsets.symmetric(horizontal: 8.w),
                 child: Text(
                   name,
-                  style: GoogleFonts.aBeeZee(
+                  style: GoogleFonts.poppins(
                     fontSize: 10.sp,
                     fontWeight: FontWeight.w400,
                     color: const Color(0xFFBA1719),
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  overflow: TextOverflow.visible,
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -730,7 +730,7 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog>
                 children: [
                   Text(
                     'W.O Name',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.black,
@@ -754,7 +754,7 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog>
                       controller: _woNameController,
                       decoration: InputDecoration(
                         hintText: 'Alfouaa Police Station',
-                        hintStyle: GoogleFonts.inter(
+                        hintStyle: GoogleFonts.poppins(
                           fontSize: 14.sp,
                           color: Colors.grey[600],
                         ),
@@ -779,7 +779,7 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog>
                 children: [
                   Text(
                     'Folder',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w600,
                       color: Colors.black,
@@ -816,7 +816,7 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog>
                               SizedBox(width: 12.w),
                               Text(
                                 'Loading folders...',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 14.sp,
                                   color: Colors.grey,
                                 ),
@@ -850,7 +850,7 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog>
                             initialValue: _selectedFolder,
                             hint: Text(
                               'Select folder',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 14.sp,
                                 color: Colors.grey,
                               ),
@@ -863,7 +863,7 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog>
                                           value: folder,
                                           child: Text(
                                             folder.name,
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 14.sp,
                                               color: Colors.black,
                                             ),
@@ -927,7 +927,7 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog>
                           text: _isPickingFiles
                               ? 'Loading...'
                               : '      Attach your file',
-                          textStyle: GoogleFonts.inter(
+                          textStyle: GoogleFonts.poppins(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w400,
                             color: const Color(0xFF9E9E9E),
@@ -956,7 +956,7 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog>
               if (_selectedFiles.isNotEmpty)
                 Text(
                   'No. of attachments ${_selectedFiles.length}',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 12.sp,
                     color: Colors.grey,
                   ),
@@ -978,7 +978,7 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog>
                       ),
                       child: Text(
                         'Cancel',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -1008,7 +1008,7 @@ class _AddDocumentDialogState extends State<_AddDocumentDialog>
                             )
                           : Text(
                               'Submit',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,

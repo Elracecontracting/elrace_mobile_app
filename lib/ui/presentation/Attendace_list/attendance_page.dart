@@ -196,7 +196,7 @@ class _AttendancePageState extends State<AttendancePage> {
       alignment: Alignment.center,
       child: Text(
         title,
-        style: GoogleFonts.koulen(
+        style: GoogleFonts.poppins(
           fontSize: 19,
           color: const Color(0xFF6A2BFF),
           letterSpacing: 1.2,
@@ -380,7 +380,7 @@ class _AttendancePageState extends State<AttendancePage> {
             const SizedBox(width: 48),
             Text(
               'ATTENDANCE',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 20,
                 fontWeight: FontWeight.w400,
                 color: appFontColor,
@@ -403,7 +403,7 @@ class _AttendancePageState extends State<AttendancePage> {
         Center(
           child: Text(
             '$monthName, $year',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF9AA0A6),
@@ -424,7 +424,7 @@ class _AttendancePageState extends State<AttendancePage> {
             child: Center(
               child: Text(
                 errorMessage,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF5A5A5A),
@@ -438,7 +438,7 @@ class _AttendancePageState extends State<AttendancePage> {
             child: Center(
               child: Text(
                 'Loading attendance data...',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF5A5A5A),
@@ -454,7 +454,7 @@ class _AttendancePageState extends State<AttendancePage> {
             child: Center(
               child: Text(
                 'No data found.',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF5A5A5A),
@@ -473,7 +473,7 @@ class _AttendancePageState extends State<AttendancePage> {
             child: Center(
               child: Text(
                 'No data found.',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF5A5A5A),
@@ -493,7 +493,7 @@ class _AttendancePageState extends State<AttendancePage> {
         child: Center(
           child: Text(
             'No employees found.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF5A5A5A),
@@ -547,9 +547,9 @@ class _AttendancePageState extends State<AttendancePage> {
                             children: [
                               Text(
                                 employee.employeeName,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.inter(
+                                maxLines: null,
+                                overflow: TextOverflow.visible,
+                                style: GoogleFonts.poppins(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
                                   color: Colors.black,
@@ -580,7 +580,7 @@ class _AttendancePageState extends State<AttendancePage> {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       child: Text(
                         recordsError,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5A5A5A),
@@ -592,7 +592,7 @@ class _AttendancePageState extends State<AttendancePage> {
                       padding: const EdgeInsets.symmetric(vertical: 10),
                       child: Text(
                         'No attendance records found.',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5A5A5A),
@@ -669,7 +669,7 @@ class _AttendancePageState extends State<AttendancePage> {
           child: Text(
             'Showing $displayCount of ${employees.length} employees',
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF9AA0A6),
@@ -716,7 +716,7 @@ class _AttendancePageState extends State<AttendancePage> {
             const SizedBox(width: 48),
             Text(
               'ATTENDANCE',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 20,
                 fontWeight: FontWeight.w400,
                 color: appFontColor,
@@ -733,7 +733,7 @@ class _AttendancePageState extends State<AttendancePage> {
         Center(
           child: Text(
             '$monthName, $year',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF9AA0A6),
@@ -754,7 +754,7 @@ class _AttendancePageState extends State<AttendancePage> {
             child: Center(
               child: Text(
                 errorMessage,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF5A5A5A),
@@ -818,9 +818,9 @@ class _AttendancePageState extends State<AttendancePage> {
               Expanded(
                 child: Text(
                   data.employeeName ?? "",
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
+                  style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: Colors.black,
@@ -829,7 +829,7 @@ class _AttendancePageState extends State<AttendancePage> {
               ),
               Text(
                 '${data.totalPresentDays ?? 0}/${data.totalWorkingDays ?? 0}',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: Colors.black,
@@ -937,7 +937,7 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
           children: [
             Text(
               'Yearly Calendar 2026',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF9AA0A6),
@@ -977,7 +977,7 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
                     alignment: Alignment.center,
                     child: Text(
                       months[index],
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: isSelected ? Colors.white : Colors.black,
@@ -1003,7 +1003,7 @@ class _MonthPickerDialogState extends State<_MonthPickerDialog> {
                 ),
                 child: Text(
                   'Done',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
@@ -1047,7 +1047,7 @@ class _MonthChip extends StatelessWidget {
           children: [
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 color: appFontColor,
@@ -1081,7 +1081,7 @@ class _SearchBox extends StatelessWidget {
       decoration: InputDecoration(
         prefixIcon: const Icon(Icons.search, size: 20),
         hintText: hintText,
-        hintStyle: GoogleFonts.inter(
+        hintStyle: GoogleFonts.poppins(
           fontSize: 13,
           fontWeight: FontWeight.w500,
           color: const Color(0xFF5A5A5A),

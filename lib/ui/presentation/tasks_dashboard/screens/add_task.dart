@@ -364,12 +364,12 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                     SizedBox(width: 8.w),
                     Text(
                       'ADD TASK',
-                      style: GoogleFonts.koulen(
+                      style: GoogleFonts.poppins(
                         fontSize: 22.sp,
                         fontWeight: FontWeight.w500,
                         color: appFontColor,
                       ),
-                      overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.visible,
                     ),
                   ],
                 ),
@@ -835,7 +835,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 fontSize: 14,
                 color: Colors.grey[600],
               ),
-              overflow: TextOverflow.ellipsis,
+              overflow: TextOverflow.visible,
             ),
           );
         }).toList(),
@@ -918,7 +918,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                 fontSize: 14,
                 color: Colors.grey[600],
               ),
-              overflow: TextOverflow.ellipsis,
+              overflow: TextOverflow.visible,
             ),
           );
         }).toList(),
@@ -1010,7 +1010,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                     fontSize: 14,
                     color: Colors.grey[600],
                   ),
-                  overflow: TextOverflow.ellipsis,
+                  overflow: TextOverflow.visible,
                 ),
               );
             }).toList(),
@@ -1115,7 +1115,7 @@ class _AddTaskScreenState extends State<AddTaskScreen> {
                           fontSize: 14,
                           color: Colors.grey[600],
                         ),
-                        overflow: TextOverflow.ellipsis,
+                        overflow: TextOverflow.visible,
                       ),
                     ),
                   ],

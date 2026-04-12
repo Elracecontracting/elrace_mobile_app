@@ -296,7 +296,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     return Text(
       text,
       textAlign: align,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.poppins(
         fontSize: 13.sp,
         fontWeight: FontWeight.w800,
         color: const Color(0xFFADADAD),
@@ -309,7 +309,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     return Text(
       text,
       textAlign: align,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.poppins(
         fontSize: 12.sp,
         fontWeight: FontWeight.w700,
         color: const Color(0xFFA9A9A9),
@@ -322,14 +322,14 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     return Text(
       text,
       textAlign: align,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.poppins(
         fontSize: size ?? 14.sp,
         fontWeight: weight ?? FontWeight.w800,
         color: color ?? const Color(0xFF0E0E0E),
         letterSpacing: 0.1,
       ),
       maxLines: 2,
-      overflow: TextOverflow.ellipsis,
+      overflow: TextOverflow.visible,
     );
   }
 
@@ -342,7 +342,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       ),
       child: Text(
         text,
-        style: GoogleFonts.inter(
+        style: GoogleFonts.poppins(
           fontSize: 9.sp,
           fontWeight: FontWeight.w700,
           color: fg,
@@ -362,7 +362,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
             padding: EdgeInsets.only(top: 4.w),
             child: Text(
               '•',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w700,
                 color: dim ? const Color(0xFFBDBDBD) : const Color(0xFF0E0E0E),
@@ -376,7 +376,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                 children: [
                   TextSpan(
                     text: label,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 13.sp,
                       fontWeight: FontWeight.w800,
                       color: dim
@@ -387,7 +387,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                   if (hasValue)
                     TextSpan(
                       text: ' $value',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w800,
                         color: dim
@@ -501,7 +501,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
         alignment: Alignment.center,
         child: Text(
           initials,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.poppins(
             fontSize: 10.sp,
             fontWeight: FontWeight.w800,
             color: const Color(0xFF4A607A),
@@ -653,7 +653,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                       padding: EdgeInsets.all(16.w),
                       child: Text(
                         _error,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.red,
@@ -673,7 +673,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                               SizedBox(height: 8.w),
                               Text(
                                 'INVOICE DETAILS',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w900,
                                   color: const Color(0xFF0E0E0E),
@@ -849,7 +849,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                           ),
                                           child: Text(
                                             invoiceDateDisplay,
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 12.sp,
                                               fontWeight: FontWeight.w700,
                                               color: const Color(0xFF7C7C7C),
@@ -867,7 +867,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                           padding: EdgeInsets.only(top: 4.w),
                                           child: Text(
                                             '•',
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 12.sp,
                                               fontWeight: FontWeight.w700,
                                               color: const Color(0xFF0E0E0E),
@@ -881,7 +881,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                               children: [
                                                 TextSpan(
                                                   text: 'Amount',
-                                                  style: GoogleFonts.inter(
+                                                  style: GoogleFonts.poppins(
                                                     fontSize: 13.sp,
                                                     fontWeight: FontWeight.w800,
                                                     color:
@@ -891,7 +891,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                                 if (formattedAmount.isNotEmpty)
                                                   TextSpan(
                                                     text: ' $formattedAmount',
-                                                    style: GoogleFonts.inter(
+                                                    style: GoogleFonts.poppins(
                                                       fontSize: 13.sp,
                                                       fontWeight:
                                                           FontWeight.w900,
@@ -934,7 +934,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                           ),
                                           child: Text(
                                             'View',
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 12.sp,
                                               fontWeight: FontWeight.w800,
                                               color: Colors.white,
@@ -958,7 +958,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                       color: Colors.white),
                                   label: Text(
                                     'View Attachments',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 12.sp,
                                       fontWeight: FontWeight.w700,
                                       color: Colors.white,
@@ -1000,7 +1000,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                               pillHeight: 36.w,
                               pillSpacing: 24.w,
                               pillBorderRadius: BorderRadius.circular(20.r),
-                              pillTextStyle: GoogleFonts.inter(
+                              pillTextStyle: GoogleFonts.poppins(
                                 fontSize: 17.sp,
                                 fontWeight: FontWeight.w500,
                                 color: Colors.white,

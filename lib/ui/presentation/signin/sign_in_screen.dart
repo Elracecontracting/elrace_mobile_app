@@ -283,7 +283,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         // ),
                         Text(
                           'sign in to your Account',
-                          style: GoogleFonts.tajawal(
+                          style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w400,
                               fontSize: SizeConfig().getTextSize(20)),
                         ),
@@ -316,7 +316,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                 padding: const EdgeInsets.only(top: 2.0),
                                 child: Text(
                                   'Remember Password',
-                                  style: GoogleFonts.tajawal(
+                                  style: GoogleFonts.poppins(
                                       fontWeight: FontWeight.w600,
                                       color: const Color(0xff30309B),
                                       fontSize: 15),
@@ -417,7 +417,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         SizedBox(height: SizeConfig().getHeight(70)),
                         Text(
                           'Contact with Support',
-                          style: GoogleFonts.tajawal(
+                          style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w600,
                               fontSize: SizeConfig().getTextSize(18)),
                         ),

@@ -462,7 +462,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                         children: [
                           Text(
                             'Expense Details',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
                               color: Colors.black87,
@@ -470,7 +470,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                           ),
                           Text(
                             'ID: ${expense['id'] ?? 'N/A'}',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 12,
                               fontWeight: FontWeight.w500,
                               color: Colors.black54,
@@ -573,7 +573,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
             children: [
               Text(
                 label,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: Colors.black54,
@@ -582,7 +582,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
               const SizedBox(height: 2),
               Text(
                 value,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   color: isAmount ? const Color(0xFFD1002C) : Colors.black87,
@@ -1621,7 +1621,7 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                                           Flexible(
                                             child: Text(
                                               selectedExpenseType,
-                                              overflow: TextOverflow.ellipsis,
+                                              overflow: TextOverflow.visible,
                                               style: const TextStyle(
                                                 color: Colors.white,
                                                 fontSize: 15,
@@ -2465,8 +2465,8 @@ class _PettyCashPopUpScreenState extends State<PettyCashPopUpScreen> {
                   children: [
                     Text(
                       name ?? 'Expense',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: null,
+                      overflow: TextOverflow.visible,
                       style: const TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.bold,

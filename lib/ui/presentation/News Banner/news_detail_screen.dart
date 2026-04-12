@@ -44,7 +44,7 @@ class NewsDetailScreen extends StatelessWidget {
                       const SizedBox(width: 8),
                       Text(
                         translate('home.news'),
-                        style: GoogleFonts.koulen(
+                        style: GoogleFonts.poppins(
                             fontSize: 25,
                             fontWeight: FontWeight.w400,
                             color: appFontColor),
@@ -74,7 +74,7 @@ class NewsDetailScreen extends StatelessWidget {
               child: Center(
                 child: Text(
                   (newsItem['titles'] ?? '').toString().toUpperCase(),
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     fontSize: 22.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF1F2937),
@@ -97,7 +97,7 @@ class NewsDetailScreen extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 40.w, vertical: 20.h),
               child: Text(
                 newsItem['des'] ?? '',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 15.sp,
                   color: Colors.black,
                   height: 1.8,

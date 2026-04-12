@@ -474,7 +474,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
               padding: EdgeInsets.symmetric(vertical: 16.h),
               child: Text(
                 _getPageTitle(),
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 18.sp,
                   fontWeight: FontWeight.w400,
                   letterSpacing: 1.5,
@@ -525,7 +525,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                       // Description
                       Text(
                         'Description',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.grey[600],
@@ -658,7 +658,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                           Expanded(
                             child: Text(
                               _getNoticeText(),
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 9.sp,
                                 color: Colors.black87,
                                 fontWeight: FontWeight.w600,
@@ -694,7 +694,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                                 )
                               : Text(
                                   'SUBMIT',
-                                  style: GoogleFonts.koulen(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 16.sp,
                                     letterSpacing: 1.5,
                                     color: Colors.white,
@@ -913,7 +913,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 12.sp,
               fontWeight: FontWeight.w700,
               color: _primary,
@@ -935,7 +935,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
           else
             Text(
               value,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w500,
                 color: Colors.black54,

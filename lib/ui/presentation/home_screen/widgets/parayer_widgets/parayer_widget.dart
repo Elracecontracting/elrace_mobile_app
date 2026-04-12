@@ -342,7 +342,7 @@ class _ParayerWidgetState extends State<ParayerWidget>
                             Row(
                               children: [
                                 Text(translate('home.prayer_times'),
-                                    style: GoogleFonts.koulen(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 20.sp,
                                       fontWeight: FontWeight.w400,
                                       color: Colors.white,
@@ -359,7 +359,7 @@ class _ParayerWidgetState extends State<ParayerWidget>
                                     SizedBox(width: 4.w),
                                     Text(
                                       _locationLabel ?? '...',
-                                      style: GoogleFonts.kanit(
+                                      style: GoogleFonts.poppins(
                                         fontSize: 14.sp,
                                         fontWeight: FontWeight.w500,
                                         color: Colors.white,
@@ -553,7 +553,7 @@ class _ParayerWidgetState extends State<ParayerWidget>
                                                 args: {
                                                   'prayer': nextPrayerName
                                                 }),
-                                            style: GoogleFonts.kanit(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w400,
                                               color: Colors.white,

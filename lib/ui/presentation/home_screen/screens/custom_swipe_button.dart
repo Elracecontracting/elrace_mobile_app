@@ -693,7 +693,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                                   child: Text(
                                     translate(
                                         'custom_swipe_button.swipe_to_check_in'),
-                                    style: GoogleFonts.akatab(
+                                    style: GoogleFonts.poppins(
                                       color: const Color(0xFF151544),
                                       fontSize: 18.sp,
                                       fontWeight: FontWeight.w700,
@@ -710,7 +710,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                                   child: Text(
                                     translate(
                                         'custom_swipe_button.swipe_to_check_out'),
-                                    style: GoogleFonts.akatab(
+                                    style: GoogleFonts.poppins(
                                       color: const Color(0xFF151544),
                                       fontSize: 18.sp,
                                       fontWeight: FontWeight.w700,
@@ -872,7 +872,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                             ),
                             child: Text(
                               _checkInDisplayTime,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontSize: 10.sp,
                                 fontWeight: FontWeight.w500,
@@ -883,7 +883,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                           // Total hours text in the middle
                           Text(
                             '$_totalHoursDisplay H',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               color: Colors.white,
                               fontSize: 10.sp,
                               fontWeight: FontWeight.w600,
@@ -900,7 +900,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                             ),
                             child: Text(
                               _checkOutDisplayTime,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontSize: 10.sp,
                                 fontWeight: FontWeight.w500,

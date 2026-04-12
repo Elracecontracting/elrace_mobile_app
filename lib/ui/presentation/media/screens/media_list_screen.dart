@@ -309,13 +309,13 @@ class _MediaListScreenState extends State<MediaListScreen> {
             if (!_showSearch)
               Text(
                 translate('home.media'),
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 22.sp,
                   fontWeight: FontWeight.w400,
                   color: appFontColor,
                   letterSpacing: 1.5,
                 ),
-                overflow: TextOverflow.ellipsis,
+                overflow: TextOverflow.visible,
               )
             else
               Expanded(child: _buildInlineSearchField()),
@@ -384,8 +384,8 @@ class _MediaListScreenState extends State<MediaListScreen> {
           color: Colors.white,
           letterSpacing: 1.0,
         ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+        maxLines: null,
+        overflow: TextOverflow.visible,
       );
     }
 
@@ -692,8 +692,8 @@ class _MediaListScreenState extends State<MediaListScreen> {
                     children: [
                       Text(
                         content.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: null,
+                        overflow: TextOverflow.visible,
                         style: GoogleFonts.poppins(
                           fontSize: 18.sp,
                           fontWeight: FontWeight.w800,
@@ -703,8 +703,8 @@ class _MediaListScreenState extends State<MediaListScreen> {
                       SizedBox(height: 2.h),
                       Text(
                         content.projectName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: null,
+                        overflow: TextOverflow.visible,
                         style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w500,

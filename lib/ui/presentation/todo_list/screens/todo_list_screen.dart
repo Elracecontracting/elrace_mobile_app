@@ -146,12 +146,12 @@ class _TodoListScreenState extends State<TodoListScreen> {
                 SizedBox(width: 8.w),
                 Text(
                   translate('home.todo_list'),
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     fontSize: 26.sp,
                     fontWeight: FontWeight.w500,
                     color: appFontColor,
                   ),
-                  overflow: TextOverflow.ellipsis,
+                  overflow: TextOverflow.visible,
                 ),
               ],
             ),
@@ -202,13 +202,13 @@ class _TodoListScreenState extends State<TodoListScreen> {
           Expanded(
             child: Text(
               userName.toUpperCase(),
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF1A1A53),
                 letterSpacing: 0.5,
               ),
-              overflow: TextOverflow.ellipsis,
+              overflow: TextOverflow.visible,
             ),
           ),
         ],
@@ -251,7 +251,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
             Expanded(
               child: Text(
                 title.toUpperCase(),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF1A1A53),
@@ -268,7 +268,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
                 ),
                 child: Text(
                   count.toString(),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF1A1A53),
@@ -308,7 +308,7 @@ class _TodoListScreenState extends State<TodoListScreen> {
               ),
               label: Text(
                 translate('todo.new_list'),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 16.sp,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF2196F3),

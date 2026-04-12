@@ -73,7 +73,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                       SizedBox(height: 16.h),
                       Text(
                         'Service not available',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5A5A5A),
@@ -83,7 +83,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                       Text(
                         'This feature is currently unavailable.\nPlease try again later.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           color: const Color(0xFF9AA0A6),
                         ),
@@ -110,7 +110,7 @@ class _TimesheetScreenState extends State<TimesheetScreen> {
                       padding: EdgeInsets.only(top: 30.h),
                       child: Text(
                         'No timesheets found.',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5A5A5A),
@@ -173,7 +173,7 @@ class _ActionsHeader extends StatelessWidget {
           SizedBox(width: 8.w),
           Text(
             title,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 16.sp,
               fontWeight: FontWeight.w800,
               color: const Color(0xFF171A2E),
@@ -222,7 +222,7 @@ class _TimesheetCard extends StatelessWidget {
                   child: Text(
                     clientName,
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 17.sp,
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF0D3E7F),
@@ -232,8 +232,8 @@ class _TimesheetCard extends StatelessWidget {
                 SizedBox(height: 8.h),
                 Text(
                   projectName.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                   style: GoogleFonts.poppins(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w700,
@@ -243,9 +243,9 @@ class _TimesheetCard extends StatelessWidget {
                 SizedBox(height: 2.h),
                 Text(
                   formanName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.lexendDeca(
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
+                  style: GoogleFonts.poppins(
                     fontSize: 11.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF484848).withOpacity(0.72),
@@ -262,7 +262,7 @@ class _TimesheetCard extends StatelessWidget {
                     SizedBox(width: 10.w),
                     Text(
                       dateText,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w500,
                         color: const Color(0xFF0D3E7F),

@@ -212,8 +212,8 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
                                               ],
                                             ),
                                             textAlign: TextAlign.center,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
+                                            maxLines: null,
+                                            overflow: TextOverflow.visible,
                                           ),
                                         ),
                                       ),
@@ -284,7 +284,7 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
                 //           const ProjectAnnouncementPage(), context),
                 //       child: Text(
                 //         translate('home.see_all'),
-                //         style: GoogleFonts.inter(
+                //         style: GoogleFonts.poppins(
                 //           fontSize: 16,
                 //           color: Colors.grey[700],
                 //           fontWeight: FontWeight.w500,

@@ -386,7 +386,7 @@ class _SignaturesScreenState extends State<SignaturesScreen> {
                       SizedBox(height: 16.h),
                       Text(
                         'Service not available',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5A5A5A),
@@ -396,7 +396,7 @@ class _SignaturesScreenState extends State<SignaturesScreen> {
                       Text(
                         'This feature is currently unavailable.\nPlease try again later.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           color: const Color(0xFF9AA0A6),
                         ),
@@ -422,7 +422,7 @@ class _SignaturesScreenState extends State<SignaturesScreen> {
                     SizedBox(height: 16.h),
                     Text(
                       'No signatures found',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w500,
                         color: const Color(0xFF9AA0A6),
@@ -453,7 +453,7 @@ class _SignaturesScreenState extends State<SignaturesScreen> {
                         SizedBox(width: 8.w),
                         Text(
                           'SIGNATURE',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 18.sp,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF101C36),
@@ -520,8 +520,8 @@ class _SignatureFileCard extends StatelessWidget {
                 children: [
                   Text(
                     item.fileName.trim().isEmpty ? 'File Name' : item.fileName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
                     style: GoogleFonts.poppins(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.w700,
@@ -532,8 +532,8 @@ class _SignatureFileCard extends StatelessWidget {
                   SizedBox(height: 6.h),
                   Text(
                     item.displayDate.isEmpty ? '-' : item.displayDate,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
                     style: GoogleFonts.poppins(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w500,
