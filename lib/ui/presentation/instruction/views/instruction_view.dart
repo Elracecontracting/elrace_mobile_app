@@ -4,8 +4,6 @@ import 'package:el_race/ui/widgets/custom_button.dart';
 import 'package:el_race/utils/extensions/size_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_translate/flutter_translate.dart';
-import 'package:el_race/core/biometric/face_recognition_helper.dart';
-import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/utils/Util.dart';
 
@@ -107,47 +105,8 @@ class InstructionView extends StatelessWidget {
               CustomButton(
                 text: translate('instruction.lets_go'),
                 onTap: () async {
-                  // Get user ID from login data
-                  final loginData = SharedPref.getLoginData();
-                  final userId = loginData.result?.data?.uid?.toString() ??
-                      loginData.result?.data?.username ??
-                      'user_${DateTime.now().millisecondsSinceEpoch}';
-
-                  // Register face using Face Recognition - MANDATORY
-                  final success = await FaceRecognitionHelper.registerFace(
-                    context,
-                    userId: userId,
-                    title: 'Register Your Face (Required)',
-                    subtitle:
-                        'Face registration is required to use the app. Please complete this step.',
-                  );
-
-                  if (success) {
-                    // Mark face as registered
-                    SharedPref()
-                        .setPreferencesBoolean('isFaceRegistered', true);
-                    SharedPref().setPreferencesBoolean(
-                        'pendingFaceVerification', false);
-
-                    // Navigate to home screen
-                    if (context.mounted) {
-                      Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
-                    }
-                  } else {
-                    // Registration failed or cancelled - show error and stay on same screen
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                              'Face registration is required. Please try again.'),
-                          duration: Duration(seconds: 3),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                      // Stay on instruction screen - don't navigate
-                      // User must complete face registration to continue
-                    }
-                  }
+                  // Navigate to home screen – auth setup happens there
+                  Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
                 },
               ),
               const Spacer(flex: 2),

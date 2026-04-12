@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/data/services/prayer_notification_service.dart';
+import 'package:volume_controller/volume_controller.dart';
 
 class PrayerAudioService {
   static final PrayerAudioService _instance = PrayerAudioService._internal();
@@ -17,6 +18,8 @@ class PrayerAudioService {
   PrayerTimes? _currentPrayerTimes;
   DateTime? _lastPlayedTime;
   bool _isPlaying = false; // منع تشغيل متعدد
+  StreamSubscription<double>? _volumeSubscription;
+  double? _volumeAtStart; // مستوى الصوت عند بداية الأذان
 
   // تهيئة الخدمة
   Future<void> initialize(PrayerTimes prayerTimes) async {
@@ -177,6 +180,36 @@ class PrayerAudioService {
     }
   }
 
+  // بدء مراقبة زر الصوت لإيقاف الأذان عند الضغط على أي زر
+  void _startVolumeListener() {
+    _volumeSubscription?.cancel();
+    // حفظ مستوى الصوت الحالي
+    VolumeController.instance.getVolume().then((vol) {
+      _volumeAtStart = vol;
+    });
+    // لا نريد أن يظهر مؤشر الصوت الخاص بالنظام
+    VolumeController.instance.showSystemUI = false;
+    _volumeSubscription =
+        VolumeController.instance.addListener((volume) {
+      if (_isPlaying && _volumeAtStart != null) {
+        // إذا تغير مستوى الصوت (أي كبسة) → أوقف الأذان
+        if ((volume - _volumeAtStart!).abs() > 0.01) {
+          stopAdhan();
+          // إعادة مستوى الصوت للقيمة الأصلية
+          VolumeController.instance.setVolume(_volumeAtStart!);
+        }
+      }
+    });
+  }
+
+  // إيقاف مراقبة زر الصوت
+  void _stopVolumeListener() {
+    _volumeSubscription?.cancel();
+    _volumeSubscription = null;
+    _volumeAtStart = null;
+    VolumeController.instance.showSystemUI = true;
+  }
+
   // تشغيل صوت الأذان
   Future<void> _playAdhan() async {
     try {
@@ -186,6 +219,9 @@ class PrayerAudioService {
       // start with low volume and fade in
       await _audioPlayer.setVolume(0.1);
       // debugPrint('🔊 Volume set to 10% (starting fade-in)');
+
+      // بدء مراقبة أزرار الصوت
+      _startVolumeListener();
 
       // تشغيل ملف الصوت من assets
       await _audioPlayer.play(AssetSource('mp3/athan.mp3'));
@@ -218,6 +254,7 @@ class PrayerAudioService {
     try {
       await _audioPlayer.stop();
       _isPlaying = false;
+      _stopVolumeListener();
       // debugPrint('Adhan stopped');
     } catch (e) {
       // debugPrint('Error stopping adhan: $e');
@@ -281,6 +318,7 @@ class PrayerAudioService {
   // تنظيف الموارد
   Future<void> dispose() async {
     _checkTimer?.cancel();
+    _stopVolumeListener();
     await _audioPlayer.stop();
     await _audioPlayer.dispose();
     _isPlaying = false;

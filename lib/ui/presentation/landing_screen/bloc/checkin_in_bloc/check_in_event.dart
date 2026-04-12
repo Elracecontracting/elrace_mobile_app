@@ -6,20 +6,5 @@ sealed class CheckInEvent extends Equatable {
   List<Object> get props => [];
 }
 
-/// Event to trigger check-in after face verification
+/// Event to trigger check-in (authentication already handled by UI layer)
 final class CheckInET extends CheckInEvent {}
-
-/// Event to verify face before check-in
-/// Now supports multiple images for anti-spoofing detection
-final class VerifyFaceForCheckInET extends CheckInEvent {
-  final String imagePath;
-  final List<String>? additionalImagePaths; // For anti-spoof check
-
-  const VerifyFaceForCheckInET({
-    required this.imagePath,
-    this.additionalImagePaths,
-  });
-
-  @override
-  List<Object> get props => [imagePath, additionalImagePaths ?? []];
-}
