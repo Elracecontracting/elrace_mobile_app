@@ -76,6 +76,8 @@ class ImagePreprocessingHelper {
       // Check image format
       if (cameraImage.format.group == ImageFormatGroup.yuv420) {
         return _convertYUV420ToImage(cameraImage);
+      } else if (cameraImage.format.group == ImageFormatGroup.nv21) {
+        return _convertNV21ToImage(cameraImage);
       } else if (cameraImage.format.group == ImageFormatGroup.bgra8888) {
         return _convertBGRA8888ToImage(cameraImage);
       } else {
@@ -115,6 +117,46 @@ class ImagePreprocessingHelper {
         final yValue = yPlane.bytes[yIndex];
         final uValue = uPlane.bytes[uvIndex];
         final vValue = vPlane.bytes[uvIndex];
+
+        // YUV to RGB conversion formula
+        final r = (yValue + 1.370705 * (vValue - 128)).clamp(0, 255).toInt();
+        final g =
+            (yValue - 0.337633 * (uValue - 128) - 0.698001 * (vValue - 128))
+                .clamp(0, 255)
+                .toInt();
+        final b = (yValue + 1.732446 * (uValue - 128)).clamp(0, 255).toInt();
+
+        image.setPixelRgba(x, y, r, g, b, 255);
+      }
+    }
+
+    return image;
+  }
+
+  /// Convert NV21 format to Image (Android)
+  ///
+  /// NV21 is a common YUV format on Android where:
+  /// - Plane 0: Y (luminance) data
+  /// - Plane 1: Interleaved VU (chrominance) data
+  static img.Image _convertNV21ToImage(CameraImage cameraImage) {
+    final width = cameraImage.width;
+    final height = cameraImage.height;
+
+    // NV21 has Y plane and interleaved VU plane
+    final yPlane = cameraImage.planes[0];
+    final vuPlane = cameraImage.planes[1];
+
+    final image = img.Image(width: width, height: height);
+
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        final yIndex = y * yPlane.bytesPerRow + x;
+        // VU plane is interleaved: V at even indices, U at odd indices
+        final vuIndex = (y ~/ 2) * vuPlane.bytesPerRow + (x ~/ 2) * 2;
+
+        final yValue = yPlane.bytes[yIndex];
+        final vValue = vuPlane.bytes[vuIndex];
+        final uValue = vuPlane.bytes[vuIndex + 1];
 
         // YUV to RGB conversion formula
         final r = (yValue + 1.370705 * (vValue - 128)).clamp(0, 255).toInt();

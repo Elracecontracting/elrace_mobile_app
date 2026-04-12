@@ -99,8 +99,8 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
           print('   📊 Head Yaw variation: $yawVariation°');
           print('   📊 Head Pitch variation: $pitchVariation°');
 
-          // If face is perfectly static (< 0.3° movement), it's likely a photo
-          if (yawVariation < 0.3 && pitchVariation < 0.3) {
+          // If face is perfectly static (< 0.8° movement), it's likely a photo
+          if (yawVariation < 0.8 && pitchVariation < 0.8) {
             print('❌ Anti-spoof FAILED: Face is too static (possible photo)');
             return const Left(
               LivenessCheckFailure(
@@ -108,31 +108,95 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
               ),
             );
           }
+          
+          // Check eye probability consistency across frames (photos have near-identical values)
+          final eyeValues = faceSequence
+              .where((f) => f.leftEyeOpenProbability != null)
+              .map((f) => (f.leftEyeOpenProbability! + (f.rightEyeOpenProbability ?? 0)) / 2)
+              .toList();
+          
+          if (eyeValues.length >= 3) {
+            final eyeVariation = _calculateVariation(eyeValues);
+            print('   📊 Eye value variation: $eyeVariation');
+            
+            // A real person's eye values vary naturally (blinking, micro-movements)
+            // A photo's eye values remain nearly constant
+            if (eyeVariation < 0.01) {
+              print('❌ Anti-spoof FAILED: Eye values too consistent (possible photo)');
+              return const Left(
+                LivenessCheckFailure(
+                  'Registration failed. Photo detected. Please use your real face.',
+                ),
+              );
+            }
+          }
 
           print('✅ Anti-spoofing check passed');
         }
       }
 
-      // Step 1: Detect face
-      print('🔍 Step 1: Detecting face...');
-      final detectResult = await _detectSingleFace(image);
-      if (detectResult.isLeft()) {
-        print('❌ Face detection failed');
-        return detectResult.fold((failure) {
-          print('❌ Failure: ${failure.runtimeType} - ${failure.message}');
-          return Left(failure);
-        }, (_) => throw Exception());
+      // Step 1: Find the BEST quality frame from all collected frames
+      // The last frame may be bad (head turned, eyes closed from blink/movement)
+      // so we try multiple frames and pick the best one
+      print('🔍 Step 1: Finding best quality frame...');
+      
+      CameraImage bestImage = image;
+      Face? bestFace;
+      double bestQuality = -1;
+      
+      // Try frames from additionalImages (newest first) to find the best one
+      final framesToTry = <CameraImage>[];
+      if (additionalImages != null && additionalImages.isNotEmpty) {
+        // Take the last 10 frames (most recent) in reverse order
+        final startIdx = (additionalImages.length - 10).clamp(0, additionalImages.length);
+        framesToTry.addAll(additionalImages.sublist(startIdx).reversed);
+      } else {
+        framesToTry.add(image);
+      }
+      
+      for (final frame in framesToTry) {
+        try {
+          final faces = await _faceDetectorService.detectFaces(frame);
+          if (faces.length == 1) {
+            final quality = _faceDetectorService.getFaceQuality(faces.first);
+            print('   📊 Frame quality: ${quality.toStringAsFixed(3)}');
+            if (quality > bestQuality) {
+              bestQuality = quality;
+              bestFace = faces.first;
+              bestImage = frame;
+            }
+            // If we found a good enough frame, stop searching
+            if (quality >= 0.5) break;
+          }
+        } catch (e) {
+          // Skip frames that fail detection
+          continue;
+        }
       }
 
-      final face = detectResult.getOrElse(() => throw Exception());
-      print('✅ Face detected successfully');
+      if (bestFace == null) {
+        // Fallback: detect face in the original image
+        print('⚠️ No good frame found, falling back to original image...');
+        final detectResult = await _detectSingleFace(image);
+        if (detectResult.isLeft()) {
+          print('❌ Face detection failed');
+          return detectResult.fold((failure) {
+            print('❌ Failure: ${failure.runtimeType} - ${failure.message}');
+            return Left(failure);
+          }, (_) => throw Exception());
+        }
+        bestFace = detectResult.getOrElse(() => throw Exception());
+        bestQuality = _faceDetectorService.getFaceQuality(bestFace);
+      }
+      
+      final face = bestFace;
+      print('✅ Best face found with quality: ${bestQuality.toStringAsFixed(3)}');
 
-      // Step 2: Check face quality (optional but recommended)
+      // Step 2: Check face quality (relaxed threshold since liveness already passed)
       print('📊 Step 2: Checking face quality...');
-      final quality = _faceDetectorService.getFaceQuality(face);
-      print('📊 Face quality: $quality');
-      if (quality < 0.3) {
-        print('❌ Face quality too low: $quality < 0.3');
+      print('📊 Face quality: $bestQuality');
+      if (bestQuality < 0.15) {
+        print('❌ Face quality too low: $bestQuality < 0.15');
         return const Left(
           EmbeddingGenerationFailure(
             'Face quality too low. Please ensure good lighting and face the camera directly.',
@@ -170,7 +234,7 @@ class FaceRecognitionRepositoryImpl implements FaceRecognitionRepository {
 
       // Step 4: Crop face from image
       print('✂️ Step 4: Cropping face...');
-      final croppedFace = await ImagePreprocessingHelper.cropFace(image, face);
+      final croppedFace = await ImagePreprocessingHelper.cropFace(bestImage, face);
       print('✅ Face cropped');
 
       // Step 5: Generate embedding

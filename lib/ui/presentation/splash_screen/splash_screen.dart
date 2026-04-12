@@ -6,6 +6,7 @@ import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/utils/Util.dart';
 import 'package:el_race/core/services/app_config_service.dart';
 import 'package:el_race/core/security/device_security_service.dart';
+import 'package:el_race/data/services/hive_service.dart';
 import 'package:provider/provider.dart';
 import 'package:el_race/ui/presentation/qr_survey/providers/qr_survey_data_provider.dart';
 
@@ -117,8 +118,23 @@ class _SplashScreenState extends State<SplashScreen> {
     _navigateToNextScreen();
   }
 
+  /// Logout user — clear all auth state
+  Future<void> _performLogout() async {
+    try {
+      await SharedPref().setPreferencesBoolean('isRegistered', false);
+      await SharedPref().removePreference('loginResponse');
+      await HiveService.setUserLoggedIn(false);
+      SharedPref().setPreferencesBoolean('pendingFaceVerification', false);
+      SharedPref().setPreferencesBoolean('isFaceRegistrationInProgress', false);
+      SharedPref().setPreferencesBoolean('isFaceRegistered', false);
+      print('✅ Logout completed from splash screen');
+    } catch (e) {
+      print('⚠️ Error during logout: $e');
+    }
+  }
+
   /// Navigate to the appropriate screen after security check
-  void _navigateToNextScreen() {
+  Future<void> _navigateToNextScreen() async {
     if (!mounted) return;
 
     try {
@@ -152,9 +168,12 @@ class _SplashScreenState extends State<SplashScreen> {
             return;
           }
 
-          // User needs to register face - go to home, it will be triggered from there
-          Util.pushPageAndRemoveRoutes(const HomeScreen(), context);
-          FirebaseService.markHomeReady();
+          // Face registration not completed — log the user out
+          // They must re-login and complete face registration
+          print('🚫 Face registration not completed — logging out user');
+          await _performLogout();
+          Util.pushPageAndRemoveRoutes(const SignInScreen(), context);
+          return;
         } else {
           // User already registered or no pending verification
           Util.pushPageAndRemoveRoutes(const HomeScreen(), context);

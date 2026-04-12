@@ -1102,7 +1102,9 @@ class SimpleLivenessTracker {
   static const int requiredBlinks = 1;
   static const double eyeOpenThreshold = 0.3;   // relaxed from 0.50 — easier to detect open
   static const double eyeClosedThreshold = 0.25; // relaxed from 0.30 — easier to detect blink
-  static const double minHeadMovementDeg = 2.0;  // relaxed from 3.0 — very slight movement
+  static const double minHeadMovementDeg = 4.0;  // increased from 2.0 — requires real head turn
+  static const double minEyeRangeForBlink = 0.15; // minimum eye value change for a real blink
+  static const int minFramesForAnalysis = 5;      // need enough frames to analyze
 
   // ── Internal state ──
   int _blinkCount = 0;
@@ -1116,6 +1118,10 @@ class SimpleLivenessTracker {
   
   double _minEyeValue = 1.0;  // track min eye probability
   double _maxEyeValue = 0.0;  // track max eye probability
+  
+  // Anti-spoof: track eye value variance across frames
+  final List<double> _eyeHistory = [];
+  final List<double> _yawHistory = [];
 
   int _frameCount = 0;
   bool _faceVisible = false;
@@ -1125,13 +1131,19 @@ class SimpleLivenessTracker {
   int get frameCount => _frameCount;
   bool get faceVisible => _faceVisible;
 
-  /// Blink is complete if state-machine detected a blink OR
-  /// if there was a significant enough eye range variation (soft blink).
+  /// Blink is complete if state-machine detected a real blink
+  /// with significant eye value change (not just sensor noise).
   bool get blinksComplete {
-    if (_blinkCount >= requiredBlinks) return true;
-    // Fallback: accept any significant eye value change as a blink
+    if (_blinkCount >= requiredBlinks) {
+      // Verify it was a real blink with sufficient eye range change
+      final eyeRange = _maxEyeValue - _minEyeValue;
+      if (eyeRange >= minEyeRangeForBlink) return true;
+      // State machine detected a blink but eye range was too small — suspicious
+      print('⚠️ Blink detected but eye range too small: ${eyeRange.toStringAsFixed(3)} < $minEyeRangeForBlink');
+    }
+    // Fallback: require significant eye change (real blink causes >0.15 change)
     final eyeRange = _maxEyeValue - _minEyeValue;
-    return eyeRange >= 0.06; // very forgiving — any small blink counts
+    return eyeRange >= minEyeRangeForBlink;
   }
 
   bool get movementComplete {
@@ -1141,7 +1153,29 @@ class SimpleLivenessTracker {
     return yawRange >= minHeadMovementDeg || pitchRange >= minHeadMovementDeg;
   }
 
-  bool get isComplete => blinksComplete && movementComplete;
+  /// Check if the eye values look natural (not from a static photo)
+  /// A real person's eye values fluctuate naturally frame-to-frame
+  bool get _eyeValuesLookNatural {
+    if (_eyeHistory.length < minFramesForAnalysis) return true; // not enough data yet
+    
+    // Calculate standard deviation of eye values
+    final mean = _eyeHistory.reduce((a, b) => a + b) / _eyeHistory.length;
+    double sumSqDiff = 0;
+    for (final v in _eyeHistory) {
+      sumSqDiff += (v - mean) * (v - mean);
+    }
+    final stdDev = math.sqrt(sumSqDiff / _eyeHistory.length);
+    
+    // A photo produces very consistent eye values (stdDev < 0.01)
+    // A real person has natural micro-fluctuations (stdDev > 0.02)
+    if (stdDev < 0.008 && _eyeHistory.length >= 8) {
+      print('⚠️ Anti-spoof: Eye values too stable (stdDev=${stdDev.toStringAsFixed(4)}) — possible photo');
+      return false;
+    }
+    return true;
+  }
+
+  bool get isComplete => blinksComplete && movementComplete && _eyeValuesLookNatural;
 
   /// Get current step (0 = waiting, 1 = blink step, 2 = movement step)
   int get currentStep {
@@ -1198,6 +1232,9 @@ class SimpleLivenessTracker {
     // Also track min/max eye values for range-based blink detection
     if (_minEyeValue > avgEye) _minEyeValue = avgEye;
     if (_maxEyeValue < avgEye) _maxEyeValue = avgEye;
+    
+    // Track eye history for variance analysis (anti-spoof)
+    _eyeHistory.add(avgEye);
   }
 
   void _trackMovement(Face face) {
@@ -1208,6 +1245,9 @@ class SimpleLivenessTracker {
     if (yaw > _maxYaw) _maxYaw = yaw;
     if (pitch < _minPitch) _minPitch = pitch;
     if (pitch > _maxPitch) _maxPitch = pitch;
+    
+    // Track yaw history for movement pattern analysis
+    _yawHistory.add(yaw);
   }
 
   /// Reset tracker for retry.
@@ -1221,6 +1261,8 @@ class SimpleLivenessTracker {
     _maxPitch = double.negativeInfinity;
     _minEyeValue = 1.0;
     _maxEyeValue = 0.0;
+    _eyeHistory.clear();
+    _yawHistory.clear();
     _frameCount = 0;
     _faceVisible = false;
   }
