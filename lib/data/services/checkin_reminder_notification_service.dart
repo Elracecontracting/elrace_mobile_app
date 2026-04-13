@@ -455,18 +455,22 @@ class CheckInReminderNotificationService {
     }
 
     final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
+    print('📱 updateReminders: isCheckedIn=$isCheckedIn');
 
     if (isCheckedIn) {
-      // المستخدم عامل check in - جدول تذكيرات check out وألغي تذكيرات check in
+      // المستخدم عامل check in:
+      // - ألغي تذكيرات check in (ما لازم توصلو لأنو خلاص عمل check in)
+      // - جدول تذكيرات check out (لتذكيره يعمل check out)
       await cancelCheckInReminders();
       await scheduleCheckOutReminders();
-      // print('📱 Updated: Scheduled check-out reminders (user is checked in)');
+      print('📱 Updated: Cancelled check-in reminders, scheduled check-out reminders (user IS checked in)');
     } else {
-      // المستخدم ما عامل check in - جدول تذكيرات check in وألغي تذكيرات check out
+      // المستخدم ما عامل check in (أو عمل check out):
+      // - ألغي تذكيرات check out (ما لازم توصلو لأنو خلاص عمل check out)
+      // - جدول تذكيرات check in (لتذكيره يعمل check in)
       await cancelCheckOutReminders();
       await scheduleCheckInReminders();
-      print(
-          '📱 Updated: Scheduled check-in reminders (user is NOT checked in)');
+      print('📱 Updated: Cancelled check-out reminders, scheduled check-in reminders (user is NOT checked in)');
     }
   }
 

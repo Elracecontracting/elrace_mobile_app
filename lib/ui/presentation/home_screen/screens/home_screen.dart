@@ -46,6 +46,7 @@ class _HomeScreenState extends State<HomeScreenPage>
     with WidgetsBindingObserver {
   // bool isMuted = false; // default value
   bool isCheckedIn = false;
+  bool _isFaceRegistrationNavigating = false; // Prevent duplicate face registration navigation
   final _locationBloc = LocationBloc();
   final Location _location = Location();
 
@@ -121,6 +122,10 @@ class _HomeScreenState extends State<HomeScreenPage>
     // print('  - isRegistered: $isRegistered');
 
     // If registration is in progress or pending and not yet registered
+    // Skip if we're already navigating to face registration (prevents duplicate screens
+    // when system dialogs like battery optimization cause app lifecycle resume)
+    if (_isFaceRegistrationNavigating) return;
+
     if (isInProgress || (isPending && !isRegistered)) {
       // print('✅ Opening face registration screen...');
       // Get userId from SharedPref - MUST match UnifiedBiometricHelper priority order!
@@ -188,6 +193,9 @@ class _HomeScreenState extends State<HomeScreenPage>
       SharedPref()
           .setPreferencesBoolean('isFaceRegistrationInProgress', true);
 
+      // Set local flag to prevent duplicate navigation on lifecycle resume
+      _isFaceRegistrationNavigating = true;
+
       // Navigate to face registration with BLoC provider
       // Use regular push - WillPopScope in FaceRegistrationScreen will prevent going back
       final success = await Navigator.of(context).push<bool>(
@@ -202,6 +210,9 @@ class _HomeScreenState extends State<HomeScreenPage>
           ),
         ),
       );
+
+      // Clear local navigation flag after returning from face registration
+      _isFaceRegistrationNavigating = false;
 
       if (success == true && mounted) {
         // Mark as registered and clear in-progress flag

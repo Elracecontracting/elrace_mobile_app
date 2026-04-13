@@ -546,7 +546,9 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
     if (!isCheckedIn) {
       // Perform global check-in
       sl.get<CheckInBloc>().add(CheckInET());
-      Get.find<TimerController>().startTimer();
+      // await startTimer to guarantee isCheckedIn=true is persisted
+      // BEFORE updateReminders() reads SharedPref
+      await Get.find<TimerController>().startTimer();
 
       // جدولة Auto Check-out في الساعة 5 مساءً
       await AutoCheckoutService.scheduleAutoCheckout();
@@ -565,7 +567,9 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
       sl
           .get<CheckOutBloc>()
           .add(CheckOutET(checkInRecordId, isAutoCheckout: false));
-      Get.find<TimerController>().stopTimer();
+      // await stopTimer to guarantee isCheckedIn=false is persisted
+      // BEFORE updateReminders() reads SharedPref
+      await Get.find<TimerController>().stopTimer();
 
       // إلغاء جدولة Auto Check-out عند Check-out اليدوي
       await AutoCheckoutService.cancelAutoCheckout();
