@@ -520,6 +520,9 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     if (categoryKey == _CategoryKeys.invoice) {
       return const Color(0xFF16A56B);
     }
+    if (categoryKey == _CategoryKeys.pettyCash) {
+      return const Color(0xFF32ADE6);
+    }
     return null;
   }
 
@@ -607,7 +610,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                         String categoryKey = entry.value;
                         bool isSelected = selectedCategoryKey == categoryKey;
                         return Container(
-                          margin: const EdgeInsets.only(right: 20.0, left: 5.0),
+                          margin: const EdgeInsets.only(right: 8.0, left: 2.0),
                           child: GestureDetector(
                             onTap: () {
                               setState(() {
@@ -756,7 +759,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
           clipBehavior: Clip.none,
           children: [
             Container(
-              width: 92.w,
+              width: 84.w,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
@@ -845,7 +848,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         ),
         SizedBox(height: 6.h),
         SizedBox(
-          width: 92.w,
+          width: 84.w,
           child: Text(
             title,
             style: GoogleFonts.poppins(

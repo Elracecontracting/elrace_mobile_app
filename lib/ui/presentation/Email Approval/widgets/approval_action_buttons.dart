@@ -185,7 +185,10 @@ class ApprovalActionButtons extends StatelessWidget {
                         await _showCommentDialog(context, label);
 
                     if (!context.mounted) return;
-                    final finalComment = comment ?? '..';
+                    if (comment == null) {
+                      return;
+                    }
+                    final finalComment = comment;
 
                     if (context.mounted) {
                       showDialog(
@@ -365,7 +368,10 @@ class ApprovalActionButtons extends StatelessWidget {
                           await _showCommentDialog(context, label);
 
                       if (!context.mounted) return;
-                      finalComment = comment ?? '..';
+                      if (comment == null) {
+                        return;
+                      }
+                      finalComment = comment;
                     }
 
                     if (context.mounted) {
@@ -826,9 +832,10 @@ class ApprovalActionButtons extends StatelessWidget {
 
                   // If user cancelled the dialog or context is no longer valid, don't proceed
                   if (!context.mounted) return;
+                  if (comment == null) return;
 
                   // Use comment if provided, otherwise use default
-                  final finalComment = comment ?? '..';
+                  final finalComment = comment;
 
                   // Show loading immediately after comment is submitted
                   if (context.mounted) {

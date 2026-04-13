@@ -996,6 +996,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                               type: widget.type,
                               userIds: [userId],
                               variant: ApprovalActionButtonsVariant.pill,
+                              showHrApproveConfirmation: true,
                               pillWidth: pillWidth,
                               pillHeight: 36.w,
                               pillSpacing: 24.w,
