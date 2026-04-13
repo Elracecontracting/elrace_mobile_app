@@ -188,10 +188,10 @@ class _MyActionTile extends StatelessWidget {
               width: 68.w,
               height: 68.w,
               decoration: BoxDecoration(
-                color: const Color(0xFFE9EAEE),
+                color: const Color(0xFFD9D9D9),
                 borderRadius: borderRadius,
                 border: Border.all(
-                  color: const Color(0xFFB5B7C1),
+                  color: const Color(0xFF8E9099),
                   width: 1,
                 ),
               ),

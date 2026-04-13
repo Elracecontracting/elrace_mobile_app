@@ -25,11 +25,18 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
 
   String _statusBadgeAsset(String status) {
     switch (status.trim().toLowerCase()) {
+      case 'approve':
       case 'approved':
+      case 'validate':
+      case 'validate2':
+      case 'done':
         return 'assets/newapp/approvedBadge.png';
-      case 'pending':
-        return 'assets/newapp/warningBadge.png';
+      case 'refuse':
+      case 'refused':
       case 'rejected':
+      case 'cancel':
+      case 'cancelled':
+      case 'canceled':
         return 'assets/newapp/rejectBadge.png';
       default:
         return 'assets/newapp/warningBadge.png';

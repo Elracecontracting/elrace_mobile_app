@@ -46,10 +46,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
     BuildContext context,
     _ReportRequestItem item,
   ) async {
-    final uri = Uri.tryParse(item.reportLink);
-    if (uri == null || item.reportLink.trim().isEmpty) {
+    final rawLink = item.reportLink.trim();
+
+    if (rawLink.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No file URL available')),
+        const SnackBar(content: Text('No file URL available for this report')),
+      );
+      return;
+    }
+
+    // Handle relative URLs from Odoo (e.g., /web/content/123)
+    final String fullUrl;
+    if (rawLink.startsWith('http://') || rawLink.startsWith('https://')) {
+      fullUrl = rawLink;
+    } else {
+      fullUrl = 'https://erp.elrace.com$rawLink';
+    }
+
+    final uri = Uri.tryParse(fullUrl);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid file URL')),
       );
       return;
     }
@@ -57,7 +74,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AttachmentViewerScreen(
-          publicUrl: item.reportLink,
+          publicUrl: fullUrl,
           title:
               item.reportName.trim().isEmpty ? 'Attachment' : item.reportName,
         ),
@@ -182,9 +199,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
                       child: _ReportRequestCard(
                         item: item,
-                        onTap: item.reportLink.isNotEmpty
-                            ? () => _openReportLink(context, item)
-                            : null,
+                        onTap: () => _openReportLink(context, item),
                       ),
                     ),
                   ),

@@ -118,12 +118,15 @@ class _LpoPdfViewerScreenState extends State<LpoPdfViewerScreen> {
 
   Future<void> _sharePdf() async {
     if (_pdfBytes == null) return;
-    
-    final fileName = widget.title?.replaceAll(RegExp(r'[^\w\-]'), '_') ?? 'lpo_report';
+
+    final rawName = widget.title?.trim() ?? 'lpo_report';
+    // Only strip characters that are truly invalid in file names, keep spaces and dots
+    final safeName = rawName.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+    final fileName = safeName.toLowerCase().endsWith('.pdf') ? safeName : '$safeName.pdf';
     await Share.shareXFiles([
       XFile.fromData(
         _pdfBytes!,
-        name: '$fileName.pdf',
+        name: fileName,
         mimeType: 'application/pdf',
       ),
     ]);
