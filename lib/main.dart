@@ -5,6 +5,7 @@ import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/chat/chat.dart';
 import 'package:el_race/data/services/hive_service.dart';
+import 'package:el_race/data/services/prayer_audio_service.dart';
 import 'package:el_race/data/services/prayer_background_service.dart';
 import 'package:el_race/providers/announcements_provider.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
@@ -30,9 +31,6 @@ import 'package:el_race/utils/di.dart';
 import 'package:el_race/utils/generated_routes.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:el_race/utils/screen_size_util.dart';
-import 'package:el_race/core/biometric/ios/face_id_helper.dart';
-import 'package:el_race/core/biometric/android/android_biometric_helper.dart';
-import 'package:el_race/core/biometric/face_recognition/face_recognition_di.dart';
 import 'package:el_race/data/services/auto_checkout_service.dart';
 import 'package:el_race/data/services/checkin_reminder_notification_service.dart';
 import 'package:el_race/data/services/counter_reset_service.dart';
@@ -128,26 +126,6 @@ void main() async {
     );
   } catch (e) {
     print('❌ Error loading app config: $e');
-  }
-
-  // Initialize platform-specific biometric authentication
-  try {
-    FaceIdHelper.initialize(); // iOS only
-    AndroidBiometricHelper.initialize(); // Android only
-  } catch (e) {
-    print('❌ Error initializing biometric: $e');
-  }
-
-  // Initialize Face Recognition System
-  try {
-    await FaceRecognitionDI.init().timeout(
-      const Duration(seconds: 10),
-      onTimeout: () {
-        print('⚠️ Face Recognition init timeout');
-      },
-    );
-  } catch (e) {
-    print('❌ Error initializing Face Recognition: $e');
   }
 
   // Register background message handler قبل FirebaseService.initialize()
@@ -518,6 +496,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         state == AppLifecycleState.hidden ||
         state == AppLifecycleState.detached) {
       _backgroundedAt ??= DateTime.now();
+
+      // عند الانتقال للخلفية: أعد جدولة إشعارات الأذان المحلية
+      // التي ألغيناها عند دخول المقدمة (لمنع التكرار).
+      // هذا يضمن وصول الإشعار حتى لو أُغلق التطبيق.
+      if (state == AppLifecycleState.paused) {
+        PrayerAudioService().rescheduleBackgroundNotifications();
+      }
     }
   }
 

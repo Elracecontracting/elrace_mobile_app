@@ -2,9 +2,12 @@ import 'dart:convert';
 import 'dart:ui';
 
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/core/services/notification_storage_service.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/delayed/data/delayed_approvals_repository.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/delayed/screens/delayed_requests_screen.dart';
+import 'package:el_race/ui/presentation/Email%20Approval/screens/hr_details_screen.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/all_approvals_overview.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/hr_and_pettycash_card.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/invoice_and_rfq_card.dart';
@@ -27,6 +30,28 @@ class ApprovalsScreen extends StatefulWidget {
 }
 
 class _ApprovalsScreenState extends State<ApprovalsScreen> {
+  static const List<_HrRequestTestCase> _hrRequestTestCases = [
+    _HrRequestTestCase(id: 35849, title: 'Sick'),
+    _HrRequestTestCase(id: 35651, title: 'Short'),
+    _HrRequestTestCase(id: 35847, title: 'Job Mission'),
+    _HrRequestTestCase(id: 35564, title: 'Temporary Permission'),
+    _HrRequestTestCase(id: 35841, title: 'Clearance'),
+    _HrRequestTestCase(id: 35837, title: 'Effective Date'),
+    _HrRequestTestCase(id: 34068, title: 'Certificate Request'),
+    _HrRequestTestCase(id: 32938, title: 'Loan'),
+    _HrRequestTestCase(id: 33800, title: 'Salary Increment'),
+    _HrRequestTestCase(id: 18915, title: 'Parental'),
+    _HrRequestTestCase(id: 31615, title: 'Resign'),
+    _HrRequestTestCase(id: 25165, title: 'Termination'),
+    _HrRequestTestCase(id: 31875, title: 'Transfer'),
+    _HrRequestTestCase(id: 30388, title: 'Passport'),
+    _HrRequestTestCase(id: 35803, title: 'Leave Encashment'),
+    _HrRequestTestCase(id: 33244, title: 'Car Rent'),
+    _HrRequestTestCase(id: 24602, title: 'Maternity'),
+    _HrRequestTestCase(id: 35842, title: 'Annual'),
+    _HrRequestTestCase(id: 32312, title: 'Promotion'),
+  ];
+
   String selectedCategoryKey = _CategoryKeys.all;
   TextEditingController searchController = TextEditingController();
   final ScrollController _tabScrollController = ScrollController();
@@ -48,6 +73,12 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   bool _delayedLoading = false;
   final DelayedApprovalsRepository _delayedRepo = DelayedApprovalsRepository();
   bool _isScrolled = false;
+  final Map<String, bool> _categoryNotificationDots = {
+    _CategoryKeys.hr: false,
+    _CategoryKeys.rfq: false,
+    _CategoryKeys.invoice: false,
+    _CategoryKeys.pettyCash: false,
+  };
 
   @override
   void initState() {
@@ -58,6 +89,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     // Delayed count is also fired in background.
     _loadAllCategoriesInBackground();
     _fetchDelayedCount();
+    _loadCategoryNotificationDots();
   }
 
   @override
@@ -295,10 +327,159 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     }
   }
 
+  bool _isNotificationUnread(Map<String, dynamic> notification) {
+    final isReadValue = notification['isRead'] ?? notification['is_read'];
+    if (isReadValue is bool) return !isReadValue;
+    if (isReadValue is num) return isReadValue == 0;
+    final str = (isReadValue ?? '').toString().trim().toLowerCase();
+    if (str.isEmpty) return true;
+    return !(str == 'true' || str == '1');
+  }
+
+  String _normalizeCategoryToken(String value) {
+    return value
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
+  }
+
+  Set<String> _categoryAliases(String categoryKey) {
+    switch (categoryKey) {
+      case _CategoryKeys.hr:
+        return {'hr', 'human_resources', 'human_resource'};
+      case _CategoryKeys.rfq:
+        return {'rfq', 'request_for_quotation'};
+      case _CategoryKeys.invoice:
+        return {'invoice', 'invoices'};
+      case _CategoryKeys.pettyCash:
+        return {'petty_cash', 'pettycash', 'ptsh'};
+      default:
+        return {categoryKey};
+    }
+  }
+
+  bool _notificationMatchesCategory(
+    Map<String, dynamic> notification,
+    String categoryKey,
+  ) {
+    final aliases = _categoryAliases(categoryKey);
+    final candidates = <String>{
+      '${notification['category'] ?? ''}',
+      '${notification['type'] ?? ''}',
+      '${notification['model'] ?? ''}',
+      '${notification['model_name'] ?? ''}',
+      '${notification['record_type'] ?? ''}',
+      '${notification['target_type'] ?? ''}',
+      '${notification['group_type'] ?? ''}',
+    };
+
+    final rawData = notification['data'];
+    if (rawData is Map<String, dynamic>) {
+      candidates.addAll([
+        '${rawData['category'] ?? ''}',
+        '${rawData['type'] ?? ''}',
+        '${rawData['model'] ?? ''}',
+        '${rawData['model_name'] ?? ''}',
+        '${rawData['record_type'] ?? ''}',
+        '${rawData['target_type'] ?? ''}',
+        '${rawData['group_type'] ?? ''}',
+      ]);
+    } else if (rawData is Map) {
+      final dataMap = Map<String, dynamic>.from(rawData);
+      candidates.addAll([
+        '${dataMap['category'] ?? ''}',
+        '${dataMap['type'] ?? ''}',
+        '${dataMap['model'] ?? ''}',
+        '${dataMap['model_name'] ?? ''}',
+        '${dataMap['record_type'] ?? ''}',
+        '${dataMap['target_type'] ?? ''}',
+        '${dataMap['group_type'] ?? ''}',
+      ]);
+    }
+
+    for (final candidate in candidates) {
+      final normalized = _normalizeCategoryToken(candidate);
+      if (normalized.isEmpty) continue;
+      if (aliases.contains(normalized)) return true;
+    }
+
+    final combinedText =
+        '${notification['title'] ?? ''} ${notification['body'] ?? ''}'
+            .toLowerCase();
+    if (categoryKey == _CategoryKeys.invoice &&
+        combinedText.contains('invoice')) {
+      return true;
+    }
+    if (categoryKey == _CategoryKeys.rfq && combinedText.contains('rfq')) {
+      return true;
+    }
+    if (categoryKey == _CategoryKeys.hr &&
+        (combinedText.contains('hr') ||
+            combinedText.contains('human resource') ||
+            combinedText.contains('leave'))) {
+      return true;
+    }
+    if (categoryKey == _CategoryKeys.pettyCash &&
+        (combinedText.contains('petty') || combinedText.contains('cash'))) {
+      return true;
+    }
+
+    return false;
+  }
+
+  Future<void> _loadCategoryNotificationDots() async {
+    try {
+      final notifications = await NotificationStorageService.getNotifications();
+      final unread = notifications.where(_isNotificationUnread).toList();
+
+      final next = {
+        _CategoryKeys.hr: false,
+        _CategoryKeys.rfq: false,
+        _CategoryKeys.invoice: false,
+        _CategoryKeys.pettyCash: false,
+      };
+
+      for (final notification in unread) {
+        if (_notificationMatchesCategory(notification, _CategoryKeys.hr)) {
+          next[_CategoryKeys.hr] = true;
+        }
+        if (_notificationMatchesCategory(notification, _CategoryKeys.rfq)) {
+          next[_CategoryKeys.rfq] = true;
+        }
+        if (_notificationMatchesCategory(notification, _CategoryKeys.invoice)) {
+          next[_CategoryKeys.invoice] = true;
+        }
+        if (_notificationMatchesCategory(
+            notification, _CategoryKeys.pettyCash)) {
+          next[_CategoryKeys.pettyCash] = true;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _categoryNotificationDots.addAll(next);
+      });
+    } catch (_) {
+      // Keep dots hidden if notifications cannot be read.
+    }
+  }
+
   void _refreshApprovalsAfterAction() {
     debugPrint('🔁 [ApprovalsScreen] Refresh requested after approve/reject');
     _loadAllCategoriesInBackground(force: true);
     _fetchDelayedCount();
+    _loadCategoryNotificationDots();
+  }
+
+  void _openHrRequestTestCases() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const _HrRequestTestCasesScreen(),
+      ),
+    );
   }
 
   String _tabTitleFor(String categoryKey) {
@@ -338,6 +519,9 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
   Color? _iconTintFor(String categoryKey) {
     if (categoryKey == _CategoryKeys.invoice) {
       return const Color(0xFF16A56B);
+    }
+    if (categoryKey == _CategoryKeys.pettyCash) {
+      return const Color(0xFF32ADE6);
     }
     return null;
   }
@@ -426,7 +610,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                         String categoryKey = entry.value;
                         bool isSelected = selectedCategoryKey == categoryKey;
                         return Container(
-                          margin: const EdgeInsets.only(right: 20.0, left: 5.0),
+                          margin: const EdgeInsets.only(right: 8.0, left: 2.0),
                           child: GestureDetector(
                             onTap: () {
                               setState(() {
@@ -453,6 +637,11 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                               title: _tabTitleFor(categoryKey),
                               isSelected: isSelected,
                               count: 0,
+                              showRedDot: categoryKey == _CategoryKeys.all
+                                  ? _categoryNotificationDots.values
+                                      .any((hasDot) => hasDot)
+                                  : (_categoryNotificationDots[categoryKey] ??
+                                      false),
                             ),
                           ),
                         );
@@ -478,6 +667,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
         rfqCount: rfqItems.length,
         hrCount: hrItems.length,
         delayedCount: delayedCount,
+        onHrTestCasesTap: kDebugMode ? _openHrRequestTestCases : null,
         onDelayedTap: () {
           Navigator.push(
             context,
@@ -560,6 +750,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
     required String title,
     required bool isSelected,
     int count = 0,
+    bool showRedDot = false,
   }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -568,7 +759,7 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
           clipBehavior: Clip.none,
           children: [
             Container(
-              width: 92.w,
+              width: 84.w,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
                 border: Border.all(
@@ -639,20 +830,34 @@ class _ApprovalsScreenState extends State<ApprovalsScreen> {
                   ),
                 ),
               ),
+            if (showRedDot)
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  width: 11,
+                  height: 11,
+                  decoration: BoxDecoration(
+                    color: red,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                ),
+              ),
           ],
         ),
         SizedBox(height: 6.h),
         SizedBox(
-          width: 92.w,
+          width: 84.w,
           child: Text(
             title,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 10.6.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF161616),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxLines: null,
+            overflow: TextOverflow.visible,
             textAlign: TextAlign.center,
           ),
         ),
@@ -667,4 +872,115 @@ class _CategoryKeys {
   static const String rfq = 'rfq';
   static const String invoice = 'invoice';
   static const String pettyCash = 'petty_cash';
+}
+
+class _HrRequestTestCase {
+  final int id;
+  final String title;
+
+  const _HrRequestTestCase({required this.id, required this.title});
+}
+
+class _HrRequestTestCasesScreen extends StatelessWidget {
+  const _HrRequestTestCasesScreen();
+
+  static const List<_HrRequestTestCase> _cases =
+      _ApprovalsScreenState._hrRequestTestCases;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF7F8FB),
+      appBar: AppBar(
+        title: Text(
+          'HR Test Cases',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+        ),
+      ),
+      body: ListView.separated(
+        padding: EdgeInsets.fromLTRB(14.w, 14.w, 14.w, 24.w),
+        itemCount: _cases.length,
+        separatorBuilder: (_, __) => SizedBox(height: 10.w),
+        itemBuilder: (context, index) {
+          final testCase = _cases[index];
+          return Material(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14.r),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14.r),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => HrDetailsScreen(
+                      requestId: testCase.id.toString(),
+                      type: 'hr',
+                    ),
+                  ),
+                );
+              },
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 14.w),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14.r),
+                  border: Border.all(color: const Color(0xFFE2E5EC)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 34.w,
+                      height: 34.w,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEEF2FA),
+                        borderRadius: BorderRadius.circular(10.r),
+                      ),
+                      child: Text(
+                        '${index + 1}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF20345B),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 10.w),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            testCase.title,
+                            style: GoogleFonts.poppins(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF151B2C),
+                            ),
+                          ),
+                          SizedBox(height: 2.w),
+                          Text(
+                            'request_id: ${testCase.id}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF6A7388),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      size: 22.sp,
+                      color: const Color(0xFF7B869F),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

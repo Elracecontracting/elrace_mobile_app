@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart' hide Message;
 
@@ -169,6 +170,10 @@ class ChatNotificationService {
     required String body,
     required ChatType chatType,
   }) async {
+    // التحقق من إعدادات كتم إشعارات الشات
+    final isChatMuted = await NotificationStorageService.isChannelMuted('chat_message');
+    if (isChatMuted) return;
+
     // Generate unique notification ID from chat ID
     final notificationId = chatId.hashCode;
 

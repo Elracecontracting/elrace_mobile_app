@@ -32,6 +32,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     on<LoadPrayerMuteStateEvent>(_loadPrayerMuteState);
     on<TogglePrayerMuteStateEvent>(_togglePrayerMuteState);
     on<UpdatePrayerTickEvent>(_updatePrayerTick);
+    on<AppPausedEvent>(_onAppPaused);
     on<ToggleReorderModeEvent>(_toggleReorderMode);
     monthName = DateFormat('MMMM').format(now);
   }
@@ -96,7 +97,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       _isSoundMuted = isMuted;
       emit(PrayerMuteStateChanged(isMuted));
     } catch (e) {
-      debugPrint('Error loading mute state: $e');
+      // debugPrint('Error loading mute state: $e');
     }
   }
 
@@ -108,7 +109,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final newState = !_isSoundMuted;
       await HiveService.setPrayerSoundMuted(newState);
       _isSoundMuted = newState;
-      debugPrint(newState.toString());
+      // debugPrint(newState.toString());
 
       if (_prayerTimes != null) {
         emit(PrayerTimesLoaded(
@@ -121,19 +122,30 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         emit(PrayerMuteStateChanged(newState));
       }
     } catch (e) {
-      debugPrint('Error toggling mute state: $e');
+      // debugPrint('Error toggling mute state: $e');
     }
+  }
+
+  /// عندما ينتقل التطبيق إلى الخلفية، نعيد جدولة إشعارات الأذان المحلية
+  /// التي تم إلغاؤها سابقاً عند دخول المقدمة.
+  Future<void> _onAppPaused(
+    AppPausedEvent event,
+    Emitter<HomeState> emit,
+  ) async {
+    try {
+      await _audioService.rescheduleBackgroundNotifications();
+    } catch (_) {}
   }
 
   Future<void> _initPrayerTimes(
     InitPrayerTimesEvent event,
     Emitter<HomeState> emit,
   ) async {
-    debugPrint('🔄 InitPrayerTimes started');
+    // debugPrint('🔄 InitPrayerTimes started');
     emit(const PrayerTimesLoading());
 
     try {
-      debugPrint('📡 Fetching prayer times from Aladhan API...');
+      // debugPrint('📡 Fetching prayer times from Aladhan API...');
 
       // Get location coordinates
       Coordinates coords;
@@ -146,7 +158,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         coords = Coordinates(25.2048, 55.2708);
       }
 
-      debugPrint('📍 Location: ${coords.latitude}, ${coords.longitude}');
+      // debugPrint('📍 Location: ${coords.latitude}, ${coords.longitude}');
 
       // Get current date
       final now = DateTime.now();
@@ -158,17 +170,17 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
             'https://api.aladhan.com/v1/timings/$timestamp?latitude=${coords.latitude}&longitude=${coords.longitude}&method=5'),
       );
 
-      debugPrint('📡 Aladhan API Response status: ${response.statusCode}');
+      // debugPrint('📡 Aladhan API Response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        debugPrint('📡 Aladhan API Response data: $data');
+        // debugPrint('📡 Aladhan API Response data: $data');
 
         if (data['code'] == 200 && data['data'] != null) {
           await _setPrayerTimesFromAladhanAPI(data['data'], coords);
 
-          debugPrint(
-              '✅ Prayer times loaded - nextPrayer: $_nextPrayer, nextTime: $_nextPrayerTime');
+          // debugPrint(
+          //     '✅ Prayer times loaded - nextPrayer: $_nextPrayer, nextTime: $_nextPrayerTime');
 
           emit(PrayerTimesLoaded(
             prayerTimes: _prayerTimes,
@@ -205,7 +217,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
 
       throw Exception('Failed to fetch prayer times from Aladhan API');
     } catch (e) {
-      debugPrint('❌ Prayer times API failed: $e');
+      // debugPrint('❌ Prayer times API failed: $e');
       // Fallback: استخدام الحساب المحلي
       try {
         final last = await Geolocator.getLastKnownPosition();
@@ -239,7 +251,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       Map<String, dynamic> apiData, Coordinates coords) async {
     final timings = apiData['timings'] as Map<String, dynamic>?;
 
-    debugPrint('🔍 Aladhan timings data: $timings');
+    // debugPrint('🔍 Aladhan timings data: $timings');
 
     if (timings == null) {
       throw Exception('No timings data from Aladhan API');
@@ -260,9 +272,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     _aladhanMaghrib = _parseAladhanTime(timings['Maghrib']);
     _aladhanIsha = _parseAladhanTime(timings['Isha']);
 
-    debugPrint(
-        '🕐 Aladhan Times - Fajr: $_aladhanFajr, Dhuhr: $_aladhanDhuhr, Asr: $_aladhanAsr, Maghrib: $_aladhanMaghrib, Isha: $_aladhanIsha');
-    debugPrint('🕐 Current time: $now');
+    // debugPrint(
+    //     '🕐 Aladhan Times - Fajr: $_aladhanFajr, Dhuhr: $_aladhanDhuhr, Asr: $_aladhanAsr, Maghrib: $_aladhanMaghrib, Isha: $_aladhanIsha');
+    // debugPrint('🕐 Current time: $now');
 
     // إيجاد الصلاة التالية من أوقات Aladhan
     if (now.isBefore(_aladhanFajr!)) {
@@ -287,11 +299,11 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
       final tomorrowPrayers = PrayerTimes(coords, tomorrowComponents, params);
       _nextPrayer = Prayer.fajr;
       _nextPrayerTime = tomorrowPrayers.fajr;
-      debugPrint('✅ All prayers passed, using tomorrow Fajr: $_nextPrayerTime');
+      // debugPrint('✅ All prayers passed, using tomorrow Fajr: $_nextPrayerTime');
       return;
     }
 
-    debugPrint('✅ Next prayer from Aladhan: $_nextPrayer at $_nextPrayerTime');
+    // debugPrint('✅ Next prayer from Aladhan: $_nextPrayer at $_nextPrayerTime');
   }
 
   DateTime _parseAladhanTime(String? timeStr) {
@@ -392,9 +404,9 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
         n = Prayer.fajr;
         nt = tomorrowPrayers.fajr;
 
-        debugPrint('⏭️ All prayers passed, using tomorrow Fajr: $nt');
+        // debugPrint('⏭️ All prayers passed, using tomorrow Fajr: $nt');
       } catch (e) {
-        debugPrint('❌ Error calculating tomorrow Fajr: $e');
+        // debugPrint('❌ Error calculating tomorrow Fajr: $e');
       }
     }
 

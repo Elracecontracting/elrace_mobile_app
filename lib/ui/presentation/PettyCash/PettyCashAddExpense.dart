@@ -135,6 +135,11 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
 
       final rawHolderId = data['holder_id'];
       if (rawHolderId is int) return rawHolderId;
+      if (rawHolderId is List &&
+          rawHolderId.isNotEmpty &&
+          rawHolderId.first is int) {
+        return rawHolderId.first as int;
+      }
       return int.tryParse(rawHolderId?.toString() ?? '');
     } catch (_) {
       return null;
@@ -313,7 +318,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                                     ? 'Unnamed project'
                                     : projectName,
                                 maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                                overflow: TextOverflow.visible,
                                 style: const TextStyle(
                                     fontSize: 13, fontWeight: FontWeight.w600),
                               ),

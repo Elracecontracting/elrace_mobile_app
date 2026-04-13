@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
-import 'dart:io' show Platform;
 
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:uuid/uuid.dart';
 import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:el_race/ui/presentation/signin/data/repository.dart';
@@ -29,38 +29,26 @@ class SignInBloc extends Bloc<SignInEvent, SignInState> {
     on<SignInET>(signInMethod);
   }
 
-  FutureOr<void> signInMethod(SignInET event, Emitter<SignInState> emit) async {
-    var deviceName = '';
+  /// Returns a persistent unique device ID per user (email).
+  /// Generated once and stored in SecureStorage so it never changes.
+  Future<String> _getOrCreateDeviceId(String email) async {
+    const storage = FlutterSecureStorage();
+    final key = 'device_id_${email.toLowerCase().trim()}';
+    final existing = await storage.read(key: key);
+    if (existing != null && existing.isNotEmpty) return existing;
+    final newId = const Uuid().v4();
+    await storage.write(key: key, value: newId);
+    return newId;
+  }
 
+  FutureOr<void> signInMethod(SignInET event, Emitter<SignInState> emit) async {
     emit(const LoadingST(isLoading: true));
 
     await FirebaseService.ensureFCMToken();
 
-    DeviceInfoPlugin deviceInfo = DeviceInfoPlugin();
-
-    if (Platform.isAndroid) {
-      AndroidDeviceInfo androidInfo = await deviceInfo.androidInfo;
-      print('Running on ${androidInfo.model}');
-      print('Running on id ${androidInfo.id}');
-      print('Running on brand ${androidInfo.brand}');
-      print('Running on device ${androidInfo.device}');
-
-      // Use a more unique device identifier
-      deviceName =
-          '${androidInfo.brand}_${androidInfo.device}_${androidInfo.id}';
-    }
-
-    if (Platform.isIOS) {
-      IosDeviceInfo iosInfo = await deviceInfo.iosInfo;
-      print('Running on ${iosInfo.utsname.machine}');
-      print('Running on name ${iosInfo.name}');
-      print('Running on model ${iosInfo.model}');
-
-      // Use a more unique device identifier for iOS
-      deviceName =
-          '${iosInfo.name}_${iosInfo.model}_${iosInfo.utsname.machine}';
-    }
-    // event.deviceId;
+    // Unique, persistent device ID per user
+    final deviceName = await _getOrCreateDeviceId(event.email);
+    log('device_id: $deviceName');
 
     try {
       Response response =

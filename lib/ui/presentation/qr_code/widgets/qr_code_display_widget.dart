@@ -156,7 +156,7 @@ class QrCodeDisplayWidget extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              overflow: TextOverflow.visible,
             ),
             const SizedBox(height: 8),
             GestureDetector(

@@ -441,7 +441,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
                     Expanded(
                       child: Text(
                         translate('search.title'),
-                        style: GoogleFonts.koulen(
+                        style: GoogleFonts.poppins(
                           fontSize: 22.sp,
                           fontWeight: FontWeight.w400,
                           color: appFontColor,
@@ -474,7 +474,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
         children: [
           Text(
             translate('search.select_category'),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 16.sp,
               fontWeight: FontWeight.w600,
               color: Colors.grey[800],
@@ -483,7 +483,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
           SizedBox(height: 8.h),
           Text(
             translate('search.select_category_desc'),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 13.sp,
               color: Colors.grey[600],
             ),
@@ -554,14 +554,14 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
             SizedBox(height: 12.h),
             Text(
               translate(option.titleKey),
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[800],
               ),
               textAlign: TextAlign.center,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              overflow: TextOverflow.visible,
             ),
           ],
         ),
@@ -601,7 +601,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
                     SizedBox(width: 8.w),
                     Text(
                       translate(selectedOption.titleKey),
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w600,
                         color: selectedOption.color,
@@ -624,7 +624,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
                 onPressed: _navigateToWidget,
                 child: Text(
                   translate('search.view_all'),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w600,
                     color: blue,
@@ -651,7 +651,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
               autofocus: true,
               decoration: InputDecoration(
                 hintText: translate('search.search_placeholder'),
-                hintStyle: GoogleFonts.inter(
+                hintStyle: GoogleFonts.poppins(
                   fontSize: 14.sp,
                   color: Colors.grey[500],
                 ),
@@ -711,7 +711,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
             SizedBox(height: 16.h),
             Text(
               translate('search.error'),
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 16.sp,
                 color: Colors.grey[700],
               ),
@@ -743,7 +743,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
             SizedBox(height: 16.h),
             Text(
               translate('search.start_searching'),
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 16.sp,
                 color: Colors.grey[500],
               ),
@@ -766,7 +766,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
             SizedBox(height: 16.h),
             Text(
               translate('search.no_results'),
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 16.sp,
                 color: Colors.grey[500],
               ),
@@ -848,23 +848,23 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
                   children: [
                     Text(
                       item.title,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.grey[800],
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: null,
+                      overflow: TextOverflow.visible,
                     ),
                     if (item.subtitle.isNotEmpty)
                       Text(
                         item.subtitle,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 12.sp,
                           color: Colors.grey[600],
                         ),
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        overflow: TextOverflow.visible,
                       ),
                   ],
                 ),
@@ -888,7 +888,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
                       ),
                       child: Text(
                         '${item.amount} AED',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.green[700],
@@ -906,7 +906,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
                     SizedBox(width: 4.w),
                     Text(
                       item.date!,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 11.sp,
                         color: Colors.grey[600],
                       ),
@@ -926,7 +926,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
                       ),
                       child: Text(
                         item.status!,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w500,
                           color: _getStatusColor(item.status!),
@@ -1064,7 +1064,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
               children: [
                 Text(
                   status.toUpperCase(),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
                     color: appFontColor,
@@ -1087,7 +1087,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
                 children: [
                   Text(
                     'Date',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: const Color(0xff151544),
@@ -1095,7 +1095,7 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
                   ),
                   Text(
                     date,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                       color: Colors.black,

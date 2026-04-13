@@ -20,7 +20,7 @@ class ContentItemWidget extends StatelessWidget {
   });
 
   Widget _buildThumbnail({bool withBorder = true}) {
-    final String imageUrl = content.previewUrl;
+    final String imageUrl = content.displayImageUrl;
     final borderRadius = BorderRadius.circular(18.r);
     const borderColor = Color(0xB8484848);
 
@@ -155,8 +155,8 @@ class ContentItemWidget extends StatelessWidget {
                                     color: Colors.white.withOpacity(0.75),
                                     letterSpacing: 1.0,
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: null,
+                                  overflow: TextOverflow.visible,
                                 ),
                                 SizedBox(height: 4.h),
                                 Text(
@@ -168,7 +168,7 @@ class ContentItemWidget extends StatelessWidget {
                                     color: Colors.white,
                                   ),
                                   maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
+                                  overflow: TextOverflow.visible,
                                 ),
                                 if (content.projectName.isNotEmpty) ...[
                                   SizedBox(height: 2.h),
@@ -180,8 +180,8 @@ class ContentItemWidget extends StatelessWidget {
                                       fontWeight: FontWeight.w500,
                                       color: Colors.white.withOpacity(0.75),
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: null,
+                                    overflow: TextOverflow.visible,
                                   ),
                                 ],
                               ],
@@ -270,8 +270,8 @@ class ContentItemWidget extends StatelessWidget {
                       color: const Color(0xFF6E6E6E),
                       letterSpacing: 0.8,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
                   ),
                 ),
               ),
@@ -303,8 +303,8 @@ class ContentItemWidget extends StatelessWidget {
                               fontWeight: FontWeight.w800,
                               color: Colors.black87,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            maxLines: null,
+                            overflow: TextOverflow.visible,
                           ),
                           if (content.projectName.isNotEmpty) ...[
                             SizedBox(height: 2.h),
@@ -315,8 +315,8 @@ class ContentItemWidget extends StatelessWidget {
                                 fontWeight: FontWeight.w500,
                                 color: const Color(0xFF6E6E6E),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              maxLines: null,
+                              overflow: TextOverflow.visible,
                             ),
                           ],
                         ],

@@ -399,8 +399,8 @@ class _TopIdentityCard extends StatelessWidget {
               children: [
                 Text(
                   displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 17,

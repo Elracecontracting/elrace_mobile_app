@@ -31,7 +31,7 @@ class AttendanceDialogs {
                 children: [
                   Text(
                     "ATTENDANCE REPORT",
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w300,
                       letterSpacing: 1.5, // Adjust as needed
@@ -40,7 +40,7 @@ class AttendanceDialogs {
                   ),
                   Text(
                     DateFormat('MMM yyyy').format(selectedEndDate),
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w300,
                       color: appFontColor,

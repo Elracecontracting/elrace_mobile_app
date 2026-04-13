@@ -25,7 +25,7 @@ class NotesHeaderWidget extends StatelessWidget implements PreferredSizeWidget {
       ),
       title: Text(
         translate('home.my_notes'),
-        style: GoogleFonts.koulen(
+        style: GoogleFonts.poppins(
           fontSize: 25.sp,
           fontWeight: FontWeight.w400,
           color: appFontColor,

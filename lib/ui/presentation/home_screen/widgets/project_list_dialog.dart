@@ -425,22 +425,8 @@ void _showProjectSelectionDialog({
                                   });
 
                                   try {
-                                    print(
-                                        '🔍 ════════════════════════════════════════════════════════');
-                                    print('📋 تفاصيل المشروع المختار:');
-                                    if (selectedProject != null) {
-                                      print(
-                                          '   Project Name: ${selectedProject?.name}');
-                                      print(
-                                          '   Agreement ID: ${selectedProject?.agreementId}');
-                                    } else if (selectedBranch != null) {
-                                      print(
-                                          '   Branch ID: ${selectedBranch[0]}');
-                                      print(
-                                          '   Branch Name: ${selectedBranch[1]}');
-                                    }
-                                    print(
-                                        '🔍 ════════════════════════════════════════════════════════');
+                                    // print('project details...');
+                                    // Project details logging silenced
 
                                     final location = Location();
                                     final locationData =
@@ -453,28 +439,15 @@ void _showProjectSelectionDialog({
                                       locationData.longitude ?? 0,
                                     );
 
-                                    print(
-                                        '🔍 ════════════════════════════════════════════════════════');
-                                    print('📊 نتيجة التحقق من اللوكيشن:');
-                                    print('   Status: ${result['status']}');
-                                    if (result['message'] != null) {
-                                      print('   Message: ${result['message']}');
-                                    }
-                                    if (result['data'] != null) {
-                                      print('   Data: ${result['data']}');
-                                    }
-                                    print(
-                                        '🔍 ════════════════════════════════════════════════════════');
+                                    // print('location validation result...');
+                                    // Location validation logging silenced
 
                                     if (result['status'] == 'success') {
                                       // Location validation succeeded
-                                      // Force face recognition only - no other options
-                                      // Save selected project/branch with face recognition method
-                                      print(
-                                          '✅ التحقق من اللوكيشن نجح! المستخدم داخل المنطقة');
+                                      // Save selected project/branch with biometric method
                                       _saveSelectedProject(
                                           selectedProject, selectedBranch,
-                                          authMethod: 'faceRecognition');
+                                          authMethod: 'biometric');
                                       Navigator.pop(context);
                                       SharedPref().setPreferencesBoolean(
                                           'wasCheckedInBeforeFaceAuth',
@@ -482,8 +455,7 @@ void _showProjectSelectionDialog({
                                       onConfirmed();
                                     } else {
                                       // Location validation failed
-                                      print(
-                                          '❌ التحقق من اللوكيشن فشل! المستخدم خارج المنطقة');
+                                      // print('❌ location validation failed');
                                       setState(() => errorMessage =
                                           'You are not within the designated area for this project. You cannot check in.');
                                     }

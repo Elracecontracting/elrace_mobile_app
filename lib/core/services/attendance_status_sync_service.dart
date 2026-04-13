@@ -14,6 +14,7 @@ class AttendanceStatusSnapshot {
   final bool isToday;
   final String checkInDisplayTime;
   final String checkOutDisplayTime;
+  final int? checkInRecordId;
   final DateTime refreshedAt;
 
   const AttendanceStatusSnapshot({
@@ -22,6 +23,7 @@ class AttendanceStatusSnapshot {
     required this.isToday,
     required this.checkInDisplayTime,
     required this.checkOutDisplayTime,
+    this.checkInRecordId,
     required this.refreshedAt,
   });
 }
@@ -33,6 +35,15 @@ class AttendanceStatusSyncService {
   static Stream<AttendanceStatusSnapshot> get updates =>
       _updatesController.stream;
 
+  /// Kept for backward compatibility — no longer used for guard logic.
+  static void markLocalAction({Duration guard = const Duration(minutes: 2)}) {}
+
+  /// Kept for backward compatibility — no longer used for guard logic.
+  static void markLocalCheckOut() {}
+
+  /// Kept for backward compatibility — no longer used for guard logic.
+  static void clearGuard() {}
+
   static Future<AttendanceStatusSnapshot?> refreshFromServer({
     String reason = 'manual',
   }) async {
@@ -43,6 +54,14 @@ class AttendanceStatusSyncService {
     try {
       final status = await AttendanceRepo().getTodayStatus();
       final snapshot = _toSnapshot(status);
+
+      print('\n🔍 ===== AttendanceSync ($reason) =====');
+      print('🔍 SERVER: checkedIn=${snapshot.checkedIn}, '
+          'checkedOut=${snapshot.checkedOut}, '
+          'checkIn=${snapshot.checkInDisplayTime}, '
+          'checkOut=${snapshot.checkOutDisplayTime}');
+      print('✅ AttendanceSync: Accepting server data ($reason)');
+      print('🔍 ===== END AttendanceSync =====\n');
 
       await _persistSnapshot(snapshot);
       _updatesController.add(snapshot);
@@ -65,6 +84,12 @@ class AttendanceStatusSyncService {
 
     final shouldBeCheckedIn = isToday && checkedInRaw && !checkedOutRaw;
 
+    // Extract check_in_record_id if available from the server
+    final rawRecordId = data['check_in_record_id'];
+    final checkInRecordId = (rawRecordId is int && rawRecordId > 0)
+        ? rawRecordId
+        : (rawRecordId is String ? int.tryParse(rawRecordId) : null);
+
     return AttendanceStatusSnapshot(
       checkedIn: shouldBeCheckedIn,
       checkedOut: isToday && checkedOutRaw,
@@ -75,41 +100,55 @@ class AttendanceStatusSyncService {
       checkOutDisplayTime: (isToday && checkOutTime != null)
           ? _formatTime(checkOutTime)
           : '00:00:00',
+      checkInRecordId: checkInRecordId,
       refreshedAt: DateTime.now(),
     );
   }
 
   static Future<void> _persistSnapshot(
       AttendanceStatusSnapshot snapshot) async {
+    print('\n📝 _persistSnapshot: WRITING from server:');
+    print('📝   isCheckedIn = ${snapshot.checkedIn}');
+    print('📝   checkInDisplayTime = ${snapshot.checkInDisplayTime}');
+    print('📝   checkOutDisplayTime = ${snapshot.checkOutDisplayTime}');
+
+    // دائماً نكتب بيانات السيرفر مباشرة بدون مقارنة محلية
     await SharedPref().setPreferencesBoolean('isCheckedIn', snapshot.checkedIn);
     await SharedPref().setPreferencesString(
         'checkInDisplayTime', snapshot.checkInDisplayTime);
     await SharedPref().setPreferencesString(
         'checkOutDisplayTime', snapshot.checkOutDisplayTime);
 
+    // تحديث checkInTime من وقت السيرفر
     if (snapshot.checkedIn && snapshot.checkInDisplayTime != '00:00:00') {
       final checkInDateTime = _parseTodayTime(snapshot.checkInDisplayTime);
       if (checkInDateTime != null) {
         await SharedPref().setPreferenceInt(
             'checkInTime', checkInDateTime.millisecondsSinceEpoch);
       }
-    } else {
+    } else if (!snapshot.checkedIn) {
       await SharedPref().setPreferenceInt('checkInTime', 0);
-    }
-
-    if (!snapshot.checkedIn) {
       await SharedPref().setPreferenceInt('checkInRecordId', 0);
     }
 
+    // حفظ check_in_record_id من السيرفر
+    if (snapshot.checkedIn && snapshot.checkInRecordId != null && snapshot.checkInRecordId! > 0) {
+      await SharedPref().setPreferenceInt('checkInRecordId', snapshot.checkInRecordId!);
+    }
+
+    print('📝 _persistSnapshot: AFTER');
+    print('📝   isCheckedIn = ${SharedPref().getPreferenceBoolean('isCheckedIn')}');
+    print('📝   checkInDisplayTime = ${SharedPref().getPreferenceString('checkInDisplayTime')}');
+    print('📝   checkOutDisplayTime = ${SharedPref().getPreferenceString('checkOutDisplayTime')}');
+    print('📝   checkInTime (ms) = ${SharedPref().getPreferenceInt('checkInTime')}');
+    print('📝   checkInRecordId = ${SharedPref().getPreferenceInt('checkInRecordId')}');
+    print('📝 ===== END _persistSnapshot =====\n');
+
     // Reload the timer controller so it reflects the server's check-in time.
-    // This handles the case where the user checked in/out from outside the app.
     try {
       final timerController = Get.find<TimerController>();
       await timerController.reloadState();
-    } catch (_) {
-      // TimerController is not yet registered (e.g., app startup before HomeScreen).
-      // It will read the correct SharedPref values when it initializes.
-    }
+    } catch (_) {}
 
     try {
       await CheckInReminderNotificationService().updateReminders();

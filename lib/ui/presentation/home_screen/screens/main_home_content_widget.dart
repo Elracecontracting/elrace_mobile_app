@@ -182,45 +182,20 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
                                           height: 190.h,
                                           width: double.infinity,
                                         ),
-                                      Positioned(
-                                        bottom: 30.h,
-                                        left: 0,
-                                        right: 0,
-                                        child: Container(
+                                      // Shadow overlay at bottom of image
+                                      Positioned.fill(
+                                        child: DecoratedBox(
                                           decoration: BoxDecoration(
-                                            gradient: const LinearGradient(
+                                            gradient: LinearGradient(
                                               begin: Alignment.topCenter,
                                               end: Alignment.bottomCenter,
                                               colors: [
-                                                Color(0xB81B1F26),
-                                                Color(0xFF717171),
+                                                Colors.transparent,
+                                                Colors.black.withOpacity(0.0),
+                                                Colors.black.withOpacity(0.6),
                                               ],
+                                              stops: const [0.0, 0.45, 1.0],
                                             ),
-                                            borderRadius:
-                                                BorderRadius.circular(2.r),
-                                          ),
-                                          padding: EdgeInsets.symmetric(
-                                              vertical: 8.h, horizontal: 12.w),
-                                          child: Text(
-                                            sliderProvider.titles[itemIndex %
-                                                sliderProvider.titles.length],
-                                            style: GoogleFonts.poppins(
-                                              color: Colors.white,
-                                              fontSize: 9.sp,
-                                              fontWeight: FontWeight.w600,
-                                              letterSpacing: 0.5,
-                                              shadows: [
-                                                Shadow(
-                                                  offset: const Offset(0, 1),
-                                                  blurRadius: 3,
-                                                  color: Colors.black
-                                                      .withOpacity(0.3),
-                                                ),
-                                              ],
-                                            ),
-                                            textAlign: TextAlign.center,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ),
                                       ),
@@ -240,6 +215,49 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
                             sliderProvider.setCurrentIndex(index);
                           },
                           initialPage: sliderProvider.currentIndex,
+                        ),
+                      ),
+
+                    // Fixed text bar — stays still, only text changes
+                    if (sliderProvider.titles.isNotEmpty)
+                      Positioned(
+                        bottom: 28.h,
+                        left: SizeConfig().getWidth(10),
+                        right: SizeConfig().getWidth(10),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Color(0xB81B1F26),
+                                Color(0xFF717171),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(2.r),
+                          ),
+                          padding: EdgeInsets.symmetric(
+                              vertical: 8.h, horizontal: 12.w),
+                          child: Text(
+                            sliderProvider.titles[sliderProvider.currentIndex %
+                                sliderProvider.titles.length],
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 9.sp,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 0.5,
+                              shadows: [
+                                Shadow(
+                                  offset: const Offset(0, 1),
+                                  blurRadius: 3,
+                                  color: Colors.black.withOpacity(0.3),
+                                ),
+                              ],
+                            ),
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
                       ),
 

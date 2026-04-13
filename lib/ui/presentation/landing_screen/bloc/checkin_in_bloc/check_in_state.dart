@@ -45,25 +45,6 @@ final class CheckInLoadingST extends CheckInState {
   List<Object> get props => [isLoading];
 }
 
-/// State for face verification results
-class FaceVerificationSuccessST extends CheckInState {
-  const FaceVerificationSuccessST();
-}
-
-class FaceVerificationFailedST extends CheckInState {
-  final String reason;
-
-  const FaceVerificationFailedST(this.reason);
-
-  @override
-  List<Object> get props => [reason];
-}
-
-/// State when face embeddings not found (need enrollment)
-class FaceNotEnrolledST extends CheckInState {
-  const FaceNotEnrolledST();
-}
-
 /// State when check-in is blocked due to time restriction
 /// Check-in is only allowed before 11:59 AM Dubai time
 class CheckInBlockedST extends CheckInState {

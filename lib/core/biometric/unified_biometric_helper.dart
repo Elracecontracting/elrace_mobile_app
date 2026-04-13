@@ -1,140 +1,102 @@
 import 'package:flutter/material.dart';
-import 'package:el_race/core/biometric/face_recognition_helper.dart';
-import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/core/biometric/device_auth_service.dart';
+import 'package:el_race/core/biometric/pin_auth_service.dart';
+import 'package:el_race/core/biometric/screens/pin_setup_screen.dart';
+import 'package:el_race/core/biometric/screens/pin_verify_sheet.dart';
 
-/// Unified biometric helper - UPDATED to use Face Recognition
+/// Unified authentication helper.
 ///
-/// Previously used platform-specific biometrics (Face ID/Fingerprint)
-/// Now uses advanced Face Recognition technology on all platforms
+/// **Strategy:**
+/// 1. If the device supports biometrics (Face ID / fingerprint) → use them.
+/// 2. Otherwise, fall back to a 4-6 digit PIN.
+///    - If the user has not set a PIN yet, open [PinSetupScreen] first.
+///    - Then show [PinVerifySheet] to verify.
 class UnifiedBiometricHelper {
   UnifiedBiometricHelper._();
 
-  /// Check if face recognition is available
-  /// Note: Requires user to register their face first
-  static Future<bool> isBiometricAvailable() async {
-    // Face recognition is available if camera is available
-    // In production, you should check camera permissions
-    return true; // Face recognition works on all devices with cameras
-  }
+  static final _deviceAuth = DeviceAuthService.instance;
+  static final _pinAuth = PinAuthService.instance;
 
-  /// Helper to get current user ID
-  static Future<String?> _getCurrentUserId() async {
-    try {
-      // Get user ID from SharedPreferences
-      final loginData = SharedPref.getLoginData();
+  // ─────────────────────── public API ───────────────────────
 
-      // Debug: Print available data
-      debugPrint('🔍 UnifiedBiometricHelper: Getting user ID...');
-      debugPrint('  - uid: ${loginData.result?.data?.uid}');
-      debugPrint('  - username: ${loginData.result?.data?.username}');
-      debugPrint('  - emp_id: ${loginData.result?.data?.emp_id}');
-      debugPrint(
-          '  - emp_profile_id: ${loginData.result?.data?.emp_profile_id}');
-
-      // Priority: emp_id > emp_profile_id > uid > username
-      final userId = loginData.result?.data?.emp_id ??
-          loginData.result?.data?.emp_profile_id ??
-          loginData.result?.data?.uid?.toString() ??
-          loginData.result?.data?.username;
-
-      if (userId == null || userId.isEmpty) {
-        debugPrint('❌ UnifiedBiometricHelper: No user ID found');
-        debugPrint('   Login data structure: ${loginData.result?.data}');
-        return null;
-      }
-
-      // Detailed logging about which field was selected
-      final empId = loginData.result?.data?.emp_id;
-      final empProfileId = loginData.result?.data?.emp_profile_id;
-      final uid = loginData.result?.data?.uid;
-
-      if (empId != null && empId.isNotEmpty) {
-        debugPrint('✅ Selected emp_id: $userId');
-      } else if (empProfileId != null && empProfileId.isNotEmpty) {
-        debugPrint('✅ Selected emp_profile_id: $userId');
-      } else if (uid != null) {
-        debugPrint('✅ Selected uid: $userId');
-      } else {
-        debugPrint('✅ Selected username: $userId');
-      }
-
-      return userId;
-    } catch (e) {
-      debugPrint('❌ UnifiedBiometricHelper: Error getting user ID: $e');
-      return null;
-    }
-  }
-
-  /// Authenticate for attendance (check-in/out)
-  /// Now uses Face Recognition instead of platform biometrics
+  /// Authenticate for check-in / check-out.
   static Future<bool> authenticateForAttendance(BuildContext context) async {
-    print('\n📍 ===== UnifiedBiometricHelper.authenticateForAttendance =====');
-    final userId = await _getCurrentUserId();
-    print('📍 Selected userId to pass: $userId');
-    print(
-        '====================================================================\n');
-
-    if (userId == null) {
-      print('❌ authenticateForAttendance: userId is null, returning false');
-      return false;
-    }
-
-    return await FaceRecognitionHelper.authenticateForAttendance(
-      context,
-      userId: userId,
-    );
+    return _authenticate(context, reason: 'تحقق من هويتك لتسجيل الحضور');
   }
 
-  /// Authenticate for sensitive data access
+  /// Authenticate for sensitive data access.
   static Future<bool> authenticateForSensitiveData(BuildContext context) async {
-    final userId = await _getCurrentUserId();
-    if (userId == null) return false;
-
-    return await FaceRecognitionHelper.authenticateForSensitiveData(
-      context,
-      userId: userId,
-    );
+    return _authenticate(context, reason: 'تحقق من هويتك لعرض البيانات');
   }
 
-  /// Authenticate for payments
+  /// Authenticate for payments.
   static Future<bool> authenticateForPayment(BuildContext context) async {
-    final userId = await _getCurrentUserId();
-    if (userId == null) return false;
-
-    return await FaceRecognitionHelper.authenticateForPayment(
-      context,
-      userId: userId,
-    );
+    return _authenticate(context, reason: 'تحقق من هويتك لإتمام الدفع');
   }
 
-  /// Authenticate for profile changes
+  /// Authenticate for profile changes.
   static Future<bool> authenticateForProfileChange(BuildContext context) async {
-    final userId = await _getCurrentUserId();
-    if (userId == null) return false;
-
-    return await FaceRecognitionHelper.authenticateForSecureAction(
-      context,
-      userId: userId,
-      title: 'Verify Identity',
-      subtitle: 'Confirm your identity to change profile settings',
-    );
+    return _authenticate(context, reason: 'تحقق من هويتك لتعديل الملف الشخصي');
   }
 
-  /// Generic authentication with custom messaging
+  /// Generic authentication with a custom [reason].
   static Future<bool> authenticate({
     required BuildContext context,
     required String title,
     required String subtitle,
     required String reason,
   }) async {
-    final userId = await _getCurrentUserId();
-    if (userId == null) return false;
+    return _authenticate(context, reason: reason);
+  }
 
-    return await FaceRecognitionHelper.authenticate(
-      context: context,
-      userId: userId,
-      title: title,
-      subtitle: subtitle,
+  /// Whether the user needs to set up their auth method (PIN setup).
+  /// Returns `true` when the device has no biometrics AND no PIN has been set.
+  static Future<bool> needsSetup() async {
+    final hasBio = await _deviceAuth.isBiometricAvailable();
+    if (hasBio) return false;
+    return !(await _pinAuth.hasPin());
+  }
+
+  /// Open PIN setup flow. Returns `true` when setup completed.
+  static Future<bool> setupPin(BuildContext context) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const PinSetupScreen()),
     );
+    return result ?? false;
+  }
+
+  // ─────────────────────── internals ───────────────────────
+
+  static Future<bool> _authenticate(
+    BuildContext context, {
+    required String reason,
+  }) async {
+    final hasBio = await _deviceAuth.isBiometricAvailable();
+
+    if (hasBio) {
+      // ── Device biometrics (Face ID / fingerprint / device passcode) ──
+      return await _deviceAuth.authenticate(
+        reason: reason,
+        biometricOnly: false, // allow device passcode as OS fallback
+      );
+    }
+
+    // ── PIN fallback ──
+    final hasPin = await _pinAuth.hasPin();
+    if (!hasPin) {
+      // First-time: force user to set a PIN
+      final didSetup = await setupPin(context);
+      if (!didSetup) return false;
+    }
+
+    if (!context.mounted) return false;
+
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => PinVerifySheet(subtitle: reason),
+    );
+    return ok ?? false;
   }
 }

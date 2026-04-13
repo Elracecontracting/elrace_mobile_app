@@ -118,12 +118,15 @@ class _LpoPdfViewerScreenState extends State<LpoPdfViewerScreen> {
 
   Future<void> _sharePdf() async {
     if (_pdfBytes == null) return;
-    
-    final fileName = widget.title?.replaceAll(RegExp(r'[^\w\-]'), '_') ?? 'lpo_report';
+
+    final rawName = widget.title?.trim() ?? 'lpo_report';
+    // Only strip characters that are truly invalid in file names, keep spaces and dots
+    final safeName = rawName.replaceAll(RegExp(r'[/\\:*?"<>|]'), '_');
+    final fileName = safeName.toLowerCase().endsWith('.pdf') ? safeName : '$safeName.pdf';
     await Share.shareXFiles([
       XFile.fromData(
         _pdfBytes!,
-        name: '$fileName.pdf',
+        name: fileName,
         mimeType: 'application/pdf',
       ),
     ]);
@@ -142,7 +145,7 @@ class _LpoPdfViewerScreenState extends State<LpoPdfViewerScreen> {
         ),
         title: Text(
           widget.title ?? 'LPO Report',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.poppins(
             fontSize: 18.sp,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF0E3A76),
@@ -173,7 +176,7 @@ class _LpoPdfViewerScreenState extends State<LpoPdfViewerScreen> {
             SizedBox(height: 16.h),
             Text(
               'Loading PDF...',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 16.sp,
                 color: Colors.grey[600],
               ),
@@ -199,7 +202,7 @@ class _LpoPdfViewerScreenState extends State<LpoPdfViewerScreen> {
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 16.sp,
                   color: Colors.grey[700],
                 ),
@@ -218,7 +221,7 @@ class _LpoPdfViewerScreenState extends State<LpoPdfViewerScreen> {
                 ),
                 child: Text(
                   'Retry',
-                  style: GoogleFonts.inter(color: Colors.white),
+                  style: GoogleFonts.poppins(color: Colors.white),
                 ),
               ),
             ],
@@ -262,7 +265,7 @@ class _LpoPdfViewerScreenState extends State<LpoPdfViewerScreen> {
               children: [
                 Text(
                   'Page $_currentPage of $_totalPages',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 14.sp,
                     color: Colors.grey[700],
                   ),

@@ -60,15 +60,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
     required String source,
     required String rawUrl,
     required Object error,
-  }) {
-    final safeUrl = _safeImageUrl(rawUrl);
-    final hasAuth = (_imageHeaders?['Authorization'] ?? '').isNotEmpty;
-    debugPrint('❌ [Media][Photo][$source] image load failed');
-    debugPrint('   rawUrl: $rawUrl');
-    debugPrint('   safeUrl: $safeUrl');
-    debugPrint('   hasAuthHeader: $hasAuth');
-    debugPrint('   error: $error');
-  }
+  }) {}
 
   Widget _buildPhotoLoadingPlaceholder(
     BuildContext context,
@@ -219,7 +211,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                 )
               else
                 SliverPadding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.w),
+                  padding: EdgeInsets.only(left: 16.w, right: 16.w, bottom: 40.h),
                   sliver: SliverToBoxAdapter(
                     child: Column(
                       children: [
@@ -260,7 +252,6 @@ class _MediaListScreenState extends State<MediaListScreen> {
                                         media: media,
                                         onTap: () {
                                           if (media.isVideo) {
-                                            print(media.previewUrl);
                                             Navigator.of(context).push(
                                               MaterialPageRoute(
                                                 builder: (context) =>
@@ -309,13 +300,13 @@ class _MediaListScreenState extends State<MediaListScreen> {
             if (!_showSearch)
               Text(
                 translate('home.media'),
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 22.sp,
                   fontWeight: FontWeight.w400,
                   color: appFontColor,
                   letterSpacing: 1.5,
                 ),
-                overflow: TextOverflow.ellipsis,
+                overflow: TextOverflow.visible,
               )
             else
               Expanded(child: _buildInlineSearchField()),
@@ -384,8 +375,8 @@ class _MediaListScreenState extends State<MediaListScreen> {
           color: Colors.white,
           letterSpacing: 1.0,
         ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+        maxLines: null,
+        overflow: TextOverflow.visible,
       );
     }
 
@@ -651,7 +642,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                       initialIndex: 0,
                     ),
                     child: Image.network(
-                      _safeImageUrl(content.previewUrl),
+                      _safeImageUrl(content.displayImageUrl),
                       headers: _imageHeaders,
                       fit: BoxFit.cover,
                       loadingBuilder: (context, child, loadingProgress) {
@@ -664,7 +655,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                       errorBuilder: (context, error, stackTrace) {
                         _logPhotoLoadError(
                           source: 'single-card',
-                          rawUrl: content.previewUrl,
+                          rawUrl: content.displayImageUrl,
                           error: error,
                         );
                         return Container(
@@ -692,8 +683,8 @@ class _MediaListScreenState extends State<MediaListScreen> {
                     children: [
                       Text(
                         content.displayName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: null,
+                        overflow: TextOverflow.visible,
                         style: GoogleFonts.poppins(
                           fontSize: 18.sp,
                           fontWeight: FontWeight.w800,
@@ -703,8 +694,8 @@ class _MediaListScreenState extends State<MediaListScreen> {
                       SizedBox(height: 2.h),
                       Text(
                         content.projectName,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: null,
+                        overflow: TextOverflow.visible,
                         style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w500,
@@ -830,7 +821,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                         itemBuilder: (context, index) {
                           final content = photos[index];
                           return Image.network(
-                            _safeImageUrl(content.previewUrl),
+                            _safeImageUrl(content.displayImageUrl),
                             headers: _imageHeaders,
                             fit: BoxFit.contain,
                             loadingBuilder: (context, child, loadingProgress) {
@@ -846,7 +837,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                             errorBuilder: (context, error, stackTrace) {
                               _logPhotoLoadError(
                                 source: 'preview',
-                                rawUrl: content.previewUrl,
+                                rawUrl: content.displayImageUrl,
                                 error: error,
                               );
                               return Container(

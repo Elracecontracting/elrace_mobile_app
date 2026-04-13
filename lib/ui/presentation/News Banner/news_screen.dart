@@ -63,7 +63,7 @@ class _NewsScreenState extends State<NewsScreen> {
                           SizedBox(width: 6.w),
                           Text(
                             translate('home.news'),
-                            style: GoogleFonts.koulen(
+                            style: GoogleFonts.poppins(
                               fontSize: 20.sp,
                               fontWeight: FontWeight.w400,
                               color: appFontColor,
@@ -106,7 +106,7 @@ class _NewsScreenState extends State<NewsScreen> {
             SizedBox(height: 16.h),
             Text(
               'Loading news...',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 16.sp,
                 color: Colors.grey[600],
               ),
@@ -134,7 +134,7 @@ class _NewsScreenState extends State<NewsScreen> {
               SizedBox(height: 16.h),
               Text(
                 'Error',
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 24.sp,
                   color: Colors.red[700],
                 ),
@@ -143,7 +143,7 @@ class _NewsScreenState extends State<NewsScreen> {
               Text(
                 provider.errorMessage ?? 'An error occurred',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 14.sp,
                   color: Colors.grey[700],
                 ),
@@ -185,7 +185,7 @@ class _NewsScreenState extends State<NewsScreen> {
             SizedBox(height: 16.h),
             Text(
               'No News Available',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 24.sp,
                 color: Colors.grey[600],
               ),
@@ -194,7 +194,7 @@ class _NewsScreenState extends State<NewsScreen> {
             Text(
               'There are no news items to display at the moment.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 14.sp,
                 color: Colors.grey[500],
               ),
@@ -281,7 +281,7 @@ class _NewsScreenState extends State<NewsScreen> {
                 child: Text(
                   newsItem.name.toUpperCase(),
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     color: appFontColor,
                     fontWeight: FontWeight.w400,
                     fontSize: 24.sp,
@@ -380,7 +380,7 @@ class _NewsScreenState extends State<NewsScreen> {
 
     return RichText(
       text: TextSpan(
-        style: GoogleFonts.inter(
+        style: GoogleFonts.poppins(
           fontSize: 14.sp,
           color: Colors.black,
           height: 1.65,
@@ -389,7 +389,7 @@ class _NewsScreenState extends State<NewsScreen> {
           TextSpan(text: preview),
           TextSpan(
             text: '  See All',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               color: const Color(0xFF868686),
               fontWeight: FontWeight.bold,
               fontSize: 16.sp,

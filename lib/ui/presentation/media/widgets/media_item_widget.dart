@@ -151,8 +151,8 @@ class MediaItemWidget extends StatelessWidget {
                       fontWeight: FontWeight.w400,
                       color: const Color(0xFF6E6E6E),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
                   ),
                 ),
               ),
@@ -198,8 +198,8 @@ class MediaItemWidget extends StatelessWidget {
                               fontWeight: FontWeight.w800,
                               color: Colors.black87,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            maxLines: null,
+                            overflow: TextOverflow.visible,
                           ),
                           if (media.client != null &&
                               media.client!.trim().isNotEmpty) ...[
@@ -211,8 +211,8 @@ class MediaItemWidget extends StatelessWidget {
                                 fontWeight: FontWeight.w500,
                                 color: const Color(0xFF6E6E6E),
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              maxLines: null,
+                              overflow: TextOverflow.visible,
                             ),
                           ],
                         ],
@@ -251,8 +251,6 @@ class MediaItemWidget extends StatelessWidget {
     // Capture origin rect immediately (before async gaps invalidate context)
     final originRect = _shareOriginRect(context);
     try {
-      print('🚀 Starting share process for media: ${media.id} - ${media.name}');
-
       // Show loading indicator
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -270,21 +268,15 @@ class MediaItemWidget extends StatelessWidget {
 
       // 1. Try to call prepare_share API to get the shareable URL
       try {
-        print('📞 Getting media repository...');
         final mediaRepository = sl.get<IMediaRepository>();
-        print('✅ Got repository, calling prepareShare...');
-
         shareableUrl = await mediaRepository.prepareShare(media.id);
-        print('📥 Received shareableUrl from API: $shareableUrl');
       } catch (e) {
-        print('⚠️ API call failed: $e');
+        // ignore, fallback below
       }
 
       // 2. If API failed, use x_web_url as fallback
       if (shareableUrl == null || shareableUrl.isEmpty) {
-        print('🔄 API failed, using x_web_url as fallback');
         shareableUrl = media.xWebUrl ?? media.streamingUrl;
-        print('📤 Using fallback URL: $shareableUrl');
       }
 
       // Trim whitespace and encode URL to handle spaces
@@ -302,7 +294,6 @@ class MediaItemWidget extends StatelessWidget {
             )
             .toString();
       } catch (e) {
-        print('⚠️ Could not parse URL for encoding: $e');
         // Fallback: simple space replacement
         shareableUrl = shareableUrl!.replaceAll(' ', '%20');
       }
@@ -311,33 +302,21 @@ class MediaItemWidget extends StatelessWidget {
         throw Exception('No URL available to share');
       }
 
-      print('📤 Final shareable URL (encoded): $shareableUrl');
-
       // 3. Download the thumbnail image if available
       XFile? thumbnailFile;
       if (media.thumbnail != null && media.thumbnail!.isNotEmpty) {
         try {
-          print('📥 Downloading thumbnail from: ${media.thumbnail}');
-
           final response = await http.get(Uri.parse(media.thumbnail!));
           if (response.statusCode == 200) {
-            // Get temporary directory
             final tempDir = await getTemporaryDirectory();
             final fileName =
                 'share_thumbnail_${DateTime.now().millisecondsSinceEpoch}.jpg';
             final filePath = '${tempDir.path}/$fileName';
-
-            // Save the thumbnail to a temporary file
             final file = File(filePath);
             await file.writeAsBytes(response.bodyBytes);
-
             thumbnailFile = XFile(filePath);
-            print('✅ Thumbnail saved to: $filePath');
-          } else {
-            print('⚠️ Failed to download thumbnail: ${response.statusCode}');
           }
         } catch (e) {
-          print('⚠️ Error downloading thumbnail: $e');
           // Continue without thumbnail if download fails
         }
       }
@@ -345,7 +324,6 @@ class MediaItemWidget extends StatelessWidget {
       // 4. Share the thumbnail image + video URL
       if (thumbnailFile != null) {
         // Share with both thumbnail and URL
-        print('📤 Sharing thumbnail + URL');
         await SharePlus.instance.share(
           ShareParams(
             files: [thumbnailFile],
@@ -355,7 +333,6 @@ class MediaItemWidget extends StatelessWidget {
         );
       } else {
         // Share only the URL if thumbnail download failed
-        print('📤 Sharing URL only');
         await SharePlus.instance.share(
           ShareParams(
             text: shareableUrl,
@@ -363,11 +340,7 @@ class MediaItemWidget extends StatelessWidget {
           ),
         );
       }
-
-      print('✅ Share completed successfully');
     } catch (e, stackTrace) {
-      print('❌ Error sharing media: $e');
-      print('Stack trace: $stackTrace');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

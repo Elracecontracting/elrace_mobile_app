@@ -155,6 +155,7 @@ class FlatAttendanceData {
     this.status,
     this.checkInStatus,
     this.checkOutStatus,
+    this.attendanceType,
   });
 
   final String employeeName;
@@ -167,6 +168,7 @@ class FlatAttendanceData {
   final String? status;
   final String? checkInStatus;
   final String? checkOutStatus;
+  final String? attendanceType;
 
   factory FlatAttendanceData.fromJson(Map<String, dynamic> json) =>
       FlatAttendanceData(
@@ -192,6 +194,10 @@ class FlatAttendanceData {
           'checkout_status',
           'out_status',
         ], json),
+        attendanceType: _firstNonEmptyString(const [
+          'x_attendance_type',
+          'attendance_type',
+        ], json),
       );
 
   Map<String, dynamic> toJson() => {
@@ -205,6 +211,7 @@ class FlatAttendanceData {
         "status": status,
         "check_in_status": checkInStatus,
         "check_out_status": checkOutStatus,
+        "x_attendance_type": attendanceType,
       };
 }
 
@@ -217,6 +224,7 @@ class AttendanceRecord {
     this.status,
     this.checkInStatus,
     this.checkOutStatus,
+    this.attendanceType,
   });
 
   final String date;
@@ -226,6 +234,7 @@ class AttendanceRecord {
   final String? status;
   final String? checkInStatus;
   final String? checkOutStatus;
+  final String? attendanceType;
 
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) =>
       AttendanceRecord(
@@ -248,6 +257,10 @@ class AttendanceRecord {
           'checkout_status',
           'out_status',
         ], json),
+        attendanceType: _firstNonEmptyString(const [
+          'x_attendance_type',
+          'attendance_type',
+        ], json),
       );
 
   Map<String, dynamic> toJson() => {
@@ -258,6 +271,7 @@ class AttendanceRecord {
         "status": status,
         "check_in_status": checkInStatus,
         "check_out_status": checkOutStatus,
+        "x_attendance_type": attendanceType,
       };
 }
 

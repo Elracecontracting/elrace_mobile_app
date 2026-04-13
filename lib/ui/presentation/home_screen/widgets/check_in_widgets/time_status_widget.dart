@@ -32,7 +32,7 @@ class TimeStatusWidget extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 displayCheckIn,
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF1A1A53),
@@ -53,7 +53,7 @@ class TimeStatusWidget extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 displayCheckOut,
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 12.sp,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFF1A1A53),

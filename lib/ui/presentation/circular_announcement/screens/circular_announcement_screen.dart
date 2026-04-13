@@ -271,13 +271,13 @@ class _CircularAnnouncementScreenState extends State<CircularAnnouncementScreen>
                   Flexible(
                     child: Text(
                       title.toUpperCase(),
-                      style: GoogleFonts.koulen(
+                      style: GoogleFonts.poppins(
                         color:
                             isSelected ? Colors.white : const Color(0xFF1A237E),
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w400,
                       ),
-                      overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.visible,
                     ),
                   ),
                 ],
@@ -326,7 +326,7 @@ class _CircularAnnouncementScreenState extends State<CircularAnnouncementScreen>
             const SizedBox(height: 16),
             Text(
               translate('common.error_occurred'),
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 18.sp,
                 color: Colors.grey[600],
               ),
@@ -398,7 +398,7 @@ class _CircularAnnouncementScreenState extends State<CircularAnnouncementScreen>
               isCircular
                   ? translate('circular_announcement.no_circulars')
                   : translate('circular_announcement.no_announcements'),
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 18.sp,
                 color: Colors.grey[600],
               ),
@@ -461,7 +461,7 @@ class _CircularAnnouncementScreenState extends State<CircularAnnouncementScreen>
                       color: Colors.black87,
                     ),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    overflow: TextOverflow.visible,
                   ),
 
                   if (item.displayBody.isNotEmpty) ...[
@@ -474,7 +474,7 @@ class _CircularAnnouncementScreenState extends State<CircularAnnouncementScreen>
                         color: Colors.black54,
                       ),
                       maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.visible,
                     ),
                   ],
 

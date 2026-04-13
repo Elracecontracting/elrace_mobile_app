@@ -268,7 +268,7 @@ class TasksScreen extends StatelessWidget {
                             icon: const Icon(Icons.attach_file),
                             label: Text(
                               attachmentFilename ?? 'Add file',
-                              overflow: TextOverflow.ellipsis,
+                              overflow: TextOverflow.visible,
                             ),
                           ),
                         ),
@@ -543,7 +543,7 @@ class TasksScreen extends StatelessWidget {
               Text(
                 task.description!,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                overflow: TextOverflow.visible,
               ),
             Text('Priority P${task.priority ?? '-'} · $dateText'),
           ],

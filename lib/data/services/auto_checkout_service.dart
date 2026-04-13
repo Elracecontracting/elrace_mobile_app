@@ -126,11 +126,11 @@ class AutoCheckoutService {
       }
 
       // تحديث الحالة
-      SharedPref().setPreferencesBoolean('isCheckedIn', false);
-      SharedPref().setPreferenceInt('checkInRecordId', 0);
-      SharedPref().removePreference('checkInProjectId');
-      SharedPref().removePreference('checkInBranchId');
-      SharedPref().removePreference('checkInAuthMethod');
+      await SharedPref().setPreferencesBoolean('isCheckedIn', false);
+      await SharedPref().setPreferenceInt('checkInRecordId', 0);
+      await SharedPref().removePreference('checkInProjectId');
+      await SharedPref().removePreference('checkInBranchId');
+      await SharedPref().removePreference('checkInAuthMethod');
 
       debugPrint('✅ Auto checkout completed successfully');
     } catch (e) {

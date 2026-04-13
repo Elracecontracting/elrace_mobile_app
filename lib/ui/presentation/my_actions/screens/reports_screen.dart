@@ -46,10 +46,27 @@ class _ReportsScreenState extends State<ReportsScreen> {
     BuildContext context,
     _ReportRequestItem item,
   ) async {
-    final uri = Uri.tryParse(item.reportLink);
-    if (uri == null || item.reportLink.trim().isEmpty) {
+    final rawLink = item.reportLink.trim();
+
+    if (rawLink.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No file URL available')),
+        const SnackBar(content: Text('No file URL available for this report')),
+      );
+      return;
+    }
+
+    // Handle relative URLs from Odoo (e.g., /web/content/123)
+    final String fullUrl;
+    if (rawLink.startsWith('http://') || rawLink.startsWith('https://')) {
+      fullUrl = rawLink;
+    } else {
+      fullUrl = 'https://erp.elrace.com$rawLink';
+    }
+
+    final uri = Uri.tryParse(fullUrl);
+    if (uri == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid file URL')),
       );
       return;
     }
@@ -57,7 +74,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => AttachmentViewerScreen(
-          publicUrl: item.reportLink,
+          publicUrl: fullUrl,
           title:
               item.reportName.trim().isEmpty ? 'Attachment' : item.reportName,
         ),
@@ -91,7 +108,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       SizedBox(height: 16.h),
                       Text(
                         'Service not available',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5A5A5A),
@@ -101,7 +118,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       Text(
                         'This feature is currently unavailable.\nPlease try again later.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           color: const Color(0xFF9AA0A6),
                         ),
@@ -149,7 +166,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         SizedBox(width: 8.w),
                         Text(
                           'MY REPORTS',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 18.sp,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF101C36),
@@ -167,7 +184,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     child: Center(
                       child: Text(
                         'No reports found.',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5A5A5A),
@@ -182,9 +199,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                           EdgeInsets.symmetric(horizontal: 16.w, vertical: 7.h),
                       child: _ReportRequestCard(
                         item: item,
-                        onTap: item.reportLink.isNotEmpty
-                            ? () => _openReportLink(context, item)
-                            : null,
+                        onTap: () => _openReportLink(context, item),
                       ),
                     ),
                   ),
@@ -236,8 +251,8 @@ class _ReportRequestCard extends StatelessWidget {
                     item.reportName.trim().isEmpty
                         ? 'File Name'
                         : item.reportName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
                     style: GoogleFonts.poppins(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.w700,
@@ -248,8 +263,8 @@ class _ReportRequestCard extends StatelessWidget {
                   SizedBox(height: 6.h),
                   Text(
                     item.displayDate.isEmpty ? '-' : item.displayDate,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
                     style: GoogleFonts.poppins(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w500,

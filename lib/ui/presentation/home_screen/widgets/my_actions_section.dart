@@ -25,7 +25,7 @@ class MyActionsSection extends StatelessWidget {
           padding: EdgeInsets.only(left: 26.w),
           child: Text(
             'ACTIONS',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF484848),
@@ -183,34 +183,37 @@ class _MyActionTile extends StatelessWidget {
       child: SizedBox(
         width: 78.w,
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 68.w,
-              height: 68.w,
+              width: 62.w,
+              height: 62.w,
               decoration: BoxDecoration(
-                color: const Color(0xFFE9EAEE),
+                color: const Color(0xFFD9D9D9),
                 borderRadius: borderRadius,
                 border: Border.all(
-                  color: const Color(0xFFB5B7C1),
+                  color: const Color(0xFF8E9099),
                   width: 1,
                 ),
               ),
               alignment: Alignment.center,
               child: Image.asset(
                 iconAsset,
-                width: 34.w,
-                height: 34.w,
+                width: 32.w,
+                height: 32.w,
                 fit: BoxFit.contain,
               ),
             ),
-            SizedBox(height: 8.h),
+            SizedBox(height: 6.h),
             Text(
               label,
-              maxLines: 1,
+              maxLines: 2,
+              textAlign: TextAlign.center,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
-                fontSize: 12.sp,
+              style: GoogleFonts.poppins(
+                fontSize: 11.sp,
                 fontWeight: FontWeight.w600,
+                height: 1.2,
                 color: const Color(0xFF9AA0A6),
               ),
             ),

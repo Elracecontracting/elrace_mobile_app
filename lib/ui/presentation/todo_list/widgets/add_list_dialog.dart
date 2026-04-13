@@ -45,7 +45,7 @@ class _AddListDialogState extends State<AddListDialog> {
       ),
       title: Text(
         isEditing ? translate('todo.edit_list') : translate('todo.new_list'),
-        style: GoogleFonts.inter(
+        style: GoogleFonts.poppins(
           fontSize: 20.sp,
           fontWeight: FontWeight.w700,
           color: const Color(0xFF1A1A53),
@@ -57,7 +57,7 @@ class _AddListDialogState extends State<AddListDialog> {
         textCapitalization: TextCapitalization.sentences,
         decoration: InputDecoration(
           hintText: translate('todo.list_name_hint'),
-          hintStyle: GoogleFonts.inter(
+          hintStyle: GoogleFonts.poppins(
             color: Colors.grey.shade400,
           ),
           border: OutlineInputBorder(
@@ -76,7 +76,7 @@ class _AddListDialogState extends State<AddListDialog> {
             vertical: 14.h,
           ),
         ),
-        style: GoogleFonts.inter(
+        style: GoogleFonts.poppins(
           fontSize: 16.sp,
           color: const Color(0xFF1A1A53),
         ),
@@ -86,7 +86,7 @@ class _AddListDialogState extends State<AddListDialog> {
           onPressed: () => Navigator.pop(context),
           child: Text(
             translate('common.cancel'),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
               fontWeight: FontWeight.w500,
               color: Colors.grey.shade600,
@@ -114,7 +114,7 @@ class _AddListDialogState extends State<AddListDialog> {
                   isEditing
                       ? translate('common.save')
                       : translate('todo.create'),
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,

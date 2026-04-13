@@ -44,7 +44,7 @@ class _AddReportPhotosScreenState extends State<AddReportPhotosScreen> {
             children: [
               Text(
                 'Add Photo',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 18.sp,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF27304E),
@@ -55,7 +55,7 @@ class _AddReportPhotosScreenState extends State<AddReportPhotosScreen> {
                 leading: const Icon(Icons.camera_alt, color: Color(0xFF27304E)),
                 title: Text(
                   'Take Photo',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w500,
                   ),
@@ -69,7 +69,7 @@ class _AddReportPhotosScreenState extends State<AddReportPhotosScreen> {
                 leading: const Icon(Icons.photo_library, color: Color(0xFF27304E)),
                 title: Text(
                   'Choose from Gallery',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w500,
                   ),
@@ -186,7 +186,7 @@ class _AddReportPhotosScreenState extends State<AddReportPhotosScreen> {
                         icon: Icon(Icons.camera_alt, size: 20.w, color: Colors.white),
                         label: Text(
                           'Add Pictures',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -224,7 +224,7 @@ class _AddReportPhotosScreenState extends State<AddReportPhotosScreen> {
                                   SizedBox(height: 12.h),
                                   Text(
                                     'Tap to add photo',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 14.sp,
                                       color: const Color(0xFFB0B0B0),
                                     ),
@@ -335,7 +335,7 @@ class _AddReportPhotosScreenState extends State<AddReportPhotosScreen> {
                           SizedBox(width: 20.w),
                           Text(
                             'Items no ${_currentIndex + 1}/${_photoItems.length}',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 16.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF6A6D78),
@@ -376,7 +376,7 @@ class _AddReportPhotosScreenState extends State<AddReportPhotosScreen> {
                         ),
                         child: Text(
                           'Generate Report',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
@@ -435,7 +435,7 @@ class _AddReportPhotosScreenState extends State<AddReportPhotosScreen> {
         children: [
           Text(
             title,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF6A6D78),
@@ -455,7 +455,7 @@ class _AddReportPhotosScreenState extends State<AddReportPhotosScreen> {
                 value: items.contains(value) ? value : null,
                 hint: Text(
                   hint,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 14.sp,
                     color: const Color(0xFFB0B0B0),
                   ),
@@ -467,7 +467,7 @@ class _AddReportPhotosScreenState extends State<AddReportPhotosScreen> {
                         value: item,
                         child: Text(
                           item,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 14.sp,
                             color: const Color(0xFF27304E),
                           ),
@@ -503,7 +503,7 @@ class _AddReportPhotosScreenState extends State<AddReportPhotosScreen> {
             children: [
               Text(
                 'Description',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF6A6D78),
@@ -532,13 +532,13 @@ class _AddReportPhotosScreenState extends State<AddReportPhotosScreen> {
               controller: controller,
               maxLines: 5,
               onChanged: onChanged,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 14.sp,
                 color: const Color(0xFF27304E),
               ),
               decoration: InputDecoration(
                 hintText: 'Enter description...',
-                hintStyle: GoogleFonts.inter(
+                hintStyle: GoogleFonts.poppins(
                   fontSize: 14.sp,
                   color: const Color(0xFFB0B0B0),
                 ),

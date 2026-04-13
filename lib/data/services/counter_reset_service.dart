@@ -182,6 +182,9 @@ class CounterResetService {
       await SharedPref().removePreference('checkInAuthMethod');
       await SharedPref().setPreferenceInt('checkInTime', 0);
 
+      // مسح وقت آخر تشيك اوت محلي حتى لا يمنع مزامنة بيانات السيرفر الجديدة
+      await SharedPref().setPreferenceInt('lastLocalCheckOutTime', 0);
+
       // Reset timer
       await SharedPref().setPreferencesBoolean('isTimerRunning', false);
       await SharedPref().removePreference('timeLeft');

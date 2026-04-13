@@ -524,7 +524,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
                 children: [
                   Text(
                     'Create New Folder',
-                    style: GoogleFonts.aBeeZee(
+                    style: GoogleFonts.poppins(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF27304E),
@@ -533,7 +533,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
                   SizedBox(height: 8.h),
                   Text(
                     'Add a clear name so team members can find documents quickly.',
-                    style: GoogleFonts.aBeeZee(
+                    style: GoogleFonts.poppins(
                       fontSize: 11.sp,
                       color: const Color(0xFF7D8597),
                     ),
@@ -551,7 +551,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
                     },
                     decoration: InputDecoration(
                       hintText: 'Example: Project ABC',
-                      hintStyle: GoogleFonts.aBeeZee(fontSize: 11.sp),
+                      hintStyle: GoogleFonts.poppins(fontSize: 11.sp),
                       contentPadding: EdgeInsets.symmetric(
                           horizontal: 12.w, vertical: 10.h),
                       border: OutlineInputBorder(
@@ -573,7 +573,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
                           ),
                           child: Text(
                             'Cancel',
-                            style: GoogleFonts.aBeeZee(
+                            style: GoogleFonts.poppins(
                                 fontWeight: FontWeight.w700),
                           ),
                         ),
@@ -598,7 +598,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
                           ),
                           child: Text(
                             'Create Folder',
-                            style: GoogleFonts.aBeeZee(
+                            style: GoogleFonts.poppins(
                               color: Colors.white,
                               fontWeight: FontWeight.w700,
                             ),
@@ -977,7 +977,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
               Text(
                 _error!,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.aBeeZee(
+                style: GoogleFonts.poppins(
                   color: const Color(0xFFBA1719),
                   fontSize: 12.sp,
                 ),
@@ -997,7 +997,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
       return Center(
         child: Text(
           'No shared folders found',
-          style: GoogleFonts.aBeeZee(
+          style: GoogleFonts.poppins(
             fontSize: 13.sp,
             color: const Color(0xff949494),
           ),
@@ -1032,7 +1032,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
           child: Text(
             _error!,
             textAlign: TextAlign.center,
-            style: GoogleFonts.aBeeZee(
+            style: GoogleFonts.poppins(
               color: const Color(0xFFBA1719),
               fontSize: 12.sp,
             ),
@@ -1047,7 +1047,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
       children: [
         Text(
           'Given Access',
-          style: GoogleFonts.aBeeZee(
+          style: GoogleFonts.poppins(
             fontSize: 13.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF949494),
@@ -1110,7 +1110,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
                   child: avatarUrl == null
                       ? Text(
                           _userInitial(name),
-                          style: GoogleFonts.aBeeZee(
+                          style: GoogleFonts.poppins(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF555555),
@@ -1136,9 +1136,9 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
                       EdgeInsets.symmetric(horizontal: 13.5.w, vertical: 8.5.h),
                   child: Text(
                     'Files No.  |  ${_folderFiles.length}',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.aBeeZee(
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
+                    style: GoogleFonts.poppins(
                       fontSize: 11.sp,
                       fontWeight: FontWeight.w400,
                       fontStyle: FontStyle.italic,
@@ -1171,7 +1171,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
                     )
                   : Text(
                       'Upload File',
-                      style: GoogleFonts.aBeeZee(
+                      style: GoogleFonts.poppins(
                         fontSize: 11.sp,
                         color: Colors.white,
                         fontWeight: FontWeight.w700,
@@ -1187,7 +1187,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
             child: Text(
               'No files in this folder',
               textAlign: TextAlign.center,
-              style: GoogleFonts.aBeeZee(
+              style: GoogleFonts.poppins(
                 fontSize: 11.sp,
                 color: const Color(0xff949494),
               ),
@@ -1270,9 +1270,9 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
                             isFolderView
                                 ? '${_folderNameFrom(_selectedFolder!)}  |  $count'
                                 : 'Folders No.  |  $count',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.aBeeZee(
+                            maxLines: null,
+                            overflow: TextOverflow.visible,
+                            style: GoogleFonts.poppins(
                               fontSize: 11.sp,
                               fontWeight: FontWeight.w400,
                               fontStyle: FontStyle.italic,
@@ -1320,7 +1320,7 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
                             )
                           : Text(
                               'Create Folder',
-                              style: GoogleFonts.aBeeZee(
+                              style: GoogleFonts.poppins(
                                 fontSize: 11.sp,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
@@ -1374,9 +1374,9 @@ class _ShareFolderCard extends StatelessWidget {
               right: 20.w,
               child: Text(
                 title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.aBeeZee(
+                maxLines: null,
+                overflow: TextOverflow.visible,
+                style: GoogleFonts.poppins(
                   fontSize: 11.sp,
                   fontWeight: FontWeight.w700,
                   color: Colors.black87,
@@ -1415,10 +1415,10 @@ class _SharedUserAvatarItem extends StatelessWidget {
             SizedBox(height: 6.h),
             Text(
               label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              maxLines: null,
+              overflow: TextOverflow.visible,
               textAlign: TextAlign.center,
-              style: GoogleFonts.aBeeZee(
+              style: GoogleFonts.poppins(
                 fontSize: 10.5.sp,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF151515),
@@ -1470,8 +1470,8 @@ class _SharedFileGridCard extends StatelessWidget {
               fileName,
               textAlign: TextAlign.center,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.aBeeZee(
+              overflow: TextOverflow.visible,
+              style: GoogleFonts.poppins(
                 fontSize: 11.sp,
                 fontWeight: FontWeight.w700,
                 color: const Color(0xFF151515),

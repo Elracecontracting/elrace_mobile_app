@@ -316,7 +316,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     return Text(
       text,
       textAlign: align,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.poppins(
         fontSize: 11.sp,
         fontWeight: FontWeight.w800,
         color: const Color(0xFFB4B4B4),
@@ -330,14 +330,14 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     return Text(
       _displayOrNA(text),
       textAlign: align,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.poppins(
         fontSize: size ?? 14.sp,
         fontWeight: weight ?? FontWeight.w800,
         color: color ?? const Color(0xFF0E0E0E),
         letterSpacing: 0.1,
       ),
       maxLines: 2,
-      overflow: TextOverflow.ellipsis,
+      overflow: TextOverflow.visible,
     );
   }
 
@@ -454,7 +454,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                       padding: EdgeInsets.all(16.w),
                       child: Text(
                         _error,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.red,
@@ -480,7 +480,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                               SizedBox(height: 4.w),
                               Text(
                                 'PETTYCASH DETAILS',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 15.sp,
                                   fontWeight: FontWeight.w900,
                                   color: const Color(0xFF0E0E0E),
@@ -648,7 +648,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                     },
                                     child: Text(
                                       'SEE MORE',
-                                      style: GoogleFonts.inter(
+                                      style: GoogleFonts.poppins(
                                         fontSize: 12.sp,
                                         fontWeight: FontWeight.w900,
                                         color: const Color(0xFFBBBBBB),
@@ -691,7 +691,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                                       color: Colors.white, size: 18.w),
                                   label: Text(
                                     'View Attachments',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 13.sp,
                                       fontWeight: FontWeight.w800,
                                       color: Colors.white,
@@ -734,7 +734,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                               pillHeight: 36.w,
                               pillSpacing: 24.w,
                               pillBorderRadius: BorderRadius.circular(20.r),
-                              pillTextStyle: GoogleFonts.inter(
+                              pillTextStyle: GoogleFonts.poppins(
                                 fontSize: 17.sp,
                                 fontWeight: FontWeight.w500,
                                 color: Colors.white,
@@ -818,21 +818,21 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
     return Text(
       _displayOrNA(text),
       textAlign: align,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.poppins(
         fontSize: size ?? 14.sp,
         fontWeight: weight ?? FontWeight.w800,
         color: color ?? const Color(0xFF0E0E0E),
         letterSpacing: 0.1,
       ),
       maxLines: 2,
-      overflow: TextOverflow.ellipsis,
+      overflow: TextOverflow.visible,
     );
   }
 
   Widget _label(String text) {
     return Text(
       text,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.poppins(
         fontSize: 11.sp,
         fontWeight: FontWeight.w800,
         color: const Color(0xFFB4B4B4),
@@ -860,7 +860,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                     SizedBox(height: 4.w),
                     Text(
                       'PETTYCASH DETAILS',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF0E0E0E),
@@ -994,7 +994,7 @@ class PettyCashSeeMoreScreen extends StatelessWidget {
                     pillHeight: 36.w,
                     pillSpacing: 24.w,
                     pillBorderRadius: BorderRadius.circular(20.r),
-                    pillTextStyle: GoogleFonts.inter(
+                    pillTextStyle: GoogleFonts.poppins(
                       fontSize: 17.sp,
                       fontWeight: FontWeight.w500,
                       color: Colors.white,

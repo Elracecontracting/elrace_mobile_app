@@ -55,7 +55,7 @@ class SliderProvider extends ChangeNotifier {
 
   List<String> get titles {
     if (_bannerDetails.isEmpty) {
-      print('📋 Using fallback titles');
+      // print('📋 Using fallback titles');
       return _fallbackTitles.map((text) {
         return text.length > 30 ? '${text.substring(0, 30)}...' : text;
       }).toList();

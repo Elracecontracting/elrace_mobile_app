@@ -267,7 +267,7 @@ class _ContactHeaderDelegate extends SliverPersistentHeaderDelegate {
         children: [
           Text(
             translate('home.contact'),
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 25.sp,
               fontWeight: FontWeight.w400,
               color: appFontColor,
@@ -310,7 +310,7 @@ Widget searchWidget(ContactBloc bloc) {
         style: const TextStyle(
           color: Color(0xFF1A1A53),
           fontSize: 15,
-          fontFamily: 'Koulen',
+          fontFamily: 'Poppins',
           fontWeight: FontWeight.w400,
         ),
         decoration: InputDecoration(
@@ -319,7 +319,7 @@ Widget searchWidget(ContactBloc bloc) {
             contentPadding: const EdgeInsets.symmetric(vertical: 14),
             hintStyle: const TextStyle(
                 fontSize: 12,
-                fontFamily: 'Koulen',
+                fontFamily: 'Poppins',
                 fontWeight: FontWeight.w400,
                 color: Color(0xFF1A1A53)),
             prefixIcon: Padding(
@@ -563,9 +563,9 @@ Widget _buildInfoSection(
       children: [
         Text(
           fullName,
-          overflow: TextOverflow.ellipsis,
-          maxLines: 1,
-          style: GoogleFonts.nunito(
+          overflow: TextOverflow.visible,
+          maxLines: null,
+          style: GoogleFonts.poppins(
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -575,9 +575,9 @@ Widget _buildInfoSection(
             width: 150,
             child: Text(
               department,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.nunito(
+              maxLines: null,
+              overflow: TextOverflow.visible,
+              style: GoogleFonts.poppins(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: const Color.fromRGBO(65, 65, 65, 0.50),
@@ -588,9 +588,9 @@ Widget _buildInfoSection(
           width: 150,
           child: Text(
             job,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.nunito(
+            maxLines: null,
+            overflow: TextOverflow.visible,
+            style: GoogleFonts.poppins(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: const Color.fromRGBO(65, 65, 65, 0.55),
@@ -599,9 +599,9 @@ Widget _buildInfoSection(
         ),
         Text(
           emp,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.nunito(
+          maxLines: null,
+          overflow: TextOverflow.visible,
+          style: GoogleFonts.poppins(
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: const Color.fromRGBO(65, 65, 65, 0.55),

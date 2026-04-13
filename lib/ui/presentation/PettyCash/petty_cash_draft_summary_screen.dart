@@ -375,7 +375,7 @@ class _PettyCashDraftSummaryScreenState
                   children: [
                     Text(
                       'Confirmation massage',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 30,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF111111),
@@ -401,7 +401,7 @@ class _PettyCashDraftSummaryScreenState
                             child: Row(
                               children: [
                                 Text('HCN',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                         fontSize: 24,
                                         fontWeight: FontWeight.w700)),
                                 const SizedBox(width: 8),
@@ -419,7 +419,7 @@ class _PettyCashDraftSummaryScreenState
                             child: Row(
                               children: [
                                 Text('RCC',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                         fontSize: 24,
                                         fontWeight: FontWeight.w700)),
                                 const SizedBox(width: 8),
@@ -466,7 +466,7 @@ class _PettyCashDraftSummaryScreenState
                             const SizedBox(width: 8),
                             Text(
                               'View Attachments',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFF111111),
@@ -479,7 +479,7 @@ class _PettyCashDraftSummaryScreenState
                     const SizedBox(height: 14),
                     Text(
                       'Are you sure you want to Submit ?',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF111111),
@@ -500,12 +500,12 @@ class _PettyCashDraftSummaryScreenState
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
                               Text('No',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
                                       color: const Color(0xFFCC2424))),
                               Text('Yes',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w700,
                                       color: const Color(0xFF0E9F57))),
@@ -896,7 +896,7 @@ class _PettyCashDraftSummaryScreenState
                 const SizedBox(width: 12),
                 Text(
                   widget.title,
-                  style: GoogleFonts.oswald(
+                  style: GoogleFonts.poppins(
                     fontSize: 23,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF111111),
@@ -925,7 +925,7 @@ class _PettyCashDraftSummaryScreenState
                             ),
                             child: Text(
                               'total ${_draftExpenses.length}',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w800,
                                 color: Colors.white,
@@ -958,7 +958,7 @@ class _PettyCashDraftSummaryScreenState
                                   const SizedBox(width: 6),
                                   Text(
                                     'Add Attachments',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w700,
                                       color: const Color(0xFF111111),
@@ -976,7 +976,7 @@ class _PettyCashDraftSummaryScreenState
                           Expanded(
                             child: Text(
                               'Balance ${_formatAmount(_totalBalance)}',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFF9A9A9A),
@@ -987,7 +987,7 @@ class _PettyCashDraftSummaryScreenState
                             _canBeSubmit
                                 ? 'Ready to submit'
                                 : 'Submission blocked',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 12,
                               fontWeight: FontWeight.w800,
                               color: _canBeSubmit
@@ -1010,7 +1010,7 @@ class _PettyCashDraftSummaryScreenState
                             children: [
                               Text(
                                 'Failed to load draft expenses',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w800,
                                   color: const Color(0xFF141414),
@@ -1020,7 +1020,7 @@ class _PettyCashDraftSummaryScreenState
                               Text(
                                 _error,
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                   color: const Color(0xFF8E8E8E),
@@ -1041,7 +1041,7 @@ class _PettyCashDraftSummaryScreenState
                             children: [
                               Text(
                                 'No draft expenses',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w800,
                                   color: const Color(0xFF171717),
@@ -1051,7 +1051,7 @@ class _PettyCashDraftSummaryScreenState
                               Text(
                                 'Start adding ${widget.expenseType == 'fleet' ? 'transportation' : 'miscellaneous'} expenses.',
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w500,
                                   color: const Color(0xFF8E8E8E),
@@ -1101,7 +1101,7 @@ class _PettyCashDraftSummaryScreenState
                               )
                             : Text(
                                 _canBeSubmit ? 'SUBMIT' : '+ ADD EXPENSE',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w900,
                                   color: Colors.white,
@@ -1147,9 +1147,9 @@ class _PettyCashDraftSummaryScreenState
             children: [
               Text(
                 _resolveSheetTitle(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
+                maxLines: null,
+                overflow: TextOverflow.visible,
+                style: GoogleFonts.poppins(
                   fontSize: 22,
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFF111111),
@@ -1158,7 +1158,7 @@ class _PettyCashDraftSummaryScreenState
               const SizedBox(height: 4),
               Text(
                 _formatDate(_draftExpenses.first.rawDate),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF9A9A9A),
@@ -1170,7 +1170,7 @@ class _PettyCashDraftSummaryScreenState
         const SizedBox(width: 12),
         Text(
           '-${_formatAmount(_totalDraftAmount)}',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.poppins(
             fontSize: 23,
             fontWeight: FontWeight.w900,
             color: const Color(0xFFFF1123),
@@ -1204,9 +1204,9 @@ class _PettyCashDraftSummaryScreenState
               children: [
                 Text(
                   expense.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
+                  style: GoogleFonts.poppins(
                     fontSize: 17,
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF111111),
@@ -1215,9 +1215,9 @@ class _PettyCashDraftSummaryScreenState
                 const SizedBox(height: 4),
                 Text(
                   _formatDate(expense.rawDate),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
+                  style: GoogleFonts.poppins(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF9A9A9A),
@@ -1229,7 +1229,7 @@ class _PettyCashDraftSummaryScreenState
           const SizedBox(width: 12),
           Text(
             '-${_formatAmount(expense.amount)}',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 22,
               fontWeight: FontWeight.w900,
               color: const Color(0xFFFF1123),
@@ -1333,7 +1333,7 @@ class _PreviewFieldCard extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: const Color(0xFFB0B0B0),
@@ -1343,7 +1343,7 @@ class _PreviewFieldCard extends StatelessWidget {
           valueWidget ??
               Text(
                 (value ?? '-').trim().isEmpty ? '-' : value!,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: const Color(0xFF111111),
@@ -1416,7 +1416,7 @@ class _AttachmentSourceTile extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,

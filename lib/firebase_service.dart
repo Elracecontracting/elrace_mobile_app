@@ -180,7 +180,7 @@ class FirebaseService {
         message,
         source: 'background_tap',
       );
-      _handleNotificationTap(message.data.toString());
+      _handleNotificationTap(_buildEnrichedPayload(message));
     });
 
     // Check for initial message (when app is opened from terminated state)
@@ -209,7 +209,7 @@ class FirebaseService {
           message,
           source: 'terminated_tap',
         );
-        _handleNotificationTap(message.data.toString());
+        _handleNotificationTap(_buildEnrichedPayload(message));
       } else {
         print('ℹ️ [TERMINATED] No initial message found');
       }
@@ -619,7 +619,16 @@ class FirebaseService {
 
         final initialTabIndex = category == 'announcement' ? 1 : 0;
 
+        // Push MainScreen as base so the user can navigate back home,
+        // then push CircularAnnouncementScreen on top.
         navigator.pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const MainScreen(),
+            settings: const RouteSettings(name: '/main'),
+          ),
+          (_) => false,
+        );
+        navigator.push(
           MaterialPageRoute(
             builder: (context) => CircularAnnouncementScreen(
               initialTabIndex: initialTabIndex,
@@ -628,7 +637,6 @@ class FirebaseService {
             ),
             settings: const RouteSettings(name: '/circular_announcement'),
           ),
-          (_) => false,
         );
         print('   - ✅ Navigation to Circular/Announcement completed!');
         return;
@@ -662,14 +670,22 @@ class FirebaseService {
         return;
       }
 
-      // Default: Navigate to notification screen
+      // Default: Navigate to notification screen.
+      // Push MainScreen as base first so the user can always navigate
+      // back to home (logo tap / back button won't get stuck).
       print('   - ✅ Navigating to notification screen...');
       navigator.pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => const MainScreen(),
+          settings: const RouteSettings(name: '/main'),
+        ),
+        (_) => false,
+      );
+      navigator.push(
         MaterialPageRoute(
           builder: (context) => const NotificationScreen(),
           settings: const RouteSettings(name: '/notification'),
         ),
-        (_) => false,
       );
       print('   - ✅ Navigation completed!');
     } finally {
@@ -692,6 +708,24 @@ class FirebaseService {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _handleNotificationTap(payload);
     });
+  }
+
+  /// Builds a JSON payload string from an FCM message, merging the
+  /// notification title/body into the data map so that text-based
+  /// record-type detection works even when the server only sends
+  /// title/body in the `notification` block (not in `data`).
+  static String _buildEnrichedPayload(RemoteMessage message) {
+    final enriched = Map<String, dynamic>.from(message.data);
+    final n = message.notification;
+    if (n != null) {
+      enriched.putIfAbsent('title', () => n.title ?? '');
+      enriched.putIfAbsent('body', () => n.body ?? '');
+    }
+    try {
+      return jsonEncode(enriched);
+    } catch (_) {
+      return enriched.toString();
+    }
   }
 
   static int? _toInt(dynamic value) {
@@ -738,6 +772,7 @@ class FirebaseService {
   static String _resolveRecordTypeFromPayload(Map<String, dynamic>? data) {
     if (data == null || data.isEmpty) return '';
 
+    // --- Step 1: check type/model/category fields ---
     final candidates = <dynamic>[
       data['record_type'],
       data['target_type'],
@@ -750,6 +785,30 @@ class FirebaseService {
       data['screen'],
       data['category'],
     ];
+
+    bool hasLpoKey = false;
+    bool hasRfqKey = false;
+    bool hasInvoiceKey = false;
+    bool hasHrKey = false;
+    bool hasPettyKey = false;
+
+    // --- Step 2: check presence of specific ID key names in data ---
+    for (final key in data.keys) {
+      final normalized = _normalizeType(key);
+      if (normalized.contains('lpo') || normalized.contains('poid')) {
+        hasLpoKey = true;
+      }
+      if (normalized.contains('rfq')) hasRfqKey = true;
+      if (normalized.contains('invoice')) hasInvoiceKey = true;
+      if (normalized.contains('hrrequest') ||
+          normalized == 'requestid' ||
+          normalized.contains('employee')) {
+        hasHrKey = true;
+      }
+      if (normalized.contains('pettycash') || normalized.contains('expense')) {
+        hasPettyKey = true;
+      }
+    }
 
     for (final candidate in candidates) {
       final normalized = _normalizeType(candidate);
@@ -782,8 +841,36 @@ class FirebaseService {
       if (normalized.contains('lpo') ||
           normalized == 'po' ||
           normalized.contains('purchaseorder')) {
-        return 'lpo';
+        return hasRfqKey ? 'rfq' : 'lpo';
       }
+    }
+
+    // --- Step 3: fall back to key-name hints ---
+    if (hasRfqKey) return 'rfq';
+    if (hasInvoiceKey) return 'invoice';
+    if (hasPettyKey) return 'pettycash';
+    if (hasLpoKey) return 'lpo';
+    if (hasHrKey) return 'hr';
+
+    // --- Step 4: text matching from any title/body fields in data ---
+    final text = [
+      data['title'],
+      data['body'],
+      data['message'],
+      data['notification_title'],
+      data['subject'],
+    ].whereType<String>().join(' ').toLowerCase();
+
+    if (text.contains('rfq')) return 'rfq';
+    if (text.contains('invoice')) return 'invoice';
+    if (text.contains('petty cash') || text.contains('expense')) {
+      return 'pettycash';
+    }
+    if (text.contains('lpo') || text.contains('purchase order')) return 'lpo';
+    if (text.contains('hr request') ||
+        text.contains('leave request') ||
+        text.contains(' hr ')) {
+      return 'hr';
     }
 
     return '';
@@ -796,55 +883,47 @@ class FirebaseService {
   ) {
     if (recordType.isEmpty || recordId == null) return false;
 
+    // Always push MainScreen first as the base so the user can navigate
+    // back home via Back button or logo tap.
+    void _pushWithBase(Widget detailScreen, String routeName) {
+      navigator.pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => const MainScreen(),
+          settings: const RouteSettings(name: '/main'),
+        ),
+        (_) => false,
+      );
+      navigator.push(
+        MaterialPageRoute(
+          builder: (_) => detailScreen,
+          settings: RouteSettings(name: routeName),
+        ),
+      );
+    }
+
     switch (recordType) {
       case 'hr':
-        navigator.pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (_) => HrDetailsScreen(
-              requestId: '$recordId',
-              type: 'HR',
-            ),
-            settings: const RouteSettings(name: '/notification_hr_details'),
-          ),
-          (_) => false,
+        _pushWithBase(
+          HrDetailsScreen(requestId: '$recordId', type: 'HR'),
+          '/notification_hr_details',
         );
         return true;
       case 'rfq':
-        navigator.pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (_) => RfqDetailsScreen(
-              requestId: '$recordId',
-              type: 'RFQ',
-            ),
-            settings: const RouteSettings(name: '/notification_rfq_details'),
-          ),
-          (_) => false,
+        _pushWithBase(
+          RfqDetailsScreen(requestId: '$recordId', type: 'RFQ'),
+          '/notification_rfq_details',
         );
         return true;
       case 'invoice':
-        navigator.pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (_) => InvoiceDetailsScreen(
-              requestId: '$recordId',
-              type: 'INVOICE',
-            ),
-            settings:
-                const RouteSettings(name: '/notification_invoice_details'),
-          ),
-          (_) => false,
+        _pushWithBase(
+          InvoiceDetailsScreen(requestId: '$recordId', type: 'INVOICE'),
+          '/notification_invoice_details',
         );
         return true;
       case 'pettycash':
-        navigator.pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (_) => PettyCashDetailsScreen(
-              requestId: '$recordId',
-              type: 'PETTYCASH',
-            ),
-            settings:
-                const RouteSettings(name: '/notification_pettycash_details'),
-          ),
-          (_) => false,
+        _pushWithBase(
+          PettyCashDetailsScreen(requestId: '$recordId', type: 'PETTYCASH'),
+          '/notification_pettycash_details',
         );
         return true;
       case 'lpo':

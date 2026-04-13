@@ -330,7 +330,7 @@ class AppSettingsWidget extends StatelessWidget {
                     Image.asset('assets/png/notification_filled_icon.png'),
                     const SizedBox(width: 12),
                     Text(translate('profile.mute_notifications'),
-                        style: GoogleFonts.inter(fontSize: 11)),
+                        style: GoogleFonts.poppins(fontSize: 11)),
                     const Spacer(),
                     Consumer<ProfileBoxProvider>(
                       builder: (context, provider, child) {
@@ -423,7 +423,7 @@ class AppSettingsWidget extends StatelessWidget {
                 ),
                 SizedBox(width: 10.w),
                 Text(
-                  'Mute Control',
+                  'Mute Notifications',
                   style: TextStyle(
                     color: const Color(0xffBA1719),
                     fontSize: 14.sp,
@@ -465,7 +465,7 @@ class AppSettingsWidget extends StatelessWidget {
               ),
               TextButton(
                 onPressed: () async {
-                  print('🚪 Logout button pressed');
+                  // print('🚪 Logout button pressed');
 
                   // Hide profile box first (before showing dialog)
                   final provider =
@@ -538,14 +538,14 @@ class AppSettingsWidget extends StatelessWidget {
 
                     try {
                       // Cleanup chat module (Firebase signout, FCM unsubscribe, etc.)
-                      print('🧹 Cleaning up chat module...');
+                      // print('🧹 Cleaning up chat module...');
                       try {
                         await ChatModuleHelper.instance.cleanup().timeout(
                               const Duration(seconds: 5),
                             );
-                        print('✅ Chat module cleaned up');
+                        // print('✅ Chat module cleaned up');
                       } catch (e) {
-                        print('⚠️ Chat cleanup failed (continuing): $e');
+                        // print('⚠️ Chat cleanup failed (continuing): $e');
                       }
 
                       // Clear UAE PASS session
@@ -554,25 +554,25 @@ class AppSettingsWidget extends StatelessWidget {
                               const Duration(seconds: 5),
                             );
                       } catch (e) {
-                        print('⚠️ UAE Pass logout failed (continuing): $e');
+                        // print('⚠️ UAE Pass logout failed (continuing): $e');
                       }
 
                       // إلغاء إشعارات التذكير بـ check in/out عند تسجيل الخروج
                       try {
                         await CheckInReminderNotificationService().cancelAllReminders();
-                        print('✅ Check-in/out reminders cancelled');
+                        // print('✅ Check-in/out reminders cancelled');
                       } catch (e) {
-                        print('⚠️ Failed to cancel reminders (continuing): $e');
+                        // print('⚠️ Failed to cancel reminders (continuing): $e');
                       }
 
                       // Clear user preferences
-                      print('🧹 Clearing preferences...');
+                      // print('🧹 Clearing preferences...');
                       await SharedPref().clearPreferences();
                       // Update login state in Hive for background service
                       await HiveService.setUserLoggedIn(false);
-                      print('✅ Preferences cleared');
+                      // print('✅ Preferences cleared');
                     } catch (e) {
-                      print('❌ Logout error: $e');
+                      // print('❌ Logout error: $e');
                     } finally {
                       // Reset bottom navigation to Home for the next session.
                       try {
@@ -580,12 +580,11 @@ class AppSettingsWidget extends StatelessWidget {
                             .read<HomeBloc>()
                             .add(const ChangeCurrentIndex(index: 1));
                       } catch (e) {
-                        print(
-                            '⚠️ Failed to reset HomeBloc index on logout: $e');
+                        // print('⚠️ Failed to reset HomeBloc index on logout: $e');
                       }
 
                       // Always navigate to sign in, even if some cleanup failed
-                      print('🧭 Navigating to sign in...');
+                      // print('🧭 Navigating to sign in...');
                       final navContext = navKey.currentContext ?? context;
                       Navigator.pushAndRemoveUntil(
                         navContext,
@@ -593,7 +592,7 @@ class AppSettingsWidget extends StatelessWidget {
                             builder: (context) => const SignInScreen()),
                         (route) => false,
                       );
-                      print('✅ Navigation completed');
+                      // print('✅ Navigation completed');
                     }
                   }
                 },

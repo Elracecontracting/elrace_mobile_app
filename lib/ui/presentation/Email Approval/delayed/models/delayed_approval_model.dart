@@ -57,9 +57,13 @@ class DelayedHrItem {
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
       requestType: json['request_type'] ?? '',
-      validatorName: json['validator_name'] ?? '',
-      validatorEmpId: json['validator_emp_id']?.toString() ?? '',
-      validatorImage: json['validator_image'] ?? '',
+      validatorName:
+          (json['reviewer_name'] ?? json['validator_name'] ?? '').toString(),
+      validatorEmpId:
+          (json['reviewer_emp_id'] ?? json['validator_emp_id'] ?? '')
+              .toString(),
+      validatorImage:
+          (json['reviewer_image'] ?? json['validator_image'] ?? '').toString(),
       requestDate: _readRequestDate(json),
       daysDelayed: json['delay_days'] ?? json['days_delayed'] ?? 0,
     );

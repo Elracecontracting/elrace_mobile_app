@@ -20,7 +20,7 @@ class LabelWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         Text(name,
-            style: GoogleFonts.kanit(
+            style: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: isGold ? FontWeight.w600 : FontWeight.w400,
               color: textColor ?? Colors.white,
@@ -35,7 +35,7 @@ class LabelWidget extends StatelessWidget {
                   : null,
             )),
         Text(time,
-            style: GoogleFonts.kanit(
+            style: GoogleFonts.poppins(
               fontSize: 10,
               fontWeight: isGold ? FontWeight.w600 : FontWeight.w400,
               color: textColor ?? Colors.white,

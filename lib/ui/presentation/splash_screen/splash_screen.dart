@@ -1,6 +1,8 @@
+import 'package:el_race/core/services/update_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/firebase_service.dart';
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
+import 'package:el_race/ui/widgets/update_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/utils/Util.dart';
@@ -117,8 +119,42 @@ class _SplashScreenState extends State<SplashScreen> {
     _navigateToNextScreen();
   }
 
-  /// Navigate to the appropriate screen after security check
+  /// Navigate to the appropriate screen after security check.
+  /// Runs the update check first, then proceeds with routing.
   void _navigateToNextScreen() {
+    if (!mounted) return;
+    _checkForUpdateThenNavigate();
+  }
+
+  Future<void> _checkForUpdateThenNavigate() async {
+    if (!mounted) return;
+
+    try {
+      // Keep in sync with version in pubspec.yaml
+      const String currentVersion = '1.0.10';
+
+      final updateResult =
+          await UpdateService.instance.checkForUpdate(currentVersion);
+
+      if (!mounted) return;
+
+      final blocked = await UpdateDialog.showIfNeeded(
+        context,
+        updateResult,
+        isRtl: Directionality.of(context) == TextDirection.rtl,
+      );
+
+      // Force-update: block navigation until user updates the app
+      if (blocked) return;
+    } catch (e) {
+      print('⚠️ Update check error (ignored): $e');
+    }
+
+    if (!mounted) return;
+    _doNavigate();
+  }
+
+  void _doNavigate() {
     if (!mounted) return;
 
     try {

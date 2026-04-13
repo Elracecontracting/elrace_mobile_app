@@ -85,18 +85,6 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
       return;
     }
 
-    // Validate: Job Mission must be at least 1 day in advance (not same day)
-    final today = DateTime.now();
-    final todayDate = DateTime(today.year, today.month, today.day);
-    final selectedDateOnly =
-        DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
-
-    if (selectedDateOnly.isBefore(todayDate.add(const Duration(days: 1)))) {
-      _showErrorDialog(
-          'Job Mission must be submitted at least 1 day in advance. Cannot select today.');
-      return;
-    }
-
     if (selectedMissionType == 'Client Visit') {
       if (clientDetails.trim().isEmpty || projectDetails.trim().isEmpty) {
         _showErrorDialog('Please fill client & project details.');
@@ -211,7 +199,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
           children: [
             Text(
               selectedMissionType,
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 color: Colors.white,
                 fontSize: 15.sp,
                 letterSpacing: 2,
@@ -262,7 +250,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       options[i],
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.black87,
@@ -576,7 +564,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
         Expanded(
           child: Text(
             translate('notification.job_mission_notice'),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 9.sp,
               color: Colors.black87,
               fontWeight: FontWeight.w600,
@@ -591,6 +579,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _bg,
+      resizeToAvoidBottomInset: true,
       appBar: const HeaderWidget(),
       body: SafeArea(
         child: Column(
@@ -599,7 +588,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
               padding: EdgeInsets.symmetric(vertical: 16.h),
               child: Text(
                 'JOB MISSION',
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 18.sp,
                   fontWeight: FontWeight.w400,
                   letterSpacing: 1.5,
@@ -623,19 +612,23 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                   ],
                 ),
                 child: SingleChildScrollView(
-                  child: Column(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(
+                      bottom:
+                          MediaQuery.of(context).viewInsets.bottom),
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Center(child: _buildDropdownHeader()),
-                      if (dropdownOpen) ...[
-                        SizedBox(height: 10.h),
-                        Center(child: _buildDropdownList()),
-                      ],
                       SizedBox(height: 18.h),
                       Center(
                         child: Text(
                           translate('request.select_day'),
-                          style: GoogleFonts.koulen(
+                          style: GoogleFonts.poppins(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.w400,
                             letterSpacing: 1.5,
@@ -664,7 +657,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                               ),
                               Text(
                                 translate('request.today'),
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.black,
@@ -693,7 +686,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                               ),
                               Text(
                                 translate('request.tomorrow'),
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.black,
@@ -707,7 +700,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                       Center(
                         child: Text(
                           translate('request.duration_type'),
-                          style: GoogleFonts.koulen(
+                          style: GoogleFonts.poppins(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.w400,
                             letterSpacing: 1.5,
@@ -735,7 +728,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                               ),
                               Text(
                                 translate('request.morning'),
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.black,
@@ -757,7 +750,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                               ),
                               Text(
                                 translate('request.afternoon'),
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.black,
@@ -774,7 +767,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                               setState(() => clientDetails = value),
                           decoration: InputDecoration(
                             labelText: translate('request.client_details'),
-                            labelStyle: GoogleFonts.inter(
+                            labelStyle: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w700,
                               color: _primary,
@@ -793,7 +786,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                               setState(() => projectDetails = value),
                           decoration: InputDecoration(
                             labelText: translate('request.project_details'),
-                            labelStyle: GoogleFonts.inter(
+                            labelStyle: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w700,
                               color: _primary,
@@ -812,7 +805,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                       SizedBox(height: 18.h),
                       Text(
                         translate('common.reason'),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.grey[600],
@@ -848,7 +841,7 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                 )
                               : Text(
                                   'SUBMIT',
-                                  style: GoogleFonts.koulen(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 16.sp,
                                     letterSpacing: 1.5,
                                     color: Colors.white,
@@ -856,6 +849,15 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                                 ),
                         ),
                       ),
+                    ],
+                  ),
+                  if (dropdownOpen)
+                    Positioned(
+                      top: 48.h,
+                      left: 0,
+                      right: 0,
+                      child: Center(child: _buildDropdownList()),
+                    ),
                     ],
                   ),
                 ),

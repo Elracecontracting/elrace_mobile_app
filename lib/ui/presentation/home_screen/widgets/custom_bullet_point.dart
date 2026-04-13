@@ -52,7 +52,7 @@ class CustomBulletPoint extends StatelessWidget {
             child: Text(
               text,
               maxLines: 2,
-              style: GoogleFonts.leagueSpartan(
+              style: GoogleFonts.poppins(
                 color: Colors.black,
                 fontSize: 14.sp,
                 letterSpacing: 1.0,
@@ -70,7 +70,7 @@ class CustomBulletPoint extends StatelessWidget {
           // const SizedBox(width: 8),
           // isAttendance
           //     ? Text(days ?? '',
-          //         style: GoogleFonts.leagueSpartan(
+          //         style: GoogleFonts.poppins(
           //           fontSize: 14.sp,
           //           fontWeight: FontWeight.w500,
           //         ))
@@ -106,7 +106,7 @@ class CountWidget extends StatelessWidget {
       ),
       child: Text(
         count.toUpperCase(),
-        style: GoogleFonts.koulen(
+        style: GoogleFonts.poppins(
             color: countColor,
             fontSize: 14.sp,
             fontWeight: FontWeight.w500, // ✅ Bold applied

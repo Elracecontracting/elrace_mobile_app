@@ -157,7 +157,7 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
         _cancelRetries();
       }
       if (timer.tick >= 60) {
-        print('⚠️ BottomNav: Gave up retrying after 2 min');
+        // print('⚠️ BottomNav: Gave up retrying after 2 min');
         _cancelRetries();
       }
     });
@@ -165,7 +165,7 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
 
   void _onChatEnabled() {
     if (ChatModuleHelper.instance.isChatEnabled && _unreadSub == null) {
-      print('🔔 BottomNav: chatEnabledNotifier fired — trying subscribe');
+      // print('🔔 BottomNav: chatEnabledNotifier fired — trying subscribe');
       if (_trySubscribe()) {
         _cancelRetries();
       }
@@ -183,16 +183,16 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar> {
     _unreadSub?.cancel();
     _unreadSub = ChatRepository.instance.subscribeToTotalUnreadCount().listen(
       (count) {
-        print('🔔 BottomNav: Received unread count = $count');
+        // print('🔔 BottomNav: Received unread count = $count');
         if (mounted && count != _totalUnread) {
           setState(() => _totalUnread = count);
         }
       },
       onError: (e) {
-        print('⚠️ BottomNav: Unread count error: $e');
+        // print('⚠️ BottomNav: Unread count error: $e');
       },
     );
-    print('✅ BottomNav: Subscribed to unread count (uid=$uid)');
+    // print('✅ BottomNav: Subscribed to unread count (uid=$uid)');
     return true;
   }
 

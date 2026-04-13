@@ -106,7 +106,7 @@ class _UserReportsScreenState extends State<UserReportsScreen> {
                               ),
                               child: Text(
                                 'CANCEL',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 11.sp,
                                   fontWeight: FontWeight.w700,
                                   letterSpacing: 0.2,
@@ -132,7 +132,7 @@ class _UserReportsScreenState extends State<UserReportsScreen> {
                                           SnackBar(
                                             content: Text(
                                               'Please enter project name',
-                                              style: GoogleFonts.inter(
+                                              style: GoogleFonts.poppins(
                                                 fontSize: 13.sp,
                                                 color: Colors.white,
                                               ),
@@ -167,7 +167,7 @@ class _UserReportsScreenState extends State<UserReportsScreen> {
                                             SnackBar(
                                               content: Text(
                                                 'Could not create project',
-                                                style: GoogleFonts.inter(
+                                                style: GoogleFonts.poppins(
                                                   fontSize: 13.sp,
                                                   color: Colors.white,
                                                 ),
@@ -207,7 +207,7 @@ class _UserReportsScreenState extends State<UserReportsScreen> {
                                     )
                                   : Text(
                                       'SUBMIT',
-                                      style: GoogleFonts.inter(
+                                      style: GoogleFonts.poppins(
                                         fontSize: 11.sp,
                                         fontWeight: FontWeight.w700,
                                         letterSpacing: 0.2,
@@ -261,7 +261,7 @@ class _UserReportsScreenState extends State<UserReportsScreen> {
                 SizedBox(width: 8.w),
                 Text(
                   'My Reports',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 20.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF151A36),
@@ -305,7 +305,7 @@ class _UserReportsScreenState extends State<UserReportsScreen> {
                           child: Center(
                             child: Text(
                               'Add a new request',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w500,
                                 color: Colors.black,
@@ -340,14 +340,14 @@ class _UserReportsScreenState extends State<UserReportsScreen> {
                         onChanged: (value) {
                           setState(() => _searchQuery = value);
                         },
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 16.sp,
                           color: const Color(0xFF22263A),
                         ),
                         decoration: InputDecoration(
                           hintText: 'Search',
                           border: InputBorder.none,
-                          hintStyle: GoogleFonts.inter(
+                          hintStyle: GoogleFonts.poppins(
                             fontSize: 16.sp,
                             color: const Color(0xFFA3A6B1),
                           ),
@@ -371,7 +371,7 @@ class _UserReportsScreenState extends State<UserReportsScreen> {
                   Expanded(
                     child: Text(
                       'Projects Reports',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF878B98),
@@ -412,7 +412,7 @@ class _UserReportsScreenState extends State<UserReportsScreen> {
                       ? Center(
                           child: Text(
                             'No reports found',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF9AA0A6),
@@ -469,7 +469,7 @@ class _DialogInputCard extends StatelessWidget {
         children: [
           Text(
             topLabel,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 11.sp,
               color: const Color(0xFF71748A),
               fontWeight: FontWeight.w500,
@@ -477,7 +477,7 @@ class _DialogInputCard extends StatelessWidget {
           ),
           Text(
             title,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 15.sp,
               color: const Color(0xFF22263A),
               fontWeight: FontWeight.w700,
@@ -494,7 +494,7 @@ class _DialogInputCard extends StatelessWidget {
             child: Center(
               child: TextField(
                 controller: controller,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 13.sp,
                   color: const Color(0xFF22263A),
                 ),
@@ -502,7 +502,7 @@ class _DialogInputCard extends StatelessWidget {
                   hintText: hint,
                   border: InputBorder.none,
                   isCollapsed: true,
-                  hintStyle: GoogleFonts.inter(
+                  hintStyle: GoogleFonts.poppins(
                     fontSize: 13.sp,
                     color: const Color(0xFFA6A9B3),
                   ),
@@ -540,7 +540,7 @@ class _DialogReadOnlyCard extends StatelessWidget {
         children: [
           Text(
             topLabel,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 11.sp,
               color: const Color(0xFF71748A),
               fontWeight: FontWeight.w500,
@@ -548,7 +548,7 @@ class _DialogReadOnlyCard extends StatelessWidget {
           ),
           Text(
             title,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 15.sp,
               color: const Color(0xFF22263A),
               fontWeight: FontWeight.w700,
@@ -568,9 +568,9 @@ class _DialogReadOnlyCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
+                    style: GoogleFonts.poppins(
                       fontSize: 12.sp,
                       color: const Color(0xFF6D7180),
                       fontWeight: FontWeight.w500,
@@ -627,24 +627,24 @@ class _ReportCard extends StatelessWidget {
                 SizedBox(height: 8.h),
                 Text(
                   title,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 11.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF27304E),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                 ),
                 SizedBox(height: 2.h),
                 Text(
                   subtitle,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 9.sp,
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF777A86),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                 ),
               ],
             ),
@@ -680,7 +680,7 @@ class _ReportCard extends StatelessWidget {
                   padding: EdgeInsets.only(right: 2.w),
                   child: Text(
                     '100',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 10.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF27304E),

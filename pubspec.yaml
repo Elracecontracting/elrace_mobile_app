@@ -69,12 +69,8 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_bloc: null
-  google_mlkit_face_detection: ^0.13.0
-  google_mlkit_face_mesh_detection: ^0.4.0
-  tflite_flutter: ^0.12.1
   flutter_secure_storage: ^9.0.0
   crypto: ^3.0.3
-  encrypt: ^5.0.3
   flutter_local_notifications: ^19.5.0
   flutter_painter_v2: ^2.1.0+1
   flutter_pdfview: ^1.4.0
@@ -125,6 +121,7 @@ dependencies:
   chewie: ^1.8.5
   youtube_player_flutter: ^9.1.1
   timezone: ^0.10.1
+  volume_controller: ^3.4.4
 
 dev_dependencies:
   flutter_launcher_icons: ^0.13.1
@@ -168,7 +165,6 @@ flutter:
     - assets/newapp/
     - assets/newapp/newicon/
     - assets/fonts/arbicsupport.ttf
-    - assets/mobilefacenet.tflite
     - AssetManifest.json
   #  fonts:
   #    - family: Inter

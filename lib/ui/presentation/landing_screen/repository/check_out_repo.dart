@@ -9,11 +9,6 @@ import '../../../../utils/urll_utils.dart';
 
 UserRepo _userRepo = UserRepo();
 
-DateTime now = DateTime.now();
-
-// Format it as 'YYYY-MM-DD HH:mm:ss'
-String formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(now);
-
 ApiQuery _apiQuery = ApiQuery();
 
 /// Check-Out Repository
@@ -43,6 +38,10 @@ class CheckOutRepo {
         'Accept': 'application/json',
         "Authorization": "Bearer $token"
       };
+
+      // Compute fresh timestamp at call time (NOT at import time)
+      final String formattedDate = DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+
       Map<String, dynamic> data = {
         "jsonrpc": "2.0",
         "params": {

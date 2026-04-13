@@ -71,6 +71,11 @@ class _PettyCashSubmittedScreenState extends State<PettyCashSubmittedScreen> {
 
       final rawHolderId = data['holder_id'];
       if (rawHolderId is int) return rawHolderId;
+      if (rawHolderId is List &&
+          rawHolderId.isNotEmpty &&
+          rawHolderId.first is int) {
+        return rawHolderId.first as int;
+      }
       return int.tryParse(rawHolderId?.toString() ?? '');
     } catch (_) {
       return null;
@@ -398,7 +403,7 @@ class _PettyCashSubmittedScreenState extends State<PettyCashSubmittedScreen> {
           children: [
             Text(
               'Failed to load submitted sheets',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
                 color: Colors.black87,
@@ -408,7 +413,7 @@ class _PettyCashSubmittedScreenState extends State<PettyCashSubmittedScreen> {
             Text(
               _error,
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
                 color: Colors.black54,
@@ -460,8 +465,8 @@ class _PettyCashSubmittedScreenState extends State<PettyCashSubmittedScreen> {
               children: [
                 Text(
                   title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                   style: GoogleFonts.poppins(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -472,8 +477,8 @@ class _PettyCashSubmittedScreenState extends State<PettyCashSubmittedScreen> {
                 const SizedBox(height: 6),
                 Text(
                   dateText,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                   style: GoogleFonts.poppins(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,

@@ -6,6 +6,7 @@ class ContentModel {
   final String projectName;
   final bool is360View;
   final String previewUrl;
+  final String? thumbnailUrl;
   final DateTime? dateCreated;
 
   const ContentModel({
@@ -14,11 +15,18 @@ class ContentModel {
     required this.projectName,
     required this.is360View,
     required this.previewUrl,
+    this.thumbnailUrl,
     this.dateCreated,
   });
 
+  /// URL to use for image display (thumbnail preferred)
+  String get displayImageUrl => (thumbnailUrl != null && thumbnailUrl!.isNotEmpty)
+      ? thumbnailUrl!
+      : previewUrl;
+
   factory ContentModel.fromJson(Map<String, dynamic> json) {
     final previewUrls = _extractPreviewUrls(json);
+    final thumbnail = json['thumbnail']?.toString()?.trim();
 
     return ContentModel(
       id: json['id'] ?? 0,
@@ -26,6 +34,7 @@ class ContentModel {
       projectName: json['project_name'] ?? '',
       is360View: json['is_360_view'] ?? false,
       previewUrl: previewUrls.isNotEmpty ? previewUrls.first : '',
+      thumbnailUrl: (thumbnail != null && thumbnail.isNotEmpty) ? thumbnail : null,
       dateCreated: _parseDateTime(json['date_created']) ??
           _parseDateTime(json['uploaded_on']) ??
           _parseDateTime(json['created_at']) ??
@@ -40,7 +49,11 @@ class ContentModel {
   /// Each URL is treated as an individual photo item so all images can render.
   static List<ContentModel> fromPhotoJson(Map<String, dynamic> json) {
     final urls = _extractPreviewUrls(json);
-    if (urls.isEmpty) return const [];
+    final thumbnail = json['thumbnail']?.toString()?.trim();
+    final thumbnailUrl = (thumbnail != null && thumbnail.isNotEmpty) ? thumbnail : null;
+
+    // If no preview URLs but we have a thumbnail, still create one item using thumbnail
+    if (urls.isEmpty && thumbnailUrl == null) return const [];
 
     final baseId = (json['id'] is num) ? (json['id'] as num).toInt() : 0;
     final fileName = json['file_name']?.toString() ?? '';
@@ -52,6 +65,21 @@ class ContentModel {
         _parseDateTime(json['create_date']) ??
         _parseDateTime(json['date']);
 
+    // If no preview URLs, create a single item using thumbnail as previewUrl
+    if (urls.isEmpty) {
+      return [
+        ContentModel(
+          id: baseId == 0 ? 1 : baseId,
+          fileName: fileName,
+          projectName: projectName,
+          is360View: is360View,
+          previewUrl: thumbnailUrl!,
+          thumbnailUrl: thumbnailUrl,
+          dateCreated: parsedDate,
+        )
+      ];
+    }
+
     return List<ContentModel>.generate(urls.length, (index) {
       final generatedId = baseId == 0 ? index + 1 : (baseId * 1000) + index;
       return ContentModel(
@@ -60,6 +88,7 @@ class ContentModel {
         projectName: projectName,
         is360View: is360View,
         previewUrl: urls[index],
+        thumbnailUrl: thumbnailUrl,
         dateCreated: parsedDate,
       );
     });
@@ -116,6 +145,7 @@ class ContentModel {
       'project_name': projectName,
       'is_360_view': is360View,
       'preview_url': previewUrl,
+      'thumbnail': thumbnailUrl,
       'date_created': dateCreated?.toIso8601String(),
     };
   }
@@ -126,6 +156,7 @@ class ContentModel {
     String? projectName,
     bool? is360View,
     String? previewUrl,
+    String? thumbnailUrl,
     DateTime? dateCreated,
   }) {
     return ContentModel(
@@ -134,6 +165,7 @@ class ContentModel {
       projectName: projectName ?? this.projectName,
       is360View: is360View ?? this.is360View,
       previewUrl: previewUrl ?? this.previewUrl,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
       dateCreated: dateCreated ?? this.dateCreated,
     );
   }
@@ -209,17 +241,12 @@ class ContentsResponse {
       _sortNewestFirst(photosList);
       _sortNewestFirst(view360List);
 
-      print(
-          '✅ ContentsResponse parsed: ${photosList.length} photos (${photoGroupsList.length} groups), ${view360List.length} 360 views');
-
       return ContentsResponse(
         photos: photosList,
         photoGroups: photoGroupsList,
         view360: view360List,
       );
     } catch (e) {
-      print('❌ Error parsing ContentsResponse: $e');
-      print('📦 JSON data: $json');
       rethrow;
     }
   }

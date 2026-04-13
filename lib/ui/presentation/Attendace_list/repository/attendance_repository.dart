@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:developer';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../../utils/di.dart';
@@ -38,8 +39,11 @@ class AttendanceRepo {
         }
       });
 
-      log('Attendance API request -> POST $url');
-      log('Attendance API request body -> $body');
+      debugPrint('\n========== [ATTENDANCE_LIST] API REQUEST ==========');
+      debugPrint('🌐 URL: $url');
+      debugPrint('📤 Body:');
+      try { debugPrint(const JsonEncoder.withIndent('  ').convert(jsonDecode(body))); } catch (_) { debugPrint(body); }
+      debugPrint('====================================================\n');
 
       final request = http.Request('POST', url)
         ..headers.addAll(headers)
@@ -48,8 +52,11 @@ class AttendanceRepo {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      log('Attendance API response status -> ${response.statusCode}');
-      log('Attendance API response body -> ${response.body}');
+      debugPrint('========== [ATTENDANCE_LIST] API RESPONSE ==========');
+      debugPrint('📊 Status Code: ${response.statusCode}');
+      debugPrint('📦 Full Response Body:');
+      try { debugPrint(const JsonEncoder.withIndent('  ').convert(jsonDecode(response.body))); } catch (_) { debugPrint(response.body); }
+      debugPrint('====================================================\n');
 
       return response;
     } catch (e) {
@@ -86,8 +93,11 @@ class AttendanceRepo {
         }
       });
 
-      log('Attendance Detail API request -> POST $url');
-      log('Attendance Detail API request body -> $body');
+      debugPrint('\n========== [ATTENDANCE_DETAIL] API REQUEST ==========');
+      debugPrint('🌐 URL: $url');
+      debugPrint('📤 Body:');
+      try { debugPrint(const JsonEncoder.withIndent('  ').convert(jsonDecode(body))); } catch (_) { debugPrint(body); }
+      debugPrint('======================================================\n');
 
       final request = http.Request('POST', url)
         ..headers.addAll(headers)
@@ -96,8 +106,11 @@ class AttendanceRepo {
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
 
-      log('Attendance Detail API response status -> ${response.statusCode}');
-      log('Attendance Detail API response body -> ${response.body}');
+      debugPrint('========== [ATTENDANCE_DETAIL] API RESPONSE ==========');
+      debugPrint('📊 Status Code: ${response.statusCode}');
+      debugPrint('📦 Full Response Body:');
+      try { debugPrint(const JsonEncoder.withIndent('  ').convert(jsonDecode(response.body))); } catch (_) { debugPrint(response.body); }
+      debugPrint('======================================================\n');
 
       return response;
     } catch (e) {
@@ -137,7 +150,15 @@ class AttendanceRepo {
         body: body,
       );
 
-      log('getAttendanceSummary: $body \nresponse:${response.body}');
+      debugPrint('\n========== [ATTENDANCE_SUMMARY] API REQUEST ==========');
+      debugPrint('🌐 URL: https://erp.elrace.com/attendance/summary');
+      debugPrint('📤 Body:');
+      try { debugPrint(const JsonEncoder.withIndent('  ').convert(jsonDecode(body))); } catch (_) { debugPrint(body); }
+      debugPrint('======================================================');
+      debugPrint('📊 Status Code: ${response.statusCode}');
+      debugPrint('📦 Full Response Body:');
+      try { debugPrint(const JsonEncoder.withIndent('  ').convert(jsonDecode(response.body))); } catch (_) { debugPrint(response.body); }
+      debugPrint('=======================================================\n');
 
       final decoded = jsonDecode(response.body);
       // Handle error structure {result: {status: 'error', message: 'Invalid token'}}
@@ -183,7 +204,15 @@ class AttendanceRepo {
         body: body,
       );
 
-      log('getTodayStatus: $body \nresponse:${response.body}');
+      debugPrint('\n========== [ATTENDANCE_TODAY_STATUS] API REQUEST ==========');
+      debugPrint('🌐 URL: https://erp.elrace.com/api/attendance/today_status');
+      debugPrint('📤 Body:');
+      try { debugPrint(const JsonEncoder.withIndent('  ').convert(jsonDecode(body))); } catch (_) { debugPrint(body); }
+      debugPrint('==========================================================');
+      debugPrint('📊 Status Code: ${response.statusCode}');
+      debugPrint('📦 Full Response Body:');
+      try { debugPrint(const JsonEncoder.withIndent('  ').convert(jsonDecode(response.body))); } catch (_) { debugPrint(response.body); }
+      debugPrint('===========================================================\n');
 
       if (response.statusCode != 200) {
         throw Exception(
@@ -216,6 +245,7 @@ class AttendanceRepo {
         'check_in_time': rawData['check_in_time']?.toString(),
         'check_out_time': rawData['check_out_time']?.toString(),
         'is_today': _toBool(rawData['is_today']),
+        'check_in_record_id': rawData['attendance_id'] ?? rawData['check_in_record_id'],
       };
     } catch (e) {
       log("Error in getTodayStatus: $e");

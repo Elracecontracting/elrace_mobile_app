@@ -370,7 +370,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
 
   /// Overlay text style matching the live preview
   TextStyle _overlayTextStyle(double fontSize) {
-    return GoogleFonts.inter(
+    return GoogleFonts.poppins(
       fontSize: fontSize,
       color: Colors.grey[200]!.withOpacity(0.85),
       fontWeight: FontWeight.w400,
@@ -944,7 +944,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                             SizedBox(width: 6.w),
                             Text(
                               '$_totalCapturedCount',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 16.sp,
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
@@ -1014,7 +1014,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                                     : _processingStatusText.isNotEmpty
                                         ? _processingStatusText
                                         : 'Saving $_pendingImagesCount photo${_pendingImagesCount > 1 ? 's' : ''}...',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 10.sp,
                                   color: Colors.white,
                                   fontWeight: FontWeight.w600,
@@ -1090,7 +1090,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                         children: [
                           Text(
                             'Document Scan',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               color: Colors.white,
                               fontSize: 17.sp,
                               fontWeight: FontWeight.w600,
@@ -1198,7 +1198,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                         SizedBox(width: 6.w),
                         Text(
                           'Enhancement',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             color: appBlue,
                             fontSize: 13.sp,
                             fontWeight: FontWeight.w600,
@@ -1256,7 +1256,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
             SizedBox(height: 14.h),
             Text(
               'Processing scan...',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 color: const Color(0xff2B2C74),
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w500,
@@ -1297,7 +1297,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
           SizedBox(height: 10.h),
           Text(
             'Applying filter...',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               color: appBlue,
               fontSize: 12.sp,
               fontWeight: FontWeight.w500,
@@ -1356,7 +1356,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
               SizedBox(width: 5.w),
               Text(
                 label,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   color: isPrimary
                       ? const Color(0xff2B2C74)
                       : Colors.white,
@@ -1417,7 +1417,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
             SizedBox(height: 5.h),
             Text(
               filterMeta.label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 color: selected ? Colors.white : const Color(0xff5A5A7A),
                 fontSize: 11.sp,
                 fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
@@ -1464,7 +1464,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
             ),
             child: Text(
               text,
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 15.sp,
                 letterSpacing: 1.2,
                 color: Colors.white,

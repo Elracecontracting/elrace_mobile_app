@@ -38,10 +38,10 @@ class TimerController extends GetxController {
     final checkInMillis = SharedPref().getPreferenceInt('checkInTime');
     final savedTimeLeftMillis = SharedPref().getPreferenceInt('timeLeft');
 
-    print('🔄 Loading global timer state...');
-    print('   isCheckedIn: $isCheckedIn');
-    print('   checkInMillis: $checkInMillis');
-    print('   savedTimeLeftMillis: $savedTimeLeftMillis');
+    // print('🔄 Loading global timer state...');
+    // print('   isCheckedIn: $isCheckedIn');
+    // print('   checkInMillis: $checkInMillis');
+    // print('   savedTimeLeftMillis: $savedTimeLeftMillis');
 
     // Timer is global - not tied to any specific project
     // If user is checked in, calculate remaining time from check-in time
@@ -50,14 +50,14 @@ class TimerController extends GetxController {
 
       // Calculate how much time has elapsed since check-in
       final elapsed = DateTime.now().difference(_checkInTime!);
-      print('   ⏱️ Time elapsed since check-in: ${elapsed.inMinutes} minutes');
+      // print('   ⏱️ Time elapsed since check-in: ${elapsed.inMinutes} minutes');
 
       // Start with 8 hours and subtract elapsed time
       _initialRemaining = const Duration(hours: 8) - elapsed;
 
       // If time has run out, set to zero
       if (_initialRemaining.inSeconds <= 0) {
-        print('   ⚠️ Timer has expired!');
+        // print('   ⚠️ Timer has expired!');
         _initialRemaining = Duration.zero;
         timeLeft.value = Duration.zero;
         isTimerRunning.value = false;
@@ -76,7 +76,7 @@ class TimerController extends GetxController {
             '   📝 Restored saved time: ${_initialRemaining.inMinutes} minutes');
       } else {
         _initialRemaining = const Duration(hours: 8);
-        print('   🆕 Starting with default 8 hours');
+        // print('   🆕 Starting with default 8 hours');
       }
       timeLeft.value = _initialRemaining;
       isTimerRunning.value = false;
@@ -84,7 +84,7 @@ class TimerController extends GetxController {
   }
 
   Future<void> startTimer() async {
-    print('▶️ Starting global timer (applies to all projects)...');
+    // print('▶️ Starting global timer (applies to all projects)...');
 
     _checkInTime = DateTime.now();
     // Fixed 8-hour duration for all projects
@@ -97,7 +97,7 @@ class TimerController extends GetxController {
     await SharedPref().setPreferencesBoolean('isCheckedIn', true);
 
     isTimerRunning.value = true;
-    print('   ✅ Global check-in time saved: ${_checkInTime}');
+    // print('   ✅ Global check-in time saved: ${_checkInTime}');
 
     _startCountdown();
   }
@@ -106,15 +106,15 @@ class TimerController extends GetxController {
     _timer?.cancel();
 
     if (_checkInTime == null) {
-      print('⚠️ Cannot start countdown: checkInTime is null');
+      // print('⚠️ Cannot start countdown: checkInTime is null');
       return;
     }
 
     final startTime = _checkInTime!;
     final initial = _initialRemaining;
 
-    print('🔄 Starting global countdown from ${initial.inMinutes} minutes');
-    print('   (Same duration applies to all projects)');
+    // print('🔄 Starting global countdown from ${initial.inMinutes} minutes');
+    // print('   (Same duration applies to all projects)');
 
     _timer = Timer.periodic(const Duration(seconds: 1), (_) async {
       // Always recalculate from the original check-in time
@@ -124,7 +124,7 @@ class TimerController extends GetxController {
       final remaining = const Duration(hours: 8) - elapsed;
 
       if (remaining.inSeconds <= 0) {
-        print('⏰ Timer completed!');
+        // print('⏰ Timer completed!');
         timeLeft.value = Duration.zero;
         isTimerRunning.value = false;
         _timer?.cancel();
@@ -141,14 +141,14 @@ class TimerController extends GetxController {
   }
 
   Future<void> stopTimer() async {
-    print('⏹️ Stopping timer...');
+    // print('⏹️ Stopping timer...');
 
     _timer?.cancel();
     _timer = null;
     isTimerRunning.value = false;
 
     if (_checkInTime == null) {
-      print('   ⚠️ No check-in time found, clearing all data');
+      // print('   ⚠️ No check-in time found, clearing all data');
       SharedPref().removePreference('checkInTime');
       SharedPref().removePreference('isCheckedIn');
       SharedPref().removePreference('timeLeft');
@@ -159,8 +159,8 @@ class TimerController extends GetxController {
     final elapsed = DateTime.now().difference(_checkInTime!);
     final updatedRemaining = const Duration(hours: 8) - elapsed;
 
-    print('   📊 Total time worked: ${elapsed.inMinutes} minutes');
-    print('   💾 Saving remaining time: ${updatedRemaining.inMinutes} minutes');
+    // print('   📊 Total time worked: ${elapsed.inMinutes} minutes');
+    // print('   💾 Saving remaining time: ${updatedRemaining.inMinutes} minutes');
 
     await SharedPref().setPreferencesBoolean('isCheckedIn', false);
     await SharedPref().removePreference('checkInTime');
@@ -178,7 +178,7 @@ class TimerController extends GetxController {
     }
 
     _checkInTime = null;
-    print('   ✅ Timer stopped successfully');
+    // print('   ✅ Timer stopped successfully');
   }
 
   /// Reload timer state from SharedPreferences.

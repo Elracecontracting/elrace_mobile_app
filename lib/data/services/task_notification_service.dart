@@ -298,6 +298,10 @@ class TaskNotificationService {
     required String body,
     required String payload,
   }) async {
+    // التحقق من إعدادات كتم إشعارات التاسكات
+    final isTaskMuted = await NotificationStorageService.isChannelMuted('task');
+    if (isTaskMuted) return;
+
     await _notificationsPlugin.show(
       id,
       title,
@@ -333,6 +337,10 @@ class TaskNotificationService {
     required tz.TZDateTime scheduledDate,
     required String payload,
   }) async {
+    // التحقق من إعدادات كتم إشعارات التاسكات
+    final isTaskMuted = await NotificationStorageService.isChannelMuted('task');
+    if (isTaskMuted) return;
+
     try {
       await _notificationsPlugin.zonedSchedule(
         id,
