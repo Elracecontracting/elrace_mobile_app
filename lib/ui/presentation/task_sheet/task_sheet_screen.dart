@@ -487,7 +487,7 @@ class _GreenTimesheetCard extends StatelessWidget {
         .toString();
 
     return Container(
-      height: 120.h,
+      constraints: BoxConstraints(minHeight: 120.h),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(22.r),
         border: Border.all(
@@ -544,7 +544,7 @@ class _GreenTimesheetCard extends StatelessWidget {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.start,
                       children: [
                         Text(
                           employeeName,
