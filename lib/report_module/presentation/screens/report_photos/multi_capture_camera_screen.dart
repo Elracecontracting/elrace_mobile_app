@@ -148,7 +148,7 @@ class _MultiCaptureCameraScreenState extends State<MultiCaptureCameraScreen>
                       ),
                       child: Text(
                         '${_capturedPaths.length} photo${_capturedPaths.length == 1 ? '' : 's'}',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -243,7 +243,7 @@ class _MultiCaptureCameraScreenState extends State<MultiCaptureCameraScreen>
                           ),
                           child: Text(
                             'Done',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 16.sp,
                               fontWeight: FontWeight.w700,
                               color: _capturedPaths.isNotEmpty

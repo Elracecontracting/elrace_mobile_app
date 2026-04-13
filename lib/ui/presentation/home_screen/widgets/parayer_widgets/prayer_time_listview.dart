@@ -65,7 +65,7 @@
 //           children: [
 //             Text(
 //               model.title,
-//               style: GoogleFonts.kanit(
+//               style: GoogleFonts.poppins(
 //                 fontSize: 9.5,
 //                 fontWeight: FontWeight.w400,
 //                 color: isSelected ? shadowBlueLight : null,
@@ -74,7 +74,7 @@
 //             const Spacer(),
 //             Text(
 //               'Left: ${model.timeLeft}',
-//               style: GoogleFonts.kanit(
+//               style: GoogleFonts.poppins(
 //                 fontSize: 9.5,
 //                 fontWeight: FontWeight.w400,
 //                 color: isSelected ? shadowBlueLight : null,

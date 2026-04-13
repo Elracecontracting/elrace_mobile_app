@@ -330,7 +330,7 @@ class AppSettingsWidget extends StatelessWidget {
                     Image.asset('assets/png/notification_filled_icon.png'),
                     const SizedBox(width: 12),
                     Text(translate('profile.mute_notifications'),
-                        style: GoogleFonts.inter(fontSize: 11)),
+                        style: GoogleFonts.poppins(fontSize: 11)),
                     const Spacer(),
                     Consumer<ProfileBoxProvider>(
                       builder: (context, provider, child) {

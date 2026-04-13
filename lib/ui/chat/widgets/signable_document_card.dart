@@ -190,7 +190,7 @@ class _SignableDocumentCardState extends State<SignableDocumentCard> {
                           color: Color(0xFF1D2449),
                         ),
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        overflow: TextOverflow.visible,
                       ),
                       const SizedBox(height: 2),
                       Text(

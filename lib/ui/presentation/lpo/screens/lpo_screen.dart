@@ -402,12 +402,12 @@ class _LpoListScreenState extends State<LpoListScreen> {
                       if (!_showSearch)
                         Text(
                           translate('home.lpo'),
-                          style: GoogleFonts.koulen(
+                          style: GoogleFonts.poppins(
                             fontSize: 22.sp,
                             fontWeight: FontWeight.w500,
                             color: appFontColor,
                           ),
-                          overflow: TextOverflow.ellipsis,
+                          overflow: TextOverflow.visible,
                         )
                       else
                         Expanded(child: _buildInlineSearchField()),

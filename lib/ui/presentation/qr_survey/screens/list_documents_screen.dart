@@ -86,7 +86,7 @@ class ListDocumentsScreen extends StatelessWidget {
             ),
             title: Text(
               doc.name,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -94,9 +94,9 @@ class ListDocumentsScreen extends StatelessWidget {
             subtitle: doc.description != null
                 ? Text(
                     doc.description!,
-                    style: GoogleFonts.inter(fontSize: 14),
+                    style: GoogleFonts.poppins(fontSize: 14),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    overflow: TextOverflow.visible,
                   )
                 : null,
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),

@@ -288,8 +288,8 @@ class _GroupIdentityCard extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 24,
@@ -460,8 +460,8 @@ class _MembersSection extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                             color: Color(0xFF1D2449),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
                         ),
                         if (role.isNotEmpty)
                           Text(
@@ -470,8 +470,8 @@ class _MembersSection extends StatelessWidget {
                               fontSize: 12,
                               color: Colors.grey[500],
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            maxLines: null,
+                            overflow: TextOverflow.visible,
                           ),
                       ],
                     ),

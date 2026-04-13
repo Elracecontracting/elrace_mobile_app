@@ -58,7 +58,7 @@ class ColleaspedCard extends StatelessWidget {
                 child: Text(
                   DateFormat('dd MMM yy').format(checkInTime).toUpperCase(),
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 15.sp,
                     fontWeight: FontWeight.bold,
                     color: appFontColor,
@@ -80,7 +80,7 @@ class ColleaspedCard extends StatelessWidget {
                   children: [
                     Text(
                       'Check-in',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.bold,
                         color: appFontColor,
@@ -88,7 +88,7 @@ class ColleaspedCard extends StatelessWidget {
                     ),
                     Text(
                       DateFormat('hh:mm a').format(checkInTime),
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w500,
                         color: Colors.black,
@@ -106,7 +106,7 @@ class ColleaspedCard extends StatelessWidget {
                   children: [
                     Text(
                       'Check-out',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.bold,
                         color: appFontColor,
@@ -117,7 +117,7 @@ class ColleaspedCard extends StatelessWidget {
                           ? DateFormat('hh:mm a').format(checkOutTime!)
                           : '--:--',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w500,
                         color: Colors.black,

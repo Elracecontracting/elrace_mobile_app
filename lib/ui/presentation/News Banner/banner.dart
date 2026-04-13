@@ -105,7 +105,7 @@ We extend our gratitude to our skilled team, trusted partners, and the community
                     const SizedBox(width: 4),
                     Text(
                       translate('home.news'),
-                      style: GoogleFonts.koulen(
+                      style: GoogleFonts.poppins(
                           fontSize: 20.sp,
                           fontWeight: FontWeight.w400,
                           color: appFontColor),
@@ -180,7 +180,7 @@ We extend our gratitude to our skilled team, trusted partners, and the community
                             Center(
                               child: Text(
                                 "${item['titles']}".toUpperCase(),
-                                style: GoogleFonts.koulen(
+                                style: GoogleFonts.poppins(
                                   color: appFontColor,
                                   fontWeight: FontWeight.w400,
                                   fontSize: 24,
@@ -278,7 +278,7 @@ We extend our gratitude to our skilled team, trusted partners, and the community
     // --- إعداد TextPainter لقص النص إلى سطرين ---
     final span = TextSpan(
       text: fullText,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.poppins(
         fontSize: 14.sp,
         color: Colors.black,
       ),
@@ -314,7 +314,7 @@ We extend our gratitude to our skilled team, trusted partners, and the community
     // --- واجهة العرض ---
     return RichText(
       text: TextSpan(
-        style: GoogleFonts.inter(
+        style: GoogleFonts.poppins(
           fontSize: 14.sp,
           color: Colors.black,
         ),
@@ -322,7 +322,7 @@ We extend our gratitude to our skilled team, trusted partners, and the community
           TextSpan(text: clippedText),
           TextSpan(
             text: "  See All",
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               color: const Color(0xFF868686),
               fontWeight: FontWeight.bold,
               fontSize: 16,
@@ -382,7 +382,7 @@ We extend our gratitude to our skilled team, trusted partners, and the community
 //                   const Icon(Icons.arrow_back_ios_new, color: Colors.black),
 //                   Text(
 //                     'NEWS',
-//                     style: GoogleFonts.inter(
+//                     style: GoogleFonts.poppins(
 //                       fontSize: 20.sp,
 //                       fontWeight: FontWeight.bold,
 //                       color: const Color(0xFF191F52),
@@ -428,7 +428,7 @@ We extend our gratitude to our skilled team, trusted partners, and the community
 //                           ),
 //                           child: Text(
 //                             item['title']!,
-//                             style: GoogleFonts.inter(
+//                             style: GoogleFonts.poppins(
 //                               fontSize: 16.sp,
 //                               fontWeight: FontWeight.bold,
 //                               color: const Color(0xFF191F52),
@@ -454,7 +454,7 @@ We extend our gratitude to our skilled team, trusted partners, and the community
 //                               horizontal: 12.w, vertical: 10.h),
 //                           child: RichText(
 //                             text: TextSpan(
-//                               style: GoogleFonts.inter(
+//                               style: GoogleFonts.poppins(
 //                                 fontSize: 14.sp,
 //                                 color: Colors.black,
 //                               ),
@@ -462,7 +462,7 @@ We extend our gratitude to our skilled team, trusted partners, and the community
 //                                 TextSpan(text: item['desc']),
 //                                 TextSpan(
 //                                   text: '  See All',
-//                                   style: GoogleFonts.inter(
+//                                   style: GoogleFonts.poppins(
 //                                     color: const Color(0xFF191F52),
 //                                     fontWeight: FontWeight.bold,
 //                                   ),

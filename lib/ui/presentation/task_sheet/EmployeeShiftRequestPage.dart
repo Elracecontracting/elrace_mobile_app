@@ -221,7 +221,7 @@ class _EmployeeShiftRequestPageState extends State<EmployeeShiftRequestPage> {
                   child: Center(
                     child: Text(
                       'TIME SHEET',
-                      style: GoogleFonts.koulen(
+                      style: GoogleFonts.poppins(
                         fontSize: 19,
                         fontWeight: FontWeight.w300,
                         letterSpacing: 1.0,
@@ -275,7 +275,7 @@ class _EmployeeShiftRequestPageState extends State<EmployeeShiftRequestPage> {
                             child: Text(
                               emp['name'].toString(),
                               style: const TextStyle(fontSize: 13),
-                              overflow: TextOverflow.ellipsis,
+                              overflow: TextOverflow.visible,
                             ),
                           );
                         }).toList(),

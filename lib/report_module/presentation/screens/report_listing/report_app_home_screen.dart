@@ -133,7 +133,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                             Expanded(
                               child: Text(
                                 'Projects Reports',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 13.sp,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF878B98),
@@ -182,9 +182,9 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                                                 start: 4.w),
                                             child: Text(
                                               'Create Report',
-                                              maxLines: 1,
+                                              maxLines: null,
                                               overflow: TextOverflow.clip,
-                                              style: GoogleFonts.inter(
+                                              style: GoogleFonts.poppins(
                                                 fontSize: 13.sp,
                                                 fontWeight: FontWeight.w700,
                                                 color: Colors.white,
@@ -216,7 +216,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                         child: Center(
                           child: Text(
                             'No reports found',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF9AA0A6),
@@ -253,7 +253,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                                       ),
                                       title: Text(
                                         'Delete Project Report',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 18.sp,
                                           fontWeight: FontWeight.w600,
                                           color: const Color(0xFF27304E),
@@ -261,7 +261,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                                       ),
                                       content: Text(
                                         'Are you sure you want to delete this project report?',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 14.sp,
                                           color: const Color(0xFF27304E),
                                         ),
@@ -272,7 +272,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                                               Navigator.pop(ctx, false),
                                           child: Text(
                                             'Cancel',
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 14.sp,
                                               fontWeight: FontWeight.w600,
                                               color: const Color(0xFF27304E),
@@ -284,7 +284,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                                               Navigator.pop(ctx, true),
                                           child: Text(
                                             'Delete',
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 14.sp,
                                               fontWeight: FontWeight.w600,
                                               color: const Color(0xFFE81E25),
@@ -354,7 +354,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                               SizedBox(width: 8.w),
                               Text(
                                 'My Reports',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF151A36),
@@ -384,14 +384,14 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                                       onChanged: (value) {
                                         setState(() => _searchQuery = value);
                                       },
-                                      style: GoogleFonts.inter(
+                                      style: GoogleFonts.poppins(
                                         fontSize: 16.sp,
                                         color: const Color(0xFF22263A),
                                       ),
                                       decoration: InputDecoration(
                                         hintText: 'Search',
                                         border: InputBorder.none,
-                                        hintStyle: GoogleFonts.inter(
+                                        hintStyle: GoogleFonts.poppins(
                                           fontSize: 16.sp,
                                           color: const Color(0xFFA3A6B1),
                                         ),

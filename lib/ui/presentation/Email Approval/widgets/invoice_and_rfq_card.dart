@@ -154,15 +154,15 @@ class InvoiceAndRfqCard extends StatelessWidget {
                       fit: BoxFit.scaleDown,
                       child: Text(
                         refNo.toUpperCase(),
-                        style: GoogleFonts.nunito(
+                        style: GoogleFonts.poppins(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF0B2D5E),
                           letterSpacing: 0.25,
                           height: 1.0,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: null,
+                        overflow: TextOverflow.visible,
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -174,27 +174,27 @@ class InvoiceAndRfqCard extends StatelessWidget {
           SizedBox(height: 10.w),
           Text(
             title.toUpperCase(),
-            style: GoogleFonts.nunito(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
               fontWeight: FontWeight.w900,
               color: const Color(0xFF0F1114),
               height: 1.1,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxLines: null,
+            overflow: TextOverflow.visible,
           ),
           SizedBox(height: 4.w),
           Text(
             subtitle,
-            style: GoogleFonts.nunito(
+            style: GoogleFonts.poppins(
               fontSize: 12.sp,
               fontWeight: FontWeight.w800,
               color: const Color(0xFF737A83),
               letterSpacing: 0.2,
               height: 1.0,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxLines: null,
+            overflow: TextOverflow.visible,
           ),
           const Spacer(),
           Row(
@@ -203,27 +203,27 @@ class InvoiceAndRfqCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   date,
-                  style: GoogleFonts.nunito(
+                  style: GoogleFonts.poppins(
                     fontSize: 10.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF8C939C),
                     letterSpacing: 0.1,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                 ),
               ),
               Text(
                 amountText,
-                style: GoogleFonts.nunito(
+                style: GoogleFonts.poppins(
                   fontSize: 26.sp,
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFF0B387A),
                   letterSpacing: 0.2,
                   height: 1.0,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: null,
+                overflow: TextOverflow.visible,
               ),
             ],
           ),
@@ -293,15 +293,15 @@ class InvoiceAndRfqCard extends StatelessWidget {
                       fit: BoxFit.scaleDown,
                       child: Text(
                         refNo.toUpperCase(),
-                        style: GoogleFonts.nunito(
+                        style: GoogleFonts.poppins(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF0B2D5E),
                           letterSpacing: 0.25,
                           height: 1.0,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: null,
+                        overflow: TextOverflow.visible,
                         textAlign: TextAlign.center,
                       ),
                     ),
@@ -313,27 +313,27 @@ class InvoiceAndRfqCard extends StatelessWidget {
           SizedBox(height: 10.w),
           Text(
             title.toUpperCase(),
-            style: GoogleFonts.nunito(
+            style: GoogleFonts.poppins(
               fontSize: 16.sp,
               fontWeight: FontWeight.w900,
               color: const Color(0xFF0F1114),
               height: 1.1,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxLines: null,
+            overflow: TextOverflow.visible,
           ),
           SizedBox(height: 4.w),
           Text(
             client,
-            style: GoogleFonts.nunito(
+            style: GoogleFonts.poppins(
               fontSize: 13.sp,
               fontWeight: FontWeight.w800,
               color: const Color(0xFF737A83),
               letterSpacing: 0.2,
               height: 1.0,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxLines: null,
+            overflow: TextOverflow.visible,
           ),
           const Spacer(),
           Row(
@@ -342,27 +342,27 @@ class InvoiceAndRfqCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   date,
-                  style: GoogleFonts.nunito(
+                  style: GoogleFonts.poppins(
                     fontSize: 10.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF8C939C),
                     letterSpacing: 0.1,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                 ),
               ),
               Text(
                 amountText,
-                style: GoogleFonts.nunito(
+                style: GoogleFonts.poppins(
                   fontSize: 26.sp,
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFF0B387A),
                   letterSpacing: 0.2,
                   height: 1.0,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: null,
+                overflow: TextOverflow.visible,
               ),
             ],
           ),

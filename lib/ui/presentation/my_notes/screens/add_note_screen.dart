@@ -79,7 +79,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
           ),
           Text(
             currentDateTime,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
               color: const Color(0xff313131),
               fontWeight: FontWeight.bold,
@@ -95,7 +95,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                 maxLines: null,
                 expands: true,
                 textAlignVertical: TextAlignVertical.top,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 16.sp,
                   height: 1.5,
                   color: Colors.black87,
@@ -103,7 +103,7 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
                 decoration: InputDecoration(
                   border: InputBorder.none,
                   hintText: 'Start typing your note...',
-                  hintStyle: GoogleFonts.inter(
+                  hintStyle: GoogleFonts.poppins(
                     fontSize: 16.sp,
                     color: const Color(0xff313131),
                     fontWeight: FontWeight.w400,

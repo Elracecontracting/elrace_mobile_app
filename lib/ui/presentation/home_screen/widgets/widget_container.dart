@@ -49,7 +49,7 @@ class WidgetContainer extends StatelessWidget {
                     children: [
                       Text(
                         translate('home.my_widgets'),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF484848),
@@ -60,7 +60,7 @@ class WidgetContainer extends StatelessWidget {
                             Util.pushPage(const EditWidgetsScreen(), context),
                         child: Text(
                           translate('home.edit'),
-                          style: GoogleFonts.nunito(
+                          style: GoogleFonts.poppins(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF858585),

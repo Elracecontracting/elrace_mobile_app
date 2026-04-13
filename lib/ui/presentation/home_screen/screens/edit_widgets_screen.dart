@@ -171,7 +171,7 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
                                   }),
                                   Text(
                                     'Edit Widgets',
-                                    style: GoogleFonts.koulen(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w400,
                                       color: appFontColor,
@@ -191,7 +191,7 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
                                         const SizedBox(width: 2),
                                         Text(
                                           'Save',
-                                          style: GoogleFonts.inter(
+                                          style: GoogleFonts.poppins(
                                             fontSize: 15.sp,
                                             fontWeight: FontWeight.w600,
                                             color: black,
@@ -237,7 +237,7 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
                                   //       const SizedBox(height: 8),
                                   //       Text(
                                   //         'Add Widget',
-                                  //         style: GoogleFonts.inter(
+                                  //         style: GoogleFonts.poppins(
                                   //           fontSize: 16.sp,
                                   //           fontWeight: FontWeight.w600,
                                   //           color: white,
@@ -261,7 +261,7 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
                                       const SizedBox(height: 16),
                                       Text(
                                         'No widgets added yet',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 16.sp,
                                           fontWeight: FontWeight.w500,
                                           color: const Color(0xFF858585),
@@ -270,7 +270,7 @@ class _EditWidgetsScreenState extends State<EditWidgetsScreen> {
                                       const SizedBox(height: 8),
                                       Text(
                                         'Tap the add button above to add your first widget',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 14.sp,
                                           color: const Color(0xFF858585),
                                         ),

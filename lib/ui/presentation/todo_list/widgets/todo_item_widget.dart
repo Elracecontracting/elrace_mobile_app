@@ -84,7 +84,7 @@ class TodoItemWidget extends StatelessWidget {
                       // Title
                       Text(
                         todo.title,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 15.sp,
                           fontWeight: FontWeight.w500,
                           color: todo.isCompleted
@@ -95,7 +95,7 @@ class TodoItemWidget extends StatelessWidget {
                               : null,
                         ),
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        overflow: TextOverflow.visible,
                       ),
                       // Meta info
                       if (_hasMetaInfo()) ...[
@@ -198,7 +198,7 @@ class TodoItemWidget extends StatelessWidget {
         SizedBox(width: 4.w),
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.poppins(
             fontSize: 11.sp,
             fontWeight: FontWeight.w500,
             color: color,

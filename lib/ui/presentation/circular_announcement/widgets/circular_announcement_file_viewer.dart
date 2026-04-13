@@ -240,17 +240,17 @@ class _CircularAnnouncementFileViewerState
           children: [
             Text(
               widget.item.displayTitle,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              maxLines: null,
+              overflow: TextOverflow.visible,
             ),
             Text(
               widget.item.isCircular ? 'Circular' : 'Announcement',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 12.sp,
                 color: Colors.grey[600],
               ),
@@ -317,7 +317,7 @@ class _CircularAnnouncementFileViewerState
                 isFileNotAvailable
                     ? 'File Not Available'
                     : 'Failed to load file',
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 18.sp,
                   color: Colors.grey[600],
                 ),

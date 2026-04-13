@@ -174,7 +174,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                 padding: EdgeInsets.only(bottom: 6.h),
                 child: Text(
                   timesheetCount,
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     color: Colors.black,
                     fontSize: 19.w,
                     fontWeight: FontWeight.w400,
@@ -622,7 +622,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           top: 16,
           child: Text(
             translate('home.media').toUpperCase(),
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               color: Colors.white,
               fontSize: 24.w,
               fontWeight: FontWeight.w400,
@@ -799,7 +799,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                                   SizedBox(width: 4.w),
                                   Text(
                                     monthAbbrev,
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                       color: const Color(0xFF2B2F6B),
                                       fontSize: 12.sp,
                                       fontWeight: FontWeight.w800,

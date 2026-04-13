@@ -372,7 +372,7 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
           Center(
             child: Text(
               translate('home.time_sheet'),
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 20,
                 fontWeight: FontWeight.w400,
                 color: Colors.black,
@@ -479,7 +479,7 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
           const SizedBox(width: 8),
           Text(
             text,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: FontWeight.w500,
               color: appFontColor,
@@ -536,7 +536,7 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
                   child: Center(
                     child: Text(
                       'Add a new request',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 30 / 2,
                         fontWeight: FontWeight.w500,
                         color: Colors.black,
@@ -565,7 +565,7 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
         ),
         Text(
           translate('home.OVERALL_HOURS'),
-          style: GoogleFonts.koulen(
+          style: GoogleFonts.poppins(
             fontSize: 26 / 1.6,
             fontWeight: FontWeight.w300,
             color: const Color(0xFF9A9A9A),
@@ -663,7 +663,7 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
                         const SizedBox(width: 8),
                         Text(
                           DateFormat('dd MMM yyyy').format(date),
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 30 / 2,
                             fontWeight: FontWeight.w500,
                             color: appFontColor,
@@ -696,7 +696,7 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
         const SizedBox(width: 8),
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.poppins(
             fontSize: 32 / 2,
             fontWeight: FontWeight.w500,
             color: Colors.black,
@@ -705,7 +705,7 @@ class _TaskDetailsPageState extends State<TaskDetailsPage> {
         const SizedBox(width: 12),
         Text(
           '${value ?? 0}',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.poppins(
             fontSize: 32 / 2,
             fontWeight: FontWeight.w700,
             color: Colors.black,

@@ -644,12 +644,12 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                     SizedBox(width: 8.w),
                     Text(
                       'TASK DETAILS',
-                      style: GoogleFonts.koulen(
+                      style: GoogleFonts.poppins(
                         fontSize: 22.sp,
                         fontWeight: FontWeight.w500,
                         color: appFontColor,
                       ),
-                      overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.visible,
                     ),
                   ],
                 ),
@@ -814,8 +814,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                                             Expanded(
                                               child: Text(
                                                 name,
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
+                                                maxLines: null,
+                                                overflow: TextOverflow.visible,
                                                 style: GoogleFonts.poppins(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.bold,
@@ -837,8 +837,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                               Expanded(
                                 child: Text(
                                   'Last updated at',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: null,
+                                  overflow: TextOverflow.visible,
                                   style: GoogleFonts.poppins(
                                     fontSize: 11,
                                     color: Colors.grey[600],
@@ -1349,8 +1349,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                       fontWeight: FontWeight.w600,
                       color: Colors.black,
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
                   ),
                   const SizedBox(height: 2),
                   Text(
@@ -1423,8 +1423,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                 fontWeight: FontWeight.w600,
                 color: Colors.black,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+              maxLines: null,
+              overflow: TextOverflow.visible,
             ),
           ),
           const SizedBox(width: 8),
@@ -1434,8 +1434,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               fontSize: 11,
               color: Colors.grey[600],
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxLines: null,
+            overflow: TextOverflow.visible,
           ),
         ],
       ),
@@ -1454,7 +1454,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                   label: Text(
                     attachment,
                     style: GoogleFonts.poppins(fontSize: 12),
-                    overflow: TextOverflow.ellipsis,
+                    overflow: TextOverflow.visible,
                   ),
                   avatar: Icon(Icons.attach_file, size: 16, color: Colors.blue),
                   backgroundColor: Colors.blue.withOpacity(0.1),
@@ -1744,8 +1744,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                                 fontWeight: FontWeight.w600,
                                 color: Colors.black87,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              maxLines: null,
+                              overflow: TextOverflow.visible,
                             ),
                             if (report != null)
                               Text(
@@ -1914,8 +1914,8 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
               color: Colors.grey[700],
             ),
             textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-            maxLines: 1,
+            overflow: TextOverflow.visible,
+            maxLines: null,
           ),
         ),
       ],
@@ -1956,7 +1956,7 @@ class _TaskDetailsScreenState extends State<TaskDetailsScreen> {
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
                       ),
-                      overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.visible,
                     ),
                   ),
                   Text(
