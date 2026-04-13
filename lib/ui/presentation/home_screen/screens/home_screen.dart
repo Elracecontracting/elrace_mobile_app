@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:el_race/core/biometric/unified_biometric_helper.dart';
+import 'package:el_race/core/services/attendance_status_sync_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/location_bloc/location_bloc.dart';
@@ -117,6 +118,10 @@ class _HomeScreenState extends State<HomeScreenPage>
     if (state == AppLifecycleState.resumed) {
       _checkLocationService(); // إعادة التحقق عند العودة
       _locationBloc.add(GetCurrentLocationET()); // إعادة جلب اللوكيشن
+
+      // مزامنة حالة الحضور من السيرفر عند العودة من الخلفية
+      // لضمان تحديث الأوقات والعداد بدون الحاجة لتسجيل خروج/دخول
+      AttendanceStatusSyncService.refreshFromServer(reason: 'app_resumed');
     }
   }
 

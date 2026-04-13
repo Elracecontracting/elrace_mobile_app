@@ -125,10 +125,33 @@ class AttendanceStatusSyncService {
         }
       }
 
+      // CASE 5: Both local and server agree on checked-in (not checked-out),
+      // but the server's check-in time is OLDER than our local check-in time.
+      // → Server is returning data from an older check-in record (first record
+      //   of the day instead of the latest). Protect local display times.
+      if (localCheckedIn && snapshot.checkedIn && !snapshot.checkedOut && localCheckIn > 0) {
+        final serverCheckInDt =
+            _parseServerDateTime(status['check_in_time']?.toString());
+        if (serverCheckInDt != null) {
+          final localCheckInDate =
+              DateTime.fromMillisecondsSinceEpoch(localCheckIn);
+          // Allow 2-min tolerance for clock drift between device and server
+          if (serverCheckInDt.isBefore(
+              localCheckInDate.subtract(const Duration(minutes: 2)))) {
+            print('🛡️ AttendanceSync: SKIP — both checked-in but server '
+                'check-in ($serverCheckInDt) is older than local check-in '
+                '($localCheckInDate). Server returning stale record.');
+            return null;
+          }
+        }
+      }
+
       // CASE 3: We locally checked-out, but server still says checked-in
       // (no check-out). Our check-out was recent (< 4 hours).
       // → Server hasn't reflected the check-out yet.
-      if (!localCheckedIn && snapshot.checkedIn && !snapshot.checkedOut && localCheckOut > 0) {
+      // ملاحظة: إذا كان checkInTime=0 يعني الحالة انمسحت بسبب counter reset
+      // وليس بسبب تشيك اوت حقيقي، فلازم نقبل بيانات السيرفر
+      if (!localCheckedIn && snapshot.checkedIn && !snapshot.checkedOut && localCheckOut > 0 && localCheckIn > 0) {
         final localCheckOutDate =
             DateTime.fromMillisecondsSinceEpoch(localCheckOut);
         final timeSince = DateTime.now().difference(localCheckOutDate);
@@ -229,10 +252,33 @@ class AttendanceStatusSyncService {
     print('📝   checkOutDisplayTime = ${snapshot.checkOutDisplayTime}');
 
     await SharedPref().setPreferencesBoolean('isCheckedIn', snapshot.checkedIn);
-    await SharedPref().setPreferencesString(
-        'checkInDisplayTime', snapshot.checkInDisplayTime);
-    await SharedPref().setPreferencesString(
-        'checkOutDisplayTime', snapshot.checkOutDisplayTime);
+
+    // حماية أوقات العرض: إذا كان المستخدم checked-in محلياً وعلى السيرفر،
+    // لا نكتب فوق الأوقات المحلية إذا كانت أوقات السيرفر أقدم (سجل قديم).
+    bool shouldUpdateDisplayTimes = true;
+    if (wasCheckedIn && snapshot.checkedIn && existingCheckInTime > 0 &&
+        snapshot.checkInDisplayTime != '00:00:00' &&
+        oldCheckInDisplay.isNotEmpty && oldCheckInDisplay != '00:00:00') {
+      final localCheckInDate =
+          DateTime.fromMillisecondsSinceEpoch(existingCheckInTime);
+      final serverCheckInWallClock =
+          _parseTodayTime(snapshot.checkInDisplayTime);
+      if (serverCheckInWallClock != null &&
+          serverCheckInWallClock.isBefore(
+              localCheckInDate.subtract(const Duration(minutes: 2)))) {
+        shouldUpdateDisplayTimes = false;
+        print('🛡️ _persistSnapshot: Server checkInDisplayTime '
+            '(${snapshot.checkInDisplayTime}) is older than local check-in '
+            '($localCheckInDate). Keeping local display times.');
+      }
+    }
+
+    if (shouldUpdateDisplayTimes) {
+      await SharedPref().setPreferencesString(
+          'checkInDisplayTime', snapshot.checkInDisplayTime);
+      await SharedPref().setPreferencesString(
+          'checkOutDisplayTime', snapshot.checkOutDisplayTime);
+    }
 
     // CRITICAL: Only update checkInTime if we are transitioning from
     // NOT checked-in to checked-in (i.e., an external check-in we need to

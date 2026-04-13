@@ -313,6 +313,9 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           SharedPref().removePreference('checkInAuthMethod');
           SharedPref().setPreferenceInt('checkInTime', 0);
 
+          // مسح وقت آخر تشيك اوت محلي حتى لا يمنع مزامنة بيانات السيرفر
+          SharedPref().setPreferenceInt('lastLocalCheckOutTime', 0);
+
           // Update notifications
           CheckInReminderNotificationService().updateReminders();
 
