@@ -988,7 +988,7 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 const SizedBox(width: 8),
                 Text(
                   'Mark as Read',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     color: Colors.white,
                     fontWeight: FontWeight.w700,
                     fontSize: 12.sp,

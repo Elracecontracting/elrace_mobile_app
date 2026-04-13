@@ -908,16 +908,6 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                             ),
                           ),
 
-                          // Total hours text in the middle
-                          Text(
-                            '$_totalHoursDisplay H',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-
                           // Right time label - shows check-out time
                           Container(
                             padding: EdgeInsets.symmetric(
