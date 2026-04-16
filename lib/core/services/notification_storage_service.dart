@@ -315,10 +315,12 @@ class NotificationStorageService {
     await _writeCachedMuteSettings(prefs, optimistic);
 
     try {
-      await NotificationApiService.updateNotificationPreference(
+      final apiResponse =
+          await NotificationApiService.updateNotificationPreference(
         model: key,
         muted: muted,
       );
+      print('[MuteSettings][UpdateResponse][$key] $apiResponse');
       await _updateUnreadCount();
       onCountChanged?.call();
     } catch (e) {
@@ -445,8 +447,7 @@ class NotificationStorageService {
       await _saveStoredNotifications(normalized, prefs);
 
       // Badge count should reflect only unread items.
-      final unreadCount =
-          normalized.where((n) => n['isRead'] != true).length;
+      final unreadCount = normalized.where((n) => n['isRead'] != true).length;
       await prefs.setInt(_unreadCountKey, unreadCount);
       onCountChanged?.call();
 
@@ -460,8 +461,7 @@ class NotificationStorageService {
   static Future<int> getTotalCount() async {
     try {
       final notifications = await getNotifications();
-      final count =
-          notifications.where((n) => n['isRead'] != true).length;
+      final count = notifications.where((n) => n['isRead'] != true).length;
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_unreadCountKey, count);
       return count;

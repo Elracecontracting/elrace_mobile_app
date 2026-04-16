@@ -68,9 +68,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   }
 
   void _initializeMinimumDate() {
-    // For SHORT and ANNUAL leave, minimum start date is 20 days from today
-    // This enforces the 20-day advance notice requirement
-    if (widget.leaveType == 'SHORT' || widget.leaveType == 'ANNUAL') {
+    // Only annual leave requires 20-day advance notice.
+    if (widget.leaveType == 'ANNUAL') {
       minimumStartDate = DateTime.now().add(const Duration(days: 20));
     } else {
       minimumStartDate = DateTime.now();
@@ -377,21 +376,32 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
         'Authorization': 'Bearer $token'
       };
 
+      debugPrint('[LeaveRequest][${widget.leaveType}][RequestBody] $body');
       final response = await http.post(url, body: body, headers: headers);
+      debugPrint(
+          '[LeaveRequest][${widget.leaveType}][ResponseStatus] ${response.statusCode}');
+      debugPrint(
+          '[LeaveRequest][${widget.leaveType}][ResponseBody] ${response.body}');
+
       final data = jsonDecode(response.body);
 
       if (!mounted) return;
 
       if (response.statusCode == 200 &&
           data['result']?['status'] == 'success') {
+        debugPrint('[LeaveRequest][${widget.leaveType}][Result] SUCCESS');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Request submitted successfully!')),
         );
         Navigator.pop(context, true);
       } else {
-        _showErrorDialog(data['result']?['message'] ?? 'Request failed');
+        final backendErrorMessage = _extractBackendErrorMessage(data);
+        debugPrint(
+            '[LeaveRequest][${widget.leaveType}][Result] FAILURE: $backendErrorMessage');
+        _showErrorDialog(backendErrorMessage);
       }
     } catch (e) {
+      debugPrint('[LeaveRequest][${widget.leaveType}][Exception] $e');
       if (mounted) {
         _showErrorDialog('An error occurred. Please try again.');
       }
@@ -415,6 +425,43 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
         ],
       ),
     );
+  }
+
+  String _extractBackendErrorMessage(dynamic data) {
+    if (data is Map<String, dynamic>) {
+      final result = data['result'];
+      if (result is Map<String, dynamic>) {
+        final resultMessage = result['message'];
+        if (resultMessage is String && resultMessage.trim().isNotEmpty) {
+          return resultMessage;
+        }
+      }
+
+      final error = data['error'];
+      if (error is Map<String, dynamic>) {
+        final errorMessage = error['message'];
+        if (errorMessage is String && errorMessage.trim().isNotEmpty) {
+          final details = error['data'];
+          if (details is Map<String, dynamic>) {
+            final detailsMessage = details['message'];
+            if (detailsMessage is String && detailsMessage.trim().isNotEmpty) {
+              return '$errorMessage: $detailsMessage';
+            }
+            final name = details['name'];
+            if (name is String && name.trim().isNotEmpty) {
+              return '$errorMessage ($name)';
+            }
+            final debug = details['debug'];
+            if (debug is String && debug.trim().isNotEmpty) {
+              return '$errorMessage\n$debug';
+            }
+          }
+          return errorMessage;
+        }
+      }
+    }
+
+    return 'Request failed';
   }
 
   String _getPageTitle() {
@@ -503,8 +550,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: EdgeInsets.only(
-                      bottom:
-                          MediaQuery.of(context).viewInsets.bottom),
+                      bottom: MediaQuery.of(context).viewInsets.bottom),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

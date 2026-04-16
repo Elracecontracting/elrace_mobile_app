@@ -467,14 +467,14 @@ class _NotificationMuteSettingsScreenState
             )
           else
             Switch.adaptive(
-              value: isAlwaysOn ? false : category.muted,
-              activeColor: const Color(0xFFE53935),
-              activeTrackColor: const Color(0xFFEF9A9A),
-              inactiveThumbColor: const Color(0xFF43A047),
-              inactiveTrackColor: const Color(0xFFA5D6A7),
+              value: isAlwaysOn ? true : !category.muted,
+              activeColor: const Color(0xFF43A047),
+              activeTrackColor: const Color(0xFFA5D6A7),
+              inactiveThumbColor: const Color(0xFFE53935),
+              inactiveTrackColor: const Color(0xFFEF9A9A),
               onChanged: _isBulkUpdating || isAlwaysOn
                   ? null
-                  : (value) => _toggleMute(category, value),
+                  : (value) => _toggleMute(category, !value),
             ),
         ],
       ),

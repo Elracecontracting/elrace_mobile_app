@@ -52,7 +52,15 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
   void initState() {
     super.initState();
     displayedMonth = DateTime(selectedDate.year, selectedDate.month);
+    if (_shouldDisableMorning) {
+      selectedDuration = 'Afternoon';
+    }
   }
+
+  bool get _isCurrentTimeAfternoonOrLater => DateTime.now().hour >= 12;
+
+  bool get _shouldDisableMorning =>
+      selectedDay == 'Today' && _isCurrentTimeAfternoonOrLater;
 
   String formatDate(DateTime date) {
     return DateFormat('dd/MM/yyyy').format(date);
@@ -96,6 +104,8 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
 
     try {
       final token = SharedPref.getLoginData().result?.token;
+      final selectedMissionTypeApiValue =
+          _mapMissionTypeToApiValue(selectedMissionType);
 
       final url = Uri.parse("https://erp.elrace.com/api/submit_request");
 
@@ -103,14 +113,14 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
         "jsonrpc": "2.0",
         "params": {
           "request_type": "job_mission",
-          "leave_type": null,
+          "leave_type": selectedMissionTypeApiValue,
           "joined_date": _formatApiDate(selectedDate),
           "start_date": DateFormat('yyyy-MM-dd 00:00:00').format(selectedDate),
           "duration": null,
           "end_date": DateFormat('yyyy-MM-dd 00:00:00').format(selectedDate),
           "description": description,
           "note": description,
-          "job_type": _mapMissionTypeToApiValue(selectedMissionType),
+          "job_type": selectedMissionTypeApiValue,
           "job_time": selectedDuration.toLowerCase(),
           "job_date": null,
           "e_reason": null,
@@ -134,23 +144,35 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
         "Authorization": "Bearer $token"
       };
 
+      debugPrint('[JobMission][RequestBody] $body');
       final response = await http.post(url, body: body, headers: headers);
+      debugPrint('[JobMission][ResponseStatus] ${response.statusCode}');
+      debugPrint('[JobMission][ResponseBody] ${response.body}');
+
       final data = jsonDecode(response.body);
+      final rpcError = data is Map<String, dynamic>
+          ? data['error'] as Map<String, dynamic>?
+          : null;
+      final rpcResult = data is Map<String, dynamic>
+          ? data['result'] as Map<String, dynamic>?
+          : null;
 
       if (!mounted) return;
 
-      if (response.statusCode == 200 &&
-          data['result']?['status'] == 'success') {
+      if (response.statusCode == 200 && rpcResult?['status'] == 'success') {
+        debugPrint('[JobMission][Result] SUCCESS');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(translate('request.job_mission_success'))),
         );
         Navigator.pop(
             context, true); // ✅ Go back to MyRequestsPage with refresh flag
       } else {
-        _showErrorDialog(
-            data['result']?['message'] ?? translate('request.request_failed'));
+        final backendErrorMessage = _extractBackendErrorMessage(data);
+        debugPrint('[JobMission][Result] FAILURE: $backendErrorMessage');
+        _showErrorDialog(backendErrorMessage);
       }
     } catch (e) {
+      debugPrint('[JobMission][Exception] $e');
       if (mounted) {
         _showErrorDialog(translate('request.error_occurred'));
       }
@@ -161,12 +183,13 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
 
   void _showErrorDialog(String msg) {
     if (!mounted) return;
+    final cleanedMessage = _sanitizeErrorMessage(msg);
     showDialog(
       context: context,
       barrierColor: Colors.black.withAlpha(128),
       builder: (context) => AlertDialog(
         title: Text(translate('request.submission_failed')),
-        content: Text(msg),
+        content: Text(cleanedMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -175,6 +198,48 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
         ],
       ),
     );
+  }
+
+  String _sanitizeErrorMessage(String message) {
+    var cleaned = message.trim();
+    cleaned = cleaned.replaceFirst(
+      RegExp(r'^validation\s*error\s*[:\-]?\s*', caseSensitive: false),
+      '',
+    );
+    return cleaned.isEmpty ? message.trim() : cleaned;
+  }
+
+  String _extractBackendErrorMessage(dynamic data) {
+    if (data is Map<String, dynamic>) {
+      final result = data['result'];
+      if (result is Map<String, dynamic>) {
+        final resultMessage = result['message'];
+        if (resultMessage is String && resultMessage.trim().isNotEmpty) {
+          return resultMessage;
+        }
+      }
+
+      final error = data['error'];
+      if (error is Map<String, dynamic>) {
+        final errorMessage = error['message'];
+        if (errorMessage is String && errorMessage.trim().isNotEmpty) {
+          final details = error['data'];
+          if (details is Map<String, dynamic>) {
+            final detailsMessage = details['message'];
+            if (detailsMessage is String && detailsMessage.trim().isNotEmpty) {
+              return '$errorMessage: $detailsMessage';
+            }
+            final name = details['name'];
+            if (name is String && name.trim().isNotEmpty) {
+              return '$errorMessage ($name)';
+            }
+          }
+          return errorMessage;
+        }
+      }
+    }
+
+    return translate('request.request_failed');
   }
 
   Widget _buildDropdownHeader() {
@@ -615,249 +680,254 @@ class _RequestJobMissionPageState extends State<RequestJobMissionPage> {
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: EdgeInsets.only(
-                      bottom:
-                          MediaQuery.of(context).viewInsets.bottom),
+                      bottom: MediaQuery.of(context).viewInsets.bottom),
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
                       Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(child: _buildDropdownHeader()),
-                      SizedBox(height: 18.h),
-                      Center(
-                        child: Text(
-                          translate('request.select_day'),
-                          style: GoogleFonts.poppins(
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w400,
-                            letterSpacing: 1.5,
-                            color: _primary,
-                          ),
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Radio<String>(
-                                value: 'Today',
-                                groupValue: selectedDay,
-                                activeColor: _accentGrey,
-                                onChanged: (value) {
-                                  if (value == null) return;
-                                  setState(() {
-                                    selectedDay = value;
-                                    selectedDuration = 'Afternoon';
-                                    _onSelectedDateChanged(DateTime.now());
-                                  });
-                                },
+                          Center(child: _buildDropdownHeader()),
+                          SizedBox(height: 18.h),
+                          Center(
+                            child: Text(
+                              translate('request.select_day'),
+                              style: GoogleFonts.poppins(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w400,
+                                letterSpacing: 1.5,
+                                color: _primary,
                               ),
-                              Text(
-                                translate('request.today'),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black,
-                                ),
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Radio<String>(
+                                    value: 'Today',
+                                    groupValue: selectedDay,
+                                    activeColor: _accentGrey,
+                                    onChanged: (value) {
+                                      if (value == null) return;
+                                      setState(() {
+                                        selectedDay = value;
+                                        if (_shouldDisableMorning &&
+                                            selectedDuration == 'Morning') {
+                                          selectedDuration = 'Afternoon';
+                                        }
+                                        _onSelectedDateChanged(DateTime.now());
+                                      });
+                                    },
+                                  ),
+                                  Text(
+                                    translate('request.today'),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(width: 20.w),
+                              Row(
+                                children: [
+                                  Radio<String>(
+                                    value: 'Tomorrow',
+                                    groupValue: selectedDay,
+                                    activeColor: _accentGrey,
+                                    onChanged: (value) {
+                                      if (value == null) return;
+                                      setState(() {
+                                        selectedDay = value;
+                                        selectedDuration = 'Morning';
+                                        _onSelectedDateChanged(
+                                          DateTime.now()
+                                              .add(const Duration(days: 1)),
+                                        );
+                                      });
+                                    },
+                                  ),
+                                  Text(
+                                    translate('request.tomorrow'),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                          SizedBox(width: 20.w),
-                          Row(
-                            children: [
-                              Radio<String>(
-                                value: 'Tomorrow',
-                                groupValue: selectedDay,
-                                activeColor: _accentGrey,
-                                onChanged: (value) {
-                                  if (value == null) return;
-                                  setState(() {
-                                    selectedDay = value;
-                                    selectedDuration = 'Morning';
-                                    _onSelectedDateChanged(
-                                      DateTime.now()
-                                          .add(const Duration(days: 1)),
-                                    );
-                                  });
-                                },
+                          SizedBox(height: 10.h),
+                          Center(
+                            child: Text(
+                              translate('request.duration_type'),
+                              style: GoogleFonts.poppins(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w400,
+                                letterSpacing: 1.5,
+                                color: _primary,
                               ),
-                              Text(
-                                translate('request.tomorrow'),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black,
-                                ),
+                            ),
+                          ),
+                          SizedBox(height: 6.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Row(
+                                children: [
+                                  Radio<String>(
+                                    value: 'Morning',
+                                    groupValue: selectedDuration,
+                                    activeColor: _accentGrey,
+                                    onChanged: _shouldDisableMorning
+                                        ? null
+                                        : (value) {
+                                            if (value == null) return;
+                                            setState(
+                                                () => selectedDuration = value);
+                                          },
+                                  ),
+                                  Text(
+                                    translate('request.morning'),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: _shouldDisableMorning
+                                          ? Colors.grey
+                                          : Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(width: 20.w),
+                              Row(
+                                children: [
+                                  Radio<String>(
+                                    value: 'Afternoon',
+                                    groupValue: selectedDuration,
+                                    activeColor: _accentGrey,
+                                    onChanged: (value) {
+                                      if (value == null) return;
+                                      setState(() => selectedDuration = value);
+                                    },
+                                  ),
+                                  Text(
+                                    translate('request.afternoon'),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
+                          ),
+                          if (selectedMissionType == 'Client Visit') ...[
+                            SizedBox(height: 14.h),
+                            TextField(
+                              onChanged: (value) =>
+                                  setState(() => clientDetails = value),
+                              decoration: InputDecoration(
+                                labelText: translate('request.client_details'),
+                                labelStyle: GoogleFonts.poppins(
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: _primary,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                    vertical: 10.h, horizontal: 12.w),
+                                isDense: true,
+                              ),
+                            ),
+                            SizedBox(height: 12.h),
+                            TextField(
+                              onChanged: (value) =>
+                                  setState(() => projectDetails = value),
+                              decoration: InputDecoration(
+                                labelText: translate('request.project_details'),
+                                labelStyle: GoogleFonts.poppins(
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: _primary,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12.r),
+                                ),
+                                contentPadding: EdgeInsets.symmetric(
+                                    vertical: 10.h, horizontal: 12.w),
+                                isDense: true,
+                              ),
+                            ),
+                          ],
+                          SizedBox(height: 16.h),
+                          _buildCalendar(),
+                          SizedBox(height: 18.h),
+                          Text(
+                            translate('common.reason'),
+                            style: GoogleFonts.poppins(
+                              fontSize: 12.sp,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                          _buildDescriptionField(),
+                          SizedBox(height: 16.h),
+                          _buildNotice(),
+                          SizedBox(height: 24.h),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48.h,
+                            child: ElevatedButton(
+                              onPressed: isSubmitting
+                                  ? null
+                                  : _submitJobMissionRequest,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _accentGrey,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(24.r),
+                                ),
+                                elevation: 2,
+                              ),
+                              child: isSubmitting
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation(
+                                            Colors.white),
+                                      ),
+                                    )
+                                  : Text(
+                                      'SUBMIT',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 16.sp,
+                                        letterSpacing: 1.5,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
                           ),
                         ],
                       ),
-                      SizedBox(height: 10.h),
-                      Center(
-                        child: Text(
-                          translate('request.duration_type'),
-                          style: GoogleFonts.poppins(
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.w400,
-                            letterSpacing: 1.5,
-                            color: _primary,
-                          ),
+                      if (dropdownOpen)
+                        Positioned(
+                          top: 48.h,
+                          left: 0,
+                          right: 0,
+                          child: Center(child: _buildDropdownList()),
                         ),
-                      ),
-                      SizedBox(height: 6.h),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Row(
-                            children: [
-                              Radio<String>(
-                                value: 'Morning',
-                                groupValue: selectedDuration,
-                                activeColor: _accentGrey,
-                                onChanged: selectedDay == 'Today'
-                                    ? null
-                                    : (value) {
-                                        if (value == null) return;
-                                        setState(
-                                            () => selectedDuration = value);
-                                      },
-                              ),
-                              Text(
-                                translate('request.morning'),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(width: 20.w),
-                          Row(
-                            children: [
-                              Radio<String>(
-                                value: 'Afternoon',
-                                groupValue: selectedDuration,
-                                activeColor: _accentGrey,
-                                onChanged: (value) {
-                                  if (value == null) return;
-                                  setState(() => selectedDuration = value);
-                                },
-                              ),
-                              Text(
-                                translate('request.afternoon'),
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      if (selectedMissionType == 'Client Visit') ...[
-                        SizedBox(height: 14.h),
-                        TextField(
-                          onChanged: (value) =>
-                              setState(() => clientDetails = value),
-                          decoration: InputDecoration(
-                            labelText: translate('request.client_details'),
-                            labelStyle: GoogleFonts.poppins(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w700,
-                              color: _primary,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            contentPadding: EdgeInsets.symmetric(
-                                vertical: 10.h, horizontal: 12.w),
-                            isDense: true,
-                          ),
-                        ),
-                        SizedBox(height: 12.h),
-                        TextField(
-                          onChanged: (value) =>
-                              setState(() => projectDetails = value),
-                          decoration: InputDecoration(
-                            labelText: translate('request.project_details'),
-                            labelStyle: GoogleFonts.poppins(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w700,
-                              color: _primary,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.r),
-                            ),
-                            contentPadding: EdgeInsets.symmetric(
-                                vertical: 10.h, horizontal: 12.w),
-                            isDense: true,
-                          ),
-                        ),
-                      ],
-                      SizedBox(height: 16.h),
-                      _buildCalendar(),
-                      SizedBox(height: 18.h),
-                      Text(
-                        translate('common.reason'),
-                        style: GoogleFonts.poppins(
-                          fontSize: 12.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey[600],
-                        ),
-                      ),
-                      SizedBox(height: 8.h),
-                      _buildDescriptionField(),
-                      SizedBox(height: 16.h),
-                      _buildNotice(),
-                      SizedBox(height: 24.h),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48.h,
-                        child: ElevatedButton(
-                          onPressed:
-                              isSubmitting ? null : _submitJobMissionRequest,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _accentGrey,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(24.r),
-                            ),
-                            elevation: 2,
-                          ),
-                          child: isSubmitting
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor:
-                                        AlwaysStoppedAnimation(Colors.white),
-                                  ),
-                                )
-                              : Text(
-                                  'SUBMIT',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16.sp,
-                                    letterSpacing: 1.5,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (dropdownOpen)
-                    Positioned(
-                      top: 48.h,
-                      left: 0,
-                      right: 0,
-                      child: Center(child: _buildDropdownList()),
-                    ),
                     ],
                   ),
                 ),
