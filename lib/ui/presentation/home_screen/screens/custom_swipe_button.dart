@@ -553,9 +553,9 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
       // BEFORE updateReminders() reads SharedPref
       await Get.find<TimerController>().startTimer();
 
-      // جدولة Auto Check-out في الساعة 5 مساءً
+      // جدولة Auto Check-out في الساعة 5:10 مساءً
       await AutoCheckoutService.scheduleAutoCheckout();
-      // debugPrint('✅ Auto checkout scheduled for 5:00 PM after check-in');
+      // debugPrint('✅ Auto checkout scheduled for 5:10 PM after check-in');
 
       // جدولة إشعارات التذكير بـ check out (من 4 مساءً - 5 مساءً)
       await CheckInReminderNotificationService().updateReminders();

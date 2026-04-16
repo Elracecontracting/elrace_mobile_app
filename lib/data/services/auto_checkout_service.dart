@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:el_race/core/utils/shared_pref.dart';
+import 'package:el_race/data/services/checkin_reminder_notification_service.dart';
 import 'package:el_race/ui/presentation/landing_screen/bloc/checkin_out_bloc/check_out_bloc.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/timer_controller.dart';
 import 'package:el_race/utils/di.dart';
@@ -7,13 +8,15 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:workmanager/workmanager.dart';
 
-/// خدمة تنفيذ الـ Auto Check-out التلقائي في الساعة 5 مساءً
+/// خدمة تنفيذ الـ Auto Check-out التلقائي في الساعة 5:10 مساءً
 ///
-/// هذه الخدمة تستخدم WorkManager لجدولة check-out تلقائي يومياً في الساعة 5 مساءً
+/// هذه الخدمة تستخدم WorkManager لجدولة check-out تلقائي يومياً في الساعة 5:10 مساءً
 /// بدون طلب Face ID authentication
 class AutoCheckoutService {
   static const String taskName = 'auto_checkout_task';
   static const String uniqueName = 'daily_auto_checkout';
+  static const int _autoCheckoutHour = 17;
+  static const int _autoCheckoutMinute = 10;
 
   /// تهيئة خدمة الـ Auto Check-out
   static Future<void> initialize() async {
@@ -28,24 +31,24 @@ class AutoCheckoutService {
 
   /// جدولة مهمة Auto Check-out اليومية
   ///
-  /// هذه المهمة تُنفذ يومياً في الساعة 5 مساءً (17:00)
+  /// هذه المهمة تُنفذ يومياً في الساعة 5:10 مساءً (17:10)
   static Future<void> scheduleAutoCheckout() async {
     try {
       // إلغاء أي مهام سابقة
       await Workmanager().cancelByUniqueName(uniqueName);
 
-      // حساب الوقت حتى الساعة 5 مساءً القادمة
+      // حساب الوقت حتى الساعة 5:10 مساءً القادمة
       final now = DateTime.now();
       DateTime targetTime = DateTime(
         now.year,
         now.month,
         now.day,
-        17, // الساعة 5 مساءً
-        0, // دقيقة
+        _autoCheckoutHour, // الساعة 5 مساءً
+        _autoCheckoutMinute, // 10 دقائق
         0, // ثانية
       );
 
-      // إذا كانت الساعة الآن بعد 5 مساءً، جدول للغد
+      // إذا كانت الساعة الآن بعد 5:10 مساءً، جدول للغد
       if (now.isAfter(targetTime)) {
         targetTime = targetTime.add(const Duration(days: 1));
       }
@@ -131,6 +134,12 @@ class AutoCheckoutService {
       await SharedPref().removePreference('checkInProjectId');
       await SharedPref().removePreference('checkInBranchId');
       await SharedPref().removePreference('checkInAuthMethod');
+
+      try {
+        await CheckInReminderNotificationService().updateReminders();
+      } catch (e) {
+        debugPrint('⚠️ Error updating reminders after auto checkout: $e');
+      }
 
       debugPrint('✅ Auto checkout completed successfully');
     } catch (e) {

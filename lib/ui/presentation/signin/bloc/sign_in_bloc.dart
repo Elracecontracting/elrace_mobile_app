@@ -68,6 +68,22 @@ class SignInBloc extends Bloc<SignInEvent, SignInState> {
         log('loginResponseModel ${response.data}');
 
         if (loginResponseModel.result?.success == true) {
+          // ============ TOKEN PRINT ============
+          final _token = loginResponseModel.result?.token ?? 'NO TOKEN';
+          print('');
+          print('========================================');
+          print('========================================');
+          print('====   USER TOKEN AFTER LOGIN   ========');
+          print('========================================');
+          print('');
+          print('TOKEN: $_token');
+          print('');
+          print('========================================');
+          print('========================================');
+          print('');
+          log('USER_TOKEN: $_token');
+          // ======================================
+
           emit(InitialSignedInST(loginResponse: loginResponseModel));
           emit(const LoadingST(isLoading: false));
           await userRepo.setLoginResponse(loginResponseModel);
