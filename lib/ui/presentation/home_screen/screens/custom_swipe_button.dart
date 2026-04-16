@@ -313,6 +313,9 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
           SharedPref().removePreference('checkInAuthMethod');
           SharedPref().setPreferenceInt('checkInTime', 0);
 
+          // مسح وقت آخر تشيك اوت محلي حتى لا يمنع مزامنة بيانات السيرفر
+          SharedPref().setPreferenceInt('lastLocalCheckOutTime', 0);
+
           // Update notifications
           CheckInReminderNotificationService().updateReminders();
 
@@ -550,9 +553,9 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
       // BEFORE updateReminders() reads SharedPref
       await Get.find<TimerController>().startTimer();
 
-      // جدولة Auto Check-out في الساعة 5 مساءً
+      // جدولة Auto Check-out في الساعة 5:10 مساءً
       await AutoCheckoutService.scheduleAutoCheckout();
-      // debugPrint('✅ Auto checkout scheduled for 5:00 PM after check-in');
+      // debugPrint('✅ Auto checkout scheduled for 5:10 PM after check-in');
 
       // جدولة إشعارات التذكير بـ check out (من 4 مساءً - 5 مساءً)
       await CheckInReminderNotificationService().updateReminders();
@@ -718,7 +721,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                                   child: Text(
                                     translate(
                                         'custom_swipe_button.swipe_to_check_in'),
-                                    style: GoogleFonts.akatab(
+                                    style: GoogleFonts.poppins(
                                       color: const Color(0xFF151544),
                                       fontSize: 18.sp,
                                       fontWeight: FontWeight.w700,
@@ -735,7 +738,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                                   child: Text(
                                     translate(
                                         'custom_swipe_button.swipe_to_check_out'),
-                                    style: GoogleFonts.akatab(
+                                    style: GoogleFonts.poppins(
                                       color: const Color(0xFF151544),
                                       fontSize: 18.sp,
                                       fontWeight: FontWeight.w700,
@@ -897,21 +900,11 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                             ),
                             child: Text(
                               _checkInDisplayTime,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontSize: 10.sp,
                                 fontWeight: FontWeight.w500,
                               ),
-                            ),
-                          ),
-
-                          // Total hours text in the middle
-                          Text(
-                            '$_totalHoursDisplay H',
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 10.sp,
-                              fontWeight: FontWeight.w600,
                             ),
                           ),
 
@@ -925,7 +918,7 @@ class _CustomSwipeButtonState extends State<CustomSwipeButton>
                             ),
                             child: Text(
                               _checkOutDisplayTime,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontSize: 10.sp,
                                 fontWeight: FontWeight.w500,

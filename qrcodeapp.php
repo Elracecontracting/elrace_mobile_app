@@ -96,19 +96,36 @@ $isIOS = stripos($userAgent, 'iPhone') !== false || stripos($userAgent, 'iPad') 
         
         function openApp() {
             var deepLink = "<?php echo $deep_link; ?>";
-            var androidPackage = "<?php echo $android_package; ?>";
             var androidFallback = "<?php echo $android_fallback; ?>";
             var iosFallback = "<?php echo $ios_fallback; ?>";
+            var redirected = false;
+            var fallbackTimer = null;
+
+            function markRedirected() {
+                redirected = true;
+                if (fallbackTimer) {
+                    clearTimeout(fallbackTimer);
+                    fallbackTimer = null;
+                }
+            }
+
+            // If app opens, browser usually gets hidden/backgrounded.
+            document.addEventListener('visibilitychange', function() {
+                if (document.hidden) markRedirected();
+            });
+            window.addEventListener('pagehide', markRedirected);
+            window.addEventListener('blur', markRedirected);
             
             if (isAndroid()) {
                 console.log('Android detected - attempting to open app');
                 
                 window.location.href = deepLink;
                 
-                setTimeout(function() {
+                fallbackTimer = setTimeout(function() {
+                    if (redirected || document.hidden) return;
                     console.log('Fallback to Play Store');
                     window.location.href = androidFallback;
-                }, 2500);
+                }, 1800);
                 
             } else if (isIOS()) {
                 console.log('iOS detected - attempting to open app');
@@ -117,10 +134,11 @@ $isIOS = stripos($userAgent, 'iPhone') !== false || stripos($userAgent, 'iPad') 
                 window.location.href = deepLink;
                 
                 // Fallback to App Store after 2.5 seconds if app doesn't open
-                setTimeout(function() {
+                fallbackTimer = setTimeout(function() {
+                    if (redirected || document.hidden) return;
                     console.log('Fallback to App Store');
                     window.location.href = iosFallback;
-                }, 2500);
+                }, 1800);
                 
             } else {
                 document.getElementById('loading').style.display = 'none';

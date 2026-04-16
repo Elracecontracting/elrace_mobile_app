@@ -136,7 +136,7 @@ class MyActionCard extends StatelessWidget {
                                           .toUpperCase()
                                       : 'N/A',
                                   textAlign: TextAlign.center,
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 13.sp,
                                     fontWeight: FontWeight.bold,
                                     color: appFontColor,
@@ -157,7 +157,7 @@ class MyActionCard extends StatelessWidget {
                                   children: [
                                     Text(
                                       translate('home.REQ_NO'),
-                                      style: GoogleFonts.inter(
+                                      style: GoogleFonts.poppins(
                                         fontSize: 11,
                                         fontWeight: FontWeight.bold,
                                         color: appFontColor,
@@ -166,12 +166,12 @@ class MyActionCard extends StatelessWidget {
                                     Text(
                                       reqNo,
                                       textAlign: TextAlign.center,
-                                      style: GoogleFonts.inter(
+                                      style: GoogleFonts.poppins(
                                         fontSize: 11.sp,
                                         fontWeight: FontWeight.w500,
                                         color: Colors.black,
                                       ),
-                                      overflow: TextOverflow.ellipsis,
+                                      overflow: TextOverflow.visible,
                                     ),
                                   ],
                                 ),
@@ -188,12 +188,12 @@ class MyActionCard extends StatelessWidget {
                                 child: Text(
                                   title,
                                   textAlign: TextAlign.center,
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 14.sp,
                                     fontWeight: FontWeight.bold,
                                     color: appFontColor,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
+                                  overflow: TextOverflow.visible,
                                   maxLines: 2,
                                 ),
                               ),

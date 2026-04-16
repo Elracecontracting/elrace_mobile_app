@@ -239,7 +239,7 @@ class _PettyCashExpenseLinesScreenState
                         children: [
                           Text(
                             widget.sheetName,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
                               color: Colors.black87,
@@ -260,7 +260,7 @@ class _PettyCashExpenseLinesScreenState
                                 const SizedBox(width: 6),
                                 Text(
                                   widget.sheetState!.toUpperCase(),
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
                                     color: _statusColor(widget.sheetState),
@@ -275,7 +275,7 @@ class _PettyCashExpenseLinesScreenState
                     if (widget.totalAmount != null)
                       Text(
                         '${_formatAmount(widget.totalAmount)} AED',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 18,
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFFD1002C),
@@ -301,7 +301,7 @@ class _PettyCashExpenseLinesScreenState
                 const SizedBox(width: 8),
                 Text(
                   'EXPENSE LINES',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                     color: Colors.black87,
@@ -318,7 +318,7 @@ class _PettyCashExpenseLinesScreenState
                     ),
                     child: Text(
                       '${expenseLines.length}',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: Colors.white,
@@ -345,7 +345,7 @@ class _PettyCashExpenseLinesScreenState
                             const SizedBox(height: 16),
                             Text(
                               'Error loading expense lines',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.black54,
@@ -363,7 +363,7 @@ class _PettyCashExpenseLinesScreenState
                         ? Center(
                             child: Text(
                               'No expense lines found.',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 color: Colors.grey,
                               ),
@@ -438,8 +438,8 @@ class _PettyCashExpenseLinesScreenState
                 Text(
                   name,
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
+                  overflow: TextOverflow.visible,
+                  style: GoogleFonts.poppins(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: Colors.black87,
@@ -451,7 +451,7 @@ class _PettyCashExpenseLinesScreenState
                     if (expenseType.isNotEmpty) ...[
                       Text(
                         expenseType.toUpperCase(),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                           color: _getExpenseTypeColor(expenseType),
@@ -462,7 +462,7 @@ class _PettyCashExpenseLinesScreenState
                     if (date.isNotEmpty)
                       Text(
                         date,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                           color: Colors.black45,
@@ -480,7 +480,7 @@ class _PettyCashExpenseLinesScreenState
             children: [
               Text(
                 '-${_formatAmount(amount)}',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: const Color(0xFFD1002C),
@@ -497,7 +497,7 @@ class _PettyCashExpenseLinesScreenState
                   ),
                   child: Text(
                     state.toUpperCase(),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 9,
                       fontWeight: FontWeight.w700,
                       color: _statusColor(state),

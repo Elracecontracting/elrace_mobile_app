@@ -120,7 +120,7 @@ class GlassTabWidget extends StatelessWidget {
                   const SizedBox(width: 6),
                   Text(
                     title.toUpperCase(),
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       color:
                           isSelected ? Colors.white : const Color(0xFF1A237E),
                       fontSize: 18.sp,

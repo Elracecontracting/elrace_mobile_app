@@ -64,7 +64,7 @@
 //         children: [
 //           Text(
 //             model.title,
-//             style: GoogleFonts.kanit(
+//             style: GoogleFonts.poppins(
 //               fontSize: 10,
 //               fontWeight: FontWeight.w400,
 //             ),
@@ -74,7 +74,7 @@
 //           ),
 //           Text(
 //             model.timeLeft,
-//             style: GoogleFonts.kanit(
+//             style: GoogleFonts.poppins(
 //               fontSize: 10,
 //               fontWeight: FontWeight.w400,
 //             ),

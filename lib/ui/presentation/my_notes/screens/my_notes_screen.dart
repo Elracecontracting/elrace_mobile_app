@@ -230,7 +230,7 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
           style: const TextStyle(
             color: Color(0xFF1A1A53),
             fontSize: 15,
-            fontFamily: 'Koulen',
+            fontFamily: 'Poppins',
             fontWeight: FontWeight.w400,
           ),
           decoration: InputDecoration(
@@ -239,7 +239,7 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
               contentPadding: const EdgeInsets.symmetric(vertical: 14),
               hintStyle: const TextStyle(
                   fontSize: 12,
-                  fontFamily: 'Koulen',
+                  fontFamily: 'Poppins',
                   fontWeight: FontWeight.w400,
                   color: Color(0xFF1A1A53)),
               prefixIcon: Padding(
@@ -281,7 +281,7 @@ class _MyNotesScreenState extends State<MyNotesScreen> {
                 labelText: translate('notes.title'),
                 border: const OutlineInputBorder(),
               ),
-              maxLines: 1,
+              maxLines: null,
             ),
             const SizedBox(height: 16),
             TextField(

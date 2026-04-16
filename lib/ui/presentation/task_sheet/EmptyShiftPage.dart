@@ -268,7 +268,7 @@ class _EmptyShiftPageState extends State<EmptyShiftPage> {
         Center(
           child: Text(
             'TIME SHEET',
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 20,
               fontWeight: FontWeight.w400,
               color: Colors.black,
@@ -296,7 +296,7 @@ class _EmptyShiftPageState extends State<EmptyShiftPage> {
           child: Text(
             "NO SHIFTS OR ABSENCES WERE\nRECORDED ON , $formattedAPIDate",
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14,
               fontWeight: FontWeight.w700,
               color: Colors.black,
@@ -360,7 +360,7 @@ class _EmptyShiftPageState extends State<EmptyShiftPage> {
                   child: Center(
                     child: Text(
                       'Add a new request',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 15,
                         fontWeight: FontWeight.w500,
                         color: Colors.black,

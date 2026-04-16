@@ -86,7 +86,7 @@ class _PettyCashMyActionScreenState extends State<PettyCashMyActionScreen> {
                       SizedBox(height: 16.h),
                       Text(
                         'Service not available',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5A5A5A),
@@ -96,7 +96,7 @@ class _PettyCashMyActionScreenState extends State<PettyCashMyActionScreen> {
                       Text(
                         'This feature is currently unavailable.\nPlease try again later.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           color: const Color(0xFF9AA0A6),
                         ),
@@ -146,7 +146,7 @@ class _PettyCashMyActionScreenState extends State<PettyCashMyActionScreen> {
                         SizedBox(width: 8.w),
                         Text(
                           'PETTYCASH',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 18.sp,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF101C36),
@@ -163,7 +163,7 @@ class _PettyCashMyActionScreenState extends State<PettyCashMyActionScreen> {
                     child: Center(
                       child: Text(
                         'No actions available.',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5A5A5A),
@@ -219,9 +219,9 @@ class _PettyCashRequestCard extends StatelessWidget {
                 Center(
                   child: Text(
                     item.requestNo,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
+                    style: GoogleFonts.poppins(
                       fontSize: 13.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF0A3887),
@@ -231,8 +231,8 @@ class _PettyCashRequestCard extends StatelessWidget {
                 SizedBox(height: 26.h),
                 Text(
                   item.title.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                   style: GoogleFonts.poppins(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w700,
@@ -248,7 +248,7 @@ class _PettyCashRequestCard extends StatelessWidget {
                       child: Center(
                         child: Text(
                           item.amount,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 22.sp,
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFF073A85),
@@ -263,7 +263,7 @@ class _PettyCashRequestCard extends StatelessWidget {
                         children: [
                           Text(
                             'Last Updated',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 9.sp,
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFFB8B8B8),
@@ -271,7 +271,7 @@ class _PettyCashRequestCard extends StatelessWidget {
                           ),
                           Text(
                             item.lastUpdated,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 9.sp,
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFFB8B8B8),

@@ -177,13 +177,13 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
                       Flexible(
                         child: Text(
                           widget.folderName ?? 'FOLDERS',
-                          style: GoogleFonts.koulen(
+                          style: GoogleFonts.poppins(
                             fontSize: 22.sp,
                             fontWeight: FontWeight.w500,
                             color: appFontColor,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
                         ),
                       ),
                     ],
@@ -213,7 +213,7 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
                     SizedBox(height: 16.h),
                     Text(
                       'Error loading documents',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w500,
                         color: Colors.red,
@@ -224,7 +224,7 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
                       padding: EdgeInsets.symmetric(horizontal: 32.w),
                       child: Text(
                         _error!,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 12.sp,
                           color: Colors.grey,
                         ),
@@ -254,7 +254,7 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
                     SizedBox(height: 16.h),
                     Text(
                       'No documents found',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 16.sp,
                         color: Colors.grey,
                       ),
@@ -272,7 +272,7 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
                       EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                   child: Text(
                     'FOLDERS',
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF151544),
@@ -300,7 +300,7 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
                 padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
                 child: Text(
                   'ATTACHMENTS',
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w500,
                     color: const Color(0xFF151544),
@@ -327,7 +327,7 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
                   padding: EdgeInsets.symmetric(horizontal: 16.w),
                   child: Text(
                     'ما في مرفقات',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w500,
                       color: Colors.grey,
@@ -441,9 +441,9 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
                         child: Text(
                           name.isEmpty ? 'File Name' : name,
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                          overflow: TextOverflow.visible,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF2E3445),
@@ -475,7 +475,7 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
             child: Center(
               child: Text(
                 'PDF',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 10.sp,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -498,7 +498,7 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
             child: Center(
               child: Text(
                 'XLS',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 10.sp,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -517,7 +517,7 @@ class _CloudDocumentsScreenState extends State<CloudDocumentsScreen> {
         child: Center(
           child: Text(
             'DOC',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 10.sp,
               fontWeight: FontWeight.bold,
               color: Colors.white,

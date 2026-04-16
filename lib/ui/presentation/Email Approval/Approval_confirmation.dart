@@ -297,7 +297,7 @@ class _ApprovalConfirmationScreenState
                   children: [
                     Text(
                       'Employee Details',
-                      style: GoogleFonts.koulen(
+                      style: GoogleFonts.poppins(
                         fontSize: 18,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 1.0,
@@ -413,7 +413,7 @@ class _ApprovalConfirmationScreenState
                             const SizedBox(width: 8),
                             Text(
                               'Employee Details',
-                              style: GoogleFonts.koulen(
+                              style: GoogleFonts.poppins(
                                 fontSize: 19.sp,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.0,
@@ -448,7 +448,7 @@ class _ApprovalConfirmationScreenState
             ),
             Text(
               'Request Details',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 23.sp,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.0,
@@ -615,7 +615,7 @@ class _ApprovalConfirmationScreenState
                                 ),
                                 label: Text(
                                   "VIEW ATTACHMENT",
-                                  style: GoogleFonts.koulen(
+                                  style: GoogleFonts.poppins(
                                     color: Colors.white,
                                     letterSpacing: 1.0,
                                   ),
@@ -740,7 +740,7 @@ class _ApprovalConfirmationScreenState
                   SizedBox(height: 6.w),
                   Text(
                     'REQUEST DETAILS',
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 26.sp,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.2,
@@ -874,7 +874,7 @@ class _ApprovalConfirmationScreenState
         children: [
           Text(
             bullet,
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 12.sp,
               fontWeight: FontWeight.w500,
               letterSpacing: 1.0,
@@ -885,7 +885,7 @@ class _ApprovalConfirmationScreenState
             width: 135.w,
             child: Text(
               label,
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.0,
@@ -920,9 +920,9 @@ class _ApprovalConfirmationScreenState
           Expanded(
             child: Text(
               displayName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.koulen(
+              maxLines: null,
+              overflow: TextOverflow.visible,
+              style: GoogleFonts.poppins(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.0,
@@ -944,7 +944,7 @@ class _ApprovalConfirmationScreenState
         children: [
           Text(
             bullet,
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 12.sp,
               fontWeight: FontWeight.w500,
               letterSpacing: 1.0,
@@ -955,7 +955,7 @@ class _ApprovalConfirmationScreenState
             width: 135.w,
             child: Text(
               label,
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.0,
@@ -974,7 +974,7 @@ class _ApprovalConfirmationScreenState
               child: Text(
                 display,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 1.0,
@@ -1000,7 +1000,7 @@ class _ApprovalConfirmationScreenState
         children: [
           Text(
             bullet,
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 12.sp,
               fontWeight: FontWeight.w500,
               letterSpacing: 1.0,
@@ -1011,7 +1011,7 @@ class _ApprovalConfirmationScreenState
             width: 135.w,
             child: Text(
               'ATTACHMENT',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.0,
@@ -1037,7 +1037,7 @@ class _ApprovalConfirmationScreenState
                 child: Text(
                   'VIEW',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.0,
@@ -1164,7 +1164,7 @@ class _ApprovalConfirmationScreenState
                                         alignment: Alignment.center,
                                         child: Text(
                                           'No items',
-                                          style: GoogleFonts.koulen(
+                                          style: GoogleFonts.poppins(
                                             fontSize: 14.sp,
                                             letterSpacing: 1.0,
                                             color: Colors.black54,
@@ -1253,7 +1253,7 @@ class _ApprovalConfirmationScreenState
                           SizedBox(height: 6.w),
                           Text(
                             '${i + 1}',
-                            style: GoogleFonts.koulen(
+                            style: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               fontWeight:
                                   active ? FontWeight.w700 : FontWeight.w600,
@@ -1355,7 +1355,7 @@ class _ApprovalConfirmationScreenState
                   SizedBox(height: 6.w),
                   Text(
                     'REQUEST DETAILS',
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 26.sp,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.2,
@@ -1485,7 +1485,7 @@ class _ApprovalConfirmationScreenState
         children: [
           Text(
             bullet,
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 12.sp,
               fontWeight: FontWeight.w500,
               letterSpacing: 1.0,
@@ -1496,7 +1496,7 @@ class _ApprovalConfirmationScreenState
             width: 135.w,
             child: Text(
               label,
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.0,
@@ -1515,7 +1515,7 @@ class _ApprovalConfirmationScreenState
               child: Text(
                 display,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 1.0,
@@ -1539,7 +1539,7 @@ class _ApprovalConfirmationScreenState
         children: [
           Text(
             '●',
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 12.sp,
               fontWeight: FontWeight.w500,
               letterSpacing: 1.0,
@@ -1550,7 +1550,7 @@ class _ApprovalConfirmationScreenState
             width: 135.w,
             child: Text(
               'ATTACHMENT',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.0,
@@ -1571,7 +1571,7 @@ class _ApprovalConfirmationScreenState
                 child: Text(
                   'View',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.0,
@@ -1696,7 +1696,7 @@ class _ApprovalConfirmationScreenState
         child: Text(
           text,
           textAlign: TextAlign.center,
-          style: GoogleFonts.koulen(
+          style: GoogleFonts.poppins(
             fontSize: 12.sp,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.0,
@@ -1721,14 +1721,14 @@ class _ApprovalConfirmationScreenState
         child: Text(
           text,
           textAlign: TextAlign.center,
-          style: GoogleFonts.koulen(
+          style: GoogleFonts.poppins(
             fontSize: 12.sp,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.0,
             color: Colors.black,
           ),
           maxLines: 3,
-          overflow: TextOverflow.ellipsis,
+          overflow: TextOverflow.visible,
         ),
       );
     }
@@ -1784,7 +1784,7 @@ class _ApprovalConfirmationScreenState
                                   alignment: Alignment.center,
                                   child: Text(
                                     'No items',
-                                    style: GoogleFonts.koulen(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 14.sp,
                                       letterSpacing: 1.0,
                                       color: Colors.black54,
@@ -1951,7 +1951,7 @@ class _ApprovalConfirmationScreenState
                   SizedBox(height: 6.w),
                   Text(
                     'REQUEST DETAILS',
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 26.sp,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.2,
@@ -2168,7 +2168,7 @@ class _ApprovalConfirmationScreenState
                                   alignment: Alignment.center,
                                   child: Text(
                                     'No items',
-                                    style: GoogleFonts.koulen(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 14.sp,
                                       letterSpacing: 1.0,
                                       color: Colors.black54,
@@ -2285,7 +2285,7 @@ class _ApprovalConfirmationScreenState
         child: Text(
           text,
           textAlign: TextAlign.center,
-          style: GoogleFonts.koulen(
+          style: GoogleFonts.poppins(
             fontSize: 12.sp,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.0,
@@ -2336,14 +2336,14 @@ class _ApprovalConfirmationScreenState
         child: Text(
           text.isEmpty ? '' : text,
           textAlign: TextAlign.center,
-          style: GoogleFonts.koulen(
+          style: GoogleFonts.poppins(
             fontSize: 12.sp,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.0,
             color: Colors.black,
           ),
           maxLines: 3,
-          overflow: TextOverflow.ellipsis,
+          overflow: TextOverflow.visible,
         ),
       );
     }
@@ -2378,7 +2378,7 @@ class _ApprovalConfirmationScreenState
         children: [
           Text(
             bullet,
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 12.sp,
               fontWeight: FontWeight.w500,
               letterSpacing: 1.0,
@@ -2389,7 +2389,7 @@ class _ApprovalConfirmationScreenState
             width: 135.w,
             child: Text(
               label,
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.0,
@@ -2408,7 +2408,7 @@ class _ApprovalConfirmationScreenState
               child: Text(
                 display,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 1.0,
@@ -2431,7 +2431,7 @@ class _ApprovalConfirmationScreenState
         children: [
           Text(
             '●',
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 12.sp,
               fontWeight: FontWeight.w500,
               letterSpacing: 1.0,
@@ -2442,7 +2442,7 @@ class _ApprovalConfirmationScreenState
             width: 135.w,
             child: Text(
               'ATTACHMENT',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.0,
@@ -2465,7 +2465,7 @@ class _ApprovalConfirmationScreenState
                 child: Text(
                   'View',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.0,
@@ -2560,9 +2560,9 @@ class _ApprovalConfirmationScreenState
                             Expanded(
                               child: Text(
                                 employeeName.toUpperCase(),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.koulen(
+                                maxLines: null,
+                                overflow: TextOverflow.visible,
+                                style: GoogleFonts.poppins(
                                   fontSize: 20.sp,
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 1.0,
@@ -2584,7 +2584,7 @@ class _ApprovalConfirmationScreenState
                     SizedBox(height: 18.w),
                     Text(
                       'REQUEST DETAILS',
-                      style: GoogleFonts.koulen(
+                      style: GoogleFonts.poppins(
                         fontSize: 26.sp,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 1.2,
@@ -2683,7 +2683,7 @@ class _ApprovalConfirmationScreenState
         children: [
           Text(
             bullet,
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 12.sp,
               fontWeight: FontWeight.w500,
               letterSpacing: 1.0,
@@ -2694,7 +2694,7 @@ class _ApprovalConfirmationScreenState
             width: 120.w,
             child: Text(
               label,
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.0,
@@ -2713,7 +2713,7 @@ class _ApprovalConfirmationScreenState
               child: Text(
                 value,
                 textAlign: TextAlign.center,
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 1.0,
@@ -2736,7 +2736,7 @@ class _ApprovalConfirmationScreenState
         children: [
           Text(
             '●',
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 12.sp,
               fontWeight: FontWeight.w500,
               letterSpacing: 1.0,
@@ -2747,7 +2747,7 @@ class _ApprovalConfirmationScreenState
             width: 120.w,
             child: Text(
               'ATTACHMENT',
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 15.sp,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.0,
@@ -2768,7 +2768,7 @@ class _ApprovalConfirmationScreenState
                 ),
                 child: Text(
                   'View',
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.0,
@@ -2790,7 +2790,7 @@ class _ApprovalConfirmationScreenState
           children: [
             Text(
               "●",
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                   letterSpacing: 1.0),
@@ -2799,7 +2799,7 @@ class _ApprovalConfirmationScreenState
             Expanded(
               child: Text(
                 label,
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 15.sp,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 1.0,
@@ -2818,7 +2818,7 @@ class _ApprovalConfirmationScreenState
                 ),
                 child: Text(
                   value,
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     letterSpacing: 1.0,
@@ -2875,7 +2875,7 @@ class _ApprovalConfirmationScreenState
               child: Text(
                 approver['name'] ?? '',
                 style: TextStyle(fontSize: 10.sp),
-                overflow: TextOverflow.ellipsis,
+                overflow: TextOverflow.visible,
               ),
             )
           ],
@@ -2895,7 +2895,7 @@ class _ApprovalConfirmationScreenState
             child: Text(
               value ?? "N/A",
               style: const TextStyle(fontSize: 13),
-              overflow: TextOverflow.ellipsis,
+              overflow: TextOverflow.visible,
             ),
           ),
         ],
@@ -2936,7 +2936,7 @@ class _ApprovalConfirmationScreenState
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Text(
         "$label ${value ?? ''}",
-        style: GoogleFonts.koulen(
+        style: GoogleFonts.poppins(
           fontSize: 13,
           fontWeight: FontWeight.w300,
           color: Colors.white,

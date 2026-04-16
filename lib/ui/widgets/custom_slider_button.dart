@@ -178,7 +178,7 @@ class CustomSliderButtonState extends State<CustomSliderButton> {
               alignment: Alignment.center,
               child: Text(
                 "SUBMIT",
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                   color: _isCompleted

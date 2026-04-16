@@ -47,8 +47,7 @@ class AppSettingsWidget extends StatelessWidget {
     if (dialogHostContext == null) return;
 
     final settings = results[0] as Map<String, bool>;
-    final apiCategories =
-        results[1] as List<NotificationCategoryApiModel>;
+    final apiCategories = results[1] as List<NotificationCategoryApiModel>;
 
     final channels = apiCategories
         .where((c) => c.model.trim().isNotEmpty)
@@ -135,15 +134,18 @@ class AppSettingsWidget extends StatelessWidget {
                             ),
                             Transform.scale(
                               scale: 0.9,
-                              child: Switch(
-                                value: valueByKey[item.key] ?? false,
-                                onChanged: isSaving
-                                    ? null
-                                    : (value) => updateChannel(item, value),
-                                activeThumbColor: const Color(0xFFE53935),
-                                activeTrackColor: const Color(0xFFEF9A9A),
-                                inactiveThumbColor: const Color(0xFF43A047),
-                                inactiveTrackColor: const Color(0xFFA5D6A7),
+                              child: Directionality(
+                                textDirection: TextDirection.ltr,
+                                child: Switch(
+                                  value: !(valueByKey[item.key] ?? false),
+                                  onChanged: isSaving
+                                      ? null
+                                      : (value) => updateChannel(item, !value),
+                                  activeThumbColor: const Color(0xFF43A047),
+                                  activeTrackColor: const Color(0xFFA5D6A7),
+                                  inactiveThumbColor: const Color(0xFFE53935),
+                                  inactiveTrackColor: const Color(0xFFEF9A9A),
+                                ),
                               ),
                             ),
                           ],
@@ -330,7 +332,7 @@ class AppSettingsWidget extends StatelessWidget {
                     Image.asset('assets/png/notification_filled_icon.png'),
                     const SizedBox(width: 12),
                     Text(translate('profile.mute_notifications'),
-                        style: GoogleFonts.inter(fontSize: 11)),
+                        style: GoogleFonts.poppins(fontSize: 11)),
                     const Spacer(),
                     Consumer<ProfileBoxProvider>(
                       builder: (context, provider, child) {
@@ -559,7 +561,8 @@ class AppSettingsWidget extends StatelessWidget {
 
                       // إلغاء إشعارات التذكير بـ check in/out عند تسجيل الخروج
                       try {
-                        await CheckInReminderNotificationService().cancelAllReminders();
+                        await CheckInReminderNotificationService()
+                            .cancelAllReminders();
                         // print('✅ Check-in/out reminders cancelled');
                       } catch (e) {
                         // print('⚠️ Failed to cancel reminders (continuing): $e');

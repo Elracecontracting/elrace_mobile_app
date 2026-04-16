@@ -207,7 +207,29 @@ class _AttendancePageState extends State<AttendancePage> {
     return hasCheckOut ? 'CHECK IN • CHECK OUT' : 'CHECK IN';
   }
 
-  Widget _buildActionCard({required String title}) {
+  /// Returns the display color for an [AttendanceRecord] based on its
+  /// attendance type or computed check-in status.
+  Color _colorForRecord(AttendanceRecord record,
+      {required String computedStatus}) {
+    final type = (record.attendanceType?.trim() ?? '').toLowerCase();
+    const normalTypes = {'normal', 'attendance', ''};
+    if (normalTypes.contains(type)) {
+      // Server marked as normal — respect late/absent only when NO type is set
+      if (type.isEmpty) {
+        if (computedStatus == 'ABSENT' || computedStatus.contains('LATE')) {
+          return const Color(0xFFBA1719); // red
+        }
+      }
+      return Colors.transparent;
+    }
+    return const Color(0xFF660FF2); // leave / special type — purple
+    if (computedStatus == 'ABSENT' || computedStatus.contains('LATE')) {
+      return const Color(0xFFBA1719); // red
+    }
+    return Colors.transparent; // on time – no accent bar
+  }
+
+  Widget _buildActionCard({required String title, required Color color}) {
     return Container(
       key: ValueKey('action_$title'),
       height: 54,
@@ -225,7 +247,7 @@ class _AttendancePageState extends State<AttendancePage> {
         title,
         style: GoogleFonts.koulen(
           fontSize: 19,
-          color: const Color(0xFF6A2BFF),
+          color: color == Colors.transparent ? Colors.white : color,
           letterSpacing: 1.2,
         ),
       ),
@@ -249,7 +271,7 @@ class _AttendancePageState extends State<AttendancePage> {
         transitionBuilder: (child, animation) =>
             FadeTransition(opacity: animation, child: child),
         child: isSelected
-            ? _buildActionCard(title: actionTitle)
+            ? _buildActionCard(title: actionTitle, color: textColor)
             : ColleaspedCard(
                 key: ValueKey('normal_$cardKey'),
                 status: status,
@@ -628,6 +650,21 @@ class _AttendancePageState extends State<AttendancePage> {
                     )
                   else
                     ...records.map((record) {
+                      // Weekend/holiday records — render special card
+                      final recordStatus =
+                          record.status?.toLowerCase().trim() ?? '';
+                      final recordAttendanceType =
+                          record.attendanceType?.toLowerCase().trim() ?? '';
+                      if (recordStatus == 'weekend' ||
+                          recordAttendanceType == 'weekend') {
+                        final DateTime? recordDate =
+                            DateTime.tryParse(record.date);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _buildWeekendCard(recordDate),
+                        );
+                      }
+
                       DateTime? checkInTime;
                       try {
                         checkInTime = DateTime.parse(record.checkIn);
@@ -646,7 +683,6 @@ class _AttendancePageState extends State<AttendancePage> {
                       }
 
                       String status = 'ONTIME';
-                      Color textColor = const Color(0xff535353);
 
                       if (checkOutTime == null) {
                         status = 'ABSENT';
@@ -657,9 +693,10 @@ class _AttendancePageState extends State<AttendancePage> {
                                 checkInTime.month, checkInTime.day, 8, 15))
                             .inMinutes;
                         status = '$lateMinutes MINS LATE';
-                        textColor = red;
                       }
 
+                      final textColor =
+                          _colorForRecord(record, computedStatus: status);
                       final cardKey =
                           'mgr_${empKey}_${record.date}_${record.checkIn}';
 
@@ -886,11 +923,9 @@ class _AttendancePageState extends State<AttendancePage> {
           }
 
           String status = 'ONTIME';
-          Color textColor = Colors.green;
 
           if (checkOutTime == null) {
             status = 'ABSENT';
-            textColor = const Color(0xff535353);
           } else if (checkInTime.isAfter(DateTime(
               checkInTime.year, checkInTime.month, checkInTime.day, 8, 15))) {
             final lateMinutes = checkInTime
@@ -898,11 +933,9 @@ class _AttendancePageState extends State<AttendancePage> {
                     checkInTime.day, 8, 15))
                 .inMinutes;
             status = '$lateMinutes MINS LATE';
-            textColor = red;
-          } else {
-            textColor = const Color(0xff535353);
           }
 
+          final textColor = _colorForRecord(record, computedStatus: status);
           final cardKey = 'emp_${record.date}_${record.checkIn}';
 
           return Padding(
@@ -931,7 +964,7 @@ class _AttendancePageState extends State<AttendancePage> {
           height: 55,
           margin: const EdgeInsets.only(top: 2, left: 3),
           decoration: BoxDecoration(
-            color: const Color(0xFF4CAF50),
+            color: const Color(0xFF009859),
             borderRadius: BorderRadius.circular(23),
           ),
         ),

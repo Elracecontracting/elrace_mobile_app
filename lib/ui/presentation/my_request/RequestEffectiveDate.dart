@@ -19,7 +19,8 @@ class EffectiveDatePage extends StatefulWidget {
 }
 
 class _EffectiveDatePageState extends State<EffectiveDatePage> {
-  String selectedMissionType = "Reason";
+  static const String _fixedReasonLabel = 'Work resumption';
+  static const String _fixedReasonApiValue = 'work_resumption';
   DateTime joinedDate = DateTime.now();
   // Auto-managed by system; user should not edit this field.
   DateTime leaveEndDate = DateTime.now();
@@ -35,15 +36,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
 
   bool isSubmitting = false;
 
-  final List<String> options = [
-    "New hire",
-    "Temporary work permit",
-    "Work resumption",
-  ];
-  bool dropdownOpen = false;
-
-  bool get _isWorkResumption =>
-      _mapReasonToApiValue(selectedMissionType) == 'work_resumption';
+  bool get _isWorkResumption => true;
 
   void _onCalendarDateSelected(DateTime date) {
     setState(() {
@@ -60,11 +53,6 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
       DateFormat('yyyy-MM-dd HH:mm:ss').format(date);
 
   Future<void> _submitEffectiveDateRequest() async {
-    if (selectedMissionType == 'Reason') {
-      _showErrorDialog('Please select a reason.');
-      return;
-    }
-
     if (description.trim().isEmpty) {
       _showErrorDialog('Please enter a description.');
       return;
@@ -90,7 +78,7 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
         "job_type": null,
         "job_time": null,
         "job_date": null,
-        "e_reason": _mapReasonToApiValue(selectedMissionType),
+        "e_reason": _fixedReasonApiValue,
         "join_date": null,
         "late_days": isWorkResumption ? calculateLateDays() : null,
         "attachment": null,
@@ -193,19 +181,19 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: EdgeInsets.only(
-                      bottom:
-                          MediaQuery.of(context).viewInsets.bottom),
+                      bottom: MediaQuery.of(context).viewInsets.bottom),
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Center(child: _buildDropdownHeader()),
+                          Center(child: _buildReasonHeader()),
                           SizedBox(height: 16.h),
                           _buildCalendar(),
                           SizedBox(height: 20.h),
-                          _buildInfoRow('Joining Date', _formatDate(joinedDate)),
+                          _buildInfoRow(
+                              'Joining Date', _formatDate(joinedDate)),
                           if (_isWorkResumption) ...[
                             SizedBox(height: 12.h),
                             _buildInfoRow(
@@ -237,8 +225,9 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                             width: double.infinity,
                             height: 48.h,
                             child: ElevatedButton(
-                              onPressed:
-                                  isSubmitting ? null : _submitEffectiveDateRequest,
+                              onPressed: isSubmitting
+                                  ? null
+                                  : _submitEffectiveDateRequest,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF5E5E5E),
                                 shape: RoundedRectangleBorder(
@@ -252,8 +241,8 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                                       height: 20,
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation(Colors.white),
+                                        valueColor: AlwaysStoppedAnimation(
+                                            Colors.white),
                                       ),
                                     )
                                   : Text(
@@ -268,13 +257,6 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
                           ),
                         ],
                       ),
-                      if (dropdownOpen)
-                        Positioned(
-                          top: 48.h,
-                          left: 0,
-                          right: 0,
-                          child: Center(child: _buildDropdownList()),
-                        ),
                     ],
                   ),
                 ),
@@ -287,92 +269,29 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
     );
   }
 
-  Widget _buildDropdownHeader() {
-    return GestureDetector(
-      onTap: () => setState(() => dropdownOpen = !dropdownOpen),
-      child: Container(
-        width: 260.w,
-        padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 24.w),
-        decoration: BoxDecoration(
-          color: const Color(0xFF5E5E5E),
-          borderRadius: BorderRadius.circular(22.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.25),
-              blurRadius: 6,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              selectedMissionType,
-              style: GoogleFonts.koulen(
-                color: Colors.white,
-                fontSize: 15.sp,
-                letterSpacing: 2,
-              ),
-            ),
-            Icon(
-              dropdownOpen ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-              color: Colors.white,
-            ),
-          ],
-        ),
+  Widget _buildReasonHeader() {
+    return Container(
+      width: 260.w,
+      padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 24.w),
+      decoration: BoxDecoration(
+        color: const Color(0xFF5E5E5E),
+        borderRadius: BorderRadius.circular(22.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.25),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
-    );
-  }
-
-  Widget _buildDropdownList() {
-    return Material(
-      elevation: 4,
-      borderRadius: BorderRadius.circular(22.r),
-      child: Container(
-        width: 260.w,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(22.r),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            )
-          ],
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: List.generate(options.length, (i) {
-            return Column(
-              children: [
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selectedMissionType = options[i];
-                      dropdownOpen = false;
-                    });
-                  },
-                  child: Container(
-                    padding:
-                        EdgeInsets.symmetric(vertical: 14.h, horizontal: 20.w),
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      options[i],
-                      style: GoogleFonts.inter(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                  ),
-                ),
-                if (i != options.length - 1)
-                  Divider(height: 1, color: Colors.grey.shade300),
-              ],
-            );
-          }),
+      child: Center(
+        child: Text(
+          'Reason: $_fixedReasonLabel',
+          style: GoogleFonts.koulen(
+            color: Colors.white,
+            fontSize: 15.sp,
+            letterSpacing: 2,
+          ),
         ),
       ),
     );
@@ -734,21 +653,5 @@ class _EffectiveDatePageState extends State<EffectiveDatePage> {
   void dispose() {
     _descController.dispose();
     super.dispose();
-  }
-}
-
-String _mapReasonToApiValue(String reason) {
-  switch (reason) {
-    case 'New Hire':
-    case 'New hire':
-      return 'new_hire';
-    case 'Temporary Work Permit':
-    case 'Temporary work permit':
-      return 'temporary_work permit'; // Note: space after "work"
-    case 'Work Resumption':
-    case 'Work resumption':
-      return 'work_resumption';
-    default:
-      return '';
   }
 }

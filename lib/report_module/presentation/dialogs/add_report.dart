@@ -84,7 +84,7 @@ Future<bool> showAddNewReport(BuildContext context,
                             ),
                             child: Text(
                               'CANCEL',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 13.sp,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
@@ -115,7 +115,7 @@ Future<bool> showAddNewReport(BuildContext context,
                             ),
                             child: Text(
                               'SUBMIT',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 13.sp,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white,
@@ -178,7 +178,7 @@ class _InputSection extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 11.sp,
               fontWeight: FontWeight.w400,
               color: const Color(0xFF6B7280),
@@ -186,7 +186,7 @@ class _InputSection extends StatelessWidget {
           ),
           Text(
             subLabel,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF1F2937),
@@ -204,7 +204,7 @@ class _InputSection extends StatelessWidget {
             alignment: Alignment.center,
             child: TextField(
               controller: controller,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 12.sp,
                 color: const Color(0xFF374151),
               ),
@@ -212,7 +212,7 @@ class _InputSection extends StatelessWidget {
                 hintText: hint,
                 border: InputBorder.none,
                 isCollapsed: true,
-                hintStyle: GoogleFonts.inter(
+                hintStyle: GoogleFonts.poppins(
                   fontSize: 12.sp,
                   color: const Color(0xFFA3A6B1),
                 ),
@@ -257,7 +257,7 @@ class _DropdownSection extends StatelessWidget {
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 11.sp,
               fontWeight: FontWeight.w400,
               color: const Color(0xFF6B7280),
@@ -265,7 +265,7 @@ class _DropdownSection extends StatelessWidget {
           ),
           Text(
             subLabel,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF1F2937),
@@ -285,7 +285,7 @@ class _DropdownSection extends StatelessWidget {
                 value: value,
                 hint: Text(
                   hint,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 12.sp,
                     color: const Color(0xFFA3A6B1),
                   ),
@@ -296,7 +296,7 @@ class _DropdownSection extends StatelessWidget {
                   size: 22.w,
                   color: const Color(0xFF374151),
                 ),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 12.sp,
                   color: const Color(0xFF374151),
                 ),
@@ -307,7 +307,7 @@ class _DropdownSection extends StatelessWidget {
                           value: item,
                           child: Text(
                             item,
-                            overflow: TextOverflow.ellipsis,
+                            overflow: TextOverflow.visible,
                           ),
                         ))
                     .toList(),

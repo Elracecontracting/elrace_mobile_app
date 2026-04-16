@@ -31,9 +31,6 @@ import 'package:el_race/utils/di.dart';
 import 'package:el_race/utils/generated_routes.dart';
 import 'package:el_race/utils/orientation_helper.dart';
 import 'package:el_race/utils/screen_size_util.dart';
-import 'package:el_race/core/biometric/ios/face_id_helper.dart';
-import 'package:el_race/core/biometric/android/android_biometric_helper.dart';
-import 'package:el_race/core/biometric/face_recognition/face_recognition_di.dart';
 import 'package:el_race/data/services/auto_checkout_service.dart';
 import 'package:el_race/data/services/checkin_reminder_notification_service.dart';
 import 'package:el_race/data/services/counter_reset_service.dart';
@@ -131,26 +128,6 @@ void main() async {
     print('❌ Error loading app config: $e');
   }
 
-  // Initialize platform-specific biometric authentication
-  try {
-    FaceIdHelper.initialize(); // iOS only
-    AndroidBiometricHelper.initialize(); // Android only
-  } catch (e) {
-    print('❌ Error initializing biometric: $e');
-  }
-
-  // Initialize Face Recognition System
-  try {
-    await FaceRecognitionDI.init().timeout(
-      const Duration(seconds: 10),
-      onTimeout: () {
-        print('⚠️ Face Recognition init timeout');
-      },
-    );
-  } catch (e) {
-    print('❌ Error initializing Face Recognition: $e');
-  }
-
   // Register background message handler قبل FirebaseService.initialize()
   try {
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -243,7 +220,7 @@ void main() async {
     print('❌ Error initializing Prayer service: $e');
   }
 
-  // تهيئة خدمة Auto Check-out التلقائي في الساعة 5 مساءً
+  // تهيئة خدمة Auto Check-out التلقائي في الساعة 5:10 مساءً
   try {
     await AutoCheckoutService.initialize().timeout(
       const Duration(seconds: 5),
@@ -290,26 +267,19 @@ void main() async {
       print('❌ Error initializing check-in reminder: $e');
     }
 
-    // جدولة Auto Check-out اليومي
+    // مزامنة حالة الدوام أولاً حتى لا يتم جدولة تذكيرات check-in
+    // اعتماداً على حالة محلية قديمة.
     try {
+      await _syncAttendanceStatusIfLoggedIn();
+
       final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
       if (isCheckedIn) {
         await AutoCheckoutService.scheduleAutoCheckout();
-        debugPrint('✅ Auto checkout scheduled for 5:00 PM');
-
-        // جدولة إشعارات التذكير حسب حالة check in/out
-        await CheckInReminderNotificationService().scheduleCheckOutReminders();
-        debugPrint('✅ Check-out reminder notifications scheduled');
-
-        // اختبار: إرسال إشعار تجريبي عند التشغيل
-        // await CheckInReminderNotificationService().sendTestNotification(isCheckIn: false);
-      } else {
-        await CheckInReminderNotificationService().scheduleCheckInReminders();
-        debugPrint('✅ Check-in reminder notifications scheduled');
-
-        // اختبار: إرسال إشعار تجريبي عند التشغيل
-        // await CheckInReminderNotificationService().sendTestNotification(isCheckIn: true);
+        debugPrint('✅ Auto checkout scheduled for 5:10 PM');
       }
+
+      await CheckInReminderNotificationService().updateReminders();
+      debugPrint('✅ Check-in/out reminder notifications refreshed');
     } catch (e) {
       print('❌ Error scheduling notifications: $e');
     }
@@ -319,11 +289,6 @@ void main() async {
 
   // Initialize chat module if user is already logged in
   await _initializeChatIfLoggedIn();
-
-  // Sync today's attendance status from the server (fire-and-forget).
-  // Runs during the splash screen delay so TimerController picks up the
-  // correct check-in time when HomeScreen opens.
-  _syncAttendanceStatusIfLoggedIn();
 
   // debugPrint = (String? message, {int? wrapWidth}) {};
   // Get saved language from SharedPref

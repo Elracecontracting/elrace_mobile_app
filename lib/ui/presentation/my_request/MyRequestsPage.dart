@@ -218,7 +218,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                               children: [
                                 Text(
                                   selectedRequestType.toUpperCase(),
-                                  style: GoogleFonts.koulen(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 15.sp,
                                     color: Colors.white,
                                     letterSpacing: 1.5,
@@ -316,7 +316,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                                           alignment: Alignment.centerLeft,
                                           child: Text(
                                             requestOptions[index],
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 14.sp,
                                               fontWeight: FontWeight.w600,
                                               color: Colors.black,
@@ -348,7 +348,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                             Expanded(
                               child: Text(
                                 translate('notification.pending_approval'),
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 9,
                                   color: appFontColor,
                                   fontWeight: FontWeight.w600,
@@ -503,7 +503,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                       child: Text(
                         _formatRequestDate(item['create_date']),
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           fontWeight: FontWeight.bold,
                           color: appFontColor,
@@ -524,7 +524,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                         children: [
                           Text(
                             'REQ NO',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: appFontColor,
@@ -533,12 +533,12 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                           Text(
                             item['name'] ?? '',
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w500,
                               color: Colors.black,
                             ),
-                            overflow: TextOverflow.ellipsis,
+                            overflow: TextOverflow.visible,
                           ),
                         ],
                       ),
@@ -554,12 +554,12 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                       child: Text(
                         item['request_type_name']?.trim() ?? '',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.bold,
                           color: appFontColor,
                         ),
-                        overflow: TextOverflow.ellipsis,
+                        overflow: TextOverflow.visible,
                       ),
                     ),
                   ],
@@ -711,7 +711,7 @@ class _MyRequestsPageState extends State<MyRequestsPage> {
                               translate('home.my_request')
                                   .toString()
                                   .toUpperCase(),
-                              style: GoogleFonts.koulen(
+                              style: GoogleFonts.poppins(
                                 fontSize: 22.sp,
                                 fontWeight: FontWeight.w400,
                                 color: appFontColor,

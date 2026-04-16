@@ -207,9 +207,9 @@ class LpoCardWidget extends StatelessWidget {
                   Center(
                     child: Text(
                       codeText,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
+                      maxLines: null,
+                      overflow: TextOverflow.visible,
+                      style: GoogleFonts.poppins(
                         fontSize: 17.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF0E3A76),
@@ -227,8 +227,8 @@ class LpoCardWidget extends StatelessWidget {
                         Text(
                           titleText.isNotEmpty ? titleText : '-',
                           maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
+                          overflow: TextOverflow.visible,
+                          style: GoogleFonts.poppins(
                             fontSize: 13.5.sp,
                             fontWeight: FontWeight.w800,
                             color: Colors.black,
@@ -240,9 +240,9 @@ class LpoCardWidget extends StatelessWidget {
                             padding: EdgeInsets.only(top: 6.h),
                             child: Text(
                               subtitleText,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.inter(
+                              maxLines: null,
+                              overflow: TextOverflow.visible,
+                              style: GoogleFonts.poppins(
                                 fontSize: 11.5.sp,
                                 fontWeight: FontWeight.w700,
                                 color: greyText,
@@ -263,9 +263,9 @@ class LpoCardWidget extends StatelessWidget {
                             (formattedDate ?? '').isNotEmpty
                                 ? formattedDate!
                                 : '',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(
+                            maxLines: null,
+                            overflow: TextOverflow.visible,
+                            style: GoogleFonts.poppins(
                               fontSize: 10.5.sp,
                               fontWeight: FontWeight.w600,
                               color: greyText,
@@ -276,9 +276,9 @@ class LpoCardWidget extends StatelessWidget {
                       if (formattedAmount != null && formattedAmount.isNotEmpty)
                         Text(
                           formattedAmount,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.inter(
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
+                          style: GoogleFonts.poppins(
                             fontSize: 24.sp,
                             fontWeight: FontWeight.w900,
                             color: const Color(0xFF0E3A76),
@@ -340,7 +340,7 @@ class LpoCardWidget extends StatelessWidget {
           : (name != null && name!.isNotEmpty)
               ? name!.characters.take(2).toString().toUpperCase()
               : 'V',
-      style: GoogleFonts.koulen(
+      style: GoogleFonts.poppins(
         fontSize: 22.sp,
         fontWeight: FontWeight.w700,
         color: appFontColor,
@@ -400,7 +400,7 @@ Widget _buildDialogContent(BuildContext context) {
             const SizedBox(width: 8),
             Text(
               "ATTACHMENTS",
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 20,
                 fontWeight: FontWeight.w400,
                 color: Colors.black,
@@ -419,7 +419,7 @@ Widget _buildDialogContent(BuildContext context) {
             const SizedBox(width: 8),
             Text(
               "LPO NO",
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 color: Colors.red,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -436,7 +436,7 @@ Widget _buildDialogContent(BuildContext context) {
             const SizedBox(width: 8),
             Text(
               "VENDOR NAME",
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 color: Colors.blue,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -453,7 +453,7 @@ Widget _buildDialogContent(BuildContext context) {
             const SizedBox(width: 8),
             Text(
               "PROJECT NAME",
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 color: Colors.black,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -493,7 +493,7 @@ Widget _buildDialogContent(BuildContext context) {
                   const SizedBox(width: 8),
                   Text(
                     "VIEW ATTACHMENT",
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w600,
                       fontSize: 16,
                       color: Colors.white,

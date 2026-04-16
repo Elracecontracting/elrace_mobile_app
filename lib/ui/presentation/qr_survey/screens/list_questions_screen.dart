@@ -174,7 +174,7 @@ class _ListQuestionsScreenState extends State<ListQuestionsScreen> {
                 ? const CircularProgressIndicator(color: Colors.white)
                 : Text(
                     translate('common.submit'),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Colors.white,
@@ -201,7 +201,7 @@ class _ListQuestionsScreenState extends State<ListQuestionsScreen> {
                 Expanded(
                   child: Text(
                     '${index + 1}. ${question.title}',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                       color: Colors.black87,
@@ -219,7 +219,7 @@ class _ListQuestionsScreenState extends State<ListQuestionsScreen> {
               const SizedBox(height: 8),
               Text(
                 question.description,
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 14,
                   color: Colors.black54,
                 ),
@@ -274,7 +274,7 @@ class _ListQuestionsScreenState extends State<ListQuestionsScreen> {
               question.dateAnswer != null
                   ? DateFormat('yyyy-MM-dd').format(question.dateAnswer!)
                   : 'Select Date',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 14,
                 color:
                     question.dateAnswer != null ? Colors.black87 : Colors.grey,

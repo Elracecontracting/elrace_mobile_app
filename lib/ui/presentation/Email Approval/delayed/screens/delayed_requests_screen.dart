@@ -14,106 +14,87 @@ class DelayedRequestsScreen extends StatefulWidget {
 
 class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
   final DelayedApprovalsRepository _repository = DelayedApprovalsRepository();
-  final ScrollController _scrollController = ScrollController();
-
-  static const int _pageSize = 20;
+  static List<Map<String, dynamic>> _cachedItems = const [];
+  static const int _batchSize = 200;
 
   bool _isLoading = true;
-  bool _isLoadingMore = false;
-  bool _hasMore = true;
-  int _currentPage = 1;
-  int? _nextPage = 2;
   String _error = '';
   List<Map<String, dynamic>> _items = [];
 
   Future<void> _fetchDelayedRequests() async {
-    setState(() {
-      _isLoading = true;
-      _isLoadingMore = false;
-      _hasMore = true;
-      _currentPage = 1;
-      _nextPage = 2;
-      _error = '';
-      _items = [];
-    });
+    final hasCached = _cachedItems.isNotEmpty;
+    if (mounted) {
+      setState(() {
+        _isLoading = !hasCached;
+        _error = '';
+        if (hasCached) {
+          _items = List<Map<String, dynamic>>.from(_cachedItems);
+        }
+      });
+    }
 
     try {
-      final firstPage = await _repository
-          .fetchAllPage(page: 1, pageSize: _pageSize)
-          .timeout(const Duration(seconds: 30));
-
-      final normalized = firstPage.data.toCardItems();
-      final merged = _mergeUniqueByTypeAndId([], normalized);
+      final normalized = await _fetchAllItemsFromApi();
+      normalized.sort(
+        (a, b) => ((b['daysDelayed'] ?? 0) as num)
+            .compareTo((a['daysDelayed'] ?? 0) as num),
+      );
 
       if (!mounted) return;
       setState(() {
-        _items = merged;
+        _items = normalized;
+        _cachedItems = List<Map<String, dynamic>>.from(normalized);
         _isLoading = false;
-        _currentPage = firstPage.currentPage;
-        _nextPage = firstPage.nextPage;
-        _hasMore = firstPage.hasMore;
       });
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _error = e.toString();
         _isLoading = false;
-        _hasMore = false;
-        _isLoadingMore = false;
       });
     }
   }
 
-  Future<void> _loadMore() async {
-    if (_isLoading || _isLoadingMore || !_hasMore) return;
+  Future<List<Map<String, dynamic>>> _fetchAllItemsFromApi() async {
+    final first = await _repository
+        .fetchAllPage(page: 1, pageSize: _batchSize)
+        .timeout(const Duration(seconds: 30));
 
-    final pageToLoad = _nextPage ?? (_currentPage + 1);
-    if (pageToLoad <= _currentPage) return;
+    final combined = <Map<String, dynamic>>[
+      ...first.data.toCardItems(),
+    ];
 
-    setState(() => _isLoadingMore = true);
-    try {
+    var nextPage = first.nextPage;
+    var hasMore = first.hasMore;
+    var safety = 0;
+
+    while (hasMore && nextPage != null && safety < 20) {
+      safety++;
       final page = await _repository
-          .fetchAllPage(page: pageToLoad, pageSize: _pageSize)
+          .fetchAllPage(page: nextPage, pageSize: _batchSize)
           .timeout(const Duration(seconds: 30));
 
-      final newItems = page.data.toCardItems();
-      if (!mounted) return;
+      final pageItems = page.data.toCardItems();
+      if (pageItems.isEmpty) {
+        break;
+      }
 
-      setState(() {
-        _items = _mergeUniqueByTypeAndId(_items, newItems);
-        _currentPage = page.currentPage;
-        _nextPage = page.nextPage;
-        _hasMore = page.hasMore;
-        _isLoadingMore = false;
-      });
-    } catch (e) {
-      debugPrint('⚠️ Failed loading delayed approvals page $pageToLoad: $e');
-      if (!mounted) return;
-      setState(() {
-        _isLoadingMore = false;
-      });
+      combined.addAll(pageItems);
+
+      final previousNext = nextPage;
+      nextPage = page.nextPage;
+      hasMore = page.hasMore && nextPage != null && nextPage != previousNext;
     }
+
+    return _dedupeByTypeAndId(combined);
   }
 
-  void _onScroll() {
-    if (!_scrollController.hasClients) return;
-    final position = _scrollController.position;
-    if (position.pixels >= position.maxScrollExtent - 240) {
-      _loadMore();
-    }
-  }
+  List<Map<String, dynamic>> _dedupeByTypeAndId(
+      List<Map<String, dynamic>> items) {
+    final result = <Map<String, dynamic>>[];
+    final seen = <String>{};
 
-  List<Map<String, dynamic>> _mergeUniqueByTypeAndId(
-    List<Map<String, dynamic>> base,
-    List<Map<String, dynamic>> incoming,
-  ) {
-    final result = List<Map<String, dynamic>>.from(base);
-    final seen = <String>{
-      for (final item in base)
-        '${(item['type'] ?? '').toString()}_${(item['id'] ?? item['reqNo'] ?? '').toString()}'
-    };
-
-    for (final item in incoming) {
+    for (final item in items) {
       final key =
           '${(item['type'] ?? '').toString()}_${(item['id'] ?? item['reqNo'] ?? '').toString()}';
       if (seen.add(key)) {
@@ -127,23 +108,17 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
     _fetchDelayedRequests();
   }
 
   @override
-  void dispose() {
-    _scrollController.removeListener(_onScroll);
-    _scrollController.dispose();
-    super.dispose();
-  }
+  void dispose() => super.dispose();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
-        controller: _scrollController,
         slivers: [
           const SliverAppBar(
             pinned: false,
@@ -162,7 +137,7 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
                 Center(
                   child: Text(
                     'DELAYED REQUESTS',
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF1A1A1A),
@@ -208,18 +183,6 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
-            if (index >= items.length) {
-              if (_isLoadingMore) {
-                return Padding(
-                  padding: EdgeInsets.symmetric(vertical: 14.h),
-                  child: const Center(
-                    child: CircularProgressIndicator(color: Color(0xFF0B2D5E)),
-                  ),
-                );
-              }
-              return const SizedBox.shrink();
-            }
-
             final item = items[index];
             return DelayedRequestCard(
               reqNo: item['reqNo'] ?? '',
@@ -234,7 +197,7 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
               },
             );
           },
-          childCount: items.length + ((_hasMore || _isLoadingMore) ? 1 : 0),
+          childCount: items.length,
         ),
       ),
     );
@@ -251,7 +214,7 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
             SizedBox(height: 16.w),
             Text(
               'No delayed requests',
-              style: GoogleFonts.nunito(
+              style: GoogleFonts.poppins(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w700,
                 color: Colors.grey[700],
@@ -260,7 +223,7 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
             SizedBox(height: 8.w),
             Text(
               'All requests are on track!',
-              style: GoogleFonts.nunito(
+              style: GoogleFonts.poppins(
                 fontSize: 14.sp,
                 fontWeight: FontWeight.w500,
                 color: Colors.grey[500],
@@ -282,7 +245,7 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
             SizedBox(height: 16.w),
             Text(
               'Failed to load delayed requests',
-              style: GoogleFonts.nunito(
+              style: GoogleFonts.poppins(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[700],
@@ -293,7 +256,7 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
               onPressed: onRetry,
               child: Text(
                 'Retry',
-                style: GoogleFonts.nunito(
+                style: GoogleFonts.poppins(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF0B2D5E),

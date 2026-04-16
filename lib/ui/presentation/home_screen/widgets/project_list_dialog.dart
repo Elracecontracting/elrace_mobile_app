@@ -444,12 +444,10 @@ void _showProjectSelectionDialog({
 
                                     if (result['status'] == 'success') {
                                       // Location validation succeeded
-                                      // Force face recognition only - no other options
-                                      // Save selected project/branch with face recognition method
-                                      // print('✅ location validation succeeded');
+                                      // Save selected project/branch with biometric method
                                       _saveSelectedProject(
                                           selectedProject, selectedBranch,
-                                          authMethod: 'faceRecognition');
+                                          authMethod: 'biometric');
                                       Navigator.pop(context);
                                       SharedPref().setPreferencesBoolean(
                                           'wasCheckedInBeforeFaceAuth',

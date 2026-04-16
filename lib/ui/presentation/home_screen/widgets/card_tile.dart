@@ -259,7 +259,7 @@ class GrayCardComponent extends StatelessWidget {
             child: Align(
               alignment: childAlignment,
               child: DefaultTextStyle(
-                style: GoogleFonts.nunito(
+                style: GoogleFonts.poppins(
                   fontSize: 12.w,
                   color: Colors.black,
                 ),

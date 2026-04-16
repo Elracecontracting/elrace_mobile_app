@@ -238,7 +238,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                   child: Center(
                     child: Text(
                       'TIME SHEET',
-                      style: GoogleFonts.koulen(
+                      style: GoogleFonts.poppins(
                         fontSize: 19,
                         fontWeight: FontWeight.w300,
                         letterSpacing: 1.0,
@@ -366,7 +366,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                                     fontWeight: FontWeight.w600,
                                     color: Colors.grey.shade500,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
+                                  overflow: TextOverflow.visible,
                                 ),
                               ),
                               Icon(

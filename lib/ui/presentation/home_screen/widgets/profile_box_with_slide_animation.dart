@@ -35,7 +35,7 @@ class _ProfileBoxWithSlideAnimationState
   bool _isLoadingQr = true;
   String? _qrErrorMessage;
   bool _isMutePopupVisible = false;
-  bool _isMutePopupSaving = false;
+  final Set<String> _savingMuteKeys = <String>{};
   List<_MuteChannelConfig> _muteChannels = <_MuteChannelConfig>[];
   Map<String, bool> _muteValueByKey = <String, bool>{};
 
@@ -158,8 +158,7 @@ class _ProfileBoxWithSlideAnimationState
     if (!mounted) return;
 
     final settings = results[0] as Map<String, bool>;
-    final apiCategories =
-        results[1] as List<NotificationCategoryApiModel>;
+    final apiCategories = results[1] as List<NotificationCategoryApiModel>;
     final adhanMuted = results[2] as bool;
 
     final apiChannels = apiCategories
@@ -189,7 +188,7 @@ class _ProfileBoxWithSlideAnimationState
               : (settings[channel.key] == true),
       };
       _isMutePopupVisible = true;
-      _isMutePopupSaving = false;
+      _savingMuteKeys.clear();
     });
   }
 
@@ -199,10 +198,12 @@ class _ProfileBoxWithSlideAnimationState
   }
 
   Future<void> _updateMuteChannel(_MuteChannelConfig item, bool value) async {
+    if (_savingMuteKeys.contains(item.key)) return;
+
     final previous = _muteValueByKey[item.key] ?? false;
     setState(() {
       _muteValueByKey[item.key] = value;
-      _isMutePopupSaving = true;
+      _savingMuteKeys.add(item.key);
     });
 
     try {
@@ -236,7 +237,7 @@ class _ProfileBoxWithSlideAnimationState
     } finally {
       if (!mounted) return;
       setState(() {
-        _isMutePopupSaving = false;
+        _savingMuteKeys.remove(item.key);
       });
     }
   }
@@ -245,7 +246,7 @@ class _ProfileBoxWithSlideAnimationState
     if (!mounted) return;
     setState(() {
       _isMutePopupVisible = false;
-      _isMutePopupSaving = false;
+      _savingMuteKeys.clear();
     });
   }
 
@@ -359,7 +360,7 @@ class _ProfileBoxWithSlideAnimationState
                         const SizedBox(height: 16),
                         Text(
                           certificateData?['error'] ?? 'No certificate found',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -381,7 +382,7 @@ class _ProfileBoxWithSlideAnimationState
                             ),
                             child: Text(
                               'OK',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -657,7 +658,7 @@ class _ProfileBoxWithSlideAnimationState
                                 }
                                 return translate('profile.name_not_available');
                               }(),
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                   fontWeight: FontWeight.w700, fontSize: 11.26),
                             ),
                             const SizedBox(height: 1),
@@ -673,7 +674,7 @@ class _ProfileBoxWithSlideAnimationState
                                 return translate(
                                     'profile.job_id_not_available');
                               }(),
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                   fontSize: 11.26, fontWeight: FontWeight.w400),
                             ),
                             const SizedBox(height: 1),
@@ -688,7 +689,7 @@ class _ProfileBoxWithSlideAnimationState
                                 }
                                 return translate('profile.id_not_available');
                               }(),
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                   fontSize: 11.26, fontWeight: FontWeight.w400),
                             ),
                             const SizedBox(height: 1),
@@ -723,7 +724,7 @@ class _ProfileBoxWithSlideAnimationState
                                 loginData.result?.data?.qr_status == true
                                     ? 'Status : Active'
                                     : 'Status : Not Active',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                     fontSize: 11.26,
                                     fontWeight: FontWeight.bold,
                                     color: loginData.result?.data?.qr_status ==
@@ -911,7 +912,9 @@ class _ProfileBoxWithSlideAnimationState
                   color: Colors.black54,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: _isMutePopupSaving ? null : _closeMuteControlPopup,
+                    onTap: _savingMuteKeys.isNotEmpty
+                        ? null
+                        : _closeMuteControlPopup,
                     child: Center(
                       child: GestureDetector(
                         onTap: () {},
@@ -945,27 +948,35 @@ class _ProfileBoxWithSlideAnimationState
                                         width: 58,
                                         child: Transform.scale(
                                           scale: 0.86,
-                                          child: Switch(
-                                            materialTapTargetSize:
-                                                MaterialTapTargetSize
-                                                    .shrinkWrap,
-                                            value: _muteValueByKey[item.key] ??
-                                                false,
-                                            onChanged: _isMutePopupSaving
-                                                ? null
-                                                : (value) => _updateMuteChannel(
-                                                    item, value),
-                                            activeThumbColor:
-                                                const Color(0xFFE53935),
-                                            activeTrackColor:
-                                                const Color(0xFFEF9A9A),
-                                            inactiveThumbColor:
-                                                const Color(0xFF43A047),
-                                            inactiveTrackColor:
-                                                const Color(0xFFA5D6A7),
-                                            trackOutlineColor:
-                                                const WidgetStatePropertyAll(
-                                              Colors.transparent,
+                                          child: Directionality(
+                                            textDirection: TextDirection.ltr,
+                                            child: Switch(
+                                              materialTapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                              value:
+                                                  !(_muteValueByKey[item.key] ??
+                                                      false),
+                                              onChanged: _savingMuteKeys
+                                                      .contains(item.key)
+                                                  ? null
+                                                  : (value) =>
+                                                      _updateMuteChannel(
+                                                        item,
+                                                        !value,
+                                                      ),
+                                              activeThumbColor:
+                                                  const Color(0xFF43A047),
+                                              activeTrackColor:
+                                                  const Color(0xFFA5D6A7),
+                                              inactiveThumbColor:
+                                                  const Color(0xFFE53935),
+                                              inactiveTrackColor:
+                                                  const Color(0xFFEF9A9A),
+                                              trackOutlineColor:
+                                                  const WidgetStatePropertyAll(
+                                                Colors.transparent,
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -977,7 +988,7 @@ class _ProfileBoxWithSlideAnimationState
                               SizedBox(
                                 height: 30,
                                 child: ElevatedButton.icon(
-                                  onPressed: _isMutePopupSaving
+                                  onPressed: _savingMuteKeys.isNotEmpty
                                       ? null
                                       : _closeMuteControlPopup,
                                   style: ElevatedButton.styleFrom(
@@ -1246,7 +1257,7 @@ class _MuteChannelConfig {
                                     //                     translate(
                                     //                         'profile.mute_notifications'),
                                     //                     style:
-                                    //                         GoogleFonts.inter(
+                                    //                         GoogleFonts.poppins(
                                     //                             fontSize: 11)),
                                     //                 const Spacer(),
                                     //                 SizedBox(

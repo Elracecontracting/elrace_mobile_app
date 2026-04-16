@@ -174,12 +174,12 @@ class _TodoCategoryScreenState extends State<TodoCategoryScreen> {
         Expanded(
           child: Text(
             widget.title.toUpperCase(),
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 24.sp,
               fontWeight: FontWeight.w500,
               color: appFontColor,
             ),
-            overflow: TextOverflow.ellipsis,
+            overflow: TextOverflow.visible,
           ),
         ),
         Consumer<TodoFirebaseProvider>(
@@ -195,7 +195,7 @@ class _TodoCategoryScreenState extends State<TodoCategoryScreen> {
               ),
               child: Text(
                 count.toString(),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF1A1A53),
@@ -221,7 +221,7 @@ class _TodoCategoryScreenState extends State<TodoCategoryScreen> {
           SizedBox(height: 16.h),
           Text(
             translate('todo.no_tasks'),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 18.sp,
               fontWeight: FontWeight.w500,
               color: Colors.grey.shade500,
@@ -230,7 +230,7 @@ class _TodoCategoryScreenState extends State<TodoCategoryScreen> {
           SizedBox(height: 8.h),
           Text(
             translate('todo.add_task_hint'),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
               color: Colors.grey.shade400,
             ),

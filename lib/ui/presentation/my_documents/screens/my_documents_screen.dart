@@ -70,6 +70,10 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
   List<Map<String, dynamic>> documents = [];
   bool _loading = false;
   String? _error;
+  String _statTotal = '-';
+  String _statRequested = '-';
+  String _statExpiringSoon = '-';
+  String _statExpired = '-';
 
   // Search state
   final TextEditingController _searchController = TextEditingController();
@@ -395,7 +399,8 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
       if (response.statusCode == 200 &&
           data['result'] != null &&
           data['result']['status'] == 'success') {
-        final List list = (data['result']['data'] ?? []) as List;
+        final resultData = data['result']['data'];
+        final List list = _extractDocumentGroups(resultData);
 
         if (kDebugMode) {
           debugPrint('📄 My Documents: total=${list.length}');
@@ -444,8 +449,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
           final group = Map<String, dynamic>.from(raw as Map);
           final groupType =
-              (group['document_type'] ?? group['type'] ?? 'DOCUMENT')
-                  .toString();
+              (group['document_type'] ?? group['type'] ?? '-').toString();
           final groupDocs = group['documents'];
 
           if (groupDocs is List && groupDocs.isNotEmpty) {
@@ -455,7 +459,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
               final type =
                   (map['document_type'] ?? map['type'] ?? groupType).toString();
-              final name = (map['name'] ?? '').toString();
+              final name = (map['name'] ?? '-').toString();
               final docIdInt = int.tryParse((map['id'] ?? '').toString());
 
               final resolvedIsFamily = familyOnly ||
@@ -479,7 +483,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
             final map = group;
             final type =
                 (map['document_type'] ?? map['type'] ?? groupType).toString();
-            final name = (map['name'] ?? '').toString();
+            final name = (map['name'] ?? '-').toString();
             final docIdInt = int.tryParse((map['id'] ?? '').toString());
 
             final resolvedIsFamily = familyOnly ||
@@ -515,8 +519,17 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
             ? filteredMapped.where((d) => d['_isFamily'] == true).toList()
             : filteredMapped.where((d) => d['_isFamily'] != true).toList();
 
+        final stats = _buildDocumentsStats(
+          resultData: resultData,
+          visibleDocs: visibleMapped,
+        );
+
         setState(() {
           documents = visibleMapped;
+          _statTotal = stats['total'] ?? '-';
+          _statRequested = stats['requested'] ?? '-';
+          _statExpiringSoon = stats['expiringSoon'] ?? '-';
+          _statExpired = stats['expired'] ?? '-';
           _loading = false;
         });
       } else {
@@ -541,6 +554,106 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     }
   }
 
+  List<dynamic> _extractDocumentGroups(dynamic resultData) {
+    if (resultData is List) return resultData;
+    if (resultData is Map) {
+      final map = Map<String, dynamic>.from(resultData);
+      final direct = map['documents'];
+      if (direct is List) return direct;
+      final groups = map['groups'];
+      if (groups is List) return groups;
+      final items = map['items'];
+      if (items is List) return items;
+    }
+    return const [];
+  }
+
+  String _countOrDash(dynamic value) {
+    if (value == null || value == false) return '-';
+    if (value is num) return value.toInt().toString();
+    final parsed = int.tryParse(value.toString().trim());
+    return parsed == null ? '-' : parsed.toString();
+  }
+
+  dynamic _pickCountFromMaps(
+      List<Map<String, dynamic>> maps, List<String> keys) {
+    for (final map in maps) {
+      for (final key in keys) {
+        if (map.containsKey(key) && map[key] != null && map[key] != false) {
+          return map[key];
+        }
+      }
+    }
+    return null;
+  }
+
+  Map<String, String> _buildDocumentsStats({
+    required dynamic resultData,
+    required List<Map<String, dynamic>> visibleDocs,
+  }) {
+    final primary = resultData is Map<String, dynamic>
+        ? resultData
+        : (resultData is Map
+            ? Map<String, dynamic>.from(resultData)
+            : <String, dynamic>{});
+    final counters = primary['counters'] is Map<String, dynamic>
+        ? primary['counters'] as Map<String, dynamic>
+        : <String, dynamic>{};
+    final summary = primary['summary'] is Map<String, dynamic>
+        ? primary['summary'] as Map<String, dynamic>
+        : <String, dynamic>{};
+
+    final totalRaw = _pickCountFromMaps(
+      [primary, counters, summary],
+      ['total', 'total_count', 'documents_count'],
+    );
+    final requestedRaw = _pickCountFromMaps(
+      [primary, counters, summary],
+      ['requested', 'requested_count', 'pending_count'],
+    );
+    final expiringSoonRaw = _pickCountFromMaps(
+      [primary, counters, summary],
+      ['expiring_soon', 'expiringSoon', 'expiring_soon_count'],
+    );
+    final expiredRaw = _pickCountFromMaps(
+      [primary, counters, summary],
+      ['expired', 'expired_count'],
+    );
+
+    final now = DateTime.now();
+    var expiringSoonComputed = 0;
+    var expiredComputed = 0;
+    var hasDateData = false;
+    for (final doc in visibleDocs) {
+      final raw = doc['expiry_date'];
+      if (raw == null || raw == false) continue;
+      final s = raw.toString().trim();
+      if (s.isEmpty) continue;
+      final parsed = DateTime.tryParse(s);
+      if (parsed == null) continue;
+      hasDateData = true;
+      final days = parsed.difference(now).inDays;
+      if (days < 0) {
+        expiredComputed++;
+      } else if (days <= 30) {
+        expiringSoonComputed++;
+      }
+    }
+
+    return {
+      'total': totalRaw != null
+          ? _countOrDash(totalRaw)
+          : visibleDocs.length.toString(),
+      'requested': _countOrDash(requestedRaw),
+      'expiringSoon': expiringSoonRaw != null
+          ? _countOrDash(expiringSoonRaw)
+          : (hasDateData ? expiringSoonComputed.toString() : '-'),
+      'expired': expiredRaw != null
+          ? _countOrDash(expiredRaw)
+          : (hasDateData ? expiredComputed.toString() : '-'),
+    };
+  }
+
   List<Map<String, dynamic>> _filteredDocs() {
     // Documents are already filtered by family_only from API
     // Just return them as is since filtering happens server-side
@@ -560,15 +673,116 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
   }
 
   String _formatCardDate(dynamic raw) {
-    if (raw == null || raw == false) return '';
+    if (raw == null || raw == false) return '-';
     final s = raw.toString().trim();
-    if (s.isEmpty) return '';
+    if (s.isEmpty) return '-';
     try {
       final date = DateTime.parse(s);
       return DateFormat('dd/MM/yyyy').format(date);
     } catch (_) {
-      return s;
+      return '-';
     }
+  }
+
+  Widget _buildDocumentsSummaryCard() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFFF4F4F4),
+          borderRadius: BorderRadius.circular(14.r),
+          border: Border.all(color: const Color(0xFFD9D9D9)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSummaryCell(label: 'Total', value: _statTotal),
+                ),
+                Container(
+                    width: 1, height: 64.h, color: const Color(0xFFD1D1D1)),
+                Expanded(
+                  child: _buildSummaryCell(
+                    label: 'Expiring Soon',
+                    value: _statExpiringSoon,
+                    dotColor: const Color(0xFFF0B321),
+                  ),
+                ),
+              ],
+            ),
+            Container(height: 1, color: const Color(0xFFD1D1D1)),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSummaryCell(
+                      label: 'Requested', value: _statRequested),
+                ),
+                Container(
+                    width: 1, height: 64.h, color: const Color(0xFFD1D1D1)),
+                Expanded(
+                  child: _buildSummaryCell(
+                    label: 'Expired',
+                    value: _statExpired,
+                    dotColor: const Color(0xFFC62828),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCell({
+    required String label,
+    required String value,
+    Color? dotColor,
+  }) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(10.w, 8.h, 10.w, 7.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              if (dotColor != null) ...[
+                Container(
+                  width: 7.w,
+                  height: 7.w,
+                  decoration: BoxDecoration(
+                    color: dotColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                SizedBox(width: 4.w),
+              ],
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.sp,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF262626),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 4.h),
+          Text(
+            value,
+            style: GoogleFonts.poppins(
+              fontSize: 20.sp,
+              height: 1,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF111111),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   bool _isMeaningfulDocLabel(String value) {
@@ -671,7 +885,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           Center(
             child: Text(
               _currentTitle,
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 26.sp,
                 fontWeight: FontWeight.w600,
                 color: appFontColor,
@@ -756,7 +970,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                         const SizedBox(width: 5),
                         Text(
                           (item['title'] as String).toUpperCase(),
-                          style: GoogleFonts.koulen(
+                          style: GoogleFonts.poppins(
                             color: isSelected
                                 ? Colors.white
                                 : const Color(0xFF1A237E),
@@ -817,36 +1031,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
         SliverToBoxAdapter(
           child: Column(
             children: [
-              Padding(
-                padding: EdgeInsets.only(left: 20.w),
-                child: Align(
-                  alignment: Alignment.topLeft,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(30.18),
-                      border: Border.all(
-                        color: const Color(0xffD9D9D9),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 13.5.w,
-                        vertical: 8.5.h,
-                      ),
-                      child: Text(
-                        'total : ${_filteredDocs().length}',
-                        style: GoogleFonts.aBeeZee(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w400,
-                          fontStyle: FontStyle.italic,
-                          letterSpacing: .10,
-                          color: const Color(0xff949494),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+              _buildDocumentsSummaryCard(),
               SizedBox(height: 8.h),
               if (_loading)
                 const Padding(
@@ -868,42 +1053,9 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: _filteredDocs().length + 1,
+                    itemCount: _filteredDocs().length,
                     itemBuilder: (context, index) {
-                      if (index == 0) {
-                        return GestureDetector(
-                          onTap: () {
-                            showDocumentDialog(context);
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(30.18),
-                              border: Border.all(
-                                color: const Color(0xffD9D9D9),
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SvgPicture.asset('assets/png/add_doc.svg'),
-                                SizedBox(height: 10.h),
-                                Text(
-                                  'Add New Document',
-                                  style: GoogleFonts.aBeeZee(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w400,
-                                    fontStyle: FontStyle.italic,
-                                    letterSpacing: .10,
-                                    color: Colors.black,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      }
-
-                      final item = _filteredDocs()[index - 1];
+                      final item = _filteredDocs()[index];
                       bool isExpired = false;
                       if (item['expiry_date'] != null &&
                           item['expiry_date'] != false) {
@@ -957,27 +1109,6 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                                         mainAxisAlignment:
                                             MainAxisAlignment.start,
                                         children: [
-                                          if (isExpired)
-                                            Padding(
-                                              padding:
-                                                  EdgeInsets.only(top: 2.h),
-                                              child: SizedBox(
-                                                width: 22.w,
-                                                height: 22.w,
-                                                child: Image.asset(
-                                                  'assets/newapp/newicon/pencil_7754138 1.png',
-                                                  fit: BoxFit.contain,
-                                                  errorBuilder: (_, __, ___) =>
-                                                      Icon(
-                                                    Icons.edit,
-                                                    size: 18.sp,
-                                                    color:
-                                                        const Color(0xFFBA1719),
-                                                  ),
-                                                ),
-                                              ),
-                                            ),
-                                          if (isExpired) SizedBox(height: 4.h),
                                           Expanded(
                                             child: Center(
                                               child: Image.asset(
@@ -1008,8 +1139,15 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                                           _isMeaningfulDocLabel(nameLabel)
                                               ? nameLabel
                                               : typeLabel;
-                                      final date =
-                                          _formatCardDate(item['issue_date']);
+                                      final cardDateRaw =
+                                          (item['expiry_date'] != null &&
+                                                  item['expiry_date'] != false)
+                                              ? item['expiry_date']
+                                              : item['issue_date'];
+                                      final date = _formatCardDate(cardDateRaw);
+                                      final dateColor = isExpired
+                                          ? const Color(0xFFBA1719)
+                                          : const Color(0xff949494);
 
                                       return Column(
                                         mainAxisSize: MainAxisSize.min,
@@ -1017,27 +1155,80 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                                           Text(
                                             displayName,
                                             textAlign: TextAlign.center,
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: GoogleFonts.aBeeZee(
+                                            maxLines: null,
+                                            overflow: TextOverflow.visible,
+                                            style: GoogleFonts.poppins(
                                               fontSize: 14.sp,
                                               fontWeight: FontWeight.w700,
                                               letterSpacing: .10,
                                               color: Colors.black,
                                             ),
                                           ),
-                                          if (date.isNotEmpty) ...[
+                                          SizedBox(height: 4.h),
+                                          Text(
+                                            date,
+                                            textAlign: TextAlign.center,
+                                            maxLines: null,
+                                            overflow: TextOverflow.visible,
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 10.sp,
+                                              fontWeight: FontWeight.w600,
+                                              letterSpacing: .10,
+                                              color: dateColor,
+                                            ),
+                                          ),
+                                          if (isExpired) ...[
                                             SizedBox(height: 4.h),
-                                            Text(
-                                              date,
-                                              textAlign: TextAlign.center,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: GoogleFonts.aBeeZee(
-                                                fontSize: 10.sp,
-                                                fontWeight: FontWeight.w400,
-                                                letterSpacing: .10,
-                                                color: const Color(0xff949494),
+                                            Container(
+                                              constraints: BoxConstraints(
+                                                minHeight: 24.h,
+                                              ),
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: 10.w,
+                                                vertical: 4.h,
+                                              ),
+                                              decoration: BoxDecoration(
+                                                gradient: const LinearGradient(
+                                                  begin: Alignment.topCenter,
+                                                  end: Alignment.bottomCenter,
+                                                  colors: [
+                                                    Color(0xFF1B1F26),
+                                                    Color(0xFF717171),
+                                                  ],
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(12.r),
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  SizedBox(
+                                                    width: 12.w,
+                                                    height: 12.w,
+                                                    child: Image.asset(
+                                                      'assets/newapp/newicon/change_document_icon.png',
+                                                      fit: BoxFit.contain,
+                                                      errorBuilder:
+                                                          (_, __, ___) => Icon(
+                                                        Icons
+                                                            .swap_horiz_rounded,
+                                                        color: Colors.white,
+                                                        size: 12.sp,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  SizedBox(width: 4.w),
+                                                  Text(
+                                                    'Change',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 10.sp,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.white,
+                                                      height: 1,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
                                           ],
@@ -1135,8 +1326,8 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        document['title'] ?? 'Document',
-                        style: GoogleFonts.koulen(
+                        (document['title'] ?? '-').toString(),
+                        style: GoogleFonts.poppins(
                           fontSize: 20,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xff191F52),
@@ -1152,7 +1343,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                 _buildInfoRow(
                   icon: Icons.description,
                   label: 'Name',
-                  value: document['name'] ?? 'N/A',
+                  value: (document['name'] ?? '-').toString(),
                   color: Colors.blue,
                 ),
                 const SizedBox(height: 12),
@@ -1219,7 +1410,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                       icon: const Icon(Icons.attach_file, color: Colors.white),
                       label: Text(
                         'VIEW ATTACHMENT',
-                        style: GoogleFonts.koulen(
+                        style: GoogleFonts.poppins(
                           fontSize: 16,
                           color: Colors.white,
                         ),
@@ -1261,7 +1452,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
             children: [
               Text(
                 label,
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                   color: color,
@@ -1335,7 +1526,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
               const SizedBox(width: 8),
               Text(
                 "ATTACHMENTS",
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 20,
                   fontWeight: FontWeight.w400,
                   color: Colors.black,
@@ -1354,7 +1545,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
               const SizedBox(width: 8),
               Text(
                 "LPO NO",
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   color: Colors.red,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -1371,7 +1562,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
               const SizedBox(width: 8),
               Text(
                 "VENDOR NAME",
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   color: Colors.blue,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -1388,7 +1579,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
               const SizedBox(width: 8),
               Text(
                 "PROJECT NAME",
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   color: Colors.black,
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
@@ -1427,7 +1618,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                     const SizedBox(width: 8),
                     Text(
                       "VIEW ATTACHMENT",
-                      style: GoogleFonts.koulen(
+                      style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w600,
                         fontSize: 16,
                         color: Colors.white,
@@ -2353,7 +2544,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
             children: [
               Text(
                 _dialogTitle,
-                style: GoogleFonts.aBeeZee(
+                style: GoogleFonts.poppins(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
                   fontSize: 16.sp,
@@ -2373,7 +2564,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
                         _isLoadingTypes && _types.isEmpty
                             ? 'Loading document types...'
                             : 'document type',
-                        style: GoogleFonts.aBeeZee(
+                        style: GoogleFonts.poppins(
                           color: Colors.grey,
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w400,
@@ -2388,8 +2579,8 @@ class _DocumentDialogState extends State<DocumentDialog> {
                             child: Center(
                               child: Text(
                                 t,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.aBeeZee(
+                                overflow: TextOverflow.visible,
+                                style: GoogleFonts.poppins(
                                   color: Colors.black87,
                                   fontSize: 12.sp,
                                   fontWeight: FontWeight.w400,
@@ -2442,14 +2633,14 @@ class _DocumentDialogState extends State<DocumentDialog> {
                   child: TextField(
                     controller: _idController,
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.aBeeZee(
+                    style: GoogleFonts.poppins(
                       fontSize: 12.sp,
                       color: Colors.black87,
                     ),
                     onTapOutside: (_) => FocusScope.of(context).unfocus(),
                     decoration: InputDecoration(
                       hintText: 'ID Number',
-                      hintStyle: GoogleFonts.aBeeZee(
+                      hintStyle: GoogleFonts.poppins(
                         color: Colors.grey,
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w400,
@@ -2472,7 +2663,7 @@ class _DocumentDialogState extends State<DocumentDialog> {
                           child: Center(
                             child: Text(
                               expiryText,
-                              style: GoogleFonts.aBeeZee(
+                              style: GoogleFonts.poppins(
                                 fontSize: 12.sp,
                                 color: _expiryDate == null
                                     ? Colors.grey
@@ -2515,9 +2706,9 @@ class _DocumentDialogState extends State<DocumentDialog> {
                           _attachedFileName == null
                               ? 'Attach  Files'
                               : _attachedFileName!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.aBeeZee(
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
+                          style: GoogleFonts.poppins(
                             color: Colors.white,
                             fontWeight: FontWeight.w700,
                             fontSize: 14.sp,

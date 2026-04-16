@@ -30,7 +30,7 @@ class TitleBarWithIconAndBackWidget extends StatelessWidget {
                 style: const TextStyle(
                   color: Color(0xFF002E6B),
                   fontSize: 16,
-                  fontFamily: 'Koulen',
+                  fontFamily: 'Poppins',
                   fontWeight: FontWeight.w500,
                   letterSpacing: 1,
                 ),

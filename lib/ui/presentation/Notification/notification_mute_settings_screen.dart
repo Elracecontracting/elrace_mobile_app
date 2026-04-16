@@ -370,7 +370,7 @@ class _NotificationMuteSettingsScreenState
               children: [
                 Text(
                   'Notification Preferences',
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     color: Colors.white,
                     fontSize: 28.sp,
                     height: 1.05,
@@ -379,7 +379,7 @@ class _NotificationMuteSettingsScreenState
                 SizedBox(height: 6.h),
                 Text(
                   statusText,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     color: Colors.white.withValues(alpha: 0.9),
                     fontSize: 12.sp,
                     fontWeight: FontWeight.w500,
@@ -429,7 +429,7 @@ class _NotificationMuteSettingsScreenState
               children: [
                 Text(
                   category.title,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF111D3A),
@@ -438,7 +438,7 @@ class _NotificationMuteSettingsScreenState
                 SizedBox(height: 2.h),
                 Text(
                   category.model,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 10.5.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF5F6F89),
@@ -447,7 +447,7 @@ class _NotificationMuteSettingsScreenState
                 if (isAlwaysOn)
                   Text(
                     'Always enabled',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 10.sp,
                       fontWeight: FontWeight.w700,
                       color: category.color,
@@ -467,14 +467,14 @@ class _NotificationMuteSettingsScreenState
             )
           else
             Switch.adaptive(
-              value: isAlwaysOn ? false : category.muted,
-              activeColor: const Color(0xFFE53935),
-              activeTrackColor: const Color(0xFFEF9A9A),
-              inactiveThumbColor: const Color(0xFF43A047),
-              inactiveTrackColor: const Color(0xFFA5D6A7),
+              value: isAlwaysOn ? true : !category.muted,
+              activeColor: const Color(0xFF43A047),
+              activeTrackColor: const Color(0xFFA5D6A7),
+              inactiveThumbColor: const Color(0xFFE53935),
+              inactiveTrackColor: const Color(0xFFEF9A9A),
               onChanged: _isBulkUpdating || isAlwaysOn
                   ? null
-                  : (value) => _toggleMute(category, value),
+                  : (value) => _toggleMute(category, !value),
             ),
         ],
       ),
@@ -491,7 +491,7 @@ class _NotificationMuteSettingsScreenState
         foregroundColor: appFontColor,
         title: Text(
           'Mute Notifications',
-          style: GoogleFonts.koulen(
+          style: GoogleFonts.poppins(
             color: appFontColor,
             fontSize: 28.sp,
           ),
@@ -509,7 +509,7 @@ class _NotificationMuteSettingsScreenState
               icon: const Icon(Icons.volume_up_rounded, size: 16),
               label: Text(
                 'Unmute all',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF2E6BC3),
                 ),
@@ -541,7 +541,7 @@ class _NotificationMuteSettingsScreenState
                       ),
                       child: Text(
                         _error!,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           color: Colors.red.shade700,
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w500,
@@ -554,7 +554,7 @@ class _NotificationMuteSettingsScreenState
                       alignment: Alignment.center,
                       child: Text(
                         'No notification categories available.',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 12.sp,
                           color: const Color(0xFF5F6F89),
                           fontWeight: FontWeight.w500,

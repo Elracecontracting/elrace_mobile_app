@@ -65,13 +65,13 @@ class ProjectCardWidget extends StatelessWidget {
           //     //     width: 190.w,
           //     //     child: Text(
           //     //       item.name,
-          //     //       style: GoogleFonts.koulen(
+          //     //       style: GoogleFonts.poppins(
           //     //         fontSize: 12.sp,
           //     //         fontWeight: FontWeight.w500,
           //     //         color: Colors.white,
           //     //         letterSpacing: 1.2,
           //     //       ),
-          //     //       overflow: TextOverflow.ellipsis,
+          //     //       overflow: TextOverflow.visible,
           //     //     ),
           //     //   ),
           //     // ),
@@ -109,13 +109,13 @@ class ProjectCardWidget extends StatelessWidget {
                               width: 225.w,
                               child: Text(
                                 item.name,
-                                style: GoogleFonts.koulen(
+                                style: GoogleFonts.poppins(
                                   fontSize: 19.26,
                                   fontWeight: FontWeight.w400,
                                   color: Colors.black,
                                   letterSpacing: 1.2,
                                 ),
-                                overflow: TextOverflow.ellipsis,
+                                overflow: TextOverflow.visible,
                               ),
                             ),
                           ],
@@ -148,13 +148,13 @@ class ProjectCardWidget extends StatelessWidget {
                                 width: 100,
                                 child: Text(
                                   "WORK ORDER",
-                                  style: GoogleFonts.koulen(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w400,
                                     color: black,
                                     //letterSpacing: 1.0,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
+                                  overflow: TextOverflow.visible,
                                 ),
                               ),
                             ],
@@ -173,14 +173,14 @@ class ProjectCardWidget extends StatelessWidget {
                                 width: 170.w,
                                 child: Text(
                                   item.agreementId,
-                                  maxLines: 1,
-                                  style: GoogleFonts.koulen(
+                                  maxLines: null,
+                                  style: GoogleFonts.poppins(
                                     fontSize: 11.06,
                                     fontWeight: FontWeight.w400,
                                     color: black,
                                     // letterSpacing: 1.0,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
+                                  overflow: TextOverflow.visible,
                                 ),
                               ),
                             ],
@@ -203,7 +203,7 @@ class ProjectCardWidget extends StatelessWidget {
                             child: Center(
                               child: Text(
                                 '+12',
-                                style: GoogleFonts.koulen(
+                                style: GoogleFonts.poppins(
                                   fontSize: 16.76.sp,
                                   fontWeight: FontWeight.w400,
                                   color: AppColors.green,
@@ -253,7 +253,7 @@ class ProjectCardWidget extends StatelessWidget {
                                             .day
                                             .toString()
                                         : '',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 14.16,
                                       fontWeight: FontWeight.w600,
                                     ),
@@ -265,13 +265,13 @@ class ProjectCardWidget extends StatelessWidget {
                                       ? DateFormat.MMMM()
                                           .format(DateTime.parse(item.date))
                                       : '',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 9,
                                     fontWeight: FontWeight.bold,
                                     color: const Color(0xff1A1A53),
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: null,
+                                  overflow: TextOverflow.visible,
                                 ),
                                 Text(
                                   Util.isValidDateTime(item.date)
@@ -279,7 +279,7 @@ class ProjectCardWidget extends StatelessWidget {
                                           .year
                                           .toString()
                                       : '',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                     color: const Color(0xff1A1A53),
@@ -300,12 +300,12 @@ class ProjectCardWidget extends StatelessWidget {
                   //       //   width: 200,
                   //       //   child: Text(
                   //       //     item.partnerId,
-                  //       //     style: GoogleFonts.koulen(
+                  //       //     style: GoogleFonts.poppins(
                   //       //       fontSize: 12,
                   //       //       color: Colors.black,
                   //       //       letterSpacing: 1.0,
                   //       //     ),
-                  //       //     overflow: TextOverflow.ellipsis,
+                  //       //     overflow: TextOverflow.visible,
                   //       //     maxLines: 2,
                   //       //     softWrap: false,
                   //       //   ),

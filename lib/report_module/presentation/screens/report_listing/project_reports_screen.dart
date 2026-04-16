@@ -117,7 +117,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                               SnackBar(
                                 content: Text(
                                   'Please enter report name',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 13.sp,
                                     color: Colors.white,
                                   ),
@@ -152,7 +152,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                                 SnackBar(
                                   content: Text(
                                     'Failed to create report. Please try again',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 13.sp,
                                       color: Colors.white,
                                     ),
@@ -187,7 +187,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                         ),
                         label: Text(
                           'Start',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 18.sp,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
@@ -283,7 +283,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                             Expanded(
                               child: Text(
                                 'Projects Reports',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 13.sp,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF787B87),
@@ -341,9 +341,9 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                                                 start: 4.w),
                                             child: Text(
                                               'Create Report',
-                                              maxLines: 1,
+                                              maxLines: null,
                                               overflow: TextOverflow.clip,
-                                              style: GoogleFonts.inter(
+                                              style: GoogleFonts.poppins(
                                                 fontSize: 13.sp,
                                                 fontWeight: FontWeight.w700,
                                                 color: Colors.white,
@@ -444,7 +444,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                                 widget.folder.name.isEmpty
                                     ? 'Projects Name'
                                     : widget.folder.name,
-                                 style: GoogleFonts.inter(
+                                 style: GoogleFonts.poppins(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF151A36),
@@ -474,14 +474,14 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                                       onChanged: (value) {
                                         setState(() => _searchQuery = value);
                                       },
-                                      style: GoogleFonts.inter(
+                                      style: GoogleFonts.poppins(
                                         fontSize: 16.sp,
                                         color: const Color(0xFF22263A),
                                       ),
                                       decoration: InputDecoration(
                                         hintText: 'Search',
                                         border: InputBorder.none,
-                                        hintStyle: GoogleFonts.inter(
+                                        hintStyle: GoogleFonts.poppins(
                                           fontSize: 16.sp,
                                           color: const Color(0xFFA3A6B1),
                                         ),
@@ -538,7 +538,7 @@ class _DialogTextFieldCard extends StatelessWidget {
         children: [
           Text(
             topLabel,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 11.sp,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF6A6D78),
@@ -546,7 +546,7 @@ class _DialogTextFieldCard extends StatelessWidget {
           ),
           Text(
             title,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 16.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF151A36),
@@ -563,7 +563,7 @@ class _DialogTextFieldCard extends StatelessWidget {
             ),
             child: TextField(
               controller: controller,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 11.sp,
                 fontWeight: FontWeight.w500,
                 color: const Color(0xFF272A36),
@@ -571,7 +571,7 @@ class _DialogTextFieldCard extends StatelessWidget {
               decoration: InputDecoration(
                 border: InputBorder.none,
                 hintText: hint,
-                hintStyle: GoogleFonts.inter(
+                hintStyle: GoogleFonts.poppins(
                   fontSize: 11.sp,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFFA2A4AA),
@@ -624,7 +624,7 @@ class _DialogDropdownCardState extends State<_DialogDropdownCard> {
         children: [
           Text(
             widget.topLabel,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 11.sp,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF6A6D78),
@@ -632,7 +632,7 @@ class _DialogDropdownCardState extends State<_DialogDropdownCard> {
           ),
           Text(
             widget.title,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 16.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF151A36),
@@ -664,14 +664,14 @@ class _DialogDropdownCardState extends State<_DialogDropdownCard> {
                       widget.value != null && widget.items.contains(widget.value)
                           ? widget.value!
                           : widget.hint,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 11.sp,
                         fontWeight: FontWeight.w500,
                         color: widget.value != null && widget.items.contains(widget.value)
                             ? const Color(0xFF272A36)
                             : const Color(0xFFA2A4AA),
                       ),
-                      overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.visible,
                     ),
                   ),
                   AnimatedRotation(
@@ -728,7 +728,7 @@ class _DialogDropdownCardState extends State<_DialogDropdownCard> {
                               horizontal: 14.w, vertical: 11.h),
                           child: Text(
                             item,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 11.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF272A36),
@@ -862,24 +862,24 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                         SizedBox(height: 14.h),
                         Text(
                           widget.report.name.isEmpty ? 'Report Name' : widget.report.name,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF27304E),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
                         ),
                         SizedBox(height: 4.h),
                         Text(
                           widget.report.reportType ?? 'Report Type',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF27304E),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
                         ),
                     SizedBox(height: 14.h),
                     FutureBuilder<ReportDetailModel?>(
@@ -898,7 +898,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                 SizedBox(width: 8.w),
                                 Text(
                                   'Loading...',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 12.sp,
                                     fontWeight: FontWeight.w500,
                                     color: const Color(0xFF9CA3AF),
@@ -913,7 +913,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                           debugPrint('❌ Card FutureBuilder error: ${snapshot.error}');
                           return Text(
                             'Error loading',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFFE81E25),
@@ -924,7 +924,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                         if (!snapshot.hasData || snapshot.data == null || snapshot.data!.reportItems.isEmpty) {
                           return Text(
                             'No images',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF9CA3AF),
@@ -936,7 +936,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                         if (items.isEmpty) {
                           return Text(
                             'No images',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF9CA3AF),
@@ -991,7 +991,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                               SizedBox(width: 4.w),
                               Text(
                                 '+$remaining',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 12.sp,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF27304E),
@@ -1065,7 +1065,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                       ),
                                       title: Text(
                                         'Delete Report',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 18.sp,
                                           fontWeight: FontWeight.w600,
                                           color: const Color(0xFF27304E),
@@ -1073,7 +1073,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                       ),
                                       content: Text(
                                         'Are you sure you want to delete this report?',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 14.sp,
                                           color: const Color(0xFF27304E),
                                         ),
@@ -1083,7 +1083,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                           onPressed: () => Navigator.pop(ctx, false),
                                           child: Text(
                                             'Cancel',
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 14.sp,
                                               fontWeight: FontWeight.w600,
                                               color: const Color(0xFF27304E),
@@ -1094,7 +1094,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                           onPressed: () => Navigator.pop(ctx, true),
                                           child: Text(
                                             'Delete',
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 14.sp,
                                               fontWeight: FontWeight.w600,
                                               color: const Color(0xFFE81E25),
@@ -1120,7 +1120,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                       SizedBox(width: 8.w),
                                       Text(
                                         'Rename',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 14.sp,
                                           fontWeight: FontWeight.w500,
                                           color: const Color(0xFF27304E),
@@ -1137,7 +1137,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                       SizedBox(width: 8.w),
                                       Text(
                                         'Delete',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 14.sp,
                                           fontWeight: FontWeight.w500,
                                           color: const Color(0xFFE81E25),
@@ -1321,7 +1321,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                       SizedBox(height: 8.h),
                       Text(
                         'Camera',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -1350,7 +1350,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                       SizedBox(height: 8.h),
                       Text(
                         'Gallery',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -1482,7 +1482,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                     icon: Icon(Icons.camera_alt, size: 18.w, color: Colors.white),
                     label: Text(
                       'Add Pictures',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
@@ -1535,7 +1535,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                   SizedBox(height: 8.h),
                                   Text(
                                     'Tap to add photo',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 12.sp,
                                       color: const Color(0xFFB0B0B0),
                                     ),
@@ -1700,7 +1700,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                           SizedBox(width: 12.w),
                           Text(
                             'Items no ${_currentIndex + 1}/${_photoItems.length}',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 14.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF6A6D78),
@@ -1741,7 +1741,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                               ? 'Failed to create report. Please try again'
                               : 'Please fill all data (Image, Location, Description) before adding new item',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -1762,7 +1762,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                         child: Text(
                           _uploadErrorMessage!,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -1848,7 +1848,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                 )
                               : Text(
                             'Submit',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
@@ -1927,7 +1927,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                 )
                               : Text(
                             'Generate Report',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
@@ -1960,7 +1960,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
         children: [
           Text(
             'Location',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF272A36),
@@ -1977,11 +1977,11 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
             child: TextField(
               controller: item.locationController,
               onChanged: (v) => item.location = v,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                   fontSize: 13.sp, color: const Color(0xFF272A36)),
               decoration: InputDecoration(
                 hintText: 'Enter location...',
-                hintStyle: GoogleFonts.inter(
+                hintStyle: GoogleFonts.poppins(
                     fontSize: 13.sp, color: const Color(0xFFB0B0B0)),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,

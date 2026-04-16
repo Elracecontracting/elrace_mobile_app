@@ -331,7 +331,7 @@ class _CameraScreenState extends State<CameraScreen> {
                               children: [
                                 Text(
                                   _currentTime,
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 15.sp,
                                     color: Colors.white,
                                     fontWeight: FontWeight.w600,
@@ -341,7 +341,7 @@ class _CameraScreenState extends State<CameraScreen> {
                                 SizedBox(height: 2.h),
                                 Text(
                                   _currentDate,
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 15.sp,
                                     color: Colors.white,
                                     fontWeight: FontWeight.w600,
@@ -352,7 +352,7 @@ class _CameraScreenState extends State<CameraScreen> {
                                   SizedBox(height: 2.h),
                                   Text(
                                     _currentLocation,
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 15.sp,
                                       color: Colors.white,
                                       fontWeight: FontWeight.w600,
@@ -416,7 +416,7 @@ class _CameraScreenState extends State<CameraScreen> {
           ),
           child: Text(
             text,
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 17.sp,
               letterSpacing: 1.4,
               color: Colors.white,

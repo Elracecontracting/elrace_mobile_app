@@ -70,10 +70,13 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
 
   bool _isSubmitting = false;
   bool _isProjectLoading = false;
+  bool _isExpenseTypeLoading = false;
   Timer? _projectSearchDebounce;
 
   DateTime _selectedDate = DateTime.now();
   int? _holderId;
+  List<_ExpenseTypeOption> _expenseTypeOptions = const [];
+  String? _selectedExpenseTypeValue;
 
   static const TextStyle _labelStyle = TextStyle(
     fontSize: 16,
@@ -86,12 +89,13 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
     return widget.fixedExpenseType.toLowerCase().trim() == 'fleet';
   }
 
-  String get _displayType {
-    return _isTransportation ? 'Transportations' : 'Miscellaneous';
+  String get _summaryType {
+    return _isTransportation ? 'fleet' : 'others';
   }
 
-  String get _apiExpenseType {
-    return _isTransportation ? 'fleet' : 'other';
+  String get _effectiveExpenseTypeValue {
+    return _selectedExpenseTypeValue ??
+        (_isTransportation ? 'fleet' : 'others');
   }
 
   @override
@@ -100,6 +104,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
     _dateController.text = DateFormat('dd/MM/yyyy').format(_selectedDate);
     _holderId = _resolveHolderId();
     _holderController.text = _holderId?.toString() ?? '';
+    unawaited(_loadExpenseTypeOptions());
   }
 
   @override
@@ -318,7 +323,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                                     ? 'Unnamed project'
                                     : projectName,
                                 maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                                overflow: TextOverflow.visible,
                                 style: const TextStyle(
                                     fontSize: 13, fontWeight: FontWeight.w600),
                               ),
@@ -365,6 +370,90 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
     }
   }
 
+  Future<void> _loadExpenseTypeOptions() async {
+    if (!mounted) return;
+
+    final token = SharedPref.getLoginData().result?.token;
+    if (token == null || token.isEmpty || _holderId == null) {
+      setState(() {
+        _expenseTypeOptions = const [];
+        _selectedExpenseTypeValue = null;
+      });
+      return;
+    }
+
+    setState(() => _isExpenseTypeLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse('https://erp.elrace.com/api/draft_summary'),
+        headers: <String, String>{
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(<String, dynamic>{
+          'jsonrpc': '2.0',
+          'params': <String, dynamic>{
+            'holder_id': _holderId,
+            'type': _summaryType,
+          },
+        }),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load expense types: ${response.statusCode}');
+      }
+
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final result = decoded['result'];
+      if (result is! Map<String, dynamic> || result['status'] != 'success') {
+        throw Exception('Failed to load expense types');
+      }
+
+      final data = result['data'];
+      final rawOptions =
+          data is Map<String, dynamic> ? data['expense_type_options'] : null;
+
+      final parsedOptions = rawOptions is List
+          ? rawOptions
+              .whereType<Map>()
+              .map((item) {
+                final map = Map<String, dynamic>.from(item);
+                final value = (map['value'] ?? '').toString().trim();
+                final label = (map['label'] ?? value).toString().trim();
+                if (value.isEmpty) return null;
+                return _ExpenseTypeOption(value: value, label: label);
+              })
+              .whereType<_ExpenseTypeOption>()
+              .toList(growable: false)
+          : const <_ExpenseTypeOption>[];
+
+      if (!mounted) return;
+      setState(() {
+        final fallback = _isTransportation
+            ? const _ExpenseTypeOption(value: 'fleet', label: 'Transportations')
+            : const _ExpenseTypeOption(value: 'others', label: 'Miscellaneous');
+        _expenseTypeOptions =
+            parsedOptions.isNotEmpty ? parsedOptions : [fallback];
+        _selectedExpenseTypeValue = _expenseTypeOptions.first.value;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        final fallback = _isTransportation
+            ? const _ExpenseTypeOption(value: 'fleet', label: 'Transportations')
+            : const _ExpenseTypeOption(value: 'others', label: 'Miscellaneous');
+        _expenseTypeOptions = [fallback];
+        _selectedExpenseTypeValue = fallback.value;
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isExpenseTypeLoading = false);
+      }
+    }
+  }
+
   Future<void> _submitExpense() async {
     if (_holderId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -398,6 +487,14 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
       return;
     }
 
+    if (_selectedExpenseTypeValue == null ||
+        _selectedExpenseTypeValue!.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select expense type')),
+      );
+      return;
+    }
+
     final token = SharedPref.getLoginData().result?.token;
     if (token == null || token.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -419,7 +516,8 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
           'unit_amount': parsedAmount,
           'name':
               '$projectName - ${DateFormat('dd/MM/yyyy').format(_selectedDate)}',
-          'x_expense_type': _apiExpenseType,
+          'type': _effectiveExpenseTypeValue,
+          'x_expense_type': _effectiveExpenseTypeValue,
         },
       };
 
@@ -623,15 +721,41 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
                           const SizedBox(height: 14),
                           labeledField(
                             label: 'Expense type',
-                            child: InputDecorator(
-                              decoration: pillDecoration(),
-                              child: Center(
-                                child: Text(
-                                  _displayType,
-                                  style: fieldTextStyle(false),
-                                ),
-                              ),
-                            ),
+                            child: _isExpenseTypeLoading
+                                ? InputDecorator(
+                                    decoration: pillDecoration(),
+                                    child: Center(
+                                      child: Text(
+                                        'Loading...',
+                                        style: fieldTextStyle(true),
+                                      ),
+                                    ),
+                                  )
+                                : DropdownButtonFormField<String>(
+                                    value: _selectedExpenseTypeValue,
+                                    isExpanded: true,
+                                    decoration: pillDecoration(),
+                                    borderRadius: BorderRadius.circular(16),
+                                    items: _expenseTypeOptions
+                                        .map(
+                                          (option) => DropdownMenuItem<String>(
+                                            value: option.value,
+                                            child: Text(
+                                              option.label,
+                                              textAlign: TextAlign.center,
+                                              style: fieldTextStyle(false),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+                                        )
+                                        .toList(growable: false),
+                                    onChanged: (value) {
+                                      if (value == null) return;
+                                      setState(() {
+                                        _selectedExpenseTypeValue = value;
+                                      });
+                                    },
+                                  ),
                           ),
                           const SizedBox(height: 20),
                           SizedBox(
@@ -675,4 +799,14 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
       ),
     );
   }
+}
+
+class _ExpenseTypeOption {
+  final String value;
+  final String label;
+
+  const _ExpenseTypeOption({
+    required this.value,
+    required this.label,
+  });
 }

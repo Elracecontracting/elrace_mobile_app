@@ -114,7 +114,7 @@ class _TodoSearchScreenState extends State<TodoSearchScreen> {
                 },
                 decoration: InputDecoration(
                   hintText: translate('todo.search_hint'),
-                  hintStyle: GoogleFonts.inter(
+                  hintStyle: GoogleFonts.poppins(
                     color: Colors.grey.shade500,
                     fontSize: 15.sp,
                   ),
@@ -142,7 +142,7 @@ class _TodoSearchScreenState extends State<TodoSearchScreen> {
                     vertical: 14.h,
                   ),
                 ),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 15.sp,
                   color: appFontColor,
                 ),
@@ -167,7 +167,7 @@ class _TodoSearchScreenState extends State<TodoSearchScreen> {
           SizedBox(height: 16.h),
           Text(
             translate('todo.search_tasks'),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 18.sp,
               fontWeight: FontWeight.w500,
               color: Colors.grey.shade500,
@@ -176,7 +176,7 @@ class _TodoSearchScreenState extends State<TodoSearchScreen> {
           SizedBox(height: 8.h),
           Text(
             translate('todo.search_description'),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
               color: Colors.grey.shade400,
             ),
@@ -200,7 +200,7 @@ class _TodoSearchScreenState extends State<TodoSearchScreen> {
           SizedBox(height: 16.h),
           Text(
             translate('todo.no_results'),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 18.sp,
               fontWeight: FontWeight.w500,
               color: Colors.grey.shade500,
@@ -209,7 +209,7 @@ class _TodoSearchScreenState extends State<TodoSearchScreen> {
           SizedBox(height: 8.h),
           Text(
             translate('todo.try_different_search'),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
               color: Colors.grey.shade400,
             ),

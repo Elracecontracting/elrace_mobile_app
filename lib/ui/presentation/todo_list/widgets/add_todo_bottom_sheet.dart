@@ -129,7 +129,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                 isEditing
                     ? translate('todo.edit_task')
                     : translate('todo.add_task'),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 20.sp,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF1A1A53),
@@ -143,7 +143,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                 textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
                   hintText: translate('todo.task_title_hint'),
-                  hintStyle: GoogleFonts.inter(
+                  hintStyle: GoogleFonts.poppins(
                     color: Colors.grey.shade400,
                   ),
                   border: OutlineInputBorder(
@@ -162,7 +162,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                     vertical: 14.h,
                   ),
                 ),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 16.sp,
                   color: const Color(0xFF1A1A53),
                 ),
@@ -175,7 +175,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                 textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
                   hintText: 'Write your description...',
-                  hintStyle: GoogleFonts.inter(
+                  hintStyle: GoogleFonts.poppins(
                     color: Colors.grey.shade400,
                   ),
                   border: OutlineInputBorder(
@@ -194,7 +194,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                     vertical: 14.h,
                   ),
                 ),
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 14.sp,
                   color: Colors.grey.shade700,
                 ),
@@ -274,7 +274,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                           SizedBox(width: 6.w),
                           Text(
                             'Linked to Report',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF1A1A53),
@@ -290,7 +290,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                           icon: Icon(Icons.description, size: 16.sp),
                           label: Text(
                             'View Report',
-                            style: GoogleFonts.inter(fontSize: 13.sp),
+                            style: GoogleFonts.poppins(fontSize: 13.sp),
                           ),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: const Color(0xFF1A1A53),
@@ -326,7 +326,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                       ),
                       child: Text(
                         translate('common.cancel'),
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.grey.shade600,
@@ -360,7 +360,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                               isEditing
                                   ? translate('common.save')
                                   : translate('todo.add_task'),
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 16.sp,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
@@ -381,7 +381,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
                     icon: const Icon(Icons.delete_outline, color: Colors.red),
                     label: Text(
                       translate('common.delete'),
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         fontWeight: FontWeight.w500,
                         color: Colors.red,
@@ -430,7 +430,7 @@ class _AddTodoBottomSheetState extends State<AddTodoBottomSheet> {
             SizedBox(width: 6.w),
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w500,
                 color: isSelected ? selectedColor : Colors.grey.shade600,
@@ -705,7 +705,7 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
               children: [
                 Text(
                   'Select Team Member',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF1A1A53),
@@ -716,7 +716,7 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                     onPressed: widget.onClear,
                     child: Text(
                       'Clear',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 14.sp,
                         color: Colors.red,
                       ),
@@ -734,7 +734,7 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
               onChanged: _filterMembers,
               decoration: InputDecoration(
                 hintText: 'Search for member...',
-                hintStyle: GoogleFonts.inter(color: Colors.grey.shade400),
+                hintStyle: GoogleFonts.poppins(color: Colors.grey.shade400),
                 prefixIcon:
                     Icon(Icons.search, color: Colors.grey.shade400, size: 22.w),
                 border: OutlineInputBorder(
@@ -768,7 +768,7 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                         SizedBox(height: 12.h),
                         Text(
                           'No members found',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 16.sp,
                             color: Colors.grey.shade500,
                           ),
@@ -793,7 +793,7 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                             member.name.isNotEmpty
                                 ? member.name[0].toUpperCase()
                                 : '?',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w600,
                               color: isSelected
                                   ? Colors.white
@@ -803,7 +803,7 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                         ),
                         title: Text(
                           member.name,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 15.sp,
                             fontWeight:
                                 isSelected ? FontWeight.w600 : FontWeight.w500,
@@ -813,7 +813,7 @@ class _MemberPickerSheetState extends State<_MemberPickerSheet> {
                         subtitle: member.jobPosition != null
                             ? Text(
                                 member.jobPosition!,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 12.sp,
                                   color: Colors.grey.shade600,
                                 ),

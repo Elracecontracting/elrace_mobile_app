@@ -64,7 +64,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           SizedBox(height: 16.h),
           Text(
             'Video Player',
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 24.sp,
               color: Colors.white,
               letterSpacing: 1.5,
@@ -73,7 +73,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           SizedBox(height: 8.h),
           Text(
             widget.media.name,
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
               color: Colors.grey[400],
               letterSpacing: 1.0,
