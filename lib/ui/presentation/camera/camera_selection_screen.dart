@@ -203,7 +203,8 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
           // Priority: subLocality > thoroughfare > locality
           if (place.subLocality != null && place.subLocality!.isNotEmpty) {
             locationText = place.subLocality!;
-          } else if (place.thoroughfare != null && place.thoroughfare!.isNotEmpty) {
+          } else if (place.thoroughfare != null &&
+              place.thoroughfare!.isNotEmpty) {
             locationText = place.thoroughfare!;
           } else if (place.locality != null && place.locality!.isNotEmpty) {
             locationText = place.locality!;
@@ -211,9 +212,12 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
 
           // Add emirate/city (locality or administrativeArea)
           String emirate = '';
-          if (place.locality != null && place.locality!.isNotEmpty && place.locality != locationText) {
+          if (place.locality != null &&
+              place.locality!.isNotEmpty &&
+              place.locality != locationText) {
             emirate = place.locality!;
-          } else if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty) {
+          } else if (place.administrativeArea != null &&
+              place.administrativeArea!.isNotEmpty) {
             emirate = place.administrativeArea!;
           }
 
@@ -229,7 +233,8 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
 
       // Fallback to GPS coordinates if geocoding returned nothing
       if (locationText.isEmpty) {
-        locationText = '${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
+        locationText =
+            '${position.latitude.toStringAsFixed(5)}, ${position.longitude.toStringAsFixed(5)}';
         debugPrint('⚠ Using GPS coordinates as fallback: $locationText');
       }
 
@@ -251,7 +256,8 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
     if (_locationRetryCount >= 3 || !mounted) return;
     _locationRetryCount++;
     final delay = Duration(seconds: 3 * _locationRetryCount);
-    debugPrint('↻ Retrying location fetch in ${delay.inSeconds}s (attempt $_locationRetryCount/3)');
+    debugPrint(
+        '↻ Retrying location fetch in ${delay.inSeconds}s (attempt $_locationRetryCount/3)');
     Future.delayed(delay, () {
       if (mounted) _fetchLocation();
     });
@@ -345,11 +351,13 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
       // Encode to JPEG in background isolate to avoid jank
       final Uint8List rgba = byteData.buffer.asUint8List();
 
-      final Uint8List jpgBytes = await compute(_encodeRgbaToJpg, _EncodeParams(
-        rgba: rgba,
-        width: width,
-        height: height,
-      ));
+      final Uint8List jpgBytes = await compute(
+          _encodeRgbaToJpg,
+          _EncodeParams(
+            rgba: rgba,
+            width: width,
+            height: height,
+          ));
 
       // Save to gallery
       final tempDir = await getTemporaryDirectory();
@@ -470,22 +478,46 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
 
       // Draw time (right-aligned) — matching live preview colors
       final int timeX = rightEdge - timeTextWidth;
-      img.drawString(baseImage, _currentTime, font: font, x: timeX + shadowOffset, y: currentY + shadowOffset, color: img.ColorRgb8(130, 130, 130));
-      img.drawString(baseImage, _currentTime, font: font, x: timeX, y: currentY, color: img.ColorRgb8(205, 205, 205));
+      img.drawString(baseImage, _currentTime,
+          font: font,
+          x: timeX + shadowOffset,
+          y: currentY + shadowOffset,
+          color: img.ColorRgb8(130, 130, 130));
+      img.drawString(baseImage, _currentTime,
+          font: font,
+          x: timeX,
+          y: currentY,
+          color: img.ColorRgb8(205, 205, 205));
 
       currentY += lineHeight;
 
       // Draw date (right-aligned)
       final int dateX = rightEdge - dateTextWidth;
-      img.drawString(baseImage, _currentDate, font: font, x: dateX + shadowOffset, y: currentY + shadowOffset, color: img.ColorRgb8(130, 130, 130));
-      img.drawString(baseImage, _currentDate, font: font, x: dateX, y: currentY, color: img.ColorRgb8(205, 205, 205));
+      img.drawString(baseImage, _currentDate,
+          font: font,
+          x: dateX + shadowOffset,
+          y: currentY + shadowOffset,
+          color: img.ColorRgb8(130, 130, 130));
+      img.drawString(baseImage, _currentDate,
+          font: font,
+          x: dateX,
+          y: currentY,
+          color: img.ColorRgb8(205, 205, 205));
 
       // Draw location (right-aligned)
       if (_currentLocation.isNotEmpty) {
         currentY += lineHeight;
         final int locationX = rightEdge - locationTextWidth;
-        img.drawString(baseImage, _currentLocation, font: font, x: locationX + shadowOffset, y: currentY + shadowOffset, color: img.ColorRgb8(130, 130, 130));
-        img.drawString(baseImage, _currentLocation, font: font, x: locationX, y: currentY, color: img.ColorRgb8(205, 205, 205));
+        img.drawString(baseImage, _currentLocation,
+            font: font,
+            x: locationX + shadowOffset,
+            y: currentY + shadowOffset,
+            color: img.ColorRgb8(130, 130, 130));
+        img.drawString(baseImage, _currentLocation,
+            font: font,
+            x: locationX,
+            y: currentY,
+            color: img.ColorRgb8(205, 205, 205));
       }
 
       // Save the result with optimized quality
@@ -996,7 +1028,8 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (_imageQueueService.isProcessing || _savePendingCount > 0)
+                              if (_imageQueueService.isProcessing ||
+                                  _savePendingCount > 0)
                                 Padding(
                                   padding: EdgeInsets.only(right: 6.w),
                                   child: SizedBox(
@@ -1096,8 +1129,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          if (_isProcessingFilter) ...
-                          [
+                          if (_isProcessingFilter) ...[
                             SizedBox(width: 10.w),
                             SizedBox(
                               width: 14.w,
@@ -1324,9 +1356,7 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
           decoration: BoxDecoration(
-            color: isPrimary
-                ? Colors.white
-                : Colors.white.withOpacity(0.15),
+            color: isPrimary ? Colors.white : Colors.white.withOpacity(0.15),
             borderRadius: BorderRadius.circular(8.r),
             border: Border.all(
               color: Colors.white.withOpacity(isPrimary ? 1.0 : 0.4),
@@ -1348,18 +1378,14 @@ class _CameraSelectionScreenState extends State<CameraSelectionScreen>
               else
                 Icon(
                   icon,
-                  color: isPrimary
-                      ? const Color(0xff2B2C74)
-                      : Colors.white,
+                  color: isPrimary ? const Color(0xff2B2C74) : Colors.white,
                   size: 16.sp,
                 ),
               SizedBox(width: 5.w),
               Text(
                 label,
                 style: GoogleFonts.poppins(
-                  color: isPrimary
-                      ? const Color(0xff2B2C74)
-                      : Colors.white,
+                  color: isPrimary ? const Color(0xff2B2C74) : Colors.white,
                   fontSize: 13.sp,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1578,8 +1604,7 @@ Future<void> _applyOverlayIsolate(_OverlayParams p) async {
       img.Image? logo = img.decodeImage(p.logoBytes!);
       if (logo != null) {
         final int logoWidth = (baseImage.width * 0.22).toInt();
-        final int logoHeight =
-            (logoWidth * logo.height / logo.width).toInt();
+        final int logoHeight = (logoWidth * logo.height / logo.width).toInt();
         logo = img.copyResize(logo,
             width: logoWidth,
             height: logoHeight,
@@ -1601,8 +1626,9 @@ Future<void> _applyOverlayIsolate(_OverlayParams p) async {
 
     final timeW = measureWidth(font, p.currentTime);
     final dateW = measureWidth(font, p.currentDate);
-    final locW =
-        p.currentLocation.isNotEmpty ? measureWidth(font, p.currentLocation) : 0;
+    final locW = p.currentLocation.isNotEmpty
+        ? measureWidth(font, p.currentLocation)
+        : 0;
 
     final int rightEdge = baseImage.width - padding;
     final int lineHeight = font.lineHeight + 6;
@@ -1637,7 +1663,8 @@ class _EncodeParams {
   final Uint8List rgba;
   final int width;
   final int height;
-  _EncodeParams({required this.rgba, required this.width, required this.height});
+  _EncodeParams(
+      {required this.rgba, required this.width, required this.height});
 }
 
 /// Runs in a background isolate — converts raw RGBA pixels to JPEG

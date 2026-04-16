@@ -130,10 +130,14 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
 
       if (data['result'] != null) {
         final result = data['result'] as Map;
-        final formData = result['data'] as Map? ?? {};
-        final attachmentList = result['attachment_ids'] as List? ?? [];
+        final rawFormData = result['data'] as Map? ?? {};
+        final formData = _normalizePettyCashFormData(
+          Map<String, dynamic>.from(rawFormData),
+        );
+        final attachmentList = result['attachment_ids'] as List? ??
+            (formData['attachment_ids'] as List? ?? []);
 
-        _logApiCompatibilityIssues(Map<String, dynamic>.from(formData));
+        _logApiCompatibilityIssues(formData);
 
         print('[PETTYCASH] PARSED formData keys: ${formData.keys.toList()}');
         print('[PETTYCASH] PARSED formData: $formData');
@@ -169,13 +173,117 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     }
   }
 
+  Map<String, dynamic> _normalizePettyCashFormData(
+    Map<String, dynamic> raw,
+  ) {
+    final normalized = Map<String, dynamic>.from(raw);
+
+    final formViewRaw = raw['form_view'];
+    if (formViewRaw is Map) {
+      normalized.addAll(Map<String, dynamic>.from(formViewRaw));
+    }
+
+    final tableViewRaw = raw['table_view'];
+    if (tableViewRaw is List) {
+      normalized['lines'] = tableViewRaw
+          .whereType<Map>()
+          .map((line) =>
+              _normalizePettyCashLine(Map<String, dynamic>.from(line)))
+          .toList();
+    } else if (normalized['lines'] is List) {
+      final lines = normalized['lines'] as List;
+      normalized['lines'] = lines
+          .whereType<Map>()
+          .map((line) =>
+              _normalizePettyCashLine(Map<String, dynamic>.from(line)))
+          .toList();
+    }
+
+    normalized['request_no'] = _pick([
+      normalized['request_no'],
+      normalized['pettycash_no'],
+      normalized['petty_cash_no'],
+      normalized['name'],
+      normalized['ref_no'],
+    ]);
+
+    normalized['pettycash_holder'] = _pick([
+      normalized['pettycash_holder'],
+      normalized['holder_name'],
+      normalized['holder'],
+    ]);
+
+    normalized['requester_name'] = _pick([
+      normalized['requester_name'],
+      normalized['requester'],
+      normalized['emp_name'],
+      normalized['employee_name'],
+      normalized['employee'],
+    ]);
+
+    normalized['pettycash_limit'] = _pick([
+      normalized['pettycash_limit'],
+      normalized['limit'],
+      normalized['limit_amount'],
+      normalized['amount'],
+      normalized['total_amount'],
+    ]);
+
+    normalized['total'] = _pick([
+      normalized['total'],
+      normalized['total_amount'],
+      normalized['amount_total'],
+      normalized['amount'],
+    ]);
+
+    return normalized;
+  }
+
+  Map<String, dynamic> _normalizePettyCashLine(Map<String, dynamic> line) {
+    final normalizedLine = Map<String, dynamic>.from(line);
+
+    normalizedLine['description'] = _pick([
+      normalizedLine['description'],
+      normalizedLine['name'],
+      normalizedLine['remarks'],
+      normalizedLine['project'],
+    ]);
+
+    normalizedLine['amount'] = _pick([
+      normalizedLine['amount'],
+      normalizedLine['price'],
+      normalizedLine['subtotal'],
+      normalizedLine['unit_price'],
+    ]);
+
+    normalizedLine['date'] = _pick([
+      normalizedLine['date'],
+      normalizedLine['expense_date'],
+      normalizedLine['line_date'],
+    ]);
+
+    return normalizedLine;
+  }
+
   void _logApiCompatibilityIssues(Map<String, dynamic> formData) {
     final requiredAny = <String, List<String>>{
-      'requestNo': ['request_no', 'pettycash_no', 'name', 'ref_no'],
-      'pettycashLimit': ['pettycash_limit', 'limit', 'limit_amount'],
+      'requestNo': [
+        'request_no',
+        'pettycash_no',
+        'petty_cash_no',
+        'name',
+        'ref_no'
+      ],
+      'pettycashLimit': ['pettycash_limit', 'limit', 'limit_amount', 'amount'],
       'pettycashHolder': ['pettycash_holder', 'holder_name', 'holder'],
-      'requester': ['requester_name', 'requester', 'emp_name', 'employee_name'],
-      'total': ['total', 'total_amount', 'amount_total'],
+      'requester': [
+        'requester_name',
+        'requester',
+        'emp_name',
+        'employee_name',
+        'employee'
+      ],
+      'total': ['total', 'total_amount', 'amount_total', 'amount'],
     };
 
     for (final entry in requiredAny.entries) {
@@ -389,6 +497,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     final requestNo = _pick([
       _formData['request_no'],
       _formData['pettycash_no'],
+      _formData['petty_cash_no'],
       _formData['name'],
       _formData['ref_no'],
     ], fallback: widget.requestId);
@@ -398,6 +507,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       _formData['requester'],
       _formData['emp_name'],
       _formData['employee_name'],
+      _formData['employee'],
     ]);
 
     final pettycashHolder = _pick([
@@ -410,6 +520,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       _formData['pettycash_limit'],
       _formData['limit'],
       _formData['limit_amount'],
+      _formData['amount'],
     ]);
 
     final projectName = _pick([
@@ -428,6 +539,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       _formData['total'],
       _formData['total_amount'],
       _formData['amount_total'],
+      _formData['amount'],
     ]);
 
     final lines = _formData['lines'] as List? ?? [];
