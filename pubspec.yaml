@@ -157,6 +157,7 @@ flutter:
     - assets/json/
     - assets/jpeg/
     - assets/fonts/
+    - assets/google_fonts/
     - assets/logo/
     - assets/i18n/
     - assets/mp4/

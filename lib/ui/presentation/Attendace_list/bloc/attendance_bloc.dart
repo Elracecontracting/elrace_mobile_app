@@ -34,6 +34,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
       http.Response response = await _attendanceRepo.getAttendanceList(
         keyword: event.keyword,
         month: event.month,
+        year: event.year,
       );
 
       if (response.statusCode == 200 &&
@@ -60,6 +61,7 @@ class AttendanceBloc extends Bloc<AttendanceEvent, AttendanceState> {
             response = await _attendanceRepo.getAttendanceList(
               keyword: event.keyword,
               month: null,
+              year: event.year,
             );
           }
         } catch (_) {}

@@ -18,6 +18,8 @@ import 'package:el_race/ui/presentation/my_projects/data/repositories/project_re
 import 'package:el_race/ui/presentation/my_projects/data/datasources/project_remote_datasource.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_usecase.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_by_partner_usecase.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/widgets/project_documents_dialog.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/screens/project_list_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
@@ -891,8 +893,27 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             '')
         .toString();
 
+    // Extract project_id: prefer data['project_id'], fallback to item.id
+    final int projectId = int.tryParse(
+            (data['project_id'] ?? item.id).toString()) ??
+        0;
+
     return GestureDetector(
-      onTap: () => _navigateToDetail(item),
+      onTap: () {
+        final repo = ProjectRepositoryImpl(ProjectRemoteDataSource());
+        final bloc = ProjectListBloc(
+          getProjectsUseCase: GetProjectsUseCase(repository: repo),
+          getProjectAttachmentsUseCase:
+              GetProjectAttachmentsUseCase(repository: repo),
+          getProjectsByPartnerUseCase:
+              GetProjectsByPartnerUseCase(repository: repo),
+        );
+        ProjectDocumentsDialog.show(
+          context,
+          projectId: projectId,
+          bloc: bloc,
+        );
+      },
       child: buildProjectCard(
         id: cardId,
         name: item.title,

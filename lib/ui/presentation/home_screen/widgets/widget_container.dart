@@ -137,6 +137,8 @@ class WidgetContainer extends StatelessWidget {
             child: Column(
               children: [
                 SizedBox(height: 10.w),
+                const AiSupportWidget(),
+                SizedBox(height: 14.h),
                 const ListViewWidgets(),
 
                 // prayer times card
@@ -146,5 +148,131 @@ class WidgetContainer extends StatelessWidget {
         ],
       ),
       );
+  }
+}
+
+class AiSupportWidget extends StatefulWidget {
+  const AiSupportWidget({super.key});
+
+  @override
+  State<AiSupportWidget> createState() => _AiSupportWidgetState();
+}
+
+class _AiSupportWidgetState extends State<AiSupportWidget> {
+  bool _tapped = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => setState(() => _tapped = !_tapped),
+      child: Container(
+        width: double.infinity,
+        height: 170.h,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18.r),
+          boxShadow: [
+            BoxShadow(
+              color: Color(0x596B3FA0),
+              blurRadius: 18,
+              offset: Offset(0, 6),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(18.r),
+          child: Stack(
+            children: [
+              // GIF as full background
+              Positioned.fill(
+                child: Image.asset(
+                  'assets/gif/ai.gif',
+                  fit: BoxFit.cover,
+                ),
+              ),
+
+              // Dark overlay so text stays readable
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        const Color(0xFF1A1040).withOpacity(0.72),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Animated label top-left
+              Positioned(
+                top: 14.h,
+                left: 22.w,
+                right: 22.w,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 400),
+                  transitionBuilder: (child, animation) {
+                    final slide = Tween<Offset>(
+                      begin: const Offset(1.0, 0.0),
+                      end: Offset.zero,
+                    ).animate(CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOut,
+                    ));
+                    return SlideTransition(
+                      position: slide,
+                      child: FadeTransition(opacity: animation, child: child),
+                    );
+                  },
+                  child: _tapped
+                      ? Align(
+                          key: const ValueKey('coming'),
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            'Coming Soon',
+                            textAlign: TextAlign.left,
+                            style: GoogleFonts.poppins(
+                              fontSize: 26.sp,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        )
+                      : Align(
+                          key: const ValueKey('ai'),
+                          alignment: Alignment.centerLeft,
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'Ai ',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 32.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: 'support',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w400,
+                                    color: const Color(0xD9FFFFFF),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

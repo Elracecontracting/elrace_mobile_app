@@ -12,6 +12,7 @@ class AttendanceRepo {
   Future<http.Response> getAttendanceList({
     String? keyword,
     int? month,
+    int? year,
     int limit = 500,
     int offset = 0,
   }) async {
@@ -28,7 +29,7 @@ class AttendanceRepo {
         "Authorization": "Bearer $token"
       };
 
-      var url = Uri.parse("https://erp.elrace.com/api/x_attendance/list");
+      var url = Uri.parse("https://erp.elrace.com/api/attendance/list");
       final body = jsonEncode({
         "jsonrpc": "2.0",
         "params": {
@@ -36,6 +37,7 @@ class AttendanceRepo {
           "limit": limit,
           "offset": offset,
           "month": month,
+          if (year != null) "year": year,
         }
       });
 

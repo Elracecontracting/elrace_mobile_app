@@ -10,7 +10,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:el_race/ui/presentation/tasks_dashboard/screens/add_task.dart';
 import 'package:el_race/ui/presentation/tasks_dashboard/screens/task_details.dart';
 import 'package:el_race/ui/presentation/tasks_dashboard/screens/user_reports_screen.dart';
-import 'package:el_race/report_module/presentation/screens/report_listing/report_app_home_screen.dart';
+import 'package:el_race/report_module/presentation/screens/report_listing/project_reports_screen.dart';
 import 'package:el_race/ui/presentation/todo_list/providers/todo_firebase_provider.dart';
 import 'package:el_race/ui/presentation/todo_list/data/todo_model.dart';
 import 'package:el_race/ui/presentation/todo_list/services/team_members_api_service.dart';
@@ -507,7 +507,7 @@ class _PendingReportsCard extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const ReportAppHomeScreen(),
+                  builder: (context) => const ProjectReportsScreen(),
                 ),
               );
             },

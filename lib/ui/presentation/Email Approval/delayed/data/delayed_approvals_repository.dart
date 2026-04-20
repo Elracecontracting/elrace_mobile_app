@@ -108,13 +108,26 @@ class DelayedApprovalsRepository {
 
   // ─────────────────────────────────────────────────────────────
   // 3. ALL  →  /api/my_delayed_approvals/all
-  //    Optional – avoid unless absolutely necessary.
+  //    Supports pagination via limit/offset in params body.
   // ─────────────────────────────────────────────────────────────
-  Future<DelayedApprovalsResponse> fetchAll() async {
+  Future<DelayedApprovalsResponse> fetchAll({
+    int? limit,
+    int? offset,
+  }) async {
     final token = _requireToken();
-    final url = Uri.parse('$_baseUrl/my_delayed_approvals/all');
 
-    final body = jsonEncode({"jsonrpc": "2.0", "params": {}});
+    final queryParams = <String, String>{};
+    if (limit != null) queryParams['limit'] = '$limit';
+    if (offset != null) queryParams['offset'] = '$offset';
+
+    final url = Uri.parse('$_baseUrl/my_delayed_approvals/all')
+        .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
+    final params = <String, dynamic>{};
+    if (limit != null) params['limit'] = limit;
+    if (offset != null) params['offset'] = offset;
+
+    final body = jsonEncode({"jsonrpc": "2.0", "params": params});
 
     try {
       final request = http.Request('GET', url)
@@ -125,7 +138,7 @@ class DelayedApprovalsRepository {
 
       if (kDebugMode) {
         debugPrint(
-            'DELAYED ALL status=${response.statusCode} bytes=${response.body.length}');
+            'DELAYED ALL status=${response.statusCode} limit=$limit offset=$offset bytes=${response.body.length}');
       }
 
       if (response.statusCode == 200) {

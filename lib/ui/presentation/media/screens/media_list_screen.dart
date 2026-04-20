@@ -8,6 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -18,6 +19,7 @@ import '../data/content_model.dart';
 import '../widgets/media_item_widget.dart';
 import '../widgets/content_item_widget.dart';
 import 'yoyo_video_player_screen.dart';
+import '../../lpo/screens/lpo_pdf_viewer_screen.dart';
 
 class MediaListScreen extends StatefulWidget {
   const MediaListScreen({super.key});
@@ -636,12 +638,33 @@ class _MediaListScreenState extends State<MediaListScreen> {
                 child: Material(
                   color: Colors.transparent,
                   child: InkWell(
-                    onTap: () => _showPhotoPreview(
-                      context,
-                      [content],
-                      initialIndex: 0,
-                    ),
-                    child: Image.network(
+                    onTap: () => _openPhotoOrPdf(context, content),
+                    child: _isPdfContent(content)
+                        ? Container(
+                            color: const Color(0xFFF5F5F5),
+                            alignment: Alignment.center,
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.picture_as_pdf_rounded,
+                                  color: Colors.red.shade700,
+                                  size: 48.sp,
+                                ),
+                                SizedBox(height: 6.h),
+                                Text(
+                                  content.displayName,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11.sp,
+                                    color: Colors.black54,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Image.network(
                       _safeImageUrl(content.displayImageUrl),
                       headers: _imageHeaders,
                       fit: BoxFit.cover,
@@ -713,11 +736,7 @@ class _MediaListScreenState extends State<MediaListScreen> {
                     children: [
                       InkWell(
                         borderRadius: BorderRadius.circular(12.r),
-                        onTap: () => _showPhotoPreview(
-                          context,
-                          [content],
-                          initialIndex: 0,
-                        ),
+                        onTap: () => _openPhotoOrPdf(context, content),
                         child: Container(
                           height: 22.h,
                           padding: EdgeInsets.symmetric(horizontal: 14.w),
@@ -766,6 +785,62 @@ class _MediaListScreenState extends State<MediaListScreen> {
         ),
       ),
     );
+  }
+
+  bool _isPdfContent(ContentModel content) => content.isPdf;
+
+  /// Checks URL content-type via HEAD request, then opens PDF viewer or photo preview.
+  Future<void> _openPhotoOrPdf(BuildContext context, ContentModel content) async {
+    // First check static indicators (filename / known fileType)
+    if (_isPdfContent(content)) {
+      if (!context.mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => LpoPdfViewerScreen(
+            pdfUrl: content.previewUrl,
+            title: content.displayName,
+          ),
+        ),
+      );
+      return;
+    }
+
+    // For URLs without extension (e.g. /my/public/file/12345),
+    // do a HEAD request to detect the actual content-type.
+    final rawUrl = content.previewUrl.trim();
+    final hasNoExtension = !rawUrl.contains('?') &&
+        !rawUrl.split('/').last.contains('.');
+    if (hasNoExtension && rawUrl.isNotEmpty) {
+      try {
+        final token = SharedPref.getLoginData().result?.token ?? '';
+        final headers = token.isNotEmpty
+            ? {'Authorization': 'Bearer $token'}
+            : <String, String>{};
+        final headResp = await http
+            .head(Uri.parse(rawUrl), headers: headers)
+            .timeout(const Duration(seconds: 6));
+        final ct = (headResp.headers['content-type'] ?? '').toLowerCase();
+        if (!context.mounted) return;
+        if (ct.contains('pdf')) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => LpoPdfViewerScreen(
+                pdfUrl: rawUrl,
+                title: content.displayName,
+              ),
+            ),
+          );
+          return;
+        }
+      } catch (_) {
+        // fall through to photo preview on error
+      }
+    }
+
+    if (!context.mounted) return;
+    _showPhotoPreview(context, [content], initialIndex: 0);
   }
 
   Future<void> _sharePhotoItem(ContentModel content) async {

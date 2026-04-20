@@ -68,11 +68,7 @@ class _AttendancePageState extends State<AttendancePage> {
 
     _attendanceBloc = AttendanceBloc();
 
-    final isAttendanceManager =
-        SharedPref.getLoginDataOrNull()?.result?.data?.isAttendanceManager ==
-            true;
-
-    // Initial load - both manager and non-manager load data
+    // Initial load - the API response determines the user role.
     _fetchAttendance(keyword: null);
   }
 
@@ -125,32 +121,18 @@ class _AttendancePageState extends State<AttendancePage> {
     _requestSeq += 1;
     final monthToUse = selectedMonth ?? DateTime.now().month;
 
-    final isAttendanceManager =
-        SharedPref.getLoginDataOrNull()?.result?.data?.isAttendanceManager ==
-            true;
-    final myEmployeeId =
-        SharedPref.getLoginDataOrNull()?.result?.data?.employee_id;
-
     log(
-      'AttendancePage fetch -> requestId=$_requestSeq, keyword=$keyword, month=$monthToUse, isManager=$isAttendanceManager, myEmployeeId=$myEmployeeId',
+      'AttendancePage fetch -> requestId=$_requestSeq, keyword=$keyword, month=$monthToUse, year=$selectedYear',
     );
 
-    if (isAttendanceManager) {
-      // Manager: fetch all employees grouped list
-      _attendanceBloc.add(GetAttendanceListET(
-        keyword: keyword,
-        month: monthToUse,
-        requestId: _requestSeq,
-      ));
-    } else {
-      // Non-manager: fetch only own attendance via /api/attendance/detail
-      _attendanceBloc.add(GetSelfAttendanceET(
-        employeeId: myEmployeeId ?? 0,
-        month: monthToUse,
-        year: selectedYear,
-        requestId: _requestSeq,
-      ));
-    }
+    // Always call GetAttendanceListET — the API returns user_type so we decide
+    // which view to show from the response, not from SharedPref.
+    _attendanceBloc.add(GetAttendanceListET(
+      keyword: keyword,
+      month: monthToUse,
+      year: selectedYear,
+      requestId: _requestSeq,
+    ));
 
     setState(() {
       expandedRecords.clear();
@@ -365,32 +347,29 @@ class _AttendancePageState extends State<AttendancePage> {
         selectedMonth = picked;
         _displayedItemsCount = 10; // Reset to initial count on month change
       });
-
-      final isAttendanceManager =
-          SharedPref.getLoginDataOrNull()?.result?.data?.isAttendanceManager ==
-              true;
-
-      if (isAttendanceManager) {
-        _fetchAttendance(keyword: null);
-      } else {
-        _fetchAttendance(keyword: null);
-      }
+      _fetchAttendance(keyword: null);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isAttendanceManager =
-        SharedPref.getLoginDataOrNull()?.result?.data?.isAttendanceManager ==
-            true;
-
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const HeaderWidget(),
       body: BlocBuilder<AttendanceBloc, AttendanceState>(
         bloc: _attendanceBloc,
         builder: (context, state) {
-          if (isAttendanceManager) {
+          // Determine role from the API response user_type field.
+          // "manager" and "management" → manager view; "user" → employee view.
+          // Fall back to SharedPref while state is loading.
+          bool isManagerRole =
+              SharedPref.getLoginDataOrNull()?.result?.data?.isAttendanceManager ==
+                  true;
+          if (state is AttendanceDataLoaded) {
+            isManagerRole = state.attendanceData.isManagerRole;
+          }
+
+          if (isManagerRole) {
             return _buildManagerView(context, state);
           } else {
             return _buildEmployeeView(context, state);
@@ -409,6 +388,7 @@ class _AttendancePageState extends State<AttendancePage> {
     }
 
     final hasFlatData = attendanceData?.data?.isNotEmpty ?? false;
+    final hasMonthlyData = attendanceData?.monthlyEmployees?.isNotEmpty ?? false;
     final hasGroupedData = attendanceData?.mode == "grouped" &&
         (attendanceData?.records?.isNotEmpty ?? false);
 
@@ -497,6 +477,7 @@ class _AttendancePageState extends State<AttendancePage> {
           )
         else if (attendanceData.status == "error" &&
             !hasFlatData &&
+            !hasMonthlyData &&
             !hasGroupedData)
           Padding(
             padding: const EdgeInsets.only(top: 24),
@@ -511,7 +492,9 @@ class _AttendancePageState extends State<AttendancePage> {
               ),
             ),
           )
-        else if (attendanceData.data != null && attendanceData.data!.isNotEmpty)
+        else if (hasMonthlyData)
+          _buildMonthlyEmployeeList(_filterMonthlyEmployeesLocally(attendanceData.monthlyEmployees!))
+        else if (hasFlatData)
           _buildFlatEmployeeList(_filterEmployeesLocally(attendanceData.data!))
         else if (attendanceData.mode == "grouped" &&
             attendanceData.records != null)
@@ -754,6 +737,308 @@ class _AttendancePageState extends State<AttendancePage> {
       final empId = employee.empId.toLowerCase();
       return name.contains(keyword) || empId.contains(keyword);
     }).toList();
+  }
+
+  List<EmployeeMonthlyAttendance> _filterMonthlyEmployeesLocally(
+      List<EmployeeMonthlyAttendance> employees) {
+    final keyword = _searchController.text.trim().toLowerCase();
+    if (keyword.isEmpty) return employees;
+
+    return employees.where((e) {
+      return e.employeeName.toLowerCase().contains(keyword) ||
+          e.employeeId.toString().contains(keyword);
+    }).toList();
+  }
+
+  Future<void> _toggleMonthlyEmployee(EmployeeMonthlyAttendance employee) async {
+    final empKey = employee.employeeId.toString();
+    final wasExpanded = expandedRecords.contains(empKey);
+    setState(() {
+      if (wasExpanded) {
+        expandedRecords.remove(empKey);
+      } else {
+        expandedRecords.add(empKey);
+      }
+    });
+
+    if (wasExpanded) return;
+    if (_managerEmployeeRecords.containsKey(empKey) ||
+        _managerEmployeeLoading.contains(empKey)) return;
+
+    setState(() {
+      _managerEmployeeLoading.add(empKey);
+      _managerEmployeeErrors.remove(empKey);
+    });
+
+    try {
+      final response = await _attendanceRepo.getAttendanceDetail(
+        empId: employee.employeeId,
+        month: selectedMonth ?? DateTime.now().month,
+        year: selectedYear,
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load records (${response.statusCode})');
+      }
+
+      final parsed = attendanceModelFromJson(response.body);
+      final result = parsed.result;
+
+      if (result.status.toLowerCase() != 'success') {
+        throw Exception('Failed to load employee records');
+      }
+
+      final records = result.records ?? <AttendanceRecord>[];
+      final Map<String, AttendanceRecord> uniqueRecords = {};
+      for (final record in records) {
+        final key = '${record.date}_${record.checkIn}';
+        if (!uniqueRecords.containsKey(key)) {
+          uniqueRecords[key] = record;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _managerEmployeeRecords[empKey] = uniqueRecords.values.toList();
+        _managerEmployeeLoading.remove(empKey);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _managerEmployeeErrors[empKey] = e.toString();
+        _managerEmployeeLoading.remove(empKey);
+      });
+    }
+  }
+
+  Widget _buildMonthlyEmployeeList(List<EmployeeMonthlyAttendance> employees) {
+    if (employees.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        child: Center(
+          child: Text(
+            'No employees found.',
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: const Color(0xFF5A5A5A),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final displayCount = _displayedItemsCount.clamp(0, employees.length);
+    final displayed = employees.sublist(0, displayCount);
+    final hasMore = displayCount < employees.length;
+
+    return Column(
+      children: [
+        ...displayed.map((employee) {
+          final empKey = employee.employeeId.toString();
+          final isExpanded = expandedRecords.contains(empKey);
+          final isLoadingRecords = _managerEmployeeLoading.contains(empKey);
+          final recordsError = _managerEmployeeErrors[empKey];
+          final records =
+              _managerEmployeeRecords[empKey] ?? const <AttendanceRecord>[];
+
+          final attendanceRatio =
+              employee.totalWorkingDays > 0
+                  ? employee.totalPresentDays / employee.totalWorkingDays
+                  : 0.0;
+          final ratioColor = attendanceRatio >= 0.8
+              ? const Color(0xFF009859)
+              : attendanceRatio >= 0.6
+                  ? const Color(0xFFF5A623)
+                  : const Color(0xFFE74C3C);
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Column(
+              children: [
+                InkWell(
+                  borderRadius: BorderRadius.circular(28),
+                  onTap: () => _toggleMonthlyEmployee(employee),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE6E6E6),
+                      borderRadius: BorderRadius.circular(28),
+                    ),
+                    child: Row(
+                      children: [
+                        _EmployeeAvatar(
+                          size: 38,
+                          imageUrl: employee.employeeImageUrl ?? '',
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            employee.employeeName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
+                            ),
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '${employee.totalPresentDays}/${employee.totalWorkingDays}',
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: ratioColor,
+                              ),
+                            ),
+                            Text(
+                              '${employee.totalAbsentDays} absent',
+                              style: GoogleFonts.inter(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF9AA0A6),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(
+                          isExpanded
+                              ? Icons.keyboard_arrow_up_rounded
+                              : Icons.keyboard_arrow_down_rounded,
+                          color: const Color(0xFF5A5A5A),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (isExpanded) ...[
+                  const SizedBox(height: 8),
+                  if (isLoadingRecords)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (recordsError != null)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Text(
+                        recordsError,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF5A5A5A),
+                        ),
+                      ),
+                    )
+                  else if (records.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      child: Text(
+                        'No attendance records found.',
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF5A5A5A),
+                        ),
+                      ),
+                    )
+                  else
+                    ...records.map((record) {
+                      final recordStatus =
+                          record.status?.toLowerCase().trim() ?? '';
+                      final recordAttendanceType =
+                          record.attendanceType?.toLowerCase().trim() ?? '';
+                      if (recordStatus == 'weekend' ||
+                          recordAttendanceType == 'weekend') {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _buildWeekendCard(
+                              DateTime.tryParse(record.date)),
+                        );
+                      }
+
+                      DateTime? checkInTime;
+                      try {
+                        checkInTime = DateTime.parse(record.checkIn);
+                      } catch (_) {}
+
+                      DateTime? checkOutTime;
+                      if (record.checkOut != null &&
+                          record.checkOut != false) {
+                        try {
+                          checkOutTime =
+                              DateTime.parse(record.checkOut.toString());
+                        } catch (_) {}
+                      }
+
+                      if (checkInTime == null) return const SizedBox.shrink();
+
+                      String status = 'ONTIME';
+                      if (checkOutTime == null) {
+                        status = 'ABSENT';
+                      } else if (checkInTime.isAfter(DateTime(
+                          checkInTime.year,
+                          checkInTime.month,
+                          checkInTime.day,
+                          8,
+                          15))) {
+                        final lateMinutes = checkInTime
+                            .difference(DateTime(checkInTime.year,
+                                checkInTime.month, checkInTime.day, 8, 15))
+                            .inMinutes;
+                        status = '$lateMinutes MINS LATE';
+                      }
+
+                      final textColor =
+                          _colorForRecord(record, computedStatus: status);
+                      final cardKey =
+                          'monthly_${empKey}_${record.date}_${record.checkIn}';
+
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: _buildInteractiveAttendanceRecordCard(
+                          cardKey: cardKey,
+                          status: status,
+                          textColor: textColor,
+                          checkInTime: checkInTime,
+                          checkOutTime: checkOutTime,
+                          actionTitle: _actionTitleForRecord(record),
+                        ),
+                      );
+                    }),
+                ],
+              ],
+            ),
+          );
+        }),
+
+        if (_isLoadingMore && hasMore)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+
+        Padding(
+          padding: const EdgeInsets.only(top: 12, bottom: 8),
+          child: Text(
+            'Showing $displayCount of ${employees.length} employees',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF9AA0A6),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   Widget _buildEmployeeView(BuildContext context, AttendanceState state) {

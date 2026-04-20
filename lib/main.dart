@@ -56,6 +56,10 @@ import 'report_module/data/provider/reports_provider.dart';
 import 'ui/presentation/Email Approval/bloc/approval_bloc.dart';
 import 'ui/presentation/home_screen/provider/slider_provider.dart';
 
+/// Completer that signals when all heavy initialisation is done.
+/// The splash screen awaits this before navigating away.
+final Completer<void> appInitCompleter = Completer<void>();
+
 // Background message handler - يجب أن يكون خارج main()
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -94,59 +98,212 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // منع Screenshot و Screen Recording
-  //await ScreenProtector.protectDataLeakageOn();
-
+  // ── PHASE 1: Bare-minimum init (fast, needed before first frame) ──
   try {
-    // Initialize with timeout to prevent hanging
     await Future.wait([
       SharedPref().instantiatePreferences(),
-      initDI(),
-      HiveService.setupHive(),
       Firebase.initializeApp(),
     ]).timeout(
-      const Duration(seconds: 30),
+      const Duration(seconds: 10),
       onTimeout: () {
-        print('⚠️ Initialization timeout - continuing with defaults');
+        print('⚠️ Phase-1 init timeout – continuing');
         return [];
       },
     );
   } catch (e) {
-    print('❌ Error during initialization: $e');
-    print('⚠️ Continuing with partial initialization...');
+    print('❌ Phase-1 init error: $e');
   }
 
-  // Load remote app configuration (e.g., Test Mode)
+  // Localization (required for first frame text direction)
+  final delegate = await LocalizationDelegate.create(
+    fallbackLocale: 'en',
+    supportedLocales: ['en', 'ar'],
+    basePath: 'assets/i18n',
+  );
+  if (SharedPref().isArabic()) {
+    await delegate.changeLocale(const Locale('ar'));
+  }
+
+  // Prevent GoogleFonts from doing HTTP fetches — use bundled assets only
+  GoogleFonts.config.allowRuntimeFetching = false;
+
+  // ── Launch the UI immediately so the native splash disappears fast ──
+  runApp(
+    BlocProvider(
+      create: (_) => ApprovalBloc(),
+      child: LocalizedApp(delegate, const MyApp()),
+    ),
+  );
+
+  // ── PHASE 2: Heavy init (runs AFTER first frame is drawn) ──
+  // Using addPostFrameCallback ensures the first frame is painted before
+  // any heavy work starts, giving a smooth native-splash → Flutter transition.
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+    _performHeavyInitialization();
+  });
+}
+
+/// Runs all the heavy services in the background.
+/// [appInitCompleter] is completed as soon as the CRITICAL services are ready
+/// (DI, Hive, AppConfig, Firebase) so the splash screen can navigate quickly.
+/// Non-critical services continue initializing in the background after that.
+Future<void> _performHeavyInitialization() async {
+  // ── CRITICAL PATH (blocks splash navigation) ──────────────────────────
   try {
-    await AppConfigService.instance.load().timeout(
-      const Duration(seconds: 10),
-      onTimeout: () {
-        print('⚠️ AppConfig load timeout - using defaults');
-      },
-    );
+    // Step 1: DI + Hive (everything else depends on these)
+    try {
+      await Future.wait([
+        initDI(),
+        HiveService.setupHive(),
+      ]).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          print('⚠️ DI/Hive init timeout');
+          return [];
+        },
+      );
+    } catch (e) {
+      print('❌ DI/Hive error: $e');
+    }
+
+    // Step 2: AppConfig + Firebase (parallel – independent of each other)
+    try {
+      FirebaseMessaging.onBackgroundMessage(
+          _firebaseMessagingBackgroundHandler);
+    } catch (_) {}
+
+    try {
+      await Future.wait([
+        AppConfigService.instance.load().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => print('⚠️ AppConfig load timeout'),
+        ),
+        FirebaseService.initialize().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => print('⚠️ Firebase service init timeout'),
+        ),
+      ]);
+    } catch (e) {
+      print('❌ Critical services error: $e');
+    }
+
+    print('✅ Critical initialization complete');
   } catch (e) {
-    print('❌ Error loading app config: $e');
+    print('❌ Unexpected error in critical init: $e');
+  } finally {
+    // Signal splash screen it can navigate NOW.
+    if (!appInitCompleter.isCompleted) {
+      appInitCompleter.complete();
+    }
   }
 
-  // Register background message handler قبل FirebaseService.initialize()
+  // ── NON-CRITICAL PATH (runs after splash can already navigate) ────────
+  // These services are needed for full functionality but NOT for the splash
+  // to finish. Running them in parallel maximizes throughput and minimizes
+  // total main-thread blocking time.
+  await Future.delayed(Duration.zero); // yield once before the batch
+  _initializeNonCriticalServices();
+}
+
+/// Background services that don't gate splash navigation.
+/// All independent services run in parallel.
+Future<void> _initializeNonCriticalServices() async {
+  // Fire-and-forget FCM token
+  _logFcmToken();
+
+  // Run all independent services in parallel
+  await Future.wait<void>([
+    _initWorkManager(),
+    _initPrayerAndCheckoutServices(),
+    _initializeChatIfLoggedIn(),
+  ]);
+
+  print('✅ All background services initialized');
+
+  // PHASE 4: Permissions + System UI (after everything else)
+  try { await _requestEssentialPermissions(); } catch (_) {}
+  try { await _configureAppSystemUi(); } catch (_) {}
+}
+
+/// WorkManager + periodic task scheduling
+Future<void> _initWorkManager() async {
   try {
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  } catch (e) {
-    print('❌ Error registering background handler: $e');
-  }
+    await Workmanager().initialize(unifiedCallbackDispatcher, isInDebugMode: false);
+    debugPrint('✅ WorkManager initialized');
 
+    await Future.wait<void>([
+      Workmanager().registerPeriodicTask(
+        'taskDeadlineCheck',
+        taskDeadlineCheckTaskName,
+        frequency: const Duration(hours: 6),
+        constraints: Constraints(
+          networkType: NetworkType.notRequired,
+          requiresBatteryNotLow: false,
+          requiresCharging: false,
+          requiresDeviceIdle: false,
+        ),
+        existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
+      ),
+      TaskNotificationService().initialize(),
+    ]);
+    debugPrint('✅ Task deadline check scheduled');
+  } catch (e) {
+    print('❌ WorkManager/task error: $e');
+  }
+}
+
+/// Prayer, checkout, counter, check-in reminders, attendance sync
+Future<void> _initPrayerAndCheckoutServices() async {
   try {
-    await FirebaseService.initialize().timeout(
-      const Duration(seconds: 10),
-      onTimeout: () {
-        print('⚠️ Firebase service init timeout');
-      },
-    );
+    // These are all independent – run in parallel
+    await Future.wait<void>([
+      PrayerBackgroundService.initialize().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => print('⚠️ Prayer service timeout'),
+      ),
+      AutoCheckoutService.initialize().timeout(
+        const Duration(seconds: 5),
+        onTimeout: () => print('⚠️ Auto checkout timeout'),
+      ),
+      CounterResetService.checkAndResetOnAppStart().then((_) async {
+        debugPrint('✅ Counter reset check done');
+        await CounterResetService.initialize().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => print('⚠️ Counter reset service timeout'),
+        );
+        debugPrint('✅ Daily counter reset scheduled');
+      }),
+    ]);
   } catch (e) {
-    print('❌ Error initializing Firebase service: $e');
+    print('❌ Service init error: $e');
   }
 
-  // طباعة FCM Token عند بدء التطبيق
+  // Check-in reminders & attendance sync (only if logged in)
+  if (SharedPref.isUserAuthenticated()) {
+    try {
+      await Future.wait<void>([
+        CheckInReminderNotificationService().initialize().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => print('⚠️ Check-in reminder timeout'),
+        ),
+        _syncAttendanceStatusIfLoggedIn(),
+      ]);
+
+      final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
+      if (isCheckedIn) {
+        await AutoCheckoutService.scheduleAutoCheckout();
+        debugPrint('✅ Auto checkout scheduled');
+      }
+      await CheckInReminderNotificationService().updateReminders();
+      debugPrint('✅ Reminders refreshed');
+    } catch (e) {
+      print('❌ Reminder/attendance error: $e');
+    }
+  }
+}
+
+/// Log FCM token without blocking startup.
+Future<void> _logFcmToken() async {
   try {
     String? fcmToken = await FirebaseMessaging.instance.getToken().timeout(
       const Duration(seconds: 10),
@@ -163,158 +320,10 @@ void main() async {
       print(fcmToken);
       print('═══════════════════════════════════════════════════════════');
       print('');
-      print('📋 انسخ الـ token أعلاه واستخدمه في Firebase Console');
-      print(
-          '🔔 اذهب إلى: Firebase Console > Cloud Messaging > Send test message');
-      print('');
-    } else {
-      print('❌ FCM Token is null');
     }
   } catch (e) {
-    print('❌ Error getting FCM token: $e');
+    print('❌ FCM token error: $e');
   }
-
-  // Initialize WorkManager ONCE with the unified dispatcher.
-  // CRITICAL: Only one callbackDispatcher can be active per app.
-  // All background tasks (prayer, auto-checkout, counter-reset) are handled
-  // by the single unifiedCallbackDispatcher in unified_workmanager_dispatcher.dart.
-  try {
-    await Workmanager().initialize(
-      unifiedCallbackDispatcher,
-      isInDebugMode: false,
-    );
-    debugPrint('✅ WorkManager initialized with unified dispatcher');
-  } catch (e) {
-    print('❌ Error initializing WorkManager: $e');
-  }
-
-  // Initialize task notification service & schedule periodic deadline checks
-  try {
-    await TaskNotificationService().initialize();
-    await Workmanager().registerPeriodicTask(
-      'taskDeadlineCheck',
-      taskDeadlineCheckTaskName,
-      frequency: const Duration(hours: 6),
-      constraints: Constraints(
-        networkType: NetworkType.notRequired,
-        requiresBatteryNotLow: false,
-        requiresCharging: false,
-        requiresDeviceIdle: false,
-      ),
-      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
-    );
-    debugPrint('✅ Task notification service initialized & deadline check scheduled');
-  } catch (e) {
-    print('❌ Error initializing task notification service: $e');
-  }
-
-  // تهيئة خدمة الأذان في الخلفية
-  try {
-    await PrayerBackgroundService.initialize().timeout(
-      const Duration(seconds: 5),
-      onTimeout: () {
-        print('⚠️ Prayer service timeout');
-      },
-    );
-  } catch (e) {
-    print('❌ Error initializing Prayer service: $e');
-  }
-
-  // تهيئة خدمة Auto Check-out التلقائي في الساعة 5:10 مساءً
-  try {
-    await AutoCheckoutService.initialize().timeout(
-      const Duration(seconds: 5),
-      onTimeout: () {
-        print('⚠️ Auto checkout init timeout');
-      },
-    );
-  } catch (e) {
-    print('❌ Error initializing auto checkout: $e');
-  }
-
-  // ⭐ تصفير عدادات الدخول/الخروج الساعة 5 صباحاً
-  // أولاً: تحقق فوري عند فتح التطبيق
-  try {
-    await CounterResetService.checkAndResetOnAppStart();
-    debugPrint('✅ Counter reset check completed on app start');
-  } catch (e) {
-    print('❌ Error checking counter reset: $e');
-  }
-
-  // ثانياً: جدولة التصفير التلقائي يومياً الساعة 5 صباحاً (حتى لو التطبيق مغلق)
-  try {
-    await CounterResetService.initialize().timeout(
-      const Duration(seconds: 5),
-      onTimeout: () {
-        print('⚠️ Counter reset service init timeout');
-      },
-    );
-    debugPrint('✅ Daily counter reset scheduled for 5:00 AM');
-  } catch (e) {
-    print('❌ Error initializing counter reset service: $e');
-  }
-
-  // تهيئة وجدولة إشعارات التذكير بـ Check In/Out - فقط إذا كان المستخدم مسجّل دخوله
-  if (SharedPref.isUserAuthenticated()) {
-    try {
-      await CheckInReminderNotificationService().initialize().timeout(
-        const Duration(seconds: 5),
-        onTimeout: () {
-          print('⚠️ Check-in reminder init timeout');
-        },
-      );
-    } catch (e) {
-      print('❌ Error initializing check-in reminder: $e');
-    }
-
-    // مزامنة حالة الدوام أولاً حتى لا يتم جدولة تذكيرات check-in
-    // اعتماداً على حالة محلية قديمة.
-    try {
-      await _syncAttendanceStatusIfLoggedIn();
-
-      final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
-      if (isCheckedIn) {
-        await AutoCheckoutService.scheduleAutoCheckout();
-        debugPrint('✅ Auto checkout scheduled for 5:10 PM');
-      }
-
-      await CheckInReminderNotificationService().updateReminders();
-      debugPrint('✅ Check-in/out reminder notifications refreshed');
-    } catch (e) {
-      print('❌ Error scheduling notifications: $e');
-    }
-  } else {
-    debugPrint('ℹ️ User not logged in — skipping check-in/out reminder & auto-checkout scheduling');
-  }
-
-  // Initialize chat module if user is already logged in
-  await _initializeChatIfLoggedIn();
-
-  // debugPrint = (String? message, {int? wrapWidth}) {};
-  // Get saved language from SharedPref
-  final delegate = await LocalizationDelegate.create(
-    fallbackLocale: 'en',
-    supportedLocales: ['en', 'ar'],
-    basePath: 'assets/i18n',
-  );
-
-  if (SharedPref().isArabic()) {
-    await delegate.changeLocale(const Locale('ar'));
-  }
-
-  // Request essential permissions at app start
-  await _requestEssentialPermissions();
-
-  // Configure system UI globally. On Android we use immersive mode and
-  // show bars temporarily on user interaction.
-  await _configureAppSystemUi();
-
-  runApp(
-    BlocProvider(
-      create: (_) => ApprovalBloc(),
-      child: LocalizedApp(delegate, const MyApp()),
-    ),
-  );
 }
 
 Timer? _androidSystemBarsTimer;
@@ -538,13 +547,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           ChangeNotifierProvider(create: (_) => ProfileBoxProvider()),
           ChangeNotifierProvider(create: (_) => ReportProvider()),
           ChangeNotifierProvider(
-              create: (_) => TodoFirebaseProvider()..initialize()),
+              create: (_) => TodoFirebaseProvider()),
           ChangeNotifierProvider(create: (_) => QrSurveyDataProvider()),
           ChangeNotifierProvider(create: (_) => AnnouncementsProvider()),
           ChangeNotifierProvider(
             create: (_) =>
-                TasksProvider(TasksRepository(api: TasksApiService()))
-                  ..loadTasks(),
+                TasksProvider(TasksRepository(api: TasksApiService())),
           ),
         ],
         child: MultiBlocProvider(

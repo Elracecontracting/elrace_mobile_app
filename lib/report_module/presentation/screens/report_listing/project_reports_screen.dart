@@ -8,6 +8,7 @@ import 'package:el_race/report_module/data/models/report_model.dart';
 import 'package:el_race/report_module/data/models/report_detail_model.dart';
 import 'package:el_race/report_module/data/models/report_item_model.dart';
 import 'package:el_race/report_module/data/provider/reports_provider.dart';
+import 'package:el_race/report_module/data/repositories/company_repository.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/report_detail.dart';
 import 'package:el_race/report_module/presentation/screens/add_report_photos/add_report_photos_screen.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
@@ -27,9 +28,9 @@ import 'package:el_race/report_module/presentation/dialogs/rename_report_dialog.
 import 'package:el_race/report_module/presentation/screens/report_detail/pdf_history_screen.dart';
 
 class ProjectReportsScreen extends StatefulWidget {
-  final FolderModel folder;
+  final FolderModel? folder;
 
-  const ProjectReportsScreen({super.key, required this.folder});
+  const ProjectReportsScreen({super.key, this.folder});
 
   @override
   State<ProjectReportsScreen> createState() => _ProjectReportsScreenState();
@@ -41,6 +42,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
   bool _isCameraButtonExpanded = false;
   List<ReportModel> _reports = [];
   bool _isScrolled = false;
+  FolderModel? _folder;
 
   Future<void> _showTakePicturesDialog() async {
     final TextEditingController reportNameController = TextEditingController();
@@ -49,6 +51,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
       'Site report'
     ];
     String selectedReportType = reportTypes.first;
+    final outerContext = context;
 
     await showDialog<void>(
       context: context,
@@ -113,7 +116,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                         onPressed: () async {
                           // Validate report name
                           if (reportNameController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ScaffoldMessenger.of(outerContext).showSnackBar(
                               SnackBar(
                                 content: Text(
                                   'Please enter report name',
@@ -135,20 +138,36 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
 
                           try {
                             final provider =
-                                Provider.of<ReportProvider>(context,
+                                Provider.of<ReportProvider>(outerContext,
                                     listen: false);
+                            // Close dialog immediately
+                            Navigator.pop(dialogContext);
                             await provider.createReport(
                               title: reportNameController.text.trim(),
-                              folderID: widget.folder.id,
+                              folderID: _folder!.id,
                               reportType: selectedReportType,
                             );
                             await _loadReports();
                             if (mounted) {
-                              Navigator.pop(dialogContext);
+                              if (provider.reports.isNotEmpty) {
+                                Navigator.push(
+                                  outerContext,
+                                  MaterialPageRoute(
+                                    builder: (context) => ReportPhotosScreen(
+                                      report: provider.reports.first,
+                                      folderName: _folder?.name ?? '',
+                                      folderId: _folder?.id ?? '',
+                                      onReportUpdated: () async {
+                                        await _loadReports();
+                                      },
+                                    ),
+                                  ),
+                                );
+                              }
                             }
                           } catch (_) {
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ScaffoldMessenger.of(outerContext).showSnackBar(
                                 SnackBar(
                                   content: Text(
                                     'Failed to create report. Please try again',
@@ -208,6 +227,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
   @override
   void initState() {
     super.initState();
+    _folder = widget.folder;
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadReports());
   }
 
@@ -216,7 +236,19 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
     setState(() => _isLoading = true);
     try {
       final provider = Provider.of<ReportProvider>(context, listen: false);
-      await provider.fetchAllReports(folderID: widget.folder.id);
+      // If no folder was passed in, fetch the first available folder
+      if (_folder == null) {
+        await CompanyRepository().getCompany();
+        ReportProvider().init(base: "https://erp.elrace.com");
+        await provider.fetchAllFolders();
+        if (!mounted) return;
+        if (provider.folders.isEmpty) {
+          setState(() => _isLoading = false);
+          return;
+        }
+        _folder = provider.folders.first;
+      }
+      await provider.fetchAllReports(folderID: _folder!.id);
       if (!mounted) return;
       setState(() {
         _reports = provider.reports;
@@ -274,7 +306,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                 },
                 child: CustomScrollView(
                   slivers: [
-                    SliverToBoxAdapter(child: SizedBox(height: 150.h)),
+                    SliverToBoxAdapter(child: SizedBox(height: 100.h)),
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: EdgeInsets.only(left: 22.w, right: 4.w),
@@ -385,8 +417,8 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                             child: _ProjectReportCard(
                               index: index,
                               report: report,
-                              folderName: widget.folder.name,
-                              folderId: widget.folder.id,
+                              folderName: _folder?.name ?? '',
+                              folderId: _folder?.id ?? '',
                               onReportUpdated: () async {
                                 await _loadReports();
                               },
@@ -428,31 +460,6 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                       ),
                       child: Column(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                'assets/png/my-reports-frame.png',
-                                width: 22.w,
-                                height: 22.w,
-                                fit: BoxFit.contain,
-                                color: const Color(0xFF151A36),
-                                colorBlendMode: BlendMode.srcIn,
-                              ),
-                              SizedBox(width: 8.w),
-                              Text(
-                                widget.folder.name.isEmpty
-                                    ? 'Projects Name'
-                                    : widget.folder.name,
-                                 style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF151A36),
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ],
-                          ),
                           SizedBox(height: 12.h),
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: 20.w),

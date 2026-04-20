@@ -14,27 +14,37 @@ class DelayedRequestsScreen extends StatefulWidget {
 
 class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
   final DelayedApprovalsRepository _repository = DelayedApprovalsRepository();
-  static List<Map<String, dynamic>> _cachedItems = const [];
-  static const int _batchSize = 200;
+  final ScrollController _scrollController = ScrollController();
+
+  static const int _pageSize = 10;
 
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
   String _error = '';
   List<Map<String, dynamic>> _items = [];
+  int _offset = 0;
 
+  // ── pagination helpers ──────────────────────────────────────
+
+  /// Initial load (or pull-to-refresh).
   Future<void> _fetchDelayedRequests() async {
-    final hasCached = _cachedItems.isNotEmpty;
     if (mounted) {
       setState(() {
-        _isLoading = !hasCached;
+        _isLoading = true;
         _error = '';
-        if (hasCached) {
-          _items = List<Map<String, dynamic>>.from(_cachedItems);
-        }
+        _items = [];
+        _offset = 0;
+        _hasMore = true;
       });
     }
 
     try {
-      final normalized = await _fetchAllItemsFromApi();
+      final response = await _repository
+          .fetchAll(limit: _pageSize, offset: 0)
+          .timeout(const Duration(seconds: 30));
+
+      final normalized = response.toCardItems();
       normalized.sort(
         (a, b) => ((b['daysDelayed'] ?? 0) as num)
             .compareTo((a['daysDelayed'] ?? 0) as num),
@@ -43,7 +53,8 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
       if (!mounted) return;
       setState(() {
         _items = normalized;
-        _cachedItems = List<Map<String, dynamic>>.from(normalized);
+        _offset = normalized.length;
+        _hasMore = normalized.length >= _pageSize;
         _isLoading = false;
       });
     } catch (e) {
@@ -55,70 +66,63 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchAllItemsFromApi() async {
-    final first = await _repository
-        .fetchAllPage(page: 1, pageSize: _batchSize)
-        .timeout(const Duration(seconds: 30));
+  /// Load next page and append to list.
+  Future<void> _loadMore() async {
+    if (_isLoadingMore || !_hasMore) return;
 
-    final combined = <Map<String, dynamic>>[
-      ...first.data.toCardItems(),
-    ];
+    setState(() => _isLoadingMore = true);
 
-    var nextPage = first.nextPage;
-    var hasMore = first.hasMore;
-    var safety = 0;
-
-    while (hasMore && nextPage != null && safety < 20) {
-      safety++;
-      final page = await _repository
-          .fetchAllPage(page: nextPage, pageSize: _batchSize)
+    try {
+      final response = await _repository
+          .fetchAll(limit: _pageSize, offset: _offset)
           .timeout(const Duration(seconds: 30));
 
-      final pageItems = page.data.toCardItems();
-      if (pageItems.isEmpty) {
-        break;
-      }
+      final newItems = response.toCardItems();
+      newItems.sort(
+        (a, b) => ((b['daysDelayed'] ?? 0) as num)
+            .compareTo((a['daysDelayed'] ?? 0) as num),
+      );
 
-      combined.addAll(pageItems);
-
-      final previousNext = nextPage;
-      nextPage = page.nextPage;
-      hasMore = page.hasMore && nextPage != null && nextPage != previousNext;
+      if (!mounted) return;
+      setState(() {
+        _items.addAll(newItems);
+        _offset += newItems.length;
+        _hasMore = newItems.length >= _pageSize;
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoadingMore = false);
     }
-
-    return _dedupeByTypeAndId(combined);
   }
 
-  List<Map<String, dynamic>> _dedupeByTypeAndId(
-      List<Map<String, dynamic>> items) {
-    final result = <Map<String, dynamic>>[];
-    final seen = <String>{};
-
-    for (final item in items) {
-      final key =
-          '${(item['type'] ?? '').toString()}_${(item['id'] ?? item['reqNo'] ?? '').toString()}';
-      if (seen.add(key)) {
-        result.add(item);
-      }
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _loadMore();
     }
-
-    return result;
   }
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     _fetchDelayedRequests();
   }
 
   @override
-  void dispose() => super.dispose();
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: CustomScrollView(
+        controller: _scrollController,
         slivers: [
           const SliverAppBar(
             pinned: false,
@@ -183,6 +187,19 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
       sliver: SliverList(
         delegate: SliverChildBuilderDelegate(
           (context, index) {
+            // Last extra item = loading indicator
+            if (index == items.length) {
+              return _isLoadingMore
+                  ? Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16.w),
+                      child: const Center(
+                        child: CircularProgressIndicator(
+                            color: Color(0xFF0B2D5E)),
+                      ),
+                    )
+                  : const SizedBox.shrink();
+            }
+
             final item = items[index];
             return DelayedRequestCard(
               reqNo: item['reqNo'] ?? '',
@@ -197,7 +214,7 @@ class _DelayedRequestsScreenState extends State<DelayedRequestsScreen> {
               },
             );
           },
-          childCount: items.length,
+          childCount: items.length + (_hasMore ? 1 : 0),
         ),
       ),
     );

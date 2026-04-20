@@ -385,6 +385,17 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
     setState(() => _isExpenseTypeLoading = true);
 
     try {
+      final requestBody = jsonEncode(<String, dynamic>{
+        'jsonrpc': '2.0',
+        'params': <String, dynamic>{
+          'holder_id': _holderId,
+          'type': _summaryType,
+        },
+      });
+      debugPrint('[PettyCash] _loadExpenseTypeOptions → REQUEST');
+      debugPrint('[PettyCash]   URL   : https://erp.elrace.com/api/draft_summary');
+      debugPrint('[PettyCash]   Body  : $requestBody');
+
       final response = await http.post(
         Uri.parse('https://erp.elrace.com/api/draft_summary'),
         headers: <String, String>{
@@ -392,14 +403,12 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
           'Accept': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode(<String, dynamic>{
-          'jsonrpc': '2.0',
-          'params': <String, dynamic>{
-            'holder_id': _holderId,
-            'type': _summaryType,
-          },
-        }),
+        body: requestBody,
       );
+
+      debugPrint('[PettyCash] _loadExpenseTypeOptions → RESPONSE');
+      debugPrint('[PettyCash]   Status: ${response.statusCode}');
+      debugPrint('[PettyCash]   Body  : ${response.body}');
 
       if (response.statusCode != 200) {
         throw Exception('Failed to load expense types: ${response.statusCode}');
@@ -415,19 +424,28 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
       final rawOptions =
           data is Map<String, dynamic> ? data['expense_type_options'] : null;
 
+      debugPrint('[PettyCash]   rawOptions: $rawOptions');
+
       final parsedOptions = rawOptions is List
           ? rawOptions
               .whereType<Map>()
               .map((item) {
                 final map = Map<String, dynamic>.from(item);
-                final value = (map['value'] ?? '').toString().trim();
+                var value = (map['value'] ?? '').toString().trim();
                 final label = (map['label'] ?? value).toString().trim();
                 if (value.isEmpty) return null;
+                // Normalize: API may return 'miscellaneous' but server expects 'others'
+                if (value.toLowerCase() == 'miscellaneous') {
+                  debugPrint('[PettyCash]   Normalizing "$value" → "others"');
+                  value = 'others';
+                }
                 return _ExpenseTypeOption(value: value, label: label);
               })
               .whereType<_ExpenseTypeOption>()
               .toList(growable: false)
           : const <_ExpenseTypeOption>[];
+
+      debugPrint('[PettyCash]   parsedOptions: ${parsedOptions.map((o) => '{value:${o.value}, label:${o.label}}').toList()}');
 
       if (!mounted) return;
       setState(() {
@@ -437,8 +455,10 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
         _expenseTypeOptions =
             parsedOptions.isNotEmpty ? parsedOptions : [fallback];
         _selectedExpenseTypeValue = _expenseTypeOptions.first.value;
+        debugPrint('[PettyCash]   _selectedExpenseTypeValue set to: $_selectedExpenseTypeValue');
       });
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[PettyCash] _loadExpenseTypeOptions → ERROR: $e');
       if (!mounted) return;
       setState(() {
         final fallback = _isTransportation
@@ -446,6 +466,7 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
             : const _ExpenseTypeOption(value: 'others', label: 'Miscellaneous');
         _expenseTypeOptions = [fallback];
         _selectedExpenseTypeValue = fallback.value;
+        debugPrint('[PettyCash]   fallback used: ${fallback.value}');
       });
     } finally {
       if (mounted) {
@@ -521,6 +542,10 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
         },
       };
 
+      debugPrint('[PettyCash] _submitExpense → REQUEST');
+      debugPrint('[PettyCash]   URL   : https://erp.elrace.com/api/create_hr_expense');
+      debugPrint('[PettyCash]   Body  : ${jsonEncode(body)}');
+
       final response = await http.post(
         Uri.parse('https://erp.elrace.com/api/create_hr_expense'),
         headers: <String, String>{
@@ -530,6 +555,10 @@ class _PettyCashAddExpenseState extends State<PettyCashAddExpense> {
         },
         body: jsonEncode(body),
       );
+
+      debugPrint('[PettyCash] _submitExpense → RESPONSE');
+      debugPrint('[PettyCash]   Status: ${response.statusCode}');
+      debugPrint('[PettyCash]   Body  : ${response.body}');
 
       if (response.statusCode != 200) {
         throw Exception('Failed to submit expense: ${response.statusCode}');

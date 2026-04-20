@@ -164,18 +164,12 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
 
   Future<void> _fetchLeaveBalance() async {
     try {
-      final loginResp = await userRepo.getLoginResponse();
-      if (loginResp?.result?.data?.leaveBalance != null) {
-        setState(() {
-          leaveBalance = loginResp!.result!.data!.leaveBalance;
-        });
-        debugPrint('✅ Leave Balance fetched: $leaveBalance');
-      } else {
-        debugPrint('⚠️ Leave Balance is null in response');
-        setState(() {
-          leaveBalance = '0';
-        });
-      }
+      final loginData = SharedPref.getLoginData();
+      final balance = loginData.result?.data?.leaveBalance?.toString();
+      setState(() {
+        leaveBalance = (balance != null && balance.isNotEmpty) ? balance : '0';
+      });
+      debugPrint('✅ Leave Balance fetched: $leaveBalance');
     } catch (e) {
       debugPrint('❌ Error fetching leave balance: $e');
       setState(() {
@@ -220,12 +214,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   }
 
   bool _isDateSelectable(DateTime date) {
-    // Sick leave supports selecting past dates (retroactive request use case).
-    if (widget.leaveType == 'SICK') {
-      return true;
-    }
-
-    // Cannot select past dates
+    // Cannot select past dates (applies to all leave types including SICK)
     final today = _dateOnly(DateTime.now());
     if (_dateOnly(date).isBefore(today)) {
       debugPrint('🔴 Date not selectable: $date (Past date)');
@@ -243,15 +232,6 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
     if (_isHoliday(date)) {
       debugPrint('🔴 Date not selectable: $date (Holiday)');
       return false;
-    }
-
-    // Cannot select dates within 3 days before or after a holiday
-    // This applies to both ANNUAL and SHORT leave
-    if (widget.leaveType == 'ANNUAL' || widget.leaveType == 'SHORT') {
-      if (_isWithin3DaysOfHoliday(date)) {
-        debugPrint('🔴 Date not selectable: $date (Within 3 days of holiday)');
-        return false;
-      }
     }
 
     debugPrint('🟢 Date selectable: $date');
@@ -307,6 +287,14 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   }
 
   Future<void> _submitRequest() async {
+    // If only a start date is selected (1-day leave), treat end date as the same day.
+    if (startDate != null && endDate == null) {
+      setState(() {
+        endDate = startDate;
+        duration = '1';
+      });
+    }
+
     if (startDate == null || endDate == null || description.trim().isEmpty) {
       _showErrorDialog('Please fill in all required fields.');
       return;
@@ -315,23 +303,6 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
     if (widget.leaveType == 'SICK' && certificateNo.trim().isEmpty) {
       _showErrorDialog('Please enter certificate number for sick leave.');
       return;
-    }
-
-    // Backdated sick leave can only be submitted within 3 days
-    // after the last sick day (assumes return-to-work is next day).
-    if (widget.leaveType == 'SICK') {
-      final today = _dateOnly(DateTime.now());
-      final selectedEndDate = _dateOnly(endDate!);
-
-      if (selectedEndDate.isBefore(today)) {
-        final lastAllowedSubmitDate =
-            selectedEndDate.add(const Duration(days: 3));
-        if (today.isAfter(lastAllowedSubmitDate)) {
-          _showErrorDialog(
-              'Late sick leave can only be submitted within 3 days after returning to work.');
-          return;
-        }
-      }
     }
 
     // SHORT leave specific validations
@@ -480,7 +451,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   String _getNoticeText() {
     switch (widget.leaveType) {
       case 'SICK':
-        return 'Sick leave requires a certificate number. Backdated sick leave must be submitted within 3 days after returning to work.';
+        return 'Sick leave requires a certificate number.';
       case 'SHORT':
         return 'Please be aware that you are eligible for 4 leaves per year';
       case 'ANNUAL':
@@ -882,7 +853,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
           date.isBefore(endDate!);
 
       final isSelectable = _isDateSelectable(date);
-      final bool enforceHolidayBlocks = widget.leaveType != 'SICK';
+      const bool enforceHolidayBlocks = false;
       final isHolidayDate = enforceHolidayBlocks && _isHoliday(date);
       final isNearHoliday =
           enforceHolidayBlocks && _isWithin3DaysOfHoliday(date);

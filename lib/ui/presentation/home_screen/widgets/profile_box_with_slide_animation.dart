@@ -7,7 +7,7 @@ import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/data/services/prayer_notification_service.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:el_race/main.dart';
+import 'package:el_race/main.dart' show appInitCompleter, navKey;
 import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/profile_widgets/app_settings_widget.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/profile_widgets/profile_paint_widgets.dart';
@@ -48,7 +48,11 @@ class _ProfileBoxWithSlideAnimationState
     super.initState();
     print('🎬 Profile Box: initState called');
 
-    _loadQrCode();
+    // Defer QR code load until heavy init is complete to avoid
+    // blocking the main thread during splash screen.
+    appInitCompleter.future.then((_) {
+      if (mounted) _loadQrCode();
+    });
 
     // Initialize animation controller for moving numbers
     _numbersAnimationController = AnimationController(
@@ -65,8 +69,8 @@ class _ProfileBoxWithSlideAnimationState
       curve: Curves.linear,
     ));
 
-    // Start infinite continuous animation without looping back
-    _numbersAnimationController.repeat();
+    // Animation will be started when the profile box becomes visible.
+    // Don't start here to avoid 60fps repaints while the drawer is hidden.
   }
 
   @override
@@ -528,6 +532,20 @@ class _ProfileBoxWithSlideAnimationState
         final isAuthenticated = SharedPref.isUserAuthenticated();
         if (isAuthenticated == false) return const SizedBox.shrink();
 
+        // ── Fast path: skip ALL heavy work when the drawer is hidden ──
+        if (!profileBoxProvider.isProfileVisible && !_isMutePopupVisible) {
+          // Stop animation when hidden to avoid 60fps repaints
+          if (_numbersAnimationController.isAnimating) {
+            _numbersAnimationController.stop();
+          }
+          return const SizedBox.shrink();
+        }
+
+        // Start animation when visible (if not already running)
+        if (!_numbersAnimationController.isAnimating) {
+          _numbersAnimationController.repeat();
+        }
+
         final screenWidth = MediaQuery.of(context).size.width;
         final drawerWidth = screenWidth * 0.75;
 
@@ -536,34 +554,6 @@ class _ProfileBoxWithSlideAnimationState
             base64Image.isNotEmpty && Util.isValidBase64(base64Image);
 
         final loginData = SharedPref.getLoginData();
-
-        // Debug: print FULL user data to the log so we can inspect it
-        try {
-          print('DEBUG: ===== FULL USER DATA FROM STORAGE =====');
-          print('DEBUG: Full stored JSON:');
-          final storedJson = SharedPref().getPreferenceString('loginResponse');
-          if (storedJson.isNotEmpty) {
-            print(JsonEncoder.withIndent('  ').convert(jsonDecode(storedJson)));
-          } else {
-            print('DEBUG: No stored login data found!');
-          }
-          print('DEBUG: ==========================================');
-          print('DEBUG: Parsed fields from model:');
-          print('DEBUG: name = ${loginData.result?.data?.name}');
-          print('DEBUG: emp_name = ${loginData.result?.data?.emp_name}');
-          print('DEBUG: username = ${loginData.result?.data?.username}');
-          print(
-              'DEBUG: partnerDisplayName = ${loginData.result?.data?.partnerDisplayName}');
-          print('DEBUG: job_id = ${loginData.result?.data?.job_id}');
-          print('DEBUG: emp_id = ${loginData.result?.data?.emp_id}');
-          print('DEBUG: uid = ${loginData.result?.data?.uid}');
-          print('DEBUG: qr_status = ${loginData.result?.data?.qr_status}');
-          print(
-              'DEBUG: image_url length = ${loginData.result?.data?.image_url?.length ?? 0}');
-          print('DEBUG: ==========================================');
-        } catch (e) {
-          print('DEBUG: user data read error: $e');
-        }
 
         return Stack(
           children: [

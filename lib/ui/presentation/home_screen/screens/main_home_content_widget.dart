@@ -255,7 +255,7 @@ class _MainHomeContentWidgetState extends State<MainHomeContentWidget> {
                               ],
                             ),
                             textAlign: TextAlign.center,
-                            maxLines: 1,
+                            maxLines: 3,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),

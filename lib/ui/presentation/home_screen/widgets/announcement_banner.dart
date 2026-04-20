@@ -34,7 +34,6 @@ class AnnouncementBanner extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: bannerHeight,
         width: double.infinity,
         decoration: BoxDecoration(
           borderRadius: bannerBorderRadius,
@@ -42,21 +41,27 @@ class AnnouncementBanner extends StatelessWidget {
             colors: [buttonLight, Colors.white, buttonDark],
           ),
         ),
-        child: ClipRRect(
-          borderRadius: bannerBorderRadius,
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              // Background Image
-              _buildBackgroundImage(),
+        child: Stack(
+          children: [
+            // Background image + gradient clipped to banner shape
+            ClipRRect(
+              borderRadius: bannerBorderRadius,
+              child: SizedBox(
+                height: bannerHeight,
+                width: double.infinity,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _buildBackgroundImage(),
+                    _buildGradientOverlay(),
+                  ],
+                ),
+              ),
+            ),
 
-              // Gradient Overlay for better text readability
-              _buildGradientOverlay(),
-
-              // Text Content
-              _buildTextContent(context),
-            ],
-          ),
+            // Text Content outside clip so it can expand freely
+            _buildTextContent(context),
+          ],
         ),
       ),
     );
@@ -130,7 +135,7 @@ class AnnouncementBanner extends StatelessWidget {
   /// Build text content with overlay styling
   Widget _buildTextContent(BuildContext context) {
     return Positioned(
-      bottom: 30.h,
+      bottom: 0,
       left: 0,
       right: 0,
       child: Container(
@@ -141,7 +146,7 @@ class AnnouncementBanner extends StatelessWidget {
           ),
           borderRadius: BorderRadius.circular(2.r),
         ),
-        padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 12.w),
+        padding: EdgeInsets.symmetric(vertical: 10.h, horizontal: 12.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
@@ -165,8 +170,8 @@ class AnnouncementBanner extends StatelessWidget {
                       ),
                     ],
                   ),
-                  maxLines: null,
-                  overflow: TextOverflow.visible,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
 
@@ -188,7 +193,7 @@ class AnnouncementBanner extends StatelessWidget {
               ),
               textAlign: TextAlign.center,
               maxLines: 3,
-              overflow: TextOverflow.visible,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

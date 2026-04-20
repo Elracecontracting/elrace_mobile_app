@@ -20,7 +20,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:skeletonizer/skeletonizer.dart';
 import '../../widgets/folder_tile.dart';
-import 'folder_reports_screen.dart';
+import 'project_reports_screen.dart';
 
 class ReportAppHomeScreen extends StatefulWidget {
   const ReportAppHomeScreen({super.key});
@@ -45,13 +45,14 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
   }
 
   getData() async {
-    await CompanyRepository().getCompany(); // ✅ Ensure company is set
-    ReportProvider().init(base: "https://erp.elrace.com");
-    isLoading = true;
-    setState(() {});
-    await reportProvider.fetchAllFolders();
-    isLoading = false;
-    setState(() {});
+    // Navigate immediately — ProjectReportsScreen loads its own data
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const ProjectReportsScreen(),
+      ),
+    );
   }
 
   Future<void> _onCreateReportTap() async {

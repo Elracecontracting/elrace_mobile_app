@@ -23,6 +23,7 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:http/http.dart' as http;
 import 'package:el_race/report_module/core/utils/directory_operation.dart';
 import 'package:el_race/report_module/data/models/report_pdf_model.dart';
+import 'package:el_race/report_module/data/repositories/company_repository.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/pdf_preview_screen.dart';
 import 'package:el_race/report_module/presentation/bottom_sheets/show_option_sheet.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -671,10 +672,19 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
   bool _isLoadingPdfs = false;
   List<ReportPdfModel> _pdfs = [];
 
+  static const _companies = [
+    'RCC',
+    'El Race Cons. & Gen. Cont. Co. L.C.C',
+    'Al Hewar Contracting & Irrigation Est.',
+  ];
+  late String _selectedCompany;
+
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.folderName);
+    final currentCompany = CompanyRepository.company?.companyName ?? '';
+    _selectedCompany = _companies.contains(currentCompany) ? currentCompany : _companies.first;
     _loadPdfHistory();
   }
 
@@ -760,6 +770,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
       final pdfBytes = await PdfService().generateReportPdf(
         report: detail,
         projectName: widget.folderName,
+        companyName: _selectedCompany,
       );
 
       if (mounted) {
@@ -920,11 +931,63 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                     ),
                   ),
                   SizedBox(height: 10.h),
-                  _buildReportTypeButton('Site report'),
+                  Center(child: _buildReportTypeButton('Site report')),
                   SizedBox(height: 8.h),
-                  _buildReportTypeButton('Transfer report'),
+                  Center(child: _buildReportTypeButton('Transfer report')),
                   SizedBox(height: 8.h),
-                  _buildReportTypeButton('Incident report'),
+                  Center(child: _buildReportTypeButton('Incident report')),
+                  SizedBox(height: 16.h),
+                  Text(
+                    'Company Name',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF6A6D78),
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Container(
+                    height: 44.h,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18.r),
+                      border: Border.all(color: const Color(0xFFD0D0D0), width: .9),
+                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 12.w),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton2<String>(
+                        value: _selectedCompany,
+                        isExpanded: true,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF27304E),
+                        ),
+                        iconStyleData: IconStyleData(
+                          icon: Icon(Icons.keyboard_arrow_down_rounded,
+                              color: const Color(0xFF27304E), size: 22.w),
+                        ),
+                        dropdownStyleData: DropdownStyleData(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16.r),
+                            color: Colors.white,
+                          ),
+                        ),
+                        items: _companies
+                            .map((c) => DropdownMenuItem(
+                                  value: c,
+                                  child: Text(c,
+                                      style: GoogleFonts.poppins(
+                                          fontSize: 13.sp,
+                                          color: const Color(0xFF27304E))),
+                                ))
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) setState(() => _selectedCompany = v);
+                        },
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

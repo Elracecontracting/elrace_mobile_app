@@ -4,6 +4,8 @@ class UserProjectModel {
   final int totalProjects;
   final double totalProjectsAmount;
   final String? photoUrl;
+  final String? agreementNo;
+  final String? cityId;
 
   const UserProjectModel({
     required this.projectId,
@@ -11,6 +13,8 @@ class UserProjectModel {
     required this.totalProjects,
     required this.totalProjectsAmount,
     this.photoUrl,
+    this.agreementNo,
+    this.cityId,
   });
 
   factory UserProjectModel.fromJson(Map<String, dynamic> json) {
@@ -32,6 +36,10 @@ class UserProjectModel {
       totalProjectsAmount:
           (json['total_projects_amount'] as num?)?.toDouble() ?? 0.0,
       photoUrl: photoUrl,
+      agreementNo: json['agreement_no']?.toString(),
+      cityId: json['city_id'] is List && (json['city_id'] as List).length > 1
+          ? (json['city_id'] as List)[1]?.toString()
+          : json['city_id']?.toString(),
     );
   }
 
@@ -42,6 +50,8 @@ class UserProjectModel {
       'total_projects': totalProjects,
       'total_projects_amount': totalProjectsAmount,
       'photo_url': photoUrl,
+      'agreement_no': agreementNo,
+      'city_id': cityId,
     };
   }
 }

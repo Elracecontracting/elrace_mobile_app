@@ -382,7 +382,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
             text,
             style: GoogleFonts.poppins(
               fontSize: 16.sp,
-              fontWeight: FontWeight.w400,
+              fontWeight: FontWeight.w500,
               color: Colors.white,
               letterSpacing: 1.2,
             ),
@@ -455,7 +455,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                 statusCount,
                 baseStyle: GoogleFonts.poppins(
                   fontSize: 16.sp,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w500,
                   color: _getStatusColor(statusCount),
                 ),
                 maxLines: null,
@@ -471,7 +471,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                   textAlign: TextAlign.center,
                   baseStyle: GoogleFonts.poppins(
                     fontSize: 13.sp,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                     color: const Color(0xFF6B6B6B),
                   ),
                   maxLines: null,
@@ -483,7 +483,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                   textAlign: TextAlign.center,
                   baseStyle: GoogleFonts.poppins(
                     fontSize: 16.sp,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w500,
                     color: const Color(0xFF1B1F26),
                   ),
                   maxLines: 2,
@@ -513,7 +513,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                                 formattedAmount,
                                 baseStyle: GoogleFonts.poppins(
                                   fontSize: 14.sp,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w500,
                                   color: const Color(0xFF1B1F26),
                                 ),
                                 maxLines: null,
@@ -558,7 +558,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                                     _getInitials(project.agreementId),
                                     style: GoogleFonts.poppins(
                                       fontSize: 11.sp,
-                                      fontWeight: FontWeight.w800,
+                                      fontWeight: FontWeight.w500,
                                       color: const Color(0xFF1B1F26),
                                     ),
                                   ),
@@ -568,7 +568,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                                 _getInitials(project.agreementId),
                                 style: GoogleFonts.poppins(
                                   fontSize: 11.sp,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w500,
                                   color: const Color(0xFF1B1F26),
                                 ),
                               ),
@@ -580,7 +580,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                             formattedDate,
                             baseStyle: GoogleFonts.poppins(
                               fontSize: 14.sp,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w500,
                               color: const Color(0xFF1B1F26),
                             ),
                             maxLines: null,
