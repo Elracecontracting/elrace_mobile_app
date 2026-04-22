@@ -7,7 +7,7 @@ import 'package:el_race/data/services/hive_service.dart';
 import 'package:el_race/data/services/prayer_notification_service.dart';
 import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:el_race/main.dart' show appInitCompleter, navKey;
+import 'package:el_race/core/app_globals.dart';
 import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/profile_widgets/app_settings_widget.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/profile_widgets/profile_paint_widgets.dart';

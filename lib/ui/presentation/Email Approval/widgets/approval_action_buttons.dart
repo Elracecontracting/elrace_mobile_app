@@ -434,11 +434,17 @@ class ApprovalActionButtons extends StatelessWidget {
                   },
             style: ElevatedButton.styleFrom(
               backgroundColor: color,
+              foregroundColor: Colors.white,
               disabledBackgroundColor: color.withValues(alpha: 0.4),
+              shadowColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              elevation: 0,
+              padding: EdgeInsets.zero,
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               shape: RoundedRectangleBorder(
                 borderRadius: pillBorderRadius ?? BorderRadius.circular(30),
               ),
-              elevation: isSelected ? 6 : 2,
             ),
             child: Text(
               '${label.substring(0, 1)}${label.substring(1).toLowerCase()}',

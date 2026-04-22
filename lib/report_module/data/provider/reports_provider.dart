@@ -16,6 +16,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:io';
 
+import '../../../core/app_globals.dart';
+
 ReportProvider reportProvider =
     Provider.of<ReportProvider>(navKey.currentContext!, listen: false);
 
@@ -418,7 +420,8 @@ class ReportProvider extends ChangeNotifier {
         return hasS3 || hasLink;
       }).toList();
 
-      print('📋 Found ${pdfItems.length} generated PDFs out of ${data.length} items');
+      print(
+          '📋 Found ${pdfItems.length} generated PDFs out of ${data.length} items');
 
       return pdfItems.map((item) {
         return ReportPdfModel(
@@ -516,7 +519,8 @@ class ReportProvider extends ChangeNotifier {
         }
       }
 
-      print('Upload failed with status: ${response.statusCode} body: ${response.data}');
+      print(
+          'Upload failed with status: ${response.statusCode} body: ${response.data}');
       return null;
     } on dio.DioException catch (e) {
       print('Dio exception during PDF upload: ${e.message}');

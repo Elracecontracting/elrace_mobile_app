@@ -6,6 +6,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
+import '../../../core/app_globals.dart' show navKey;
+
 Future<bool> showAddNewReport(BuildContext context,
     {required int type, String? folderID}) async {
   TextEditingController nameController = TextEditingController();
@@ -20,7 +22,8 @@ Future<bool> showAddNewReport(BuildContext context,
   final currentCompany =
       CompanyRepository.company?.companyName ?? companies.first;
 
-  String selectedCompany = companies.contains(currentCompany) ? currentCompany : companies.first;
+  String selectedCompany =
+      companies.contains(currentCompany) ? currentCompany : companies.first;
 
   bool cancel = true;
 
@@ -37,8 +40,7 @@ Future<bool> showAddNewReport(BuildContext context,
             ),
             backgroundColor: Colors.white,
             child: Padding(
-              padding:
-                  EdgeInsets.symmetric(vertical: 28.h, horizontal: 22.w),
+              padding: EdgeInsets.symmetric(vertical: 28.h, horizontal: 22.w),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisSize: MainAxisSize.min,
@@ -60,7 +62,8 @@ Future<bool> showAddNewReport(BuildContext context,
                     value: selectedCompany,
                     items: companies,
                     onChanged: (v) {
-                      setDialogState(() => selectedCompany = v ?? companies.first);
+                      setDialogState(
+                          () => selectedCompany = v ?? companies.first);
                       descriptionController.text = v ?? '';
                     },
                   ),

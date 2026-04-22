@@ -59,7 +59,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
     'effective_date': 'Effective Date',
     'salary_certificate': 'Salary Certificate',
     'certificate_request': 'Certificate Request',
-    'loan': 'Loan',
+    'loan': 'Loan Request',
     'increment': 'Salary Increment',
     'salary_increment': 'Salary Increment',
     'promotion': 'Promotion',
@@ -67,10 +67,10 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
     'resignation': 'Resignation',
     'resign': 'Resign',
     'termination': 'Termination',
-    'transfer': 'Transfer',
+    'transfer': 'Transfer Request',
     'passport': 'Passport',
     'leave_encashment': 'Leave Encashment',
-    'car_rent': 'Car Rent',
+    'car_rent': 'Car Rent Request',
     'generic': 'HR Request',
   };
 
@@ -753,7 +753,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
         color: color ?? const Color(0xFF0E0E0E),
         letterSpacing: 0.1,
       ),
-      maxLines: 2,
+      maxLines: null,
       overflow: TextOverflow.visible,
     );
   }
@@ -836,7 +836,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                   requestedByShouldStartLeft ? TextAlign.left : TextAlign.right,
               textDirection: TextDirection.ltr,
               softWrap: true,
-              maxLines: 3,
+              maxLines: null,
               overflow: TextOverflow.visible,
               style: GoogleFonts.poppins(
                 fontSize: 13.sp,
@@ -1105,7 +1105,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
               alignment: Alignment.bottomLeft,
               child: Text(
                 value,
-                maxLines: 2,
+                maxLines: null,
                 overflow: TextOverflow.visible,
                 style: GoogleFonts.poppins(
                   fontSize: 14.sp,
@@ -1113,6 +1113,320 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                   color: const Color(0xFF111111),
                   height: 1.1,
                 ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDateForDisplay(String value) {
+    final raw = value.trim();
+    if (raw.isEmpty) return '';
+
+    final datePart = raw.split(' ').first;
+    final parts = datePart.split('-');
+    if (parts.length == 3 && parts[0].length == 4) {
+      return '${parts[2]}/${parts[1]}/${parts[0]}';
+    }
+    return raw;
+  }
+
+  String _formatAmountWithAed(String value) {
+    final raw = value.trim();
+    if (raw.isEmpty) return '-';
+    final lower = raw.toLowerCase();
+    if (lower.contains('aed')) return raw;
+
+    final numeric = RegExp(r'^\d+(\.\d+)?$');
+    if (numeric.hasMatch(raw)) return '$raw AED';
+    return raw;
+  }
+
+  Widget _simSectionCard({
+    required String title,
+    required List<_DetailItem> items,
+  }) {
+    final visible =
+        items.where((e) => e.value.trim().isNotEmpty).toList(growable: false);
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: const Color(0xFF9E9E9E), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 8.w),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(color: const Color(0xFFE0E0E0), width: 1),
+              ),
+            ),
+            child: Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontSize: 15.sp,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF5A5A5A),
+              ),
+            ),
+          ),
+          if (visible.isEmpty)
+            Padding(
+              padding: EdgeInsets.all(12.w),
+              child: Text(
+                'No data',
+                style: GoogleFonts.poppins(
+                  fontSize: 12.sp,
+                  color: const Color(0xFF7A7A7A),
+                ),
+              ),
+            )
+          else
+            Column(
+              children: [
+                for (int i = 0; i < visible.length;)
+                  () {
+                    final current = visible[i];
+                    final hasNext = i + 1 < visible.length;
+                    final next = hasNext ? visible[i + 1] : null;
+                    final renderAsPair = !current.fullWidth &&
+                        hasNext &&
+                        !(next?.fullWidth ?? false);
+                    final renderAsPairWithEmpty = !current.fullWidth &&
+                        !renderAsPair &&
+                        current.pairWithEmpty;
+                    final nextIndex = renderAsPair ? i + 2 : i + 1;
+
+                    final row = Container(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: nextIndex < visible.length
+                                ? const Color(0xFFE6E6E6)
+                                : Colors.transparent,
+                          ),
+                        ),
+                      ),
+                      child: renderAsPair || renderAsPairWithEmpty
+                          ? Row(
+                              children: [
+                                Expanded(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 10.w, vertical: 8.w),
+                                    child: _simCell(
+                                      current.label,
+                                      current.value,
+                                      highlight: current.highlight,
+                                      inlineLabelValue:
+                                          current.inlineLabelValue,
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  width: 1,
+                                  height: 46.w,
+                                  color: const Color(0xFFE6E6E6),
+                                ),
+                                Expanded(
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 10.w, vertical: 8.w),
+                                    child: renderAsPair
+                                        ? _simCell(
+                                            next!.label,
+                                            next.value,
+                                            highlight: next.highlight,
+                                            inlineLabelValue:
+                                                next.inlineLabelValue,
+                                          )
+                                        : const SizedBox.shrink(),
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Padding(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 10.w, vertical: 8.w),
+                              child: _simCell(
+                                current.label,
+                                current.value,
+                                highlight: current.highlight,
+                                inlineLabelValue: current.inlineLabelValue,
+                              ),
+                            ),
+                    );
+
+                    i = nextIndex;
+                    return row;
+                  }(),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _simCell(String label, String value,
+      {bool highlight = false, bool inlineLabelValue = false}) {
+    final isCompanyNumberLabel = label == 'Company No#' ||
+        label == 'Company No.' ||
+        label == 'Company Number';
+    final isManagerLabel = label == 'New Manager' || label == 'Current Manager';
+    final highlightAmount = highlight ||
+        label == 'Suggested Increment' ||
+        label == 'Suggested By Manager' ||
+        label == 'New Salary' ||
+        label == 'Last work Date' ||
+        label == 'Notice Period Start' ||
+        label == 'Resignation Type' ||
+        label == 'Last Day of Employee' ||
+        label == 'Notice Period' ||
+        label == 'Start Hour' ||
+        label == 'Duration time' ||
+        label == 'Duration Time' ||
+        label == 'TP Date' ||
+        label == 'Job Mission Type';
+
+    if (isCompanyNumberLabel && !inlineLabelValue) {
+      final companyText = SizedBox(
+        width: double.infinity,
+        child: RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: '$label:\n',
+                style: GoogleFonts.poppins(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFFA0A0A0),
+                ),
+              ),
+              TextSpan(
+                text: value,
+                style: GoogleFonts.poppins(
+                  fontSize: 12.sp,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF202020),
+                ),
+              ),
+            ],
+          ),
+          textAlign: TextAlign.left,
+          textDirection: TextDirection.ltr,
+          maxLines: null,
+          overflow: TextOverflow.visible,
+        ),
+      );
+      return Align(alignment: Alignment.centerLeft, child: companyText);
+    }
+
+    final defaultText = SizedBox(
+      width: double.infinity,
+      child: RichText(
+        text: TextSpan(
+          children: [
+            TextSpan(
+              text: '$label: ',
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFFA0A0A0),
+              ),
+            ),
+            TextSpan(
+              text: value,
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w700,
+                color: highlightAmount
+                    ? const Color(0xFFFF8A00)
+                    : const Color(0xFF202020),
+              ),
+            ),
+          ],
+        ),
+        textAlign: TextAlign.left,
+        textDirection: TextDirection.ltr,
+        maxLines: null,
+        overflow: TextOverflow.visible,
+      ),
+    );
+
+    return Align(alignment: Alignment.centerLeft, child: defaultText);
+  }
+
+  Widget _buildSimCommentCard(String comment) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(8.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(color: const Color(0xFF9E9E9E), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Text(
+                'Comment',
+                style: GoogleFonts.poppins(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF5A5A5A),
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${comment.characters.length}/50',
+                style: GoogleFonts.poppins(
+                  fontSize: 11.sp,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFFA8A8A8),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 6.w),
+          Container(
+            width: double.infinity,
+            constraints: BoxConstraints(minHeight: 38.w),
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.w),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF4F4F4),
+              borderRadius: BorderRadius.circular(10.r),
+              border: Border.all(color: const Color(0xFFDADADA), width: 1),
+            ),
+            child: Text(
+              comment,
+              maxLines: null,
+              overflow: TextOverflow.visible,
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF3B3B3B),
               ),
             ),
           ),
@@ -1225,12 +1539,535 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
       _employeeInfo,
     ];
     final requestDetailItems = _buildRequestDetailItems(caseKey, detailMaps);
+    final isIncrementRequest =
+        caseKey == 'increment' || caseKey == 'salary_increment';
+    final isAnnualLeaveRequest = caseKey == 'annual';
+    final isParentalLeaveRequest = caseKey == 'parental';
+    final isMaternityLeaveRequest = caseKey == 'maternity';
+    final isPromotionRequest = caseKey == 'promotion';
+    final isCarRentRequest = caseKey == 'car_rent';
+    final isTransferRequest = caseKey == 'transfer';
+    final isSickLeaveRequest = caseKey == 'sick';
+    final isClearanceRequest = caseKey == 'clearance';
+    final isShortLeaveRequest = caseKey == 'short';
+    final isTemporaryPermissionRequest = caseKey == 'temporary_permission';
+    final isEffectiveDateRequest = caseKey == 'effective_date';
+    final isJobMissionRequest = caseKey == 'job_mission';
+    final isResignationRequest =
+        caseKey == 'resignation' || caseKey == 'resign';
+    final isTerminationRequest = caseKey == 'termination';
+    final isLeaveEncashmentRequest = caseKey == 'leave_encashment';
+    final isCertificateRequest =
+        caseKey == 'salary_certificate' || caseKey == 'certificate_request';
+    final isLoanRequest = caseKey == 'loan';
+    final isReferenceLayoutRequest = caseKey == 'sim' ||
+        isIncrementRequest ||
+        isAnnualLeaveRequest ||
+        isParentalLeaveRequest ||
+        isMaternityLeaveRequest ||
+        isPromotionRequest ||
+        isCarRentRequest ||
+        isTransferRequest ||
+        isSickLeaveRequest ||
+        isShortLeaveRequest ||
+        isClearanceRequest ||
+        isTemporaryPermissionRequest ||
+        isEffectiveDateRequest ||
+        isJobMissionRequest ||
+        isResignationRequest ||
+        isTerminationRequest ||
+        isLeaveEncashmentRequest ||
+        isCertificateRequest ||
+        isLoanRequest;
 
     final userId =
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
 
     final pillWidth =
         ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
+
+    final employeeType =
+        _pickFromMaps(employeeMaps, ['type', 'employee_type'], fallback: '-');
+    final employeeId =
+        _pickFromMaps(employeeMaps, ['emp_id', 'employee_id'], fallback: '-');
+    final joiningDate = _formatDateForDisplay(
+      _pickFromMaps(employeeMaps, ['joining_date', 'join_date'], fallback: '-'),
+    );
+    final effectiveDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['increment_effective_date', 'effective_date'],
+        fallback: '-',
+      ),
+    );
+    final loanEffectiveDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['eos_date', 'effective_date'],
+        fallback: '-',
+      ),
+    );
+    final suggestedIncrement = _formatAmountWithAed(
+      _pickFromMaps(
+        requestMaps,
+        ['employee_suggested_salary', 'suggested_increment'],
+        fallback: '-',
+      ),
+    );
+    final suggestedByManager = _formatAmountWithAed(
+      _pickFromMaps(
+        requestMaps,
+        ['manager_suggested_salary', 'suggested_by_manager'],
+        fallback: '-',
+      ),
+    );
+    final newSalary = _formatAmountWithAed(
+      _pickFromMaps(
+        requestMaps,
+        ['new_salary', 'suggested_total', 'salary_max'],
+        fallback: '-',
+      ),
+    );
+    final evaluationScore = _pickFromMaps(
+      requestMaps,
+      ['evaluation_score', 'overall_score'],
+      fallback: '-',
+    );
+    final workDuration =
+        _pickFromMaps(employeeMaps, ['working_days'], fallback: '-');
+    final requestedBy = _pickFromMaps(
+        requestMaps, ['requested_by', 'requester_name', 'employee_name'],
+        fallback: employeeName);
+    final companyNo = _pickFromMaps(requestMaps, ['company_no'], fallback: '-');
+    final leaveBalance = _pickFromMaps(
+      requestMaps,
+      ['remaining_leave_days', 'leave_balance', 'balance_leave'],
+      fallback: '-',
+    );
+    final availableDays = _pickFromMaps(
+      requestMaps,
+      ['available_days'],
+      fallback: '-',
+    );
+    final startHour = _pickFromMaps(
+      requestMaps,
+      ['start_time', 'hour_from', 'temp_hours'],
+      fallback: '-',
+    );
+    final durationTime = _pickFromMaps(
+      requestMaps,
+      ['duration_type', 'temp_selection', 'requested_duration', 'duration'],
+      fallback: '-',
+    );
+    final tpDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['request_date_to', 'end_date', 'start_date', 'request_date_from'],
+        fallback: '-',
+      ),
+    );
+    final shortLeaveStartDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['start_date', 'request_date_from'],
+        fallback: '-',
+      ),
+    );
+    final shortLeaveEndDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['end_date', 'request_date_to'],
+        fallback: '-',
+      ),
+    );
+    final shortLeaveDuration = _pickFromMaps(
+      requestMaps,
+      ['requested_duration', 'duration', 'number_of_days'],
+      fallback: '-',
+    );
+    final shortLeaveBalance = _pickFromMaps(
+      requestMaps,
+      [
+        'leave_balance',
+        'remaining_leave_days',
+        'balance_leave',
+        'available_days',
+        'annual_short_leaves_remaining',
+      ],
+      fallback: '-',
+    );
+    final annualLeaveStartDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['start_date', 'request_date_from'],
+        fallback: '-',
+      ),
+    );
+    final annualLeaveEndDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['end_date', 'request_date_to'],
+        fallback: '-',
+      ),
+    );
+    final annualLeaveDuration = _pickFromMaps(
+      requestMaps,
+      ['requested_duration', 'duration', 'number_of_days'],
+      fallback: '-',
+    );
+    final annualLeaveBalance = _pickFromMaps(
+      requestMaps,
+      ['leave_balance', 'remaining_leave_days', 'balance_leave'],
+      fallback: '-',
+    );
+    final annualLeaveAvailableDays = _pickFromMaps(
+      requestMaps,
+      ['available_days'],
+      fallback: '-',
+    );
+    final annualShortUsage = _pickFromMaps(
+      requestMaps,
+      ['annual_short_leaves_remaining'],
+      fallback: '-',
+    );
+    final parentalLeaveStartDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['start_date', 'request_date_from'],
+        fallback: '-',
+      ),
+    );
+    final parentalLeaveEndDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['end_date', 'request_date_to'],
+        fallback: '-',
+      ),
+    );
+    final parentalLeaveDuration = _pickFromMaps(
+      requestMaps,
+      ['requested_duration', 'duration', 'number_of_days'],
+      fallback: '-',
+    );
+    final promotionEffectiveDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['effective_date'],
+        fallback: '-',
+      ),
+    );
+    final promotionNewJobPosition = _pickFromMaps(
+      requestMaps,
+      ['new_job', 'new_position', 'new_job_position'],
+      fallback: '-',
+    );
+    final promotionEvaluationScoreRaw = _pickFromMaps(
+      requestMaps,
+      ['overall_score', 'evaluation_score'],
+      fallback: '-',
+    );
+    final promotionEvaluationScore = promotionEvaluationScoreRaw == '-' ||
+            promotionEvaluationScoreRaw.trim().isEmpty ||
+            promotionEvaluationScoreRaw.contains('%')
+        ? promotionEvaluationScoreRaw
+        : '${promotionEvaluationScoreRaw.trim()} %';
+    final promotionNewManager = _pickFromMaps(
+      requestMaps,
+      ['new_manager'],
+      fallback: '-',
+    );
+    final promotionCurrentManager = _pickFromMaps(
+      requestMaps,
+      ['old_manager', 'current_manager'],
+      fallback: '-',
+    );
+    final carRentCompanyNo = _pickFromMaps(
+      detailMaps,
+      ['company_no', 'company_number', 'companyno', 'compnay_no'],
+      fallback: '-',
+    );
+    final carRequestType = _pickFromMaps(
+      requestMaps,
+      ['car_req_type', 'car_request_type'],
+      fallback: '-',
+    );
+    final carRentType = _pickFromMaps(
+      requestMaps,
+      ['rent_type', 'car_rent_type'],
+      fallback: '-',
+    );
+    final transferType = _pickFromMaps(
+      requestMaps,
+      ['transfer_type', 'transfer_request_type'],
+      fallback: '-',
+    );
+    final transferNewManager = _pickFromMaps(
+      requestMaps,
+      ['new_manager'],
+      fallback: '-',
+    );
+    final transferFrom = _pickFromMaps(
+      requestMaps,
+      ['transfer_from'],
+      fallback: '-',
+    );
+    final transferTo = _pickFromMaps(
+      requestMaps,
+      ['transfer_to'],
+      fallback: '-',
+    );
+    final transferForman = _pickFromMaps(
+      requestMaps,
+      ['forman'],
+      fallback: '-',
+    );
+    final maternityLeaveStartDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['start_date', 'request_date_from'],
+        fallback: '-',
+      ),
+    );
+    final maternityLeaveEndDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['end_date', 'request_date_to'],
+        fallback: '-',
+      ),
+    );
+    final maternityLeaveDuration = _pickFromMaps(
+      requestMaps,
+      ['requested_duration', 'duration', 'number_of_days'],
+      fallback: '-',
+    );
+    final maternityLeaveAvailableDays = _pickFromMaps(
+      requestMaps,
+      ['available_days'],
+      fallback: '-',
+    );
+    final maternityAnnualShortUsage = _pickFromMaps(
+      requestMaps,
+      ['annual_short_leaves_remaining'],
+      fallback: '-',
+    );
+    final maternityLeaveBalance = _pickFromMaps(
+      requestMaps,
+      ['leave_balance', 'remaining_leave_days', 'balance_leave'],
+      fallback: '-',
+    );
+    final sickLeaveStartDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['start_date', 'request_date_from'],
+        fallback: '-',
+      ),
+    );
+    final sickAllowedDays = _pickFromMaps(
+      requestMaps,
+      ['allowed_sick_days'],
+      fallback: '-',
+    );
+    final sickRefNo = _pickFromMaps(
+      requestMaps,
+      ['sick_leave_reference', 'sick_leave_reference_no', 'certificate_no'],
+      fallback: '-',
+    );
+    final sickEid = _pickFromMaps(
+      requestMaps,
+      ['emirates_id'],
+      fallback: '-',
+    );
+    final sickValidationUrl = _pickFromMaps(
+      detailMaps,
+      [
+        'review_validation',
+        'review_validation_url',
+        'validation_url',
+        'review_url',
+      ],
+    );
+    final encashmentStartDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['start_date', 'request_date_from'],
+        fallback: '-',
+      ),
+    );
+    final encashmentEndDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['request_date_to', 'end_date'],
+        fallback: '-',
+      ),
+    );
+    final encashmentDays = _pickFromMaps(
+      requestMaps,
+      ['encashment_days', 'encash_days'],
+      fallback: '-',
+    );
+    final joinedDateRequest = _formatDateForDisplay(
+      _pickFromMaps(
+        detailMaps,
+        ['joined_date', 'join_date'],
+        fallback: '-',
+      ),
+    );
+    final noticePeriodStart = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['notice_period_start_date'],
+        fallback: '-',
+      ),
+    );
+    final resignationType = _pickFromMaps(
+      requestMaps,
+      ['resignation_type'],
+      fallback: '-',
+    );
+    final lastDayOfEmployee = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['expected_relieving_date', 'emp_last_day'],
+        fallback: '-',
+      ),
+    );
+    final noticePeriod = _pickFromMaps(
+      requestMaps,
+      ['notice_period'],
+      fallback: '-',
+    );
+    final terminationType = _pickFromMaps(
+      requestMaps,
+      ['termination_type'],
+      fallback: '-',
+    );
+    final terminationReason = _pickFromMaps(
+      requestMaps,
+      ['termination_reason', 'reason'],
+      fallback: '-',
+    );
+    final terminationExpectedLastDay = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['emp_last_day', 'expected_relieving_date', 'end_date'],
+        fallback: '-',
+      ),
+    );
+    final terminationCompanyNo = _pickFromMaps(
+      detailMaps,
+      ['company_no', 'company_number', 'companyno', 'compnay_no'],
+      fallback: '-',
+    );
+    final certificateType = _pickFromMaps(
+      requestMaps,
+      ['certificate_type', 'document_type'],
+      fallback: '-',
+    );
+    final certificateLanguage = _pickFromMaps(
+      requestMaps,
+      ['certificate_language', 'language'],
+      fallback: '-',
+    );
+    final loanType = _pickFromMaps(
+      requestMaps,
+      ['loan_type'],
+      fallback: '-',
+    );
+    final netWorkedDays = _pickFromMaps(
+      requestMaps,
+      ['net_worked_days'],
+      fallback: '-',
+    );
+    final loanYears = _pickFromMaps(
+      requestMaps,
+      ['years'],
+      fallback: '-',
+    );
+    final totalAbsentDays = _pickFromMaps(
+      requestMaps,
+      ['total_absent_days'],
+      fallback: '-',
+    );
+    final totalGratuity = _pickFromMaps(
+      requestMaps,
+      ['total_gratuity'],
+      fallback: '-',
+    );
+    final loanAmount = _pickFromMaps(
+      requestMaps,
+      ['loan_amount', 'amount', 'requested_amount'],
+      fallback: '-',
+    );
+    final jobMissionDay = _pickFromMaps(
+      requestMaps,
+      ['day', 'day_name', 'day_type', 'date_type'],
+      fallback: 'Today',
+    );
+    final jobMissionDuration = _pickFromMaps(
+      requestMaps,
+      ['duration_type', 'only_afternoon', 'duration'],
+      fallback: '-',
+    );
+    final jobMissionType = _pickFromMaps(
+      requestMaps,
+      ['job_mission_type', 'job_type'],
+      fallback: '-',
+    );
+    final requestDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        [
+          'request_date',
+          'request_datetime',
+          'request_date_from',
+          'date',
+          'create_date',
+        ],
+        fallback: '-',
+      ),
+    );
+    final lastWorkDate = _formatDateForDisplay(
+      _pickFromMaps(
+        requestMaps,
+        ['last_work_date', 'end_date', 'expected_relieving_date'],
+        fallback: '-',
+      ),
+    );
+    final branchName = _pickFromMaps(
+      employeeMaps,
+      ['city_id', 'city', 'branch'],
+      fallback: '-',
+    );
+    final comment = _pickFromMaps(
+      detailMaps,
+      [
+        'note',
+        'description',
+        'comment',
+        'discipline_reason',
+        'e_reason',
+        'reason',
+      ],
+      fallback: '',
+    );
+    final attachmentUrl = _pickFromMaps(
+      detailMaps,
+      [
+        'attachment',
+        'attachments',
+        'sim_attachment',
+        'attachment_url',
+        'document_url',
+        'increment_attachment',
+        'salary_increment_attachment',
+        'birth_attachment',
+        'discharge_report_attachment',
+        'gm_attachment',
+      ],
+    );
+    final referenceActionUrl =
+        isSickLeaveRequest ? sickValidationUrl : attachmentUrl;
+    final hasReferenceAction = _isValidAttachmentUrl(referenceActionUrl);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -1260,189 +2097,1132 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                         child: SingleChildScrollView(
                           padding: EdgeInsets.symmetric(
                               horizontal: 20.w, vertical: 10.w),
-                          child: Column(
-                            children: [
-                              SizedBox(height: 8.w),
-                              Text(
-                                'HR REQUEST',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 20.sp,
-                                  fontWeight: FontWeight.w900,
-                                  color: const Color(0xFF0E0E0E),
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                              SizedBox(height: 14.w),
-
-                              // Employee Info Card
-                              Container(
-                                width: double.infinity,
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 16.w, vertical: 12.w),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF1C1C1E),
-                                  borderRadius: BorderRadius.circular(50.r),
-                                ),
-                                child: Row(
+                          child: isReferenceLayoutRequest
+                              ? Column(
                                   children: [
-                                    Container(
-                                      width: 50.w,
-                                      height: 50.w,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: Colors.white,
-                                        border: Border.all(
-                                          color: Colors.white,
-                                          width: 2,
-                                        ),
-                                      ),
-                                      child: ClipOval(
-                                        child: employeeImage.isNotEmpty
-                                            ? _buildEmployeeImage(employeeImage)
-                                            : Icon(
-                                                Icons.person,
-                                                color: const Color(0xFF6B6B6B),
-                                                size: 30.w,
-                                              ),
+                                    SizedBox(height: 8.w),
+                                    Text(
+                                      requestType,
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF161616),
                                       ),
                                     ),
-                                    SizedBox(width: 12.w),
-                                    Expanded(
+                                    SizedBox(height: 14.w),
+                                    Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        Container(
+                                          width: 92.w,
+                                          height: 92.w,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: Colors.white,
+                                            border: Border.all(
+                                              color: const Color(0xFFDADADA),
+                                              width: 1.2,
+                                            ),
+                                          ),
+                                          child: ClipOval(
+                                            child: employeeImage.isNotEmpty
+                                                ? _buildEmployeeImage(
+                                                    employeeImage)
+                                                : Icon(
+                                                    Icons.person,
+                                                    color:
+                                                        const Color(0xFF6B6B6B),
+                                                    size: 42.w,
+                                                  ),
+                                          ),
+                                        ),
+                                        SizedBox(width: 12.w),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                employeeName,
+                                                maxLines: null,
+                                                overflow: TextOverflow.visible,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 18.sp,
+                                                  fontWeight: FontWeight.w700,
+                                                  color:
+                                                      const Color(0xFF181818),
+                                                ),
+                                              ),
+                                              if (secondaryName.isNotEmpty)
+                                                Padding(
+                                                  padding:
+                                                      EdgeInsets.only(top: 2.w),
+                                                  child: Text(
+                                                    secondaryName,
+                                                    maxLines: null,
+                                                    overflow:
+                                                        TextOverflow.visible,
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 15.sp,
+                                                      fontWeight:
+                                                          FontWeight.w500,
+                                                      color: const Color(
+                                                          0xFF888888),
+                                                    ),
+                                                  ),
+                                                ),
+                                              SizedBox(height: 7.w),
+                                              Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Container(
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                        horizontal: 6.w,
+                                                        vertical: 5.w,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(
+                                                            0xFFC9C9C9),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(20.r),
+                                                      ),
+                                                      child: Text(
+                                                        requestNo,
+                                                        maxLines: 1,
+                                                        softWrap: false,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        style:
+                                                            GoogleFonts.poppins(
+                                                          fontSize: 13.sp,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          color: const Color(
+                                                              0xFF1E1E1E),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  SizedBox(width: 8.w),
+                                                  Expanded(
+                                                    child: Container(
+                                                      padding:
+                                                          EdgeInsets.symmetric(
+                                                        horizontal: 6.w,
+                                                        vertical: 5.w,
+                                                      ),
+                                                      decoration: BoxDecoration(
+                                                        color: const Color(
+                                                            0xFF2EA6DE),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(20.r),
+                                                      ),
+                                                      child: Text(
+                                                        branchName,
+                                                        maxLines: 1,
+                                                        softWrap: false,
+                                                        overflow: TextOverflow
+                                                            .ellipsis,
+                                                        textAlign:
+                                                            TextAlign.center,
+                                                        style:
+                                                            GoogleFonts.poppins(
+                                                          fontSize: 13.sp,
+                                                          fontWeight:
+                                                              FontWeight.w700,
+                                                          color: const Color(
+                                                              0xFF1E1E1E),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 14.w),
+                                    _simSectionCard(
+                                      title: 'Employee Summary',
+                                      items: [
+                                        _DetailItem(
+                                            'Employee Type',
+                                            employeeType.isEmpty
+                                                ? '-'
+                                                : employeeType),
+                                        _DetailItem(
+                                            'ID',
+                                            employeeId.isEmpty
+                                                ? '-'
+                                                : employeeId),
+                                        _DetailItem(
+                                            'Joining Date',
+                                            joiningDate.isEmpty
+                                                ? '-'
+                                                : joiningDate),
+                                        _DetailItem(
+                                            'Work Duration',
+                                            workDuration.isEmpty
+                                                ? '-'
+                                                : workDuration),
+                                      ],
+                                    ),
+                                    SizedBox(height: 12.w),
+                                    _simSectionCard(
+                                      title: 'Request Info',
+                                      items: isIncrementRequest
+                                          ? [
+                                              _DetailItem(
+                                                'Requested By',
+                                                requestedBy.isEmpty
+                                                    ? '-'
+                                                    : requestedBy,
+                                              ),
+                                              _DetailItem(
+                                                'Request Date',
+                                                requestDate.isEmpty
+                                                    ? '-'
+                                                    : requestDate,
+                                              ),
+                                              _DetailItem(
+                                                'Effective Date',
+                                                effectiveDate.isEmpty
+                                                    ? '-'
+                                                    : effectiveDate,
+                                              ),
+                                              _DetailItem(
+                                                'Suggested Increment',
+                                                suggestedIncrement,
+                                              ),
+                                              _DetailItem(
+                                                'Suggested By Manager',
+                                                suggestedByManager,
+                                              ),
+                                              _DetailItem(
+                                                'New Salary',
+                                                newSalary,
+                                              ),
+                                              _DetailItem(
+                                                'Evaluation Score %',
+                                                evaluationScore.isEmpty
+                                                    ? '-'
+                                                    : evaluationScore,
+                                              ),
+                                            ]
+                                          : isAnnualLeaveRequest
+                                              ? [
+                                                  _DetailItem(
+                                                    'Requested By',
+                                                    requestedBy.isEmpty
+                                                        ? '-'
+                                                        : requestedBy,
+                                                  ),
+                                                  _DetailItem(
+                                                    'Request Date',
+                                                    requestDate.isEmpty
+                                                        ? '-'
+                                                        : requestDate,
+                                                  ),
+                                                  _DetailItem(
+                                                    'Start Date',
+                                                    annualLeaveStartDate.isEmpty
+                                                        ? '-'
+                                                        : annualLeaveStartDate,
+                                                    highlight: true,
+                                                  ),
+                                                  _DetailItem(
+                                                    'End Date',
+                                                    annualLeaveEndDate.isEmpty
+                                                        ? '-'
+                                                        : annualLeaveEndDate,
+                                                    highlight: true,
+                                                  ),
+                                                  _DetailItem(
+                                                    'Duration',
+                                                    annualLeaveDuration.isEmpty
+                                                        ? '-'
+                                                        : annualLeaveDuration,
+                                                    highlight: true,
+                                                  ),
+                                                  _DetailItem(
+                                                    'Balance Leave',
+                                                    annualLeaveBalance.isEmpty
+                                                        ? '-'
+                                                        : annualLeaveBalance,
+                                                    highlight: true,
+                                                  ),
+                                                  _DetailItem(
+                                                    'Available Days',
+                                                    annualLeaveAvailableDays
+                                                            .isEmpty
+                                                        ? '-'
+                                                        : annualLeaveAvailableDays,
+                                                    highlight: true,
+                                                  ),
+                                                  _DetailItem(
+                                                    'Annual/Short Usage',
+                                                    annualShortUsage.isEmpty
+                                                        ? '-'
+                                                        : annualShortUsage,
+                                                    highlight: true,
+                                                  ),
+                                                ]
+                                              : isParentalLeaveRequest
+                                                  ? [
+                                                      _DetailItem(
+                                                        'Requested By',
+                                                        requestedBy.isEmpty
+                                                            ? '-'
+                                                            : requestedBy,
+                                                      ),
+                                                      _DetailItem(
+                                                        'Request Date',
+                                                        requestDate.isEmpty
+                                                            ? '-'
+                                                            : requestDate,
+                                                      ),
+                                                      _DetailItem(
+                                                        'Start Date',
+                                                        parentalLeaveStartDate
+                                                                .isEmpty
+                                                            ? '-'
+                                                            : parentalLeaveStartDate,
+                                                      ),
+                                                      _DetailItem(
+                                                        'End Date',
+                                                        parentalLeaveEndDate
+                                                                .isEmpty
+                                                            ? '-'
+                                                            : parentalLeaveEndDate,
+                                                      ),
+                                                      _DetailItem(
+                                                        'Duration',
+                                                        parentalLeaveDuration
+                                                                .isEmpty
+                                                            ? '-'
+                                                            : parentalLeaveDuration,
+                                                        highlight: true,
+                                                      ),
+                                                    ]
+                                                  : isMaternityLeaveRequest
+                                                      ? [
+                                                          _DetailItem(
+                                                            'Requested By',
+                                                            requestedBy.isEmpty
+                                                                ? '-'
+                                                                : requestedBy,
+                                                          ),
+                                                          _DetailItem(
+                                                            'Request Date',
+                                                            requestDate.isEmpty
+                                                                ? '-'
+                                                                : requestDate,
+                                                          ),
+                                                          _DetailItem(
+                                                            'Start Date',
+                                                            maternityLeaveStartDate
+                                                                    .isEmpty
+                                                                ? '-'
+                                                                : maternityLeaveStartDate,
+                                                          ),
+                                                          _DetailItem(
+                                                            'Duration',
+                                                            maternityLeaveDuration
+                                                                    .isEmpty
+                                                                ? '-'
+                                                                : maternityLeaveDuration,
+                                                            highlight: true,
+                                                          ),
+                                                          _DetailItem(
+                                                            'Available Days',
+                                                            maternityLeaveAvailableDays
+                                                                    .isEmpty
+                                                                ? '-'
+                                                                : maternityLeaveAvailableDays,
+                                                            highlight: true,
+                                                          ),
+                                                          _DetailItem(
+                                                            'End Date',
+                                                            maternityLeaveEndDate
+                                                                    .isEmpty
+                                                                ? '-'
+                                                                : maternityLeaveEndDate,
+                                                          ),
+                                                          _DetailItem(
+                                                            'Annual/Short Usage',
+                                                            maternityAnnualShortUsage
+                                                                    .isEmpty
+                                                                ? '-'
+                                                                : maternityAnnualShortUsage,
+                                                            highlight: true,
+                                                          ),
+                                                          _DetailItem(
+                                                            'Leave Balance',
+                                                            maternityLeaveBalance
+                                                                    .isEmpty
+                                                                ? '-'
+                                                                : maternityLeaveBalance,
+                                                            highlight: true,
+                                                          ),
+                                                        ]
+                                                      : isPromotionRequest
+                                                          ? [
+                                                              _DetailItem(
+                                                                'Requested By',
+                                                                requestedBy
+                                                                        .isEmpty
+                                                                    ? '-'
+                                                                    : requestedBy,
+                                                              ),
+                                                              _DetailItem(
+                                                                'Effective Date',
+                                                                promotionEffectiveDate
+                                                                        .isEmpty
+                                                                    ? '-'
+                                                                    : promotionEffectiveDate,
+                                                              ),
+                                                              _DetailItem(
+                                                                'Request Date',
+                                                                requestDate
+                                                                        .isEmpty
+                                                                    ? '-'
+                                                                    : requestDate,
+                                                              ),
+                                                              _DetailItem(
+                                                                'New Jon Position',
+                                                                promotionNewJobPosition
+                                                                        .isEmpty
+                                                                    ? '-'
+                                                                    : promotionNewJobPosition,
+                                                                highlight: true,
+                                                              ),
+                                                              _DetailItem(
+                                                                'Evaluation Score',
+                                                                promotionEvaluationScore
+                                                                        .isEmpty
+                                                                    ? '-'
+                                                                    : promotionEvaluationScore,
+                                                                pairWithEmpty:
+                                                                    true,
+                                                              ),
+                                                              _DetailItem(
+                                                                'New Manager',
+                                                                promotionNewManager
+                                                                        .isEmpty
+                                                                    ? '-'
+                                                                    : promotionNewManager,
+                                                                highlight: true,
+                                                                fullWidth: true,
+                                                              ),
+                                                              _DetailItem(
+                                                                'Current Manager',
+                                                                promotionCurrentManager
+                                                                        .isEmpty
+                                                                    ? '-'
+                                                                    : promotionCurrentManager,
+                                                                highlight: true,
+                                                                fullWidth: true,
+                                                              ),
+                                                            ]
+                                                          : isCarRentRequest
+                                                              ? [
+                                                                  _DetailItem(
+                                                                    'Requested By',
+                                                                    requestedBy
+                                                                            .isEmpty
+                                                                        ? '-'
+                                                                        : requestedBy,
+                                                                  ),
+                                                                  _DetailItem(
+                                                                    'Company No#',
+                                                                    carRentCompanyNo ==
+                                                                            '-'
+                                                                        ? '__________'
+                                                                        : carRentCompanyNo,
+                                                                    inlineLabelValue:
+                                                                        true,
+                                                                  ),
+                                                                  _DetailItem(
+                                                                    'Request Date',
+                                                                    requestDate
+                                                                            .isEmpty
+                                                                        ? '-'
+                                                                        : requestDate,
+                                                                  ),
+                                                                  _DetailItem(
+                                                                    'Car Request Type',
+                                                                    carRequestType
+                                                                            .isEmpty
+                                                                        ? '-'
+                                                                        : carRequestType,
+                                                                    highlight:
+                                                                        true,
+                                                                  ),
+                                                                  _DetailItem(
+                                                                    'Rent Type',
+                                                                    carRentType
+                                                                            .isEmpty
+                                                                        ? '-'
+                                                                        : carRentType,
+                                                                    highlight:
+                                                                        true,
+                                                                    pairWithEmpty:
+                                                                        true,
+                                                                  ),
+                                                                ]
+                                                              : isSickLeaveRequest
+                                                                  ? [
+                                                                      _DetailItem(
+                                                                        'Requested By',
+                                                                        requestedBy.isEmpty
+                                                                            ? '-'
+                                                                            : requestedBy,
+                                                                      ),
+                                                                      _DetailItem(
+                                                                        'Request Date',
+                                                                        requestDate.isEmpty
+                                                                            ? '-'
+                                                                            : requestDate,
+                                                                      ),
+                                                                      _DetailItem(
+                                                                        'Start Date',
+                                                                        sickLeaveStartDate.isEmpty
+                                                                            ? '-'
+                                                                            : sickLeaveStartDate,
+                                                                      ),
+                                                                      _DetailItem(
+                                                                        'Allow Sick Days',
+                                                                        sickAllowedDays.isEmpty
+                                                                            ? '-'
+                                                                            : sickAllowedDays,
+                                                                      ),
+                                                                      _DetailItem(
+                                                                        'Ref No#',
+                                                                        sickRefNo.isEmpty
+                                                                            ? '-'
+                                                                            : sickRefNo,
+                                                                      ),
+                                                                      _DetailItem(
+                                                                        'EID',
+                                                                        sickEid.isEmpty
+                                                                            ? '-'
+                                                                            : sickEid,
+                                                                        highlight:
+                                                                            true,
+                                                                      ),
+                                                                    ]
+                                                                  : isShortLeaveRequest
+                                                                      ? [
+                                                                          _DetailItem(
+                                                                            'Requested By',
+                                                                            requestedBy.isEmpty
+                                                                                ? '-'
+                                                                                : requestedBy,
+                                                                          ),
+                                                                          _DetailItem(
+                                                                            'Request Date',
+                                                                            requestDate.isEmpty
+                                                                                ? '-'
+                                                                                : requestDate,
+                                                                          ),
+                                                                          _DetailItem(
+                                                                            'Start Date',
+                                                                            shortLeaveStartDate.isEmpty
+                                                                                ? '-'
+                                                                                : shortLeaveStartDate,
+                                                                            highlight:
+                                                                                true,
+                                                                          ),
+                                                                          _DetailItem(
+                                                                            'End Date',
+                                                                            shortLeaveEndDate.isEmpty
+                                                                                ? '-'
+                                                                                : shortLeaveEndDate,
+                                                                            highlight:
+                                                                                true,
+                                                                          ),
+                                                                          _DetailItem(
+                                                                            'Duration',
+                                                                            shortLeaveDuration.isEmpty
+                                                                                ? '-'
+                                                                                : shortLeaveDuration,
+                                                                            highlight:
+                                                                                true,
+                                                                          ),
+                                                                          _DetailItem(
+                                                                            'Balance Leave',
+                                                                            shortLeaveBalance.isEmpty
+                                                                                ? '-'
+                                                                                : shortLeaveBalance,
+                                                                            highlight:
+                                                                                true,
+                                                                          ),
+                                                                        ]
+                                                                      : isTemporaryPermissionRequest
+                                                                          ? [
+                                                                              _DetailItem(
+                                                                                'Requested By',
+                                                                                requestedBy.isEmpty ? '-' : requestedBy,
+                                                                              ),
+                                                                              _DetailItem(
+                                                                                'Request Date',
+                                                                                requestDate.isEmpty ? '-' : requestDate,
+                                                                              ),
+                                                                              _DetailItem(
+                                                                                'Leave Balance',
+                                                                                leaveBalance.isEmpty ? '-' : leaveBalance,
+                                                                              ),
+                                                                              _DetailItem(
+                                                                                'Available Days',
+                                                                                availableDays.isEmpty ? '-' : availableDays,
+                                                                              ),
+                                                                              _DetailItem(
+                                                                                'Start Hour',
+                                                                                startHour.isEmpty ? '-' : startHour,
+                                                                              ),
+                                                                              _DetailItem(
+                                                                                'Duration Time',
+                                                                                durationTime.isEmpty ? '-' : durationTime,
+                                                                              ),
+                                                                              _DetailItem(
+                                                                                'TP Date',
+                                                                                tpDate.isEmpty ? '-' : tpDate,
+                                                                              ),
+                                                                            ]
+                                                                          : isLeaveEncashmentRequest
+                                                                              ? [
+                                                                                  _DetailItem(
+                                                                                    'Requested By',
+                                                                                    requestedBy.isEmpty ? '-' : requestedBy,
+                                                                                  ),
+                                                                                  _DetailItem(
+                                                                                    'Request Date',
+                                                                                    requestDate.isEmpty ? '-' : requestDate,
+                                                                                  ),
+                                                                                  _DetailItem(
+                                                                                    'Start Date',
+                                                                                    encashmentStartDate.isEmpty ? '-' : encashmentStartDate,
+                                                                                  ),
+                                                                                  _DetailItem(
+                                                                                    'End Date',
+                                                                                    encashmentEndDate.isEmpty ? '-' : encashmentEndDate,
+                                                                                  ),
+                                                                                  _DetailItem(
+                                                                                    'Available Days',
+                                                                                    availableDays.isEmpty ? '-' : availableDays,
+                                                                                    highlight: true,
+                                                                                  ),
+                                                                                  _DetailItem(
+                                                                                    'Encashment Days',
+                                                                                    encashmentDays.isEmpty ? '-' : encashmentDays,
+                                                                                    highlight: true,
+                                                                                  ),
+                                                                                  _DetailItem(
+                                                                                    'Leave Balance',
+                                                                                    leaveBalance.isEmpty ? '-' : leaveBalance,
+                                                                                  ),
+                                                                                ]
+                                                                              : isCertificateRequest
+                                                                                  ? [
+                                                                                      _DetailItem(
+                                                                                        'Requested By',
+                                                                                        requestedBy.isEmpty ? '-' : requestedBy,
+                                                                                      ),
+                                                                                      _DetailItem(
+                                                                                        'Request Date',
+                                                                                        requestDate.isEmpty ? '-' : requestDate,
+                                                                                      ),
+                                                                                      _DetailItem(
+                                                                                        'Certificate Type',
+                                                                                        certificateType.isEmpty ? '-' : certificateType,
+                                                                                        highlight: true,
+                                                                                      ),
+                                                                                      _DetailItem(
+                                                                                        'Language',
+                                                                                        certificateLanguage.isEmpty ? '-' : certificateLanguage,
+                                                                                        highlight: true,
+                                                                                      ),
+                                                                                    ]
+                                                                                  : isLoanRequest
+                                                                                      ? [
+                                                                                          _DetailItem(
+                                                                                            'Requested By',
+                                                                                            requestedBy.isEmpty ? '-' : requestedBy,
+                                                                                          ),
+                                                                                          _DetailItem(
+                                                                                            'Request Date',
+                                                                                            requestDate.isEmpty ? '-' : requestDate,
+                                                                                          ),
+                                                                                          _DetailItem(
+                                                                                            'Effective Date',
+                                                                                            loanEffectiveDate.isEmpty ? '-' : loanEffectiveDate,
+                                                                                          ),
+                                                                                          _DetailItem(
+                                                                                            'Loan Type',
+                                                                                            loanType.isEmpty ? '-' : loanType,
+                                                                                            highlight: true,
+                                                                                          ),
+                                                                                          _DetailItem(
+                                                                                            'Net Worked Days',
+                                                                                            netWorkedDays.isEmpty ? '-' : netWorkedDays,
+                                                                                          ),
+                                                                                          _DetailItem(
+                                                                                            'Years',
+                                                                                            loanYears.isEmpty ? '-' : loanYears,
+                                                                                            highlight: true,
+                                                                                          ),
+                                                                                          _DetailItem(
+                                                                                            'Total Absent Days',
+                                                                                            totalAbsentDays.isEmpty ? '-' : totalAbsentDays,
+                                                                                          ),
+                                                                                          _DetailItem(
+                                                                                            'Total Gratuity',
+                                                                                            totalGratuity.isEmpty ? '-' : totalGratuity,
+                                                                                            highlight: true,
+                                                                                          ),
+                                                                                          _DetailItem(
+                                                                                            'Loan Amount',
+                                                                                            loanAmount.isEmpty ? '-' : loanAmount,
+                                                                                          ),
+                                                                                        ]
+                                                                                      : isJobMissionRequest
+                                                                                          ? [
+                                                                                              _DetailItem(
+                                                                                                'Requested By',
+                                                                                                requestedBy.isEmpty ? '-' : requestedBy,
+                                                                                              ),
+                                                                                              _DetailItem(
+                                                                                                'Request Date',
+                                                                                                requestDate.isEmpty ? '-' : requestDate,
+                                                                                              ),
+                                                                                              _DetailItem(
+                                                                                                'Joined Date',
+                                                                                                joiningDate.isEmpty ? '-' : joiningDate,
+                                                                                              ),
+                                                                                              _DetailItem(
+                                                                                                'Day',
+                                                                                                jobMissionDay.isEmpty ? '-' : jobMissionDay,
+                                                                                              ),
+                                                                                              _DetailItem(
+                                                                                                'Duration time',
+                                                                                                jobMissionDuration.isEmpty ? '-' : jobMissionDuration,
+                                                                                              ),
+                                                                                              _DetailItem(
+                                                                                                'Job Mission Type',
+                                                                                                jobMissionType.isEmpty ? '-' : jobMissionType,
+                                                                                              ),
+                                                                                            ]
+                                                                                          : isTransferRequest
+                                                                                              ? [
+                                                                                                  _DetailItem(
+                                                                                                    'Requested By',
+                                                                                                    requestedBy.isEmpty ? '-' : requestedBy,
+                                                                                                  ),
+                                                                                                  _DetailItem(
+                                                                                                    'Type',
+                                                                                                    transferType.isEmpty ? '-' : transferType,
+                                                                                                  ),
+                                                                                                  _DetailItem(
+                                                                                                    'Request Date',
+                                                                                                    requestDate.isEmpty ? '-' : requestDate,
+                                                                                                    pairWithEmpty: true,
+                                                                                                  ),
+                                                                                                  _DetailItem(
+                                                                                                    'New Transfer Manager',
+                                                                                                    transferNewManager.isEmpty ? '-' : transferNewManager,
+                                                                                                    fullWidth: true,
+                                                                                                  ),
+                                                                                                  _DetailItem(
+                                                                                                    'transfer From',
+                                                                                                    transferFrom.isEmpty ? '-' : transferFrom,
+                                                                                                    fullWidth: true,
+                                                                                                  ),
+                                                                                                  _DetailItem(
+                                                                                                    'transfer To',
+                                                                                                    transferTo.isEmpty ? '-' : transferTo,
+                                                                                                    highlight: true,
+                                                                                                    fullWidth: true,
+                                                                                                  ),
+                                                                                                  _DetailItem(
+                                                                                                    'Forman',
+                                                                                                    transferForman.isEmpty ? '-' : transferForman,
+                                                                                                    fullWidth: true,
+                                                                                                  ),
+                                                                                                ]
+                                                                                              : isResignationRequest
+                                                                                                  ? [
+                                                                                                      _DetailItem(
+                                                                                                        'Requested By',
+                                                                                                        requestedBy.isEmpty ? '-' : requestedBy,
+                                                                                                      ),
+                                                                                                      _DetailItem(
+                                                                                                        'Request Date',
+                                                                                                        requestDate.isEmpty ? '-' : requestDate,
+                                                                                                      ),
+                                                                                                      _DetailItem(
+                                                                                                        'Notice Period Start',
+                                                                                                        noticePeriodStart.isEmpty ? '-' : noticePeriodStart,
+                                                                                                      ),
+                                                                                                      _DetailItem(
+                                                                                                        'Resignation Type',
+                                                                                                        resignationType.isEmpty ? '-' : resignationType,
+                                                                                                      ),
+                                                                                                      _DetailItem(
+                                                                                                        'Last Day of Employee',
+                                                                                                        lastDayOfEmployee.isEmpty ? '-' : lastDayOfEmployee,
+                                                                                                      ),
+                                                                                                      _DetailItem(
+                                                                                                        'Notice Period',
+                                                                                                        noticePeriod.isEmpty ? '-' : noticePeriod,
+                                                                                                      ),
+                                                                                                    ]
+                                                                                                  : isTerminationRequest
+                                                                                                      ? [
+                                                                                                          _DetailItem(
+                                                                                                            'Requested By',
+                                                                                                            requestedBy.isEmpty ? '-' : requestedBy,
+                                                                                                          ),
+                                                                                                          _DetailItem(
+                                                                                                            'Company No#',
+                                                                                                            terminationCompanyNo == '-' ? '__________' : terminationCompanyNo.replaceAll(RegExp(r'\s+'), ''),
+                                                                                                          ),
+                                                                                                          _DetailItem(
+                                                                                                            'Request Date',
+                                                                                                            requestDate.isEmpty ? '-' : requestDate,
+                                                                                                          ),
+                                                                                                          _DetailItem(
+                                                                                                            'Termination Type',
+                                                                                                            terminationType.isEmpty ? '-' : terminationType,
+                                                                                                            highlight: true,
+                                                                                                          ),
+                                                                                                          _DetailItem(
+                                                                                                            'Reason',
+                                                                                                            terminationReason.isEmpty ? '-' : terminationReason,
+                                                                                                            highlight: true,
+                                                                                                          ),
+                                                                                                          _DetailItem(
+                                                                                                            'Expected Last Day',
+                                                                                                            terminationExpectedLastDay.isEmpty ? '-' : terminationExpectedLastDay,
+                                                                                                            highlight: true,
+                                                                                                          ),
+                                                                                                        ]
+                                                                                                      : isEffectiveDateRequest
+                                                                                                          ? [
+                                                                                                              _DetailItem(
+                                                                                                                'Requested By',
+                                                                                                                requestedBy.isEmpty ? '-' : requestedBy,
+                                                                                                              ),
+                                                                                                              _DetailItem(
+                                                                                                                'Request Date',
+                                                                                                                requestDate.isEmpty ? '-' : requestDate,
+                                                                                                              ),
+                                                                                                              _DetailItem(
+                                                                                                                'Joined Date',
+                                                                                                                joinedDateRequest.isEmpty ? '-' : joinedDateRequest,
+                                                                                                              ),
+                                                                                                            ]
+                                                                                                          : isClearanceRequest
+                                                                                                              ? [
+                                                                                                                  _DetailItem(
+                                                                                                                    'Requested By',
+                                                                                                                    requestedBy.isEmpty ? '-' : requestedBy,
+                                                                                                                  ),
+                                                                                                                  _DetailItem(
+                                                                                                                    'Request Date',
+                                                                                                                    requestDate.isEmpty ? '-' : requestDate,
+                                                                                                                  ),
+                                                                                                                  _DetailItem(
+                                                                                                                    'Last work Date',
+                                                                                                                    lastWorkDate.isEmpty ? '-' : lastWorkDate,
+                                                                                                                  ),
+                                                                                                                ]
+                                                                                                              : [
+                                                                                                                  _DetailItem(
+                                                                                                                    'Requested By',
+                                                                                                                    requestedBy.isEmpty ? '-' : requestedBy,
+                                                                                                                  ),
+                                                                                                                  _DetailItem(
+                                                                                                                    'Company No.',
+                                                                                                                    companyNo.isEmpty ? '-' : companyNo,
+                                                                                                                  ),
+                                                                                                                  _DetailItem(
+                                                                                                                    'Request Date',
+                                                                                                                    requestDate.isEmpty ? '-' : requestDate,
+                                                                                                                  ),
+                                                                                                                ],
+                                    ),
+                                    SizedBox(height: 12.w),
+                                    _buildSimCommentCard(comment),
+                                    if (hasReferenceAction) ...[
+                                      SizedBox(height: 16.w),
+                                      SizedBox(
+                                        width: 0.88.sw,
+                                        child: InkWell(
+                                          onTap: isSickLeaveRequest
+                                              ? () => _openValidationUrl(
+                                                  referenceActionUrl)
+                                              : () => _openAttachmentUrl(
+                                                  referenceActionUrl),
+                                          borderRadius:
+                                              BorderRadius.circular(14.r),
+                                          child: Container(
+                                            padding: EdgeInsets.symmetric(
+                                                vertical: 13.w),
+                                            decoration: BoxDecoration(
+                                              borderRadius:
+                                                  BorderRadius.circular(14.r),
+                                              gradient: const LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  Color(0xFF777B84),
+                                                  Color(0xFF63676F),
+                                                ],
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.attach_file_rounded,
+                                                  color: Colors.white,
+                                                  size: 20.sp,
+                                                ),
+                                                SizedBox(width: 6.w),
+                                                Text(
+                                                  isSickLeaveRequest
+                                                      ? 'Review Sick Leave'
+                                                      : 'View Attachments',
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 14.sp,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                    SizedBox(height: 22.w),
+                                  ],
+                                )
+                              : Column(
+                                  children: [
+                                    SizedBox(height: 8.w),
+                                    Text(
+                                      'HR REQUEST',
+                                      textAlign: TextAlign.center,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.w900,
+                                        color: const Color(0xFF0E0E0E),
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                                    SizedBox(height: 14.w),
+
+                                    // Employee Info Card
+                                    Container(
+                                      width: double.infinity,
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 16.w, vertical: 12.w),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF1C1C1E),
+                                        borderRadius:
+                                            BorderRadius.circular(50.r),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 50.w,
+                                            height: 50.w,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: Colors.white,
+                                              border: Border.all(
+                                                color: Colors.white,
+                                                width: 2,
+                                              ),
+                                            ),
+                                            child: ClipOval(
+                                              child: employeeImage.isNotEmpty
+                                                  ? _buildEmployeeImage(
+                                                      employeeImage)
+                                                  : Icon(
+                                                      Icons.person,
+                                                      color: const Color(
+                                                          0xFF6B6B6B),
+                                                      size: 30.w,
+                                                    ),
+                                            ),
+                                          ),
+                                          SizedBox(width: 12.w),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  employeeName,
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 16.sp,
+                                                    fontWeight: FontWeight.w900,
+                                                    color: Colors.white,
+                                                  ),
+                                                ),
+                                                if (secondaryName.isNotEmpty)
+                                                  Text(
+                                                    secondaryName,
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 14.sp,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: Colors.white
+                                                          .withOpacity(0.9),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(height: 12.w),
+
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: _requestMetaBox(
+                                            label: 'Request No',
+                                            value: requestNo,
+                                          ),
+                                        ),
+                                        SizedBox(width: 8.w),
+                                        Expanded(
+                                          child: _requestMetaBox(
+                                            label: 'Request Type',
+                                            value: requestType,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 12.w),
+
+                                    _card(
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text(
-                                            employeeName,
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 16.sp,
-                                              fontWeight: FontWeight.w900,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          if (secondaryName.isNotEmpty)
-                                            Text(
-                                              secondaryName,
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 14.sp,
-                                                fontWeight: FontWeight.w600,
-                                                color: Colors.white
-                                                    .withOpacity(0.9),
-                                              ),
-                                            ),
+                                          Center(
+                                              child:
+                                                  _label('Employee Details')),
+                                          SizedBox(height: 12.w),
+                                          if (employeeDetails.isEmpty)
+                                            _value(
+                                                'No employee details available',
+                                                size: 12.sp,
+                                                weight: FontWeight.w500,
+                                                color: const Color(0xFF6E6E6E))
+                                          else
+                                            for (int i = 0;
+                                                i < employeeDetails.length;
+                                                i++) ...[
+                                              _detailRow(
+                                                  employeeDetails[i].label,
+                                                  employeeDetails[i].value),
+                                              if (i !=
+                                                  employeeDetails.length - 1)
+                                                const Divider(
+                                                  color: Color(0xFFE0E0E0),
+                                                  height: 1,
+                                                ),
+                                            ],
                                         ],
                                       ),
                                     ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 12.w),
-
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _requestMetaBox(
-                                      label: 'Request No',
-                                      value: requestNo,
-                                    ),
-                                  ),
-                                  SizedBox(width: 8.w),
-                                  Expanded(
-                                    child: _requestMetaBox(
-                                      label: 'Request Type',
-                                      value: requestType,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 12.w),
-
-                              _card(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Center(child: _label('Employee Details')),
                                     SizedBox(height: 12.w),
-                                    if (employeeDetails.isEmpty)
-                                      _value('No employee details available',
-                                          size: 12.sp,
-                                          weight: FontWeight.w500,
-                                          color: const Color(0xFF6E6E6E))
-                                    else
-                                      for (int i = 0;
-                                          i < employeeDetails.length;
-                                          i++) ...[
-                                        _detailRow(employeeDetails[i].label,
-                                            employeeDetails[i].value),
-                                        if (i != employeeDetails.length - 1)
-                                          const Divider(
-                                            color: Color(0xFFE0E0E0),
-                                            height: 1,
-                                          ),
-                                      ],
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 12.w),
 
-                              _card(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Center(child: _label('Request Details')),
-                                    SizedBox(height: 12.w),
-                                    if (requestDetailItems.isEmpty)
-                                      _value(
-                                          'No request-specific details available',
-                                          size: 12.sp,
-                                          weight: FontWeight.w500,
-                                          color: const Color(0xFF6E6E6E))
-                                    else
-                                      for (int i = 0;
-                                          i < requestDetailItems.length;
-                                          i++) ...[
-                                        requestDetailItems[i].label ==
-                                                'Validation'
-                                            ? _validationActionBox(
-                                                requestDetailItems[i].value,
-                                              )
-                                            : requestDetailItems[i].label ==
-                                                        'GM Attachment' ||
-                                                    requestDetailItems[i]
-                                                            .label ==
-                                                        'Birth Attachment'
-                                                ? _attachmentActionBox(
-                                                    requestDetailItems[i].value,
-                                                    label: requestDetailItems[i]
-                                                        .label,
-                                                  )
-                                                : requestDetailItems[i]
-                                                        .multiline
-                                                    ? _detailDescriptionBox(
-                                                        requestDetailItems[i]
-                                                            .label,
-                                                        requestDetailItems[i]
-                                                            .value,
-                                                      )
-                                                    : _detailRow(
-                                                        requestDetailItems[i]
-                                                            .label,
-                                                        requestDetailItems[i]
-                                                            .value,
-                                                      ),
-                                        if (i != requestDetailItems.length - 1)
-                                          const Divider(
-                                            color: Color(0xFFE0E0E0),
-                                            height: 1,
-                                          ),
-                                      ],
+                                    _card(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Center(
+                                              child: _label('Request Details')),
+                                          SizedBox(height: 12.w),
+                                          if (requestDetailItems.isEmpty)
+                                            _value(
+                                                'No request-specific details available',
+                                                size: 12.sp,
+                                                weight: FontWeight.w500,
+                                                color: const Color(0xFF6E6E6E))
+                                          else
+                                            for (int i = 0;
+                                                i < requestDetailItems.length;
+                                                i++) ...[
+                                              requestDetailItems[i].label ==
+                                                      'Validation'
+                                                  ? _validationActionBox(
+                                                      requestDetailItems[i]
+                                                          .value,
+                                                    )
+                                                  : requestDetailItems[i]
+                                                                  .label ==
+                                                              'GM Attachment' ||
+                                                          requestDetailItems[i]
+                                                                  .label ==
+                                                              'Birth Attachment'
+                                                      ? _attachmentActionBox(
+                                                          requestDetailItems[i]
+                                                              .value,
+                                                          label:
+                                                              requestDetailItems[
+                                                                      i]
+                                                                  .label,
+                                                        )
+                                                      : requestDetailItems[i]
+                                                              .multiline
+                                                          ? _detailDescriptionBox(
+                                                              requestDetailItems[
+                                                                      i]
+                                                                  .label,
+                                                              requestDetailItems[
+                                                                      i]
+                                                                  .value,
+                                                            )
+                                                          : _detailRow(
+                                                              requestDetailItems[
+                                                                      i]
+                                                                  .label,
+                                                              requestDetailItems[
+                                                                      i]
+                                                                  .value,
+                                                            ),
+                                              if (i !=
+                                                  requestDetailItems.length - 1)
+                                                const Divider(
+                                                  color: Color(0xFFE0E0E0),
+                                                  height: 1,
+                                                ),
+                                            ],
+                                        ],
+                                      ),
+                                    ),
+                                    SizedBox(height: 20.w),
                                   ],
                                 ),
-                              ),
-                              SizedBox(height: 20.w),
-                            ],
-                          ),
                         ),
                       ),
                       SafeArea(
@@ -1450,26 +3230,60 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                         child: Padding(
                           padding: EdgeInsets.symmetric(
                               horizontal: 20.w, vertical: 14.w),
-                          child: Center(
-                            child: ApprovalActionButtons(
-                              requestId: widget.requestId,
-                              type: widget.type,
-                              userIds: [userId],
-                              variant: ApprovalActionButtonsVariant.pill,
-                              pillWidth: pillWidth,
-                              pillHeight: 36.w,
-                              pillSpacing: 24.w,
-                              pillBorderRadius: BorderRadius.circular(20.r),
-                              pillTextStyle: GoogleFonts.poppins(
-                                fontSize: 17.sp,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white,
-                                height: 1,
-                              ),
-                              showHrApproveConfirmation: true,
-                              enableFakeApproveDemo: _isLocalFakeRequest,
-                            ),
-                          ),
+                          child: isReferenceLayoutRequest
+                              ? Container(
+                                  width: double.infinity,
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 14.w, vertical: 12.w),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFD7D7D7),
+                                    borderRadius: BorderRadius.circular(24.r),
+                                  ),
+                                  child: Center(
+                                    child: ApprovalActionButtons(
+                                      requestId: widget.requestId,
+                                      type: widget.type,
+                                      userIds: [userId],
+                                      variant:
+                                          ApprovalActionButtonsVariant.pill,
+                                      pillWidth: pillWidth,
+                                      pillHeight: 36.w,
+                                      pillSpacing: 24.w,
+                                      pillBorderRadius:
+                                          BorderRadius.circular(20.r),
+                                      pillTextStyle: GoogleFonts.poppins(
+                                        fontSize: 17.sp,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.white,
+                                        height: 1,
+                                      ),
+                                      showHrApproveConfirmation: true,
+                                      enableFakeApproveDemo:
+                                          _isLocalFakeRequest,
+                                    ),
+                                  ),
+                                )
+                              : Center(
+                                  child: ApprovalActionButtons(
+                                    requestId: widget.requestId,
+                                    type: widget.type,
+                                    userIds: [userId],
+                                    variant: ApprovalActionButtonsVariant.pill,
+                                    pillWidth: pillWidth,
+                                    pillHeight: 36.w,
+                                    pillSpacing: 24.w,
+                                    pillBorderRadius:
+                                        BorderRadius.circular(20.r),
+                                    pillTextStyle: GoogleFonts.poppins(
+                                      fontSize: 17.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white,
+                                      height: 1,
+                                    ),
+                                    showHrApproveConfirmation: true,
+                                    enableFakeApproveDemo: _isLocalFakeRequest,
+                                  ),
+                                ),
                         ),
                       ),
                     ],
@@ -1488,9 +3302,21 @@ class _FieldDef {
 }
 
 class _DetailItem {
-  const _DetailItem(this.label, this.value, {this.multiline = false});
+  const _DetailItem(
+    this.label,
+    this.value, {
+    this.multiline = false,
+    this.highlight = false,
+    this.fullWidth = false,
+    this.pairWithEmpty = false,
+    this.inlineLabelValue = false,
+  });
 
   final String label;
   final String value;
   final bool multiline;
+  final bool highlight;
+  final bool fullWidth;
+  final bool pairWithEmpty;
+  final bool inlineLabelValue;
 }

@@ -23,6 +23,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+import 'core/app_globals.dart';
+
 class FirebaseService {
   static final FirebaseMessaging _firebaseMessaging =
       FirebaseMessaging.instance;
@@ -109,8 +111,8 @@ class FirebaseService {
     // Create the high_importance_channel used by FCM foreground notifications.
     // Without this, Android 8+ silently drops or demotes notifications because
     // the channel referenced in AndroidManifest meta-data doesn't exist.
-    final androidImpl = _flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
+    final androidImpl =
+        _flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
     if (androidImpl != null) {
       await androidImpl.createNotificationChannel(
@@ -647,7 +649,8 @@ class FirebaseService {
         final taskId = payloadData?['task_id']?.toString();
         final isFirebaseTask =
             payloadData?['is_firebase_task']?.toString() != 'false';
-        print('   - ✅ Task notification! taskId=$taskId, firebase=$isFirebaseTask');
+        print(
+            '   - ✅ Task notification! taskId=$taskId, firebase=$isFirebaseTask');
 
         if (taskId != null && taskId.isNotEmpty && isFirebaseTask) {
           navigator.push(

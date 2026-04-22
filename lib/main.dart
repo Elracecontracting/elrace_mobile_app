@@ -49,16 +49,13 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:app_links/app_links.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:el_race/core/app_globals.dart';
 import 'core/services/app_config_service.dart';
 import 'core/services/attendance_status_sync_service.dart';
 import 'firebase_service.dart';
 import 'report_module/data/provider/reports_provider.dart';
 import 'ui/presentation/Email Approval/bloc/approval_bloc.dart';
 import 'ui/presentation/home_screen/provider/slider_provider.dart';
-
-/// Completer that signals when all heavy initialisation is done.
-/// The splash screen awaits this before navigating away.
-final Completer<void> appInitCompleter = Completer<void>();
 
 // Background message handler - يجب أن يكون خارج main()
 @pragma('vm:entry-point')
@@ -175,9 +172,9 @@ Future<void> _performHeavyInitialization() async {
     try {
       await Future.wait([
         AppConfigService.instance.load().timeout(
-          const Duration(seconds: 10),
-          onTimeout: () => print('⚠️ AppConfig load timeout'),
-        ),
+              const Duration(seconds: 10),
+              onTimeout: () => print('⚠️ AppConfig load timeout'),
+            ),
         FirebaseService.initialize().timeout(
           const Duration(seconds: 10),
           onTimeout: () => print('⚠️ Firebase service init timeout'),
@@ -221,14 +218,19 @@ Future<void> _initializeNonCriticalServices() async {
   print('✅ All background services initialized');
 
   // PHASE 4: Permissions + System UI (after everything else)
-  try { await _requestEssentialPermissions(); } catch (_) {}
-  try { await _configureAppSystemUi(); } catch (_) {}
+  try {
+    await _requestEssentialPermissions();
+  } catch (_) {}
+  try {
+    await _configureAppSystemUi();
+  } catch (_) {}
 }
 
 /// WorkManager + periodic task scheduling
 Future<void> _initWorkManager() async {
   try {
-    await Workmanager().initialize(unifiedCallbackDispatcher, isInDebugMode: false);
+    await Workmanager()
+        .initialize(unifiedCallbackDispatcher, isInDebugMode: false);
     debugPrint('✅ WorkManager initialized');
 
     await Future.wait<void>([
@@ -283,9 +285,9 @@ Future<void> _initPrayerAndCheckoutServices() async {
     try {
       await Future.wait<void>([
         CheckInReminderNotificationService().initialize().timeout(
-          const Duration(seconds: 5),
-          onTimeout: () => print('⚠️ Check-in reminder timeout'),
-        ),
+              const Duration(seconds: 5),
+              onTimeout: () => print('⚠️ Check-in reminder timeout'),
+            ),
         _syncAttendanceStatusIfLoggedIn(),
       ]);
 
@@ -546,8 +548,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           ChangeNotifierProvider(create: (_) => SliderProvider()),
           ChangeNotifierProvider(create: (_) => ProfileBoxProvider()),
           ChangeNotifierProvider(create: (_) => ReportProvider()),
-          ChangeNotifierProvider(
-              create: (_) => TodoFirebaseProvider()),
+          ChangeNotifierProvider(create: (_) => TodoFirebaseProvider()),
           ChangeNotifierProvider(create: (_) => QrSurveyDataProvider()),
           ChangeNotifierProvider(create: (_) => AnnouncementsProvider()),
           ChangeNotifierProvider(
@@ -660,7 +661,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 }
 
-GlobalKey<NavigatorState> navKey = GlobalKey();
 final GlobalKey<OverlayState> appOverlayKey = GlobalKey<OverlayState>();
 bool _deepLinkingInitialized = false;
 Uri? _lastHandledDeepLink;

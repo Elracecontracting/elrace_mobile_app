@@ -1,7 +1,7 @@
 import 'package:el_race/core/services/update_service.dart';
+import 'package:el_race/core/app_globals.dart' show appInitCompleter;
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/firebase_service.dart';
-import 'package:el_race/main.dart' show appInitCompleter;
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
 import 'package:el_race/ui/widgets/update_dialog.dart';
 import 'package:flutter/material.dart';
@@ -251,7 +251,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
             )
-          : const SizedBox.expand(),  // Dark bg while video loads (< 100ms)
+          : const SizedBox.expand(), // Dark bg while video loads (< 100ms)
     );
   }
 
