@@ -31,7 +31,8 @@ class PettyCashDetailsScreen extends StatefulWidget {
 class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
   bool _isLoading = true;
   String _error = '';
-  bool _showAllLines = false;
+  final PageController _linesPageController = PageController();
+  int _currentLinesPage = 0;
 
   Map<String, dynamic> _formData = const {};
   List<dynamic> _attachmentIds = const [];
@@ -80,6 +81,112 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     return DateFormat('dd/MM/yyyy').format(parsed);
   }
 
+  bool _isInvalidImageValue(String value) {
+    final normalized = value.trim().toLowerCase();
+    if (normalized.isEmpty || normalized == 'false' || normalized == 'null') {
+      return true;
+    }
+
+    if (normalized.endsWith('/false') ||
+        normalized.contains('/image/false') ||
+        normalized.contains('employee/image/false')) {
+      return true;
+    }
+
+    return false;
+  }
+
+  String _pickImage(List<dynamic> values) {
+    for (final value in values) {
+      final candidate = _safe(value);
+      if (candidate.isEmpty) continue;
+      if (_isInvalidImageValue(candidate)) continue;
+      return candidate;
+    }
+    return '';
+  }
+
+  String _normalizeImageUrl(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty || _isInvalidImageValue(trimmed)) return '';
+
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      return trimmed;
+    }
+
+    if (trimmed.startsWith('/')) {
+      return 'https://erp.elrace.com$trimmed';
+    }
+
+    if (RegExp(r'^\d+$').hasMatch(trimmed)) {
+      return 'https://erp.elrace.com/public/employee/image/$trimmed';
+    }
+
+    if (trimmed.startsWith('public/') || trimmed.startsWith('employee/')) {
+      return 'https://erp.elrace.com/$trimmed';
+    }
+
+    return trimmed;
+  }
+
+  Widget _buildAvatar(String imageData, {required double iconSize}) {
+    final trimmed = imageData.trim();
+    if (trimmed.isEmpty) {
+      return Icon(
+        Icons.person,
+        color: const Color(0xFF6B6B6B),
+        size: iconSize,
+      );
+    }
+
+    final normalizedUrl = _normalizeImageUrl(trimmed);
+    final isUrl = normalizedUrl.startsWith('http://') ||
+        normalizedUrl.startsWith('https://');
+    if (isUrl) {
+      final token = SharedPref.getLoginData().result?.token;
+      final headers = <String, String>{
+        'Accept': 'image/*,*/*;q=0.8',
+      };
+      if (_safe(token).isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      return Image.network(
+        normalizedUrl,
+        fit: BoxFit.cover,
+        headers: headers,
+        errorBuilder: (_, __, ___) => Icon(
+          Icons.person,
+          color: const Color(0xFF6B6B6B),
+          size: iconSize,
+        ),
+      );
+    }
+
+    try {
+      String base64String = trimmed;
+      if (trimmed.contains('base64,')) {
+        base64String = trimmed.split('base64,')[1];
+      }
+      final bytes = base64Decode(base64String);
+      return Image.memory(
+        bytes,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => Icon(
+          Icons.person,
+          color: const Color(0xFF6B6B6B),
+          size: iconSize,
+        ),
+      );
+    } catch (_) {
+      return Icon(
+        Icons.person,
+        color: const Color(0xFF6B6B6B),
+        size: iconSize,
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -87,6 +194,12 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       _formData = Map<String, dynamic>.from(widget.initialData!);
     }
     _fetchPettyCashDetails();
+  }
+
+  @override
+  void dispose() {
+    _linesPageController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchPettyCashDetails() async {
@@ -212,6 +325,35 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       normalized['holder_name'],
       normalized['holder'],
     ]);
+
+    final holderRaw =
+        raw['pettycash_holder'] ?? raw['holder'] ?? raw['holder_name'];
+    if (holderRaw is Map) {
+      final holderMap = Map<String, dynamic>.from(holderRaw);
+      normalized['holder_name'] = _pick([
+        holderMap['name'],
+        holderMap['holder_name'],
+        holderMap['employee_name'],
+        holderMap['emp_name'],
+        normalized['holder_name'],
+        normalized['pettycash_holder'],
+      ]);
+      normalized['holder_image'] = _pick([
+        holderMap['holder_image_url'],
+        holderMap['emp_image_url'],
+        holderMap['image_emp'],
+        holderMap['employee_image'],
+        holderMap['image'],
+        holderMap['avatar'],
+        holderMap['photo'],
+        holderMap['id'],
+        normalized['holder_image'],
+      ]);
+      normalized['pettycash_holder'] = _pick([
+        normalized['holder_name'],
+        normalized['pettycash_holder'],
+      ]);
+    }
 
     normalized['requester_name'] = _pick([
       normalized['requester_name'],
@@ -492,6 +634,17 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
     );
   }
 
+  List<List<dynamic>> _chunkLines(List<dynamic> source, int chunkSize) {
+    if (source.isEmpty) return const [];
+    final chunks = <List<dynamic>>[];
+    for (int i = 0; i < source.length; i += chunkSize) {
+      final end =
+          (i + chunkSize < source.length) ? i + chunkSize : source.length;
+      chunks.add(source.sublist(i, end));
+    }
+    return chunks;
+  }
+
   @override
   Widget build(BuildContext context) {
     final requestNo = _pick([
@@ -535,17 +688,54 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
       _formData['req_date'],
     ]);
 
-    final total = _pick([
-      _formData['total'],
-      _formData['total_amount'],
-      _formData['amount_total'],
-      _formData['amount'],
+    final employeeTitle = _pick([
+      _formData['job_title'],
+      _formData['job_position'],
+      _formData['department'],
+      _formData['section'],
+    ]);
+
+    final comment = _pick([
+      _formData['comment'],
+      _formData['note'],
+      _formData['description'],
+    ]);
+
+    final employeeImage = _pickImage([
+      _formData['emp_image_url'],
+      _formData['image_emp'],
+      _formData['employee_image'],
+      _formData['emp_image'],
+      _formData['employee_img'],
+      _formData['image'],
+      _formData['avatar'],
+      _formData['photo'],
+      _formData['profile_image'],
+    ]);
+
+    final holderImage = _pickImage([
+      _formData['holder_image_url'],
+      _formData['pettycash_holder_image_url'],
+      _formData['pettycash_holder_image'],
+      _formData['holder_image'],
+      _formData['holder_img'],
+      _formData['pettycash_holder_avatar'],
+      (_formData['pettycash_holder'] is Map)
+          ? (_formData['pettycash_holder'] as Map)['image_emp']
+          : null,
+      (_formData['holder'] is Map)
+          ? (_formData['holder'] as Map)['image_emp']
+          : null,
+      (_formData['holder_name'] is Map)
+          ? (_formData['holder_name'] as Map)['image_emp']
+          : null,
+      _formData['image_emp'],
     ]);
 
     final lines = _formData['lines'] as List? ?? [];
-    final hasMoreLines = lines.length > 4;
-    final visibleLines =
-        (_showAllLines || !hasMoreLines) ? lines : lines.take(4).toList();
+    final linePages = _chunkLines(lines, 6);
+    final hasAttachments = _attachmentIds.isNotEmpty;
+    final requestDateLabel = _formatDate(date);
 
     final userId =
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
@@ -554,7 +744,7 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
         ((MediaQuery.of(context).size.width - 96.w) / 2).clamp(110.w, 150.w);
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F2),
+      backgroundColor: Colors.white,
       appBar: HeaderWidget(),
       body: SafeArea(
         top: false,
@@ -586,240 +776,428 @@ class _PettyCashDetailsScreenState extends State<PettyCashDetailsScreen> {
                       Expanded(
                         child: SingleChildScrollView(
                           padding: EdgeInsets.symmetric(
-                              horizontal: 16.w, vertical: 12.w),
+                              horizontal: 18.w, vertical: 10.w),
                           child: Column(
                             children: [
-                              SizedBox(height: 4.w),
+                              SizedBox(height: 8.w),
                               Text(
-                                'PETTYCASH DETAILS',
+                                'Petty cash',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 15.sp,
-                                  fontWeight: FontWeight.w900,
+                                  fontSize: 33.sp / 2,
+                                  fontWeight: FontWeight.w500,
                                   color: const Color(0xFF0E0E0E),
-                                  letterSpacing: 0.6,
                                 ),
                               ),
-                              SizedBox(height: 16.w),
-                              // Row 1: Req No | Pettycash Limit
+                              SizedBox(height: 14.w),
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Expanded(
-                                    child: _card(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 14.w, vertical: 12.w),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          _label('Req No'),
-                                          SizedBox(height: 8.w),
-                                          _value(requestNo,
-                                              size: 11.5.sp,
-                                              weight: FontWeight.w900),
-                                        ],
+                                  Container(
+                                    width: 92.w,
+                                    height: 92.w,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white,
+                                      border: Border.all(
+                                        color: const Color(0xFFDADADA),
+                                        width: 1.2,
+                                      ),
+                                    ),
+                                    child: ClipOval(
+                                      child: _buildAvatar(
+                                        employeeImage,
+                                        iconSize: 42.w,
                                       ),
                                     ),
                                   ),
-                                  SizedBox(width: 8.w),
                                   Expanded(
-                                    child: _card(
-                                      padding: EdgeInsets.symmetric(
-                                          horizontal: 14.w, vertical: 12.w),
+                                    child: Padding(
+                                      padding: EdgeInsets.only(left: 12.w),
                                       child: Column(
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          _label('Pettycash Limit'),
+                                          Text(
+                                            _displayOrNA(requester),
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 18.sp,
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFF181818),
+                                            ),
+                                          ),
+                                          if (employeeTitle.trim().isNotEmpty)
+                                            Padding(
+                                              padding:
+                                                  EdgeInsets.only(top: 2.w),
+                                              child: Text(
+                                                employeeTitle,
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 15.sp,
+                                                  fontWeight: FontWeight.w500,
+                                                  color:
+                                                      const Color(0xFF888888),
+                                                ),
+                                              ),
+                                            ),
                                           SizedBox(height: 8.w),
-                                          _value(_formatAmount(pettycashLimit),
-                                              size: 11.5.sp,
-                                              weight: FontWeight.w900),
+                                          Row(
+                                            children: [
+                                              Expanded(
+                                                child: Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                    horizontal: 6.w,
+                                                    vertical: 5.w,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        const Color(0xFFC9C9C9),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            20.r),
+                                                  ),
+                                                  child: FittedBox(
+                                                    fit: BoxFit.scaleDown,
+                                                    child: Text(
+                                                      requestNo,
+                                                      maxLines: 1,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontSize: 13.sp,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: const Color(
+                                                            0xFF1E1E1E),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              SizedBox(width: 8.w),
+                                              Expanded(
+                                                child: Container(
+                                                  padding: EdgeInsets.symmetric(
+                                                    horizontal: 6.w,
+                                                    vertical: 5.w,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        const Color(0xFF2EA6DE),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            20.r),
+                                                  ),
+                                                  child: FittedBox(
+                                                    fit: BoxFit.scaleDown,
+                                                    child: Text(
+                                                      requestDateLabel,
+                                                      maxLines: 1,
+                                                      textAlign:
+                                                          TextAlign.center,
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                        fontSize: 13.sp,
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        color: const Color(
+                                                            0xFF1E1E1E),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ],
                                       ),
                                     ),
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 10.w),
-                              // Row 2: Pettycash Holder (full width)
-                              _card(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 14.w, vertical: 12.w),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    _label('Pettycash Holder'),
-                                    SizedBox(height: 8.w),
-                                    _value(pettycashHolder,
-                                        size: 11.5.sp, weight: FontWeight.w900),
+                              SizedBox(height: 14.w),
+                              Container(
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                      color: const Color(0xFF9E9E9E), width: 1),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
                                   ],
                                 ),
-                              ),
-                              SizedBox(height: 10.w),
-                              // Row 3: Requester (full width)
-                              _card(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 14.w, vertical: 12.w),
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _label('Requester'),
-                                    SizedBox(height: 8.w),
-                                    _value(requester,
-                                        size: 11.5.sp, weight: FontWeight.w900),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 10.w),
-                              // Items card
-                              _card(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (visibleLines.isNotEmpty)
-                                      ...visibleLines
-                                          .asMap()
-                                          .entries
-                                          .map((entry) {
-                                        final i = entry.key;
-                                        final line = entry.value;
-                                        final lineMap = line as Map? ?? {};
-                                        final description = _pick([
-                                          lineMap['description'],
-                                          lineMap['name'],
-                                          projectName,
-                                        ], fallback: 'Item');
-                                        final lineDate = _pick([
-                                          lineMap['date'],
-                                          lineMap['line_date'],
-                                          date,
-                                        ]);
-                                        final amount = _pick([
-                                          lineMap['amount'],
-                                          lineMap['price'],
-                                          lineMap['subtotal'],
-                                        ]);
-
-                                        return _lineItemTile(
-                                          description: description,
-                                          lineDate: lineDate,
-                                          amount: amount,
-                                          showDivider:
-                                              i < visibleLines.length - 1,
-                                        );
-                                      })
-                                    else
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.spaceBetween,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
+                                    Container(
+                                      width: double.infinity,
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 12.w, vertical: 8.w),
+                                      decoration: const BoxDecoration(
+                                        border: Border(
+                                          bottom: BorderSide(
+                                              color: Color(0xFFE2E2E2),
+                                              width: 1),
+                                        ),
+                                      ),
+                                      child: Text(
+                                        'Petty cash holder',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 15.sp,
+                                          fontWeight: FontWeight.w700,
+                                          color: const Color(0xFF5A5A5A),
+                                        ),
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 12.w, vertical: 10.w),
+                                      child: Row(
                                         children: [
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                _value(projectName,
-                                                    size: 14.sp,
-                                                    weight: FontWeight.w900),
-                                                SizedBox(height: 6.w),
-                                                _label(_formatDate(date)),
-                                              ],
+                                          Container(
+                                            width: 34.w,
+                                            height: 34.w,
+                                            decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: Colors.white,
+                                              border: Border.all(
+                                                color: const Color(0xFFDADADA),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: ClipOval(
+                                              child: _buildAvatar(
+                                                holderImage,
+                                                iconSize: 18.w,
+                                              ),
                                             ),
                                           ),
-                                          SizedBox(width: 12.w),
-                                          _value(_formatAmount(pettycashLimit),
-                                              size: 14.sp,
-                                              weight: FontWeight.w900,
-                                              color: const Color(0xFF15A98A)),
+                                          SizedBox(width: 8.w),
+                                          Expanded(
+                                            child: Text(
+                                              _displayOrNA(pettycashHolder),
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14.sp,
+                                                fontWeight: FontWeight.w600,
+                                                color: const Color(0xFF111111),
+                                              ),
+                                            ),
+                                          ),
                                         ],
                                       ),
+                                    ),
                                   ],
                                 ),
                               ),
-                              if (hasMoreLines && !_showAllLines) ...[
-                                SizedBox(height: 6.w),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: GestureDetector(
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              PettyCashSeeMoreScreen(
-                                            requestId: widget.requestId,
-                                            type: widget.type,
-                                            userId: userId,
-                                            lines: lines,
-                                            projectName: projectName,
-                                            date: date,
+                              SizedBox(height: 12.w),
+                              SizedBox(
+                                height: 330.w,
+                                child: linePages.isNotEmpty
+                                    ? PageView.builder(
+                                        controller: _linesPageController,
+                                        itemCount: linePages.length,
+                                        onPageChanged: (index) {
+                                          if (!mounted) return;
+                                          setState(() {
+                                            _currentLinesPage = index;
+                                          });
+                                        },
+                                        itemBuilder: (context, pageIndex) {
+                                          final pageLines =
+                                              linePages[pageIndex];
+                                          return _card(
+                                            child: ListView.builder(
+                                              padding: EdgeInsets.zero,
+                                              physics:
+                                                  const BouncingScrollPhysics(),
+                                              itemCount: pageLines.length,
+                                              itemBuilder: (context, i) {
+                                                final lineMap =
+                                                    pageLines[i] as Map? ?? {};
+                                                final description = _pick([
+                                                  lineMap['description'],
+                                                  lineMap['name'],
+                                                  projectName,
+                                                ], fallback: 'Project name');
+                                                final lineDate = _pick([
+                                                  lineMap['date'],
+                                                  lineMap['line_date'],
+                                                  date,
+                                                ]);
+                                                final amount = _pick([
+                                                  lineMap['amount'],
+                                                  lineMap['price'],
+                                                  lineMap['subtotal'],
+                                                  pettycashLimit,
+                                                ]);
+
+                                                return _lineItemTile(
+                                                  description: description,
+                                                  lineDate: lineDate,
+                                                  amount: amount,
+                                                  showDivider:
+                                                      i < pageLines.length - 1,
+                                                );
+                                              },
+                                            ),
+                                          );
+                                        },
+                                      )
+                                    : _card(
+                                        child: _lineItemTile(
+                                          description:
+                                              _displayOrNA(projectName),
+                                          lineDate: date,
+                                          amount: pettycashLimit,
+                                          showDivider: false,
+                                        ),
+                                      ),
+                              ),
+                              SizedBox(height: 8.w),
+                              if (linePages.length > 1)
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    for (int i = 0; i < linePages.length; i++)
+                                      Container(
+                                        width: 8.w,
+                                        height: 8.w,
+                                        margin: EdgeInsets.symmetric(
+                                            horizontal: 5.w),
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: i == _currentLinesPage
+                                              ? const Color(0xFF919191)
+                                              : Colors.transparent,
+                                          border: Border.all(
+                                            color: const Color(0xFF9D9D9D),
+                                            width: 1,
                                           ),
                                         ),
-                                      );
-                                    },
-                                    child: Text(
-                                      'SEE MORE',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12.sp,
-                                        fontWeight: FontWeight.w900,
-                                        color: const Color(0xFFBBBBBB),
-                                        letterSpacing: 0.2,
+                                      ),
+                                  ],
+                                )
+                              else
+                                SizedBox(height: 8.w),
+                              SizedBox(height: 10.w),
+                              Container(
+                                width: double.infinity,
+                                padding: EdgeInsets.all(8.w),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(14.r),
+                                  border: Border.all(
+                                      color: const Color(0xFF9E9E9E), width: 1),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.08),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Text(
+                                          'Comment',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 15.sp,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF5A5A5A),
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          '${comment.characters.length}/50',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 11.sp,
+                                            fontWeight: FontWeight.w500,
+                                            color: const Color(0xFFA8A8A8),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    SizedBox(height: 6.w),
+                                    Container(
+                                      width: double.infinity,
+                                      constraints:
+                                          BoxConstraints(minHeight: 38.w),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 10.w, vertical: 8.w),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF4F4F4),
+                                        borderRadius:
+                                            BorderRadius.circular(10.r),
+                                        border: Border.all(
+                                            color: const Color(0xFFDADADA),
+                                            width: 1),
+                                      ),
+                                      child: Text(
+                                        comment,
+                                        maxLines: null,
+                                        overflow: TextOverflow.visible,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 12.sp,
+                                          fontWeight: FontWeight.w500,
+                                          color: const Color(0xFF3B3B3B),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (hasAttachments) ...[
+                                SizedBox(height: 16.w),
+                                SizedBox(
+                                  width: 0.88.sw,
+                                  child: InkWell(
+                                    onTap: _viewAttachment,
+                                    borderRadius: BorderRadius.circular(14.r),
+                                    child: Container(
+                                      padding:
+                                          EdgeInsets.symmetric(vertical: 13.w),
+                                      decoration: BoxDecoration(
+                                        borderRadius:
+                                            BorderRadius.circular(14.r),
+                                        gradient: const LinearGradient(
+                                          begin: Alignment.topCenter,
+                                          end: Alignment.bottomCenter,
+                                          colors: [
+                                            Color(0xFF777B84),
+                                            Color(0xFF63676F),
+                                          ],
+                                        ),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Icon(
+                                            Icons.attach_file_rounded,
+                                            color: Colors.white,
+                                            size: 20.sp,
+                                          ),
+                                          SizedBox(width: 6.w),
+                                          Text(
+                                            'View Attachments',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 14.sp,
+                                              fontWeight: FontWeight.w700,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
                                 ),
                               ],
-                              SizedBox(height: 10.w),
-                              // Total card
-                              _card(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 16.w, vertical: 12.w),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    _value('TOTAL',
-                                        size: 15.sp,
-                                        weight: FontWeight.w900,
-                                        color: const Color(0xFFD31721)),
-                                    _value(_formatAmount(total),
-                                        size: 18.sp,
-                                        weight: FontWeight.w900,
-                                        color: const Color(0xFFD31721)),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 10.w),
-                              // Attachments button
-                              SizedBox(
-                                width: double.infinity,
-                                height: 46.w,
-                                child: ElevatedButton.icon(
-                                  onPressed: _attachmentIds.isEmpty
-                                      ? null
-                                      : _viewAttachment,
-                                  icon: Icon(Icons.attach_file,
-                                      color: Colors.white, size: 18.w),
-                                  label: Text(
-                                    'View Attachments',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 13.sp,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF64676B),
-                                    disabledBackgroundColor:
-                                        const Color(0xFF64676B)
-                                            .withValues(alpha: 0.4),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12.r),
-                                    ),
-                                  ),
-                                ),
-                              ),
                               SizedBox(height: 14.w),
                             ],
                           ),

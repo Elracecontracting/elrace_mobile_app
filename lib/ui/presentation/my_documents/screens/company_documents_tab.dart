@@ -3,10 +3,10 @@ import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
 
-/// Company Documents Tab
 class CompanyDocumentsTab extends StatefulWidget {
   const CompanyDocumentsTab({
     super.key,
@@ -22,165 +22,78 @@ class CompanyDocumentsTab extends StatefulWidget {
 }
 
 class _CompanyDocumentsTabState extends State<CompanyDocumentsTab> {
+  final PageController _foldersPageController =
+      PageController(viewportFraction: 0.82);
+
   bool _isLoading = false;
+  bool _isLoadingFolderContents = false;
   String? _error;
-  List<_CompanyDocumentItem> _documents = const [];
 
-  void _debugPrintLong(String message) {
-    const chunkSize = 800;
-    for (var i = 0; i < message.length; i += chunkSize) {
-      final end =
-          (i + chunkSize < message.length) ? i + chunkSize : message.length;
-      debugPrint(message.substring(i, end));
-    }
-  }
+  List<_CompanyFolder> _folders = const [];
+  int _currentFolderPage = 0;
 
-  void _logCompanyRequest({
-    required Uri url,
-    required String method,
-    required Map<String, String> headers,
-    String? body,
-  }) {
-    debugPrint('=========== COMPANY DOCUMENTS REQUEST START ===========');
-    debugPrint('URL: $url');
-    debugPrint('Method: $method');
-    _debugPrintLong('Headers: ${jsonEncode(headers)}');
-    if (body != null && body.isNotEmpty) {
-      _debugPrintLong('Body: $body');
-    }
-    debugPrint('============ COMPANY DOCUMENTS REQUEST END ============');
-  }
-
-  void _logCompanyResponse(http.Response response) {
-    debugPrint('=========== COMPANY DOCUMENTS RESPONSE START ==========');
-    debugPrint('Status: ${response.statusCode}');
-    _debugPrintLong('Headers: ${jsonEncode(response.headers)}');
-    _debugPrintLong('Body: ${response.body}');
-    debugPrint('============ COMPANY DOCUMENTS RESPONSE END ===========');
-  }
-
-  dynamic _decodeJsonResponse(http.Response response,
-      {required String fallbackError}) {
-    final body = response.body.trim();
-    if (body.isEmpty) {
-      throw Exception('$fallbackError (empty response)');
-    }
-
-    try {
-      return jsonDecode(body);
-    } catch (_) {
-      final preview = body.length > 120 ? '${body.substring(0, 120)}...' : body;
-      throw Exception('$fallbackError (invalid response: $preview)');
-    }
-  }
+  _CompanyFolder? _selectedFolder;
+  List<_CompanyAttachment> _selectedFolderAttachments = const [];
 
   @override
   void initState() {
     super.initState();
-    _fetchCompanyDocuments();
+    _fetchCompanyFolders();
+  }
+
+  @override
+  void dispose() {
+    _foldersPageController.dispose();
+    super.dispose();
   }
 
   String _normalizeToken(dynamic value) {
     return (value ?? '').toString().trim().toLowerCase();
   }
 
-  bool _isSuccessResult(dynamic decoded) {
-    if (decoded is! Map) return false;
-    final result = decoded['result'];
-    if (result is! Map) return false;
-    final status = _normalizeToken(result['status']);
+  Map<String, dynamic> _extractResultEnvelope(dynamic decoded) {
+    if (decoded is Map && decoded['result'] is Map) {
+      return Map<String, dynamic>.from(decoded['result'] as Map);
+    }
+    if (decoded is Map && decoded['status'] != null) {
+      return Map<String, dynamic>.from(decoded);
+    }
+    return <String, dynamic>{};
+  }
+
+  bool _isSuccessEnvelope(Map<String, dynamic> envelope) {
+    final status = _normalizeToken(envelope['status']);
     return status == 'success' || status == 'ok' || status == 'true';
   }
 
-  List<Map<String, dynamic>> _extractFlatDocumentMaps(dynamic data) {
-    final docs = <Map<String, dynamic>>[];
-
-    void addRaw(Map raw) {
-      final map = Map<String, dynamic>.from(raw);
-      final nestedAttachments = map['attachments'];
-      if (nestedAttachments is List && nestedAttachments.isNotEmpty) {
-        for (final attachment in nestedAttachments) {
-          if (attachment is! Map) continue;
-          final merged = Map<String, dynamic>.from(map)
-            ..addAll(Map<String, dynamic>.from(attachment));
-          merged['attachment_ids'] =
-              merged['attachment_ids'] ?? <dynamic>[attachment];
-          docs.add(merged);
-        }
-        return;
-      }
-      docs.add(map);
-    }
-
-    if (data is List) {
-      for (final item in data) {
-        if (item is Map) {
-          addRaw(item);
-        }
-      }
-      return docs;
-    }
-
-    if (data is Map) {
-      for (final key in const ['documents', 'attachments', 'files', 'items']) {
-        final candidate = data[key];
-        if (candidate is List) {
-          for (final item in candidate) {
-            if (item is Map) {
-              addRaw(item);
-            }
-          }
-          return docs;
-        }
-      }
-      addRaw(data);
-    }
-
-    return docs;
+  int _toInt(dynamic value, {int fallback = 0}) {
+    if (value is int) return value;
+    return int.tryParse((value ?? '').toString()) ?? fallback;
   }
 
-  _CompanyDocumentItem _mapDocument(Map<String, dynamic> raw) {
-    final title = (raw['document_type'] ??
-            raw['type'] ??
-            raw['category'] ??
-            raw['title'] ??
-            raw['name'] ??
-            'Company Document')
-        .toString();
+  Future<dynamic> _sendJsonRpcGet(
+    Uri url,
+    Map<String, String> headers,
+    Map<String, dynamic> params,
+  ) async {
+    final request = http.Request('GET', url)
+      ..headers.addAll(headers)
+      ..body = jsonEncode({
+        'jsonrpc': '2.0',
+        'params': params,
+      });
 
-    final fileName = (raw['attachment_name'] ??
-            raw['attachment_filename'] ??
-            raw['file_name'] ??
-            raw['name'] ??
-            'document.pdf')
-        .toString();
-
-    final normalized = Map<String, dynamic>.from(raw);
-    dynamic attachmentIds = normalized['attachment_ids'];
-    if (attachmentIds == null ||
-        (attachmentIds is List && attachmentIds.isEmpty)) {
-      final rawAttachmentId =
-          normalized['attachment_id'] ?? normalized['attachmentId'];
-      if (rawAttachmentId != null && rawAttachmentId.toString().isNotEmpty) {
-        attachmentIds = <dynamic>[rawAttachmentId];
-      }
-    }
-    normalized['attachment_ids'] = attachmentIds ?? const [];
-    normalized['name'] = fileName;
-    normalized['title'] = title;
-
-    return _CompanyDocumentItem(
-      title: title,
-      fileName: fileName,
-      raw: normalized,
-    );
+    final streamed = await request.send();
+    return http.Response.fromStream(streamed);
   }
 
-  Future<void> _fetchCompanyDocuments() async {
+  Future<void> _fetchCompanyFolders() async {
     if (!mounted) return;
     setState(() {
       _isLoading = true;
       _error = null;
+      _selectedFolder = null;
+      _selectedFolderAttachments = const [];
     });
 
     try {
@@ -189,44 +102,68 @@ class _CompanyDocumentsTabState extends State<CompanyDocumentsTab> {
         throw Exception('Session expired. Please login again.');
       }
 
-      final url = Uri.parse('https://erp.elrace.com/api/company/attachments');
+      final url = Uri.parse('https://erp.elrace.com/api/company/folders');
       final headers = {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         'Authorization': 'Bearer $token',
       };
-      final body = jsonEncode({
-        'jsonrpc': '2.0',
-        'params': <String, dynamic>{},
-      });
 
-      _logCompanyRequest(url: url, method: 'GET', headers: headers, body: body);
+      var response = await _sendJsonRpcGet(url, headers, <String, dynamic>{});
 
-      final request = http.Request('GET', url)
-        ..headers.addAll(headers)
-        ..body = body;
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
-      _logCompanyResponse(response);
-      final decoded = _decodeJsonResponse(response,
-          fallbackError: 'Failed to load company documents');
-
-      if (response.statusCode != 200 || !_isSuccessResult(decoded)) {
-        final message = decoded is Map
-            ? (decoded['result']?['message']?.toString() ??
-                decoded['error']?.toString() ??
-                'Failed to load company documents')
-            : 'Failed to load company documents';
-        throw Exception(message);
+      // Some environments reject GET with body; fallback to plain GET.
+      if (response.statusCode == 400 ||
+          response.statusCode == 404 ||
+          response.statusCode == 405) {
+        response = await http.get(
+          url,
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+        );
       }
 
-      final result = decoded['result'] as Map<String, dynamic>;
-      final flatDocs = _extractFlatDocumentMaps(result['data']);
-      final mapped = flatDocs.map(_mapDocument).toList(growable: false);
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Failed to load company folders (HTTP ${response.statusCode})');
+      }
+
+      final decoded = jsonDecode(response.body);
+      final envelope = _extractResultEnvelope(decoded);
+      if (!_isSuccessEnvelope(envelope)) {
+        throw Exception(
+          envelope['message']?.toString() ??
+              (decoded is Map ? decoded['error']?.toString() : null) ??
+              'Failed to load company folders',
+        );
+      }
+
+      final rawData = envelope['data'] ??
+          (decoded is Map && decoded['data'] is List ? decoded['data'] : null);
+      if (rawData is! List) {
+        throw Exception('Invalid folders response format');
+      }
+
+      final mapped = rawData
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .map(
+            (m) => _CompanyFolder(
+              id: _toInt(m['id']),
+              name: (m['name'] ?? 'Folder').toString(),
+              totalFiles: _toInt(m['total_files']),
+            ),
+          )
+          .where((f) => f.id > 0)
+          .toList(growable: false);
 
       if (!mounted) return;
       setState(() {
-        _documents = mapped;
+        _folders = mapped;
+        if (_currentFolderPage >= _folders.length) {
+          _currentFolderPage = _folders.isEmpty ? 0 : _folders.length - 1;
+        }
       });
     } catch (e) {
       if (!mounted) return;
@@ -242,70 +179,452 @@ class _CompanyDocumentsTabState extends State<CompanyDocumentsTab> {
     }
   }
 
-  Future<void> _openDocument(_CompanyDocumentItem item) async {
-    final hasAttachment = item.raw['attachment_ids'] is List
-        ? (item.raw['attachment_ids'] as List).isNotEmpty
-        : item.raw['attachment_ids'] is Map;
+  Future<void> _openFolder(_CompanyFolder folder) async {
+    if (!mounted) return;
+    setState(() {
+      _isLoadingFolderContents = true;
+      _error = null;
+    });
 
-    if (!hasAttachment) {
+    try {
+      final token = SharedPref.getLoginData().result?.token ?? '';
+      if (token.isEmpty) {
+        throw Exception('Session expired. Please login again.');
+      }
+
+      final url =
+          Uri.parse('https://erp.elrace.com/api/company/folder/contents');
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+
+      final response =
+          await _sendJsonRpcGet(url, headers, {'unit_id': folder.id});
+
+      if (response.statusCode != 200) {
+        throw Exception(
+            'Failed to load folder contents (HTTP ${response.statusCode})');
+      }
+
+      final decoded = jsonDecode(response.body);
+      final envelope = _extractResultEnvelope(decoded);
+      if (!_isSuccessEnvelope(envelope)) {
+        throw Exception(
+          envelope['message']?.toString() ??
+              (decoded is Map ? decoded['error']?.toString() : null) ??
+              'Failed to load folder contents',
+        );
+      }
+
+      final data = envelope['data'];
+      if (data is! Map) {
+        throw Exception('Invalid folder contents response format');
+      }
+
+      final rawAttachments = data['attachments'];
+      final attachments = (rawAttachments is List)
+          ? rawAttachments
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
+              .map(
+                (m) => _CompanyAttachment(
+                  id: _toInt(m['id']),
+                  name: (m['name'] ?? 'File').toString(),
+                  mimetype: (m['mimetype'] ?? '').toString(),
+                  createdAt: (m['create_date'] ?? '').toString(),
+                  fileUrl: (m['file_url'] ?? '').toString(),
+                  raw: m,
+                ),
+              )
+              .where((a) => a.id > 0)
+              .toList(growable: false)
+          : const <_CompanyAttachment>[];
+
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No attachment available for this file')),
-      );
-      return;
+      setState(() {
+        _selectedFolder = folder;
+        _selectedFolderAttachments = attachments;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingFolderContents = false;
+        });
+      }
     }
-
-    final callback = widget.onOpenDocument;
-    if (callback == null) return;
-    await callback(item.raw);
   }
 
-  @override
-  Widget build(BuildContext context) {
+  int get _totalFilesAcrossFolders {
+    var total = 0;
+    for (final folder in _folders) {
+      total += folder.totalFiles;
+    }
+    return total;
+  }
+
+  void _goBackToFolders() {
+    if (!mounted) return;
+    setState(() {
+      _selectedFolder = null;
+      _selectedFolderAttachments = const [];
+      _error = null;
+    });
+  }
+
+  Future<void> _openAttachment(_CompanyAttachment attachment) async {
+    final callback = widget.onOpenDocument;
+    if (callback == null) return;
+
+    final map = Map<String, dynamic>.from(attachment.raw)
+      ..['name'] = attachment.name
+      ..['title'] = attachment.name
+      ..['attachment_ids'] = [
+        {
+          'attachment_id': attachment.id,
+        }
+      ];
+
+    await callback(map);
+  }
+
+  Widget _buildTopFoldersHeader() {
+    return Padding(
+      padding: EdgeInsets.only(left: 22.w, right: 22.w, top: 8.h, bottom: 6.h),
+      child: Row(
+        children: [
+          Text(
+            'Folders no ${_folders.length}',
+            style: GoogleFonts.poppins(
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF7A7A7A),
+              letterSpacing: 1.5,
+            ),
+          ),
+          const Spacer(),
+          IconButton(
+            onPressed: _isLoading ? null : _fetchCompanyFolders,
+            icon: const Icon(Icons.refresh_rounded),
+            color: const Color(0xFF27304E),
+            tooltip: 'Refresh',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFoldersPager() {
+    if (_folders.isEmpty) {
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: 26.h),
+        child: Column(
+          children: [
+            Icon(
+              Icons.folder_off_rounded,
+              size: 46.sp,
+              color: const Color(0xFF98A0AE),
+            ),
+            SizedBox(height: 10.h),
+            Text(
+              'No company folders',
+              style: GoogleFonts.poppins(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF3B4352),
+              ),
+            ),
+            SizedBox(height: 6.h),
+            Text(
+              'Folders will appear here once available.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.poppins(
+                fontSize: 12.sp,
+                fontWeight: FontWeight.w500,
+                color: const Color(0xFF7B8290),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return SizedBox(
+      height: 250.h,
+      child: PageView.builder(
+        controller: _foldersPageController,
+        itemCount: _folders.length,
+        onPageChanged: (index) {
+          if (!mounted) return;
+          setState(() {
+            _currentFolderPage = index;
+          });
+        },
+        itemBuilder: (context, index) {
+          final folder = _folders[index];
+          return Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8.w),
+            child: GestureDetector(
+              onTap:
+                  _isLoadingFolderContents ? null : () => _openFolder(folder),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: SvgPicture.asset(
+                      'assets/newapp/company_document_tab_folder.svg',
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  Positioned(
+                    top: 20.h,
+                    right: 34.w,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(maxWidth: 140.w),
+                      child: Text(
+                        folder.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        textAlign: TextAlign.right,
+                        style: GoogleFonts.poppins(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPagerDots() {
+    if (_folders.length <= 1) {
+      return SizedBox(height: 12.h);
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(top: 6.h, bottom: 8.h),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(_folders.length, (index) {
+          final selected = index == _currentFolderPage;
+          return Container(
+            width: 12.w,
+            height: 12.w,
+            margin: EdgeInsets.symmetric(horizontal: 5.w),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color:
+                  selected ? const Color(0xFF8A8A8A) : const Color(0xFFCFCFCF),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildNoOfFilesCard() {
+    final totalFiles = _folders.isEmpty ? 0 : _totalFilesAcrossFolders;
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 0.w, vertical: 4.h),
+      child: SizedBox(
+        height: 360.h,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bubbleLeft = constraints.maxWidth * 0.60;
+            final bubbleTop = constraints.maxHeight * 0.72;
+            final bubbleSize = constraints.maxWidth * 0.15;
+
+            return Stack(
+              children: [
+                Positioned.fill(
+                  child: Image.asset(
+                    'assets/newapp/company_documents_no_of_file.png',
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                Positioned(
+                  left: bubbleLeft,
+                  top: bubbleTop,
+                  width: bubbleSize,
+                  height: bubbleSize,
+                  child: Center(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        totalFiles.toString(),
+                        style: GoogleFonts.poppins(
+                          fontSize: 30.sp,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                          height: 1,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFolderContents() {
+    final folder = _selectedFolder;
+    if (folder == null) return const SizedBox.shrink();
+
     return Column(
       children: [
         Padding(
           padding:
-              EdgeInsets.only(left: 20.w, right: 20.w, top: 8.h, bottom: 8.h),
+              EdgeInsets.only(left: 10.w, right: 12.w, top: 6.h, bottom: 6.h),
           child: Row(
             children: [
-              Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(30.18.r),
-                  border: Border.all(color: const Color(0xffD9D9D9)),
-                ),
-                child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 13.5.w, vertical: 8.5.h),
-                  child: Text(
-                    'Files No.  |  ${_documents.length}',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11.sp,
-                      fontWeight: FontWeight.w400,
-                      fontStyle: FontStyle.italic,
-                      letterSpacing: .10,
-                      color: const Color(0xff949494),
-                    ),
+              IconButton(
+                onPressed: _goBackToFolders,
+                icon: const Icon(Icons.arrow_back_ios_new_rounded),
+                color: const Color(0xFF27304E),
+              ),
+              Expanded(
+                child: Text(
+                  folder.name,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.poppins(
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1D2445),
+                    letterSpacing: 1.0,
                   ),
                 ),
               ),
-              const Spacer(),
-              IconButton(
-                onPressed: _isLoading ? null : _fetchCompanyDocuments,
-                icon: const Icon(Icons.refresh_rounded),
-                color: const Color(0xFF27304E),
-                tooltip: 'Refresh',
-              ),
+              SizedBox(width: 40.w),
             ],
           ),
         ),
-        if (_isLoading)
+        if (_isLoadingFolderContents)
           const Expanded(
             child: Center(child: CircularProgressIndicator()),
           )
-        else if (_error != null)
+        else if (_selectedFolderAttachments.isEmpty)
           Expanded(
             child: Center(
+              child: Text(
+                'No files in this folder',
+                style: GoogleFonts.poppins(
+                  fontSize: 13.sp,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF7A7A7A),
+                ),
+              ),
+            ),
+          )
+        else
+          Expanded(
+            child: Column(
+              children: [
+                Padding(
+                  padding:
+                      EdgeInsets.only(left: 28.w, right: 18.w, bottom: 8.h),
+                  child: Row(
+                    children: [
+                      Text(
+                        'No of files ${_selectedFolderAttachments.length}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w500,
+                          color: const Color(0xFF808080),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: GridView.builder(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 22.w, vertical: 4.h),
+                    itemCount: _selectedFolderAttachments.length,
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 20.w,
+                      mainAxisSpacing: 18.h,
+                      mainAxisExtent: 178.h,
+                    ),
+                    itemBuilder: (context, index) {
+                      final item = _selectedFolderAttachments[index];
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(12.r),
+                        onTap: () => _openAttachment(item),
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              width: 92.w,
+                              height: 92.w,
+                              child: Image.asset(
+                                'assets/newapp/pdf.png',
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                            SizedBox(height: 8.h),
+                            Text(
+                              item.name,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.poppins(
+                                fontSize: 15.sp,
+                                fontWeight: FontWeight.w500,
+                                color: const Color(0xFF111111),
+                                letterSpacing: 0.4,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async {
+        if (_selectedFolder != null) {
+          _goBackToFolders();
+          return false;
+        }
+        return true;
+      },
+      child: Builder(
+        builder: (context) {
+          if (_isLoading && _folders.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (_error != null && _folders.isEmpty) {
+            return Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20.w),
                 child: Column(
@@ -321,176 +640,102 @@ class _CompanyDocumentsTabState extends State<CompanyDocumentsTab> {
                     ),
                     SizedBox(height: 12.h),
                     OutlinedButton(
-                      onPressed: _fetchCompanyDocuments,
+                      onPressed: _fetchCompanyFolders,
                       child: const Text('Retry'),
                     ),
                   ],
                 ),
               ),
-            ),
-          )
-        else
-          Expanded(
-            child: GridView.builder(
-              physics: const BouncingScrollPhysics(),
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              itemCount: _documents.length + 1,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 12.w,
-                mainAxisSpacing: 12.h,
-                childAspectRatio: 0.78,
-              ),
-              itemBuilder: (context, index) {
-                if (index == 0) {
-                  return GestureDetector(
-                    onTap: widget.onAddDocument,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24.r),
-                        border: Border.all(color: const Color(0xffD9D9D9)),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.note_add_outlined,
-                            size: 48.sp,
-                            color: const Color(0xff949494),
-                          ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            'Add New',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w400,
-                              fontStyle: FontStyle.italic,
-                              color: const Color(0xff949494),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
+            );
+          }
 
-                final item = _documents[index - 1];
-                return _CompanyDocumentCard(
-                  item: item,
-                  onTap: () => _openDocument(item),
-                );
-              },
-            ),
-          ),
-      ],
-    );
-  }
-}
+          if (_selectedFolder != null) {
+            return _buildFolderContents();
+          }
 
-class _CompanyDocumentCard extends StatelessWidget {
-  const _CompanyDocumentCard({
-    required this.item,
-    required this.onTap,
-  });
-
-  final _CompanyDocumentItem item;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24.r),
-          border: Border.all(color: const Color(0xffD9D9D9)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha((0.04 * 255).toInt()),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(10.w, 10.h, 10.w, 12.h),
-          child: Column(
+          return Stack(
             children: [
-              Align(
-                alignment: Alignment.topRight,
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 9.w, vertical: 3.h),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14.r),
-                    color: const Color(0xFFF4F6FB),
-                    border: Border.all(color: const Color(0xffE5E8F3)),
-                  ),
-                  child: Text(
-                    'PDF',
-                    style: GoogleFonts.poppins(
-                      fontSize: 9.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xffBA1719),
-                      letterSpacing: 0.5,
+              ListView(
+                padding: EdgeInsets.only(top: 6.h, bottom: 8.h),
+                children: [
+                  _buildTopFoldersHeader(),
+                  _buildFoldersPager(),
+                  _buildPagerDots(),
+                  _buildNoOfFilesCard(),
+                ],
+              ),
+              if (_isLoadingFolderContents)
+                Positioned.fill(
+                  child: AbsorbPointer(
+                    child: Container(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      child: Center(
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                              horizontal: 16.w, vertical: 12.h),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14.r),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2.6),
+                              ),
+                              SizedBox(width: 10.w),
+                              Text(
+                                'Loading folder files...',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF27304E),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-              SizedBox(height: 4.h),
-              Expanded(
-                child: Center(
-                  child: Image.asset(
-                    'assets/newapp/pdf.png',
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Icon(
-                      Icons.picture_as_pdf,
-                      size: 48.sp,
-                      color: const Color(0xFFBA1719),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: 8.h),
-              Text(
-                item.title,
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.visible,
-                style: GoogleFonts.poppins(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w700,
-                  color: Colors.black,
-                ),
-              ),
-              SizedBox(height: 3.h),
-              Text(
-                item.fileName,
-                textAlign: TextAlign.center,
-                maxLines: null,
-                overflow: TextOverflow.visible,
-                style: GoogleFonts.poppins(
-                  fontSize: 10.sp,
-                  fontWeight: FontWeight.w400,
-                  color: const Color(0xff949494),
-                ),
-              ),
             ],
-          ),
-        ),
+          );
+        },
       ),
     );
   }
 }
 
-class _CompanyDocumentItem {
-  const _CompanyDocumentItem({
-    required this.title,
-    required this.fileName,
+class _CompanyFolder {
+  const _CompanyFolder({
+    required this.id,
+    required this.name,
+    required this.totalFiles,
+  });
+
+  final int id;
+  final String name;
+  final int totalFiles;
+}
+
+class _CompanyAttachment {
+  const _CompanyAttachment({
+    required this.id,
+    required this.name,
+    required this.mimetype,
+    required this.createdAt,
+    required this.fileUrl,
     required this.raw,
   });
 
-  final String title;
-  final String fileName;
+  final int id;
+  final String name;
+  final String mimetype;
+  final String createdAt;
+  final String fileUrl;
   final Map<String, dynamic> raw;
 }

@@ -74,6 +74,8 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
   String _statRequested = '-';
   String _statExpiringSoon = '-';
   String _statExpired = '-';
+  String? _activeFamilyDocType;
+  List<Map<String, dynamic>> _familyRecentActivities = [];
 
   // Search state
   final TextEditingController _searchController = TextEditingController();
@@ -127,6 +129,24 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           (i + chunkSize < message.length) ? i + chunkSize : message.length;
       debugPrint(message.substring(i, end));
     }
+  }
+
+  void _debugFamilyLog(String title, [Object? payload]) {
+    if (!kDebugMode) return;
+    debugPrint('');
+    debugPrint('================ FAMILY DOCUMENTS :: $title ================');
+    if (payload != null) {
+      if (payload is String) {
+        _debugPrintLong(payload);
+      } else {
+        try {
+          _debugPrintLong(const JsonEncoder.withIndent('  ').convert(payload));
+        } catch (_) {
+          _debugPrintLong(payload.toString());
+        }
+      }
+    }
+    debugPrint('============================================================');
   }
 
   dynamic _firstAttachmentIdFrom(dynamic attachmentIds) {
@@ -333,7 +353,112 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
     }
   }
 
-  Future<void> _fetchMyDocuments({String? keyword}) async {
+  String? _normalizeDocType(String? raw) {
+    final value = (raw ?? '').trim().toLowerCase();
+    if (value.isEmpty || value == 'all') return null;
+    if (value == 'expiry_soon' || value == 'expired' || value == 'requested') {
+      return value;
+    }
+    return null;
+  }
+
+  String _normalizeToken(dynamic value) {
+    return (value ?? '')
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  Map<String, dynamic> _buildRecentActivityItem(Map<String, dynamic> map) {
+    final stateRaw = (map['state'] ?? map['status'] ?? '').toString();
+    final state = stateRaw.trim().toLowerCase();
+    final name = (map['name'] ?? map['document_type'] ?? 'Document').toString();
+    final member = (map['family_member'] ?? '').toString();
+    final whenRaw =
+        (map['request_date'] ?? map['create_date'] ?? map['write_date'] ?? '')
+            .toString();
+
+    return {
+      'title': member.trim().isEmpty ? name : '$name ($member)',
+      'state': state,
+      'time': whenRaw,
+    };
+  }
+
+  Future<void> _fetchFamilyRecentActivities() async {
+    try {
+      final token = SharedPref.getLoginData().result?.token ?? '';
+      if (token.isEmpty) return;
+
+      final url =
+          Uri.parse('https://erp.elrace.com/api/get_employee_documents');
+      final headers = {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+      final body = jsonEncode({
+        'jsonrpc': '2.0',
+        'params': {
+          'family_only': true,
+          'doc_type': 'requested',
+        },
+      });
+
+      _debugFamilyLog('RECENT ACTIVITY REQUEST', {
+        'url': url.toString(),
+        'method': 'POST',
+        'headers': {
+          ...headers,
+          'Authorization': headers['Authorization'] != null ? 'Bearer ***' : '',
+        },
+        'body': jsonDecode(body),
+      });
+
+      final response = await http.post(url, headers: headers, body: body);
+      _debugFamilyLog('RECENT ACTIVITY RAW RESPONSE', {
+        'statusCode': response.statusCode,
+        'body': response.body,
+      });
+      if (response.statusCode != 200) return;
+
+      final decoded = jsonDecode(response.body);
+      final result = (decoded is Map && decoded['result'] is Map)
+          ? Map<String, dynamic>.from(decoded['result'] as Map)
+          : (decoded is Map && decoded['status'] != null)
+              ? Map<String, dynamic>.from(decoded)
+              : <String, dynamic>{};
+      final statusToken = _normalizeToken(result['status']);
+      if (!(statusToken == 'success' ||
+          statusToken == 'ok' ||
+          statusToken == 'true')) {
+        return;
+      }
+
+      final rawData = result['data'];
+      if (rawData is! List) return;
+
+      final items = rawData
+          .whereType<Map>()
+          .map((e) => _buildRecentActivityItem(Map<String, dynamic>.from(e)))
+          .toList(growable: false);
+
+      _debugFamilyLog('RECENT ACTIVITY PARSED', {
+        'count': items.length,
+        'firstItem': items.isNotEmpty ? items.first : null,
+      });
+
+      if (!mounted) return;
+      setState(() {
+        _familyRecentActivities = items;
+      });
+    } catch (_) {
+      // Keep UI stable if activity endpoint parsing fails.
+    }
+  }
+
+  Future<void> _fetchMyDocuments({String? keyword, String? docType}) async {
     setState(() {
       _loading = true;
       _error = null;
@@ -351,11 +476,15 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
       // Determine family_only based on currentIndex (0 = personal, 1 = family)
       final bool familyOnly = currentIndex == 1;
+      final normalizedDocType = familyOnly
+          ? _normalizeDocType(docType ?? _activeFamilyDocType)
+          : null;
       final familyTaggedIds =
           _loadTaggedDocumentIds(_familyTaggedDocumentIdsKey);
 
       final Map<String, dynamic> params = {
         'family_only': familyOnly,
+        'doc_type': normalizedDocType,
       };
 
       final body = jsonEncode({'jsonrpc': '2.0', 'params': params});
@@ -369,8 +498,37 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
       );
 
       final startTime = DateTime.now();
+      if (familyOnly) {
+        _debugFamilyLog('DOCUMENTS REQUEST', {
+          'url': url.toString(),
+          'method': 'POST',
+          'keyword': keyword,
+          'params': params,
+        });
+      }
+
       final response = await http.post(url, headers: headers, body: body);
       final duration = DateTime.now().difference(startTime);
+
+      if (familyOnly) {
+        _debugFamilyLog('DOCUMENTS RAW RESPONSE', {
+          'statusCode': response.statusCode,
+          'durationMs': duration.inMilliseconds,
+          'body': response.body,
+        });
+      }
+
+      if (kDebugMode && familyOnly && normalizedDocType == 'requested') {
+        debugPrint('======== FAMILY REQUESTED API START ========');
+        debugPrint('URL: ${url.toString()}');
+        debugPrint('Method: POST');
+        debugPrint(
+            'Headers: {Content-Type: application/json, Accept: application/json, Authorization: Bearer ***}');
+        debugPrint('Body: $body');
+        debugPrint('Status: ${response.statusCode}');
+        _debugPrintLong(response.body);
+        debugPrint('========= FAMILY REQUESTED API END =========');
+      }
 
       if (kDebugMode) {
         debugPrint('=========== MY DOCUMENTS API RESPONSE START ===========');
@@ -381,6 +539,12 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
       }
 
       final data = jsonDecode(response.body);
+      final resultEnvelope = (data is Map && data['result'] is Map)
+          ? Map<String, dynamic>.from(data['result'] as Map)
+          : (data is Map && data['status'] != null)
+              ? Map<String, dynamic>.from(data)
+              : <String, dynamic>{};
+      final statusToken = _normalizeToken(resultEnvelope['status']);
 
       // 📥 Log Response
       ApiLogger.logResponse(
@@ -397,9 +561,10 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
       }
 
       if (response.statusCode == 200 &&
-          data['result'] != null &&
-          data['result']['status'] == 'success') {
-        final resultData = data['result']['data'];
+          (statusToken == 'success' ||
+              statusToken == 'ok' ||
+              statusToken == 'true')) {
+        final resultData = resultEnvelope['data'];
         final List list = _extractDocumentGroups(resultData);
 
         if (kDebugMode) {
@@ -475,7 +640,32 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                 'issue_date': map['issue_date'],
                 'expiry_date': map['expiry_date'],
                 'description': map['description'],
-                'attachment_ids': map['attachment_ids'] ?? [],
+                'attachment_ids': map['attachment_ids'] ??
+                    (map['attachment_id'] != null
+                        ? [
+                            {
+                              'attachment_id': map['attachment_id'],
+                            }
+                          ]
+                        : []),
+                'state': map['state'],
+                'request_date': map['request_date'],
+                'is_family': map['is_family'],
+                'family_member': map['family_member'],
+                'family_member_label': map['family_member_label'],
+                'relation': map['relation'],
+                'person_name': map['person_name'] ?? map['family_member_name'],
+                'family_member_name': map['family_member_name'],
+                'passport_no': map['passport_no'] ?? map['passport_number'],
+                'eid_no': map['eid_no'] ?? map['emirates_id_no'],
+                'nationality': map['nationality'] ?? map['nationality_name'],
+                'birth_date': map['birth_date'] ?? map['family_member_dob'],
+                'passport_expiry_date':
+                    map['passport_expiry_date'] ?? map['expiry_date'],
+                'eid_expiry_date': map['eid_expiry_date'] ?? map['expiry_date'],
+                'photo': map['photo'],
+                'image_url': map['image_url'],
+                'avatar': map['avatar'],
                 '_isFamily': resolvedIsFamily,
               });
             }
@@ -499,7 +689,32 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
               'issue_date': map['issue_date'],
               'expiry_date': map['expiry_date'],
               'description': map['description'],
-              'attachment_ids': map['attachment_ids'] ?? [],
+              'attachment_ids': map['attachment_ids'] ??
+                  (map['attachment_id'] != null
+                      ? [
+                          {
+                            'attachment_id': map['attachment_id'],
+                          }
+                        ]
+                      : []),
+              'state': map['state'],
+              'request_date': map['request_date'],
+              'is_family': map['is_family'],
+              'family_member': map['family_member'],
+              'family_member_label': map['family_member_label'],
+              'relation': map['relation'],
+              'person_name': map['person_name'] ?? map['family_member_name'],
+              'family_member_name': map['family_member_name'],
+              'passport_no': map['passport_no'] ?? map['passport_number'],
+              'eid_no': map['eid_no'] ?? map['emirates_id_no'],
+              'nationality': map['nationality'] ?? map['nationality_name'],
+              'birth_date': map['birth_date'] ?? map['family_member_dob'],
+              'passport_expiry_date':
+                  map['passport_expiry_date'] ?? map['expiry_date'],
+              'eid_expiry_date': map['eid_expiry_date'] ?? map['expiry_date'],
+              'photo': map['photo'],
+              'image_url': map['image_url'],
+              'avatar': map['avatar'],
               '_isFamily': resolvedIsFamily,
             });
           }
@@ -520,9 +735,21 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
             : filteredMapped.where((d) => d['_isFamily'] != true).toList();
 
         final stats = _buildDocumentsStats(
+          resultEnvelope: resultEnvelope,
           resultData: resultData,
           visibleDocs: visibleMapped,
         );
+
+        if (familyOnly) {
+          _debugFamilyLog('DOCUMENTS PARSED SUMMARY', {
+            'docType': normalizedDocType,
+            'mappedTotal': mapped.length,
+            'visibleTotal': visibleMapped.length,
+            'stats': stats,
+            'firstVisible':
+                visibleMapped.isNotEmpty ? visibleMapped.first : null,
+          });
+        }
 
         setState(() {
           documents = visibleMapped;
@@ -530,12 +757,19 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
           _statRequested = stats['requested'] ?? '-';
           _statExpiringSoon = stats['expiringSoon'] ?? '-';
           _statExpired = stats['expired'] ?? '-';
+          if (familyOnly) {
+            _activeFamilyDocType = normalizedDocType;
+          }
           _loading = false;
         });
+
+        if (familyOnly) {
+          unawaited(_fetchFamilyRecentActivities());
+        }
       } else {
         setState(() {
-          _error = data['result']?['message']?.toString() ??
-              data['error']?.toString() ??
+          _error = resultEnvelope['message']?.toString() ??
+              (data is Map ? data['error']?.toString() : null) ??
               'Failed to load documents';
           _loading = false;
         });
@@ -588,9 +822,22 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
   }
 
   Map<String, String> _buildDocumentsStats({
+    required Map<String, dynamic> resultEnvelope,
     required dynamic resultData,
     required List<Map<String, dynamic>> visibleDocs,
   }) {
+    final envelopeSummary = resultEnvelope['summary'] is Map<String, dynamic>
+        ? resultEnvelope['summary'] as Map<String, dynamic>
+        : (resultEnvelope['summary'] is Map
+            ? Map<String, dynamic>.from(resultEnvelope['summary'] as Map)
+            : <String, dynamic>{});
+
+    final envelopeCounters = resultEnvelope['counters'] is Map<String, dynamic>
+        ? resultEnvelope['counters'] as Map<String, dynamic>
+        : (resultEnvelope['counters'] is Map
+            ? Map<String, dynamic>.from(resultEnvelope['counters'] as Map)
+            : <String, dynamic>{});
+
     final primary = resultData is Map<String, dynamic>
         ? resultData
         : (resultData is Map
@@ -604,19 +851,19 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
         : <String, dynamic>{};
 
     final totalRaw = _pickCountFromMaps(
-      [primary, counters, summary],
+      [envelopeSummary, envelopeCounters, primary, counters, summary],
       ['total', 'total_count', 'documents_count'],
     );
     final requestedRaw = _pickCountFromMaps(
-      [primary, counters, summary],
+      [envelopeSummary, envelopeCounters, primary, counters, summary],
       ['requested', 'requested_count', 'pending_count'],
     );
     final expiringSoonRaw = _pickCountFromMaps(
-      [primary, counters, summary],
+      [envelopeSummary, envelopeCounters, primary, counters, summary],
       ['expiring_soon', 'expiringSoon', 'expiring_soon_count'],
     );
     final expiredRaw = _pickCountFromMaps(
-      [primary, counters, summary],
+      [envelopeSummary, envelopeCounters, primary, counters, summary],
       ['expired', 'expired_count'],
     );
 
@@ -876,149 +1123,195 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: const HeaderWidget(),
-      body: Column(
-        children: [
-          const SizedBox(height: 5),
-          Center(
-            child: Text(
-              _currentTitle,
-              style: GoogleFonts.poppins(
-                fontSize: 26.sp,
-                fontWeight: FontWeight.w600,
-                color: appFontColor,
-                letterSpacing: 1.5,
+    return WillPopScope(
+      onWillPop: () async {
+        // If Family tab has an active stats filter, clear it first and stay
+        // on Family tab (do not jump to My Documents tab).
+        if (currentIndex == 1 && _activeFamilyDocType != null) {
+          setState(() {
+            _activeFamilyDocType = null;
+            _loading = true;
+            _error = null;
+          });
+
+          final keyword = _searchController.text.trim();
+          unawaited(
+            _fetchMyDocuments(
+              keyword: keyword.isEmpty ? null : keyword,
+              docType: null,
+            ),
+          );
+          return false;
+        }
+
+        // For Company/Share tabs, allow normal pop to previous screen.
+        return true;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: const HeaderWidget(),
+        body: Column(
+          children: [
+            const SizedBox(height: 5),
+            Center(
+              child: Text(
+                _currentTitle,
+                style: GoogleFonts.poppins(
+                  fontSize: 26.sp,
+                  fontWeight: FontWeight.w600,
+                  color: appFontColor,
+                  letterSpacing: 1.5,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 10),
-          // ── Tab Bar ──
-          SizedBox(
-            height: 55.w,
-            child: ListView.separated(
-              padding: const EdgeInsets.only(left: 10, right: 10),
-              itemCount: notificationType.length,
-              physics: const BouncingScrollPhysics(),
-              scrollDirection: Axis.horizontal,
-              itemBuilder: (context, index) {
-                final isSelected = index == currentIndex;
-                final item = notificationType[index];
-                final shouldTintIcon = index == 2 || index == 3;
+            const SizedBox(height: 10),
+            // ── Tab Bar ──
+            SizedBox(
+              height: 55.w,
+              child: ListView.separated(
+                padding: const EdgeInsets.only(left: 10, right: 10),
+                itemCount: notificationType.length,
+                physics: const BouncingScrollPhysics(),
+                scrollDirection: Axis.horizontal,
+                itemBuilder: (context, index) {
+                  final isSelected = index == currentIndex;
+                  final item = notificationType[index];
+                  final shouldTintIcon = index == 2 || index == 3;
 
-                final String displayIcon = isSelected
-                    ? item['icon'] as String
-                    : item['icon_unfocus'] as String;
+                  final String displayIcon = isSelected
+                      ? item['icon'] as String
+                      : item['icon_unfocus'] as String;
 
-                return InkWell(
-                  onTap: () {
-                    if (currentIndex == index) return;
-                    final shouldFetchDocs = index == 0 || index == 1;
+                  return InkWell(
+                    onTap: () {
+                      if (currentIndex == index) return;
+                      final shouldFetchDocs = index == 0 || index == 1;
 
-                    setState(() {
-                      currentIndex = index;
-                      if (shouldFetchDocs) {
-                        _loading = true;
-                        _error = null;
-                        if (index == 1) {
-                          // Prevent temporary old/fallback folder flash
-                          // while family documents are loading.
-                          documents = [];
+                      setState(() {
+                        currentIndex = index;
+                        if (shouldFetchDocs) {
+                          if (index == 1) {
+                            _activeFamilyDocType = null;
+                          }
+                          _loading = true;
+                          _error = null;
+                          if (index == 1) {
+                            // Prevent temporary old/fallback folder flash
+                            // while family documents are loading.
+                            documents = [];
+                          }
                         }
-                      }
-                    });
+                      });
 
-                    // Keep My/Family lists in sync with selected tab source.
-                    if (shouldFetchDocs) {
-                      final keyword = _searchController.text.trim();
-                      unawaited(
-                        _fetchMyDocuments(
-                          keyword: keyword.isEmpty ? null : keyword,
-                        ),
-                      );
-                    }
-                  },
-                  child: Container(
-                    alignment: Alignment.center,
-                    margin: const EdgeInsets.only(top: 6),
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                    decoration: BoxDecoration(
-                      color: isSelected ? appFontColor : greyText2,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha((0.1 * 255).toInt()),
-                          blurRadius: 8,
-                          offset: const Offset(0, 3),
-                        ),
-                      ],
-                    ),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          displayIcon,
-                          height: 25.w,
-                          color: shouldTintIcon
-                              ? (isSelected ? Colors.white : Colors.black)
-                              : null,
-                          colorBlendMode:
-                              shouldTintIcon ? BlendMode.srcIn : null,
-                        ),
-                        const SizedBox(width: 5),
-                        Text(
-                          (item['title'] as String).toUpperCase(),
-                          style: GoogleFonts.poppins(
-                            color: isSelected
-                                ? Colors.white
-                                : const Color(0xFF1A237E),
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.3,
+                      // Keep My/Family lists in sync with selected tab source.
+                      if (shouldFetchDocs) {
+                        final keyword = _searchController.text.trim();
+                        unawaited(
+                          _fetchMyDocuments(
+                            keyword: keyword.isEmpty ? null : keyword,
+                            docType: index == 1 ? _activeFamilyDocType : null,
                           ),
+                        );
+                      }
+                    },
+                    child: Container(
+                      alignment: Alignment.center,
+                      margin: const EdgeInsets.only(top: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      decoration: BoxDecoration(
+                        color: isSelected ? appFontColor : greyText2,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha((0.1 * 255).toInt()),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            displayIcon,
+                            height: 25.w,
+                            color: shouldTintIcon
+                                ? (isSelected ? Colors.white : Colors.black)
+                                : null,
+                            colorBlendMode:
+                                shouldTintIcon ? BlendMode.srcIn : null,
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            (item['title'] as String).toUpperCase(),
+                            style: GoogleFonts.poppins(
+                              color: isSelected
+                                  ? Colors.white
+                                  : const Color(0xFF1A237E),
+                              fontSize: 16.sp,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                separatorBuilder: (BuildContext context, int index) =>
+                    const SizedBox(width: 10),
+              ),
+            ),
+            SizedBox(height: 8.h),
+            // ── Tab Content ──
+            Expanded(
+              child: currentIndex == 0
+                  ? _buildMyDocumentsContent()
+                  : IndexedStack(
+                      index: currentIndex - 1,
+                      children: [
+                        FamilyDocumentsTab(
+                          isActive: currentIndex == 1,
+                          isLoading: currentIndex == 1 && _loading,
+                          documents: documents,
+                          statTotal: _statTotal,
+                          statRequested: _statRequested,
+                          statExpiringSoon: _statExpiringSoon,
+                          statExpired: _statExpired,
+                          selectedDocType: _activeFamilyDocType,
+                          recentActivities: _familyRecentActivities,
+                          onDocTypeSelected: (docType) {
+                            final keyword = _searchController.text.trim();
+                            unawaited(
+                              _fetchMyDocuments(
+                                keyword: keyword.isEmpty ? null : keyword,
+                                docType: docType,
+                              ),
+                            );
+                          },
+                          onOpenDocument: _openDocumentAttachment,
+                          onAddDocument: () {
+                            _showDocumentDialogByType(
+                                DocumentDialogType.family);
+                          },
+                        ),
+                        CompanyDocumentsTab(
+                          key: ValueKey('company_docs_$_companyTabVersion'),
+                          onAddDocument: () {
+                            _showDocumentDialogByType(
+                                DocumentDialogType.company);
+                          },
+                          onOpenDocument: _openDocumentAttachment,
+                        ),
+                        ShareDocumentsTab(
+                          onOpenDocument: _openDocumentAttachment,
                         ),
                       ],
                     ),
-                  ),
-                );
-              },
-              separatorBuilder: (BuildContext context, int index) =>
-                  const SizedBox(width: 10),
             ),
-          ),
-          SizedBox(height: 8.h),
-          // ── Tab Content ──
-          Expanded(
-            child: currentIndex == 0
-                ? _buildMyDocumentsContent()
-                : IndexedStack(
-                    index: currentIndex - 1,
-                    children: [
-                      FamilyDocumentsTab(
-                        isActive: currentIndex == 1,
-                        isLoading: currentIndex == 1 && _loading,
-                        documents: documents,
-                        onOpenDocument: _openDocumentAttachment,
-                        onAddDocument: () {
-                          _showDocumentDialogByType(DocumentDialogType.family);
-                        },
-                      ),
-                      CompanyDocumentsTab(
-                        key: ValueKey('company_docs_$_companyTabVersion'),
-                        onAddDocument: () {
-                          _showDocumentDialogByType(DocumentDialogType.company);
-                        },
-                        onOpenDocument: _openDocumentAttachment,
-                      ),
-                      ShareDocumentsTab(
-                        onOpenDocument: _openDocumentAttachment,
-                      ),
-                    ],
-                  ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -1823,24 +2116,28 @@ class _DocumentDialogState extends State<DocumentDialog> {
         'Authorization': 'Bearer $token',
       };
 
-      final request = http.Request('GET', url)
-        ..headers.addAll(headers)
-        ..body = jsonEncode({
-          'jsonrpc': '2.0',
-          'params': {
-            'family_only': _familyOnly,
-          },
-        });
+      final body = jsonEncode({
+        'jsonrpc': '2.0',
+        'params': {
+          'family_only': _familyOnly,
+        },
+      });
 
-      final streamed = await request.send();
-      final response = await http.Response.fromStream(streamed);
+      final response = await http.post(url, headers: headers, body: body);
       if (response.statusCode != 200) return;
 
       final decoded = jsonDecode(response.body);
       if (decoded is! Map) return;
 
-      final result = decoded['result'];
-      if (result is! Map || _normalizeToken(result['status']) != 'success') {
+      final result = (decoded['result'] is Map)
+          ? Map<String, dynamic>.from(decoded['result'] as Map)
+          : (decoded['status'] != null)
+              ? Map<String, dynamic>.from(decoded)
+              : <String, dynamic>{};
+      final statusToken = _normalizeToken(result['status']);
+      if (!(statusToken == 'success' ||
+          statusToken == 'ok' ||
+          statusToken == 'true')) {
         return;
       }
 
@@ -2139,8 +2436,16 @@ class _DocumentDialogState extends State<DocumentDialog> {
       if (response.statusCode != 200) return null;
 
       final decoded = jsonDecode(response.body);
-      final result = decoded['result'];
-      if (result is! Map || _normalizeToken(result['status']) != 'success') {
+      if (decoded is! Map) return null;
+      final result = (decoded['result'] is Map)
+          ? Map<String, dynamic>.from(decoded['result'] as Map)
+          : (decoded['status'] != null)
+              ? Map<String, dynamic>.from(decoded)
+              : <String, dynamic>{};
+      final statusToken = _normalizeToken(result['status']);
+      if (!(statusToken == 'success' ||
+          statusToken == 'ok' ||
+          statusToken == 'true')) {
         return null;
       }
 
@@ -2250,31 +2555,37 @@ class _DocumentDialogState extends State<DocumentDialog> {
           final response = await http.post(url, headers: headers, body: body);
           if (response.statusCode == 200) {
             final decoded = jsonDecode(response.body);
-            final result = decoded['result'];
-            if (result is Map) {
-              final statusOk = _normalizeToken(result['status']) == 'success';
-              final dataList = result['data'];
-              if (statusOk && dataList is List) {
-                final afterFingerprints = _buildDocumentFingerprints(dataList);
-                if (beforeFingerprints != null &&
-                    beforeFingerprints.isNotEmpty) {
-                  final hasDelta = afterFingerprints.any((fingerprint) =>
-                      !beforeFingerprints.contains(fingerprint));
-                  if (hasDelta) {
-                    return true;
-                  }
-                }
+            if (decoded is! Map) continue;
 
-                final found = _containsUploadedDocument(
-                  dataList,
-                  selectedType: selectedType,
-                  idNumber: idNumber,
-                  attachmentFileName: attachmentFileName,
-                  uploadedDocumentId: uploadedDocumentId,
-                );
-                if (found) {
+            final result = (decoded['result'] is Map)
+                ? Map<String, dynamic>.from(decoded['result'] as Map)
+                : (decoded['status'] != null)
+                    ? Map<String, dynamic>.from(decoded)
+                    : <String, dynamic>{};
+            final statusToken = _normalizeToken(result['status']);
+            final statusOk = statusToken == 'success' ||
+                statusToken == 'ok' ||
+                statusToken == 'true';
+            final dataList = result['data'];
+            if (statusOk && dataList is List) {
+              final afterFingerprints = _buildDocumentFingerprints(dataList);
+              if (beforeFingerprints != null && beforeFingerprints.isNotEmpty) {
+                final hasDelta = afterFingerprints.any(
+                    (fingerprint) => !beforeFingerprints.contains(fingerprint));
+                if (hasDelta) {
                   return true;
                 }
+              }
+
+              final found = _containsUploadedDocument(
+                dataList,
+                selectedType: selectedType,
+                idNumber: idNumber,
+                attachmentFileName: attachmentFileName,
+                uploadedDocumentId: uploadedDocumentId,
+              );
+              if (found) {
+                return true;
               }
             }
           }

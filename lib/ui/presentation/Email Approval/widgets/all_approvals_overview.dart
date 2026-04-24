@@ -364,7 +364,7 @@ class _RorCard extends StatelessWidget {
               Text(
                 'ROR',
                 style: GoogleFonts.poppins(
-                  fontSize: 21.sp,
+                  fontSize: 20.sp,
                   fontWeight: FontWeight.w800,
                   color: const Color(0xFF1A1A1A),
                   height: 1,
@@ -390,48 +390,60 @@ class _RorCard extends StatelessWidget {
               Expanded(
                 child: SizedBox(
                   height: 220.h,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  child: Stack(
                     children: [
-                      _RorNeedle(
-                        label: 'HR',
-                        value: hrCount,
-                        maxValue: maxValue,
-                        highlight: highlightedIndex == 0,
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: _RorChartGuidesPainter(),
+                        ),
                       ),
-                      _RorNeedle(
-                        label: 'RFQ',
-                        value: rfqCount,
-                        maxValue: maxValue,
-                        highlight: highlightedIndex == 1,
-                      ),
-                      _RorNeedle(
-                        label: 'Petty cash',
-                        value: pettyCashCount,
-                        maxValue: maxValue,
-                        highlight: highlightedIndex == 2,
-                      ),
-                      _RorNeedle(
-                        label: 'invoice',
-                        value: invoiceCount,
-                        maxValue: maxValue,
-                        highlight: highlightedIndex == 3,
+                      Positioned.fill(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            _RorNeedle(
+                              label: 'HR',
+                              value: hrCount,
+                              maxValue: maxValue,
+                              highlight: highlightedIndex == 0,
+                            ),
+                            _RorNeedle(
+                              label: 'RFQ',
+                              value: rfqCount,
+                              maxValue: maxValue,
+                              highlight: highlightedIndex == 1,
+                            ),
+                            _RorNeedle(
+                              label: 'Petty cash',
+                              value: pettyCashCount,
+                              maxValue: maxValue,
+                              highlight: highlightedIndex == 2,
+                            ),
+                            _RorNeedle(
+                              label: 'invoice',
+                              value: invoiceCount,
+                              maxValue: maxValue,
+                              highlight: highlightedIndex == 3,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
                 ),
               ),
-              SizedBox(width: 12.w),
+              SizedBox(width: 10.w),
               SizedBox(
-                width: 72.w,
+                width: 88.w,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Text(
-                      '$ror%',
+                      '+$ror%',
                       style: GoogleFonts.poppins(
-                        fontSize: 18.sp,
+                        fontSize: 42.sp / 2,
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFF111111),
                         height: 1,
@@ -441,10 +453,10 @@ class _RorCard extends StatelessWidget {
                     Text(
                       'The percentage of\nROR in the past\nweek.',
                       style: GoogleFonts.poppins(
-                        fontSize: 8.2.sp,
+                        fontSize: 9.sp,
                         fontWeight: FontWeight.w500,
                         color: const Color(0xFF616161),
-                        height: 1.2,
+                        height: 1.25,
                       ),
                     ),
                   ],
@@ -483,7 +495,7 @@ class _RorNeedle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final ratio = maxValue <= 0 ? 0.0 : value / maxValue;
-    final lineHeight = (18.h + (ratio * 122.h)).clamp(18.h, 140.h);
+    final lineHeight = (28.h + (ratio * 108.h)).clamp(28.h, 136.h);
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.end,
@@ -491,14 +503,14 @@ class _RorNeedle extends StatelessWidget {
         _ValueBubble(value: value),
         SizedBox(height: 5.h),
         Stack(
-          alignment: Alignment.topCenter,
+          alignment: Alignment.bottomCenter,
           children: [
             if (highlight)
               Container(
-                width: 34.w,
-                height: lineHeight,
+                width: 38.w,
+                height: lineHeight + 18.h,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDDE2E9).withOpacity(0.55),
+                  color: const Color(0xFFDDE2E9).withOpacity(0.58),
                   borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(20.r),
                     bottomRight: Radius.circular(20.r),
@@ -507,7 +519,7 @@ class _RorNeedle extends StatelessWidget {
               )
             else
               Container(
-                width: 1.4,
+                width: 1.25,
                 height: lineHeight,
                 decoration: BoxDecoration(
                   color: const Color(0xFFD8D8D8),
@@ -517,13 +529,24 @@ class _RorNeedle extends StatelessWidget {
             Container(
               width: 1.2,
               height: lineHeight,
-              color: const Color(0xFFC9CFD8),
+              color: const Color(0xFFCAD1DA),
+            ),
+            Positioned(
+              top: lineHeight * 0.42,
+              child: Container(
+                width: 6.5.w,
+                height: 6.5.w,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF77A8D8),
+                  shape: BoxShape.circle,
+                ),
+              ),
             ),
             if (highlight)
               Positioned(
                 bottom: 0,
                 child: Container(
-                  width: 34.w,
+                  width: 38.w,
                   height: 24.h,
                   decoration: BoxDecoration(
                     color: const Color(0xFFE7EBF1).withOpacity(0.9),
@@ -535,12 +558,15 @@ class _RorNeedle extends StatelessWidget {
                 ),
               )
             else
-              Container(
-                width: 6.5.w,
-                height: 6.5.w,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF79A8D8),
-                  shape: BoxShape.circle,
+              Positioned(
+                bottom: 0,
+                child: Container(
+                  width: 6.5.w,
+                  height: 6.5.w,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF79A8D8),
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
           ],
@@ -590,6 +616,96 @@ class _ValueBubble extends StatelessWidget {
       ),
     );
   }
+}
+
+class _RorChartGuidesPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final left = 0.0;
+    final right = size.width - 2;
+
+    final topY = size.height * 0.18;
+    final midY = size.height * 0.59;
+    final bottomY = size.height * 0.77;
+
+    void drawDashedLine({
+      required double y,
+      required Color color,
+      required double dash,
+      required double gap,
+      required double width,
+    }) {
+      final paint = Paint()
+        ..color = color
+        ..strokeWidth = width
+        ..style = PaintingStyle.stroke;
+
+      double x = left;
+      while (x < right) {
+        final x2 = (x + dash).clamp(left, right);
+        canvas.drawLine(Offset(x, y), Offset(x2, y), paint);
+        x += dash + gap;
+      }
+    }
+
+    drawDashedLine(
+      y: topY,
+      color: const Color(0xFF6FC6E2),
+      dash: 4,
+      gap: 2.8,
+      width: 1,
+    );
+    drawDashedLine(
+      y: midY,
+      color: const Color(0xFF464646),
+      dash: 3,
+      gap: 2.2,
+      width: 1,
+    );
+    drawDashedLine(
+      y: bottomY,
+      color: const Color(0xFFD35A6A),
+      dash: 3,
+      gap: 2.2,
+      width: 1,
+    );
+
+    final topDot = Paint()..color = const Color(0xFF36BAE2);
+    final midDot = Paint()..color = const Color(0xFF545454);
+    final bottomDot = Paint()..color = const Color(0xFFC2262E);
+    canvas.drawCircle(Offset(right, topY), 2.6, topDot);
+    canvas.drawCircle(Offset(right, midY), 2.6, midDot);
+    canvas.drawCircle(Offset(right, bottomY), 2.6, bottomDot);
+
+    final plusPainter = TextPainter(
+      text: const TextSpan(
+        text: '+',
+        style: TextStyle(
+          color: Color(0xFF36BAE2),
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    plusPainter.paint(canvas, Offset(2, midY - 12));
+
+    final minusPainter = TextPainter(
+      text: const TextSpan(
+        text: '-',
+        style: TextStyle(
+          color: Color(0xFFC2262E),
+          fontSize: 9,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    minusPainter.paint(canvas, Offset(2, bottomY - 12));
+  }
+
+  @override
+  bool shouldRepaint(covariant _RorChartGuidesPainter oldDelegate) => false;
 }
 
 class _DelayedRequestCard extends StatefulWidget {
