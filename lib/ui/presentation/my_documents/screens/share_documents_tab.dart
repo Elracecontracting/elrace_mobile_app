@@ -1593,37 +1593,6 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
     );
   }
 
-  Widget _buildFolderDots() {
-    if (_folders.length <= 1) {
-      return SizedBox(height: 20.h);
-    }
-
-    return Padding(
-      padding: EdgeInsets.only(top: 6.h, bottom: 14.h),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(_folders.length, (index) {
-          final selected = index == _currentFolderPage;
-          return Container(
-            width: 10.w,
-            height: 10.w,
-            margin: EdgeInsets.symmetric(horizontal: 6.w),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: selected ? const Color(0xFF6E6E6E) : Colors.transparent,
-              border: selected
-                  ? null
-                  : Border.all(
-                      color: const Color(0xFF8C8C8C),
-                      width: 1.4,
-                    ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
   Widget _buildGivenAccessSection() {
     final users = _currentAllowedUsers;
 
@@ -1921,7 +1890,6 @@ class _ShareDocumentsTabState extends State<ShareDocumentsTab> {
                   ),
                   SizedBox(height: 8.h),
                   _buildFoldersSlider(),
-                  _buildFolderDots(),
                   _buildGivenAccessSection(),
                   SizedBox(height: 16.h),
                   _buildRecentActivitySection(),

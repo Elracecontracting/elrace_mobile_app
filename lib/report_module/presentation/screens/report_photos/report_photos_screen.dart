@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:ui';
 import 'dart:typed_data';
 
@@ -21,6 +22,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:http/http.dart' as http;
+import 'package:gal/gal.dart';
 import 'package:el_race/report_module/core/utils/directory_operation.dart';
 import 'package:el_race/report_module/data/models/report_pdf_model.dart';
 import 'package:el_race/report_module/data/repositories/company_repository.dart';
@@ -49,6 +51,7 @@ class ReportPhotosScreen extends StatefulWidget {
 class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
   bool _isLoading = true;
   bool _isButtonExpanded = false;
+  bool _isDownloadingPhotos = false;
   final ImagePicker _picker = ImagePicker();
   List<_PhotoItem> _photoItems = [];
 
@@ -175,83 +178,95 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
     await showDialog(
       context: context,
       barrierColor: Colors.black45,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        child: SizedBox(
-          width: 200.w,
-          child: Container(
-            padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 16.w),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1B1F26), Color(0xFF1A1A53)],
-                stops: [0.72, 1.0],
-              ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(top: 94.h, left: 24.w),
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: Material(
+            color: Colors.transparent,
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(16.r),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _pickImage(ImageSource.camera);
-                    },
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SvgPicture.asset(
-                          'assets/svg/camera_svgrepo.svg',
-                          width: 36.sp,
-                          height: 36.sp,
-                          colorFilter: const ColorFilter.mode(
-                              Colors.white, BlendMode.srcIn),
-                        ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          'Camera',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                child: Container(
+                  width: 186.w,
+                  padding:
+                      EdgeInsets.symmetric(vertical: 14.h, horizontal: 12.w),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        const Color(0xFF000000).withOpacity(0.88),
+                        const Color(0xFF1A1A53).withOpacity(0.88),
                       ],
                     ),
+                    borderRadius: BorderRadius.circular(16.r),
                   ),
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.pop(ctx);
-                      _pickImage(ImageSource.gallery);
-                    },
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SvgPicture.asset(
-                          'assets/svg/gallery_svgrepo.svg',
-                          width: 36.sp,
-                          height: 36.sp,
-                          colorFilter: const ColorFilter.mode(
-                              Colors.white, BlendMode.srcIn),
-                        ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          'Gallery',
-                          style: GoogleFonts.poppins(
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            _pickImage(ImageSource.camera);
+                          },
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SvgPicture.asset(
+                                'assets/svg/camera_svgrepo.svg',
+                                width: 32.sp,
+                                height: 32.sp,
+                                colorFilter: const ColorFilter.mode(
+                                    Colors.white, BlendMode.srcIn),
+                              ),
+                              SizedBox(height: 6.h),
+                              Text(
+                                'Camera',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.pop(ctx);
+                            _pickImage(ImageSource.gallery);
+                          },
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SvgPicture.asset(
+                                'assets/svg/gallery_svgrepo.svg',
+                                width: 32.sp,
+                                height: 32.sp,
+                                colorFilter: const ColorFilter.mode(
+                                    Colors.white, BlendMode.srcIn),
+                              ),
+                              SizedBox(height: 6.h),
+                              Text(
+                                'Gallery',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13.sp,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -343,6 +358,89 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
     );
   }
 
+  Future<void> _downloadPhotosToGallery(List<_PhotoItem> photos) async {
+    if (_isDownloadingPhotos) return;
+
+    if (photos.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No photos available to download.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isDownloadingPhotos = true);
+
+    int successCount = 0;
+    int failedCount = 0;
+
+    for (final item in photos) {
+      final rawPath = item.imagePath!.trim();
+      String? tempFilePath;
+
+      try {
+        String localPath = rawPath;
+        if (rawPath.startsWith('http')) {
+          final response = await http.get(Uri.parse(rawPath));
+          if (response.statusCode != 200) {
+            failedCount++;
+            continue;
+          }
+          final dir = await getTemporaryDirectory();
+          tempFilePath =
+              '${dir.path}/report_photo_${DateTime.now().millisecondsSinceEpoch}_$successCount.jpg';
+          await File(tempFilePath)
+              .writeAsBytes(response.bodyBytes, flush: true);
+          localPath = tempFilePath;
+        }
+
+        await Gal.putImage(localPath, album: 'RCC Reports');
+        successCount++;
+      } catch (_) {
+        failedCount++;
+      } finally {
+        if (tempFilePath != null) {
+          try {
+            await File(tempFilePath).delete();
+          } catch (_) {}
+        }
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _isDownloadingPhotos = false);
+
+    if (successCount > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$successCount photo(s) downloaded successfully.'),
+          backgroundColor: Colors.green.shade700,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Failed to download photos.'),
+          backgroundColor: Color(0xFFE81E25),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    if (failedCount > 0 && successCount > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('$failedCount photo(s) could not be downloaded.'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   void _openPhotoDetailDialog(int index) {
     showDialog(
       context: context,
@@ -387,16 +485,38 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
               Padding(
                 padding: EdgeInsets.only(left: 20.w),
                 child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
+                    Text(
+                      'Photos',
+                      style: GoogleFonts.poppins(
+                        fontSize: 18.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF878B98),
+                        letterSpacing: 0.4,
+                      ),
+                    ),
                     Expanded(
-                      child: Text(
-                        'Photos',
-                        style: GoogleFonts.poppins(
-                          fontSize: 18.sp,
-                          fontWeight: FontWeight.w700,
-                          color: const Color(0xFF878B98),
-                          letterSpacing: 0.4,
+                      child: Center(
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Image.asset(
+                              'assets/newapp/photo_report_icon.png',
+                              width: 20.w,
+                              height: 20.w,
+                              fit: BoxFit.contain,
+                            ),
+                            SizedBox(width: 4.w),
+                            Text(
+                              '${_photoItems.length}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 34.sp / 2,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF878B98),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
@@ -471,6 +591,49 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
                                     });
                                   }),
                                 ),
+                                if (_photoItems.any((p) =>
+                                    p.imagePath != null &&
+                                    p.imagePath!.trim().isNotEmpty)) ...[
+                                  SizedBox(height: 6.h),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF27304E),
+                                      borderRadius: BorderRadius.only(
+                                        topLeft: Radius.circular(14.r),
+                                        bottomLeft: Radius.circular(14.r),
+                                      ),
+                                    ),
+                                    child: _menuButton(
+                                      _isDownloadingPhotos
+                                          ? 'Downloading...'
+                                          : 'Download Photos',
+                                      () {
+                                        WidgetsBinding.instance
+                                            .addPostFrameCallback((_) async {
+                                          if (mounted) {
+                                            setState(() =>
+                                                _isButtonExpanded = false);
+                                          }
+                                          await Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  _DownloadPhotosSelectionScreen(
+                                                photoItems: _photoItems,
+                                                reportId: widget.report.id,
+                                                folderId: widget.folderId,
+                                                onDownloadSelected: (selected) {
+                                                  return _downloadPhotosToGallery(
+                                                      selected);
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
@@ -642,6 +805,309 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
   }
 }
 
+class _DownloadPhotosSelectionScreen extends StatefulWidget {
+  final List<_PhotoItem> photoItems;
+  final String reportId;
+  final String folderId;
+  final Future<void> Function(List<_PhotoItem> selected) onDownloadSelected;
+
+  const _DownloadPhotosSelectionScreen({
+    required this.photoItems,
+    required this.reportId,
+    required this.folderId,
+    required this.onDownloadSelected,
+  });
+
+  @override
+  State<_DownloadPhotosSelectionScreen> createState() =>
+      _DownloadPhotosSelectionScreenState();
+}
+
+class _DownloadPhotosSelectionScreenState
+    extends State<_DownloadPhotosSelectionScreen> {
+  final Set<int> _selectedIndices = <int>{};
+  bool _isDownloading = false;
+
+  List<int> _validPhotoIndices() {
+    final result = <int>[];
+    for (int i = 0; i < widget.photoItems.length; i++) {
+      final path = widget.photoItems[i].imagePath;
+      if (path != null && path.trim().isNotEmpty) {
+        result.add(i);
+      }
+    }
+    return result;
+  }
+
+  void _toggleSelect(int index) {
+    setState(() {
+      if (_selectedIndices.contains(index)) {
+        _selectedIndices.remove(index);
+      } else {
+        _selectedIndices.add(index);
+      }
+    });
+  }
+
+  void _toggleSelectAll() {
+    final valid = _validPhotoIndices();
+    final allSelected =
+        valid.isNotEmpty && valid.every((i) => _selectedIndices.contains(i));
+
+    setState(() {
+      if (allSelected) {
+        _selectedIndices.clear();
+      } else {
+        _selectedIndices
+          ..clear()
+          ..addAll(valid);
+      }
+    });
+  }
+
+  Future<void> _downloadSelected() async {
+    if (_selectedIndices.isEmpty || _isDownloading) return;
+
+    final selected = _selectedIndices
+        .map((i) => i >= 0 && i < widget.photoItems.length
+            ? widget.photoItems[i]
+            : null)
+        .whereType<_PhotoItem>()
+        .where((p) => p.imagePath != null && p.imagePath!.trim().isNotEmpty)
+        .toList(growable: false);
+
+    if (selected.isEmpty) return;
+
+    setState(() => _isDownloading = true);
+    await widget.onDownloadSelected(selected);
+    if (!mounted) return;
+    setState(() => _isDownloading = false);
+    Navigator.pop(context);
+  }
+
+  void _openPreview(int index) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) => _PhotoDetailDialog(
+        photoItems: widget.photoItems,
+        initialIndex: index,
+        reportId: widget.reportId,
+        folderId: widget.folderId,
+      ),
+    ).then((_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final valid = _validPhotoIndices();
+    final allSelected =
+        valid.isNotEmpty && valid.every((i) => _selectedIndices.contains(i));
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F4F4),
+      appBar: const HeaderWidget(),
+      body: SafeArea(
+        top: false,
+        child: Column(
+          children: [
+            SizedBox(height: 14.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Select',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF878B98),
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                      Expanded(
+                        child: Center(
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Image.asset(
+                                'assets/newapp/photo_report_icon.png',
+                                width: 20.w,
+                                height: 20.w,
+                                fit: BoxFit.contain,
+                              ),
+                              SizedBox(width: 4.w),
+                              Text(
+                                '${valid.length}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 34.sp / 2,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF878B98),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: _selectedIndices.isEmpty || _isDownloading
+                            ? null
+                            : _downloadSelected,
+                        borderRadius: BorderRadius.circular(20.r),
+                        child: SizedBox(
+                          width: 34.w,
+                          height: 34.w,
+                          child: Icon(
+                            Icons.arrow_downward,
+                            size: 30.w,
+                            color: _selectedIndices.isEmpty
+                                ? const Color(0xFF9EA1AB)
+                                : const Color(0xFF27304E),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 10.h),
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: _toggleSelectAll,
+                        child: Text(
+                          'Select All',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF666A76),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                      GestureDetector(
+                        onTap: _toggleSelectAll,
+                        child: Container(
+                          width: 24.w,
+                          height: 24.w,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: allSelected
+                                ? const Color(0xFF1A73E8)
+                                : Colors.white,
+                            border: Border.all(
+                              color: const Color(0xFF1A73E8),
+                              width: 2,
+                            ),
+                          ),
+                          child: allSelected
+                              ? Icon(Icons.check,
+                                  color: Colors.white, size: 16.w)
+                              : null,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 10.h),
+            Expanded(
+              child: ListView.builder(
+                padding: EdgeInsets.symmetric(horizontal: 14.w, vertical: 6.h),
+                itemCount: valid.length,
+                itemBuilder: (context, i) {
+                  final index = valid[i];
+                  final item = widget.photoItems[index];
+                  final isNetwork = item.imagePath!.startsWith('http');
+                  final isSelected = _selectedIndices.contains(index);
+
+                  return GestureDetector(
+                    onTap: () => _openPreview(index),
+                    child: Container(
+                      margin: EdgeInsets.only(bottom: 14.h),
+                      height: 200.h,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(22.r),
+                        border: Border.all(
+                            color: const Color(0xFF2C3454), width: 1.5),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          item.editedBytes != null
+                              ? Image.memory(
+                                  item.editedBytes!,
+                                  key: ValueKey(item.editedBytes.hashCode),
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Center(
+                                      child:
+                                          Icon(Icons.broken_image, size: 40)),
+                                )
+                              : isNetwork
+                                  ? Image.network(
+                                      item.imagePath!,
+                                      fit: BoxFit.cover,
+                                      gaplessPlayback: true,
+                                      cacheWidth: 600,
+                                      errorBuilder: (_, __, ___) =>
+                                          const Center(
+                                              child: Icon(Icons.broken_image,
+                                                  size: 40)),
+                                    )
+                                  : Image.file(
+                                      File(item.imagePath!),
+                                      key: ValueKey(item.imagePath),
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (_, __, ___) =>
+                                          const Center(
+                                              child: Icon(Icons.broken_image,
+                                                  size: 40)),
+                                    ),
+                          Container(color: Colors.black.withOpacity(0.28)),
+                          Positioned(
+                            top: 10.h,
+                            left: 10.w,
+                            child: GestureDetector(
+                              onTap: () => _toggleSelect(index),
+                              child: Container(
+                                width: 30.w,
+                                height: 30.w,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isSelected
+                                      ? const Color(0xFF1A73E8)
+                                      : Colors.white.withOpacity(0.75),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: isSelected
+                                    ? Icon(Icons.check,
+                                        color: Colors.white, size: 20.w)
+                                    : null,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ═══════════════════════════════════════════════════════════
 // PDF Generation Page (File Name + Generate + Recent Files)
 // ═══════════════════════════════════════════════════════════
@@ -684,7 +1150,8 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
     super.initState();
     _nameController = TextEditingController(text: widget.folderName);
     final currentCompany = CompanyRepository.company?.companyName ?? '';
-    _selectedCompany = _companies.contains(currentCompany) ? currentCompany : _companies.first;
+    _selectedCompany =
+        _companies.contains(currentCompany) ? currentCompany : _companies.first;
     _loadPdfHistory();
   }
 
@@ -951,7 +1418,8 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(18.r),
-                      border: Border.all(color: const Color(0xFFD0D0D0), width: .9),
+                      border:
+                          Border.all(color: const Color(0xFFD0D0D0), width: .9),
                     ),
                     padding: EdgeInsets.symmetric(horizontal: 12.w),
                     child: DropdownButtonHideUnderline(
@@ -1231,7 +1699,8 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                     if (response.statusCode == 200) {
                       final name =
                           pdf.fileName.isEmpty ? 'report.pdf' : pdf.fileName;
-                      final fileName = name.endsWith('.pdf') ? name : '$name.pdf';
+                      final fileName =
+                          name.endsWith('.pdf') ? name : '$name.pdf';
                       final dir = await getTemporaryDirectory();
                       final file = File('${dir.path}/$fileName');
                       await file.writeAsBytes(response.bodyBytes);
@@ -1593,13 +2062,20 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
               padding: EdgeInsets.symmetric(horizontal: 16.w),
               child: Row(
                 children: [
-                  _iconBtn(Icons.camera_alt_outlined,
-                      () => _showImageSourceDialog()),
+                  _iconAssetBtn(
+                    'assets/newapp/image-editing_12624692 1.png',
+                    () => _showImageSourceDialog(),
+                  ),
                   SizedBox(width: 8.w),
-                  _iconBtn(Icons.edit_outlined, () => _drawOnPhoto(item)),
+                  _iconAssetBtn(
+                    'assets/newapp/pencil_7754138 1 (1).png',
+                    () => _drawOnPhoto(item),
+                  ),
                   SizedBox(width: 8.w),
-                  _iconBtn(Icons.delete_outline, _deleteImage,
-                      color: const Color(0xFFE81E25)),
+                  _iconAssetBtn(
+                    'assets/newapp/delete_svgrepo.com.png',
+                    _deleteImage,
+                  ),
                 ],
               ),
             ),
@@ -1666,20 +2142,25 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          IconButton(
-                            onPressed: _currentIndex > 0
+                          GestureDetector(
+                            onTap: _currentIndex > 0
                                 ? () => WidgetsBinding.instance
                                         .addPostFrameCallback((_) {
                                       if (mounted)
                                         setState(() => _currentIndex--);
                                     })
                                 : null,
-                            icon: Icon(
-                              Icons.keyboard_double_arrow_left,
-                              size: 28.w,
-                              color: _currentIndex > 0
-                                  ? const Color(0xFF27304E)
-                                  : const Color(0xFFD0D0D0),
+                            child: Opacity(
+                              opacity: _currentIndex > 0 ? 1 : 0.35,
+                              child: Transform.rotate(
+                                angle: math.pi / 2,
+                                child: Image.asset(
+                                  'assets/newapp/report_next_previous_image.gif',
+                                  width: 34.w,
+                                  height: 34.w,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
                             ),
                           ),
                           SizedBox(width: 12.w),
@@ -1692,22 +2173,28 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
                             ),
                           ),
                           SizedBox(width: 12.w),
-                          IconButton(
-                            onPressed:
-                                _currentIndex < widget.photoItems.length - 1
-                                    ? () => WidgetsBinding.instance
-                                            .addPostFrameCallback((_) {
-                                          if (mounted)
-                                            setState(() => _currentIndex++);
-                                        })
-                                    : null,
-                            icon: Icon(
-                              Icons.keyboard_double_arrow_right,
-                              size: 28.w,
-                              color:
+                          GestureDetector(
+                            onTap: _currentIndex < widget.photoItems.length - 1
+                                ? () => WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                      if (mounted)
+                                        setState(() => _currentIndex++);
+                                    })
+                                : null,
+                            child: Opacity(
+                              opacity:
                                   _currentIndex < widget.photoItems.length - 1
-                                      ? const Color(0xFF27304E)
-                                      : const Color(0xFFD0D0D0),
+                                      ? 1
+                                      : 0.35,
+                              child: Transform.rotate(
+                                angle: -math.pi / 2,
+                                child: Image.asset(
+                                  'assets/newapp/report_next_previous_image.gif',
+                                  width: 34.w,
+                                  height: 34.w,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
                             ),
                           ),
                         ],
@@ -1724,18 +2211,16 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
     );
   }
 
-  Widget _iconBtn(IconData icon, VoidCallback onTap,
-      {Color color = const Color(0xFF6A6D78)}) {
+  Widget _iconAssetBtn(String assetPath, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 36.w,
-        height: 36.w,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(8.r),
+      child: SizedBox(
+        width: 30.w,
+        height: 30.w,
+        child: Image.asset(
+          assetPath,
+          fit: BoxFit.contain,
         ),
-        child: Icon(icon, size: 20.w, color: color),
       ),
     );
   }

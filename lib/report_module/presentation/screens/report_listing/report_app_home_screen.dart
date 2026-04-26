@@ -133,7 +133,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                'Projects Reports',
+                                'Reports',
                                 style: GoogleFonts.poppins(
                                   fontSize: 13.sp,
                                   fontWeight: FontWeight.w700,
@@ -182,7 +182,7 @@ class _ReportAppHomeScreenState extends State<ReportAppHomeScreen> {
                                             padding: EdgeInsetsDirectional.only(
                                                 start: 4.w),
                                             child: Text(
-                                              'Create Report',
+                                              'New Report',
                                               maxLines: null,
                                               overflow: TextOverflow.clip,
                                               style: GoogleFonts.poppins(

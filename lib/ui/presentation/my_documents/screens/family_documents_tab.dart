@@ -1171,6 +1171,7 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
             height: 220.h,
             child: PageView.builder(
               controller: _folderPageController,
+              padEnds: false,
               itemCount: folders.length,
               itemBuilder: (context, index) {
                 final folder = folders[index];

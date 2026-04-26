@@ -46,10 +46,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
 
   Future<void> _showTakePicturesDialog() async {
     final TextEditingController reportNameController = TextEditingController();
-    const reportTypes = [
-      'Incident report',
-      'Site report'
-    ];
+    const reportTypes = ['Incident report', 'Site report'];
     String selectedReportType = reportTypes.first;
     final outerContext = context;
 
@@ -137,9 +134,9 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                           }
 
                           try {
-                            final provider =
-                                Provider.of<ReportProvider>(outerContext,
-                                    listen: false);
+                            final provider = Provider.of<ReportProvider>(
+                                outerContext,
+                                listen: false);
                             // Close dialog immediately
                             Navigator.pop(dialogContext);
                             await provider.createReport(
@@ -281,7 +278,10 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
       onTap: () {
         if (_isCameraButtonExpanded) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() { _isCameraButtonExpanded = false; });
+            if (mounted)
+              setState(() {
+                _isCameraButtonExpanded = false;
+              });
           });
         }
       },
@@ -306,7 +306,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                 },
                 child: CustomScrollView(
                   slivers: [
-                    SliverToBoxAdapter(child: SizedBox(height: 100.h)),
+                    SliverToBoxAdapter(child: SizedBox(height: 146.h)),
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: EdgeInsets.only(left: 22.w, right: 4.w),
@@ -314,7 +314,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                           children: [
                             Expanded(
                               child: Text(
-                                'Projects Reports',
+                                'Reports',
                                 style: GoogleFonts.poppins(
                                   fontSize: 13.sp,
                                   fontWeight: FontWeight.w700,
@@ -326,8 +326,12 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                               onTap: () {
                                 if (!_isCameraButtonExpanded) {
                                   // First tap: just expand the button
-                                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    if (mounted) setState(() { _isCameraButtonExpanded = true; });
+                                  WidgetsBinding.instance
+                                      .addPostFrameCallback((_) {
+                                    if (mounted)
+                                      setState(() {
+                                        _isCameraButtonExpanded = true;
+                                      });
                                   });
                                 } else {
                                   // Second tap (when already expanded): show first dialog
@@ -372,7 +376,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                                             padding: EdgeInsetsDirectional.only(
                                                 start: 4.w),
                                             child: Text(
-                                              'Create Report',
+                                              'New Report',
                                               maxLines: null,
                                               overflow: TextOverflow.clip,
                                               style: GoogleFonts.poppins(
@@ -460,6 +464,28 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                       ),
                       child: Column(
                         children: [
+                          SizedBox(height: 10.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Image.asset(
+                                'assets/newapp/report_svgrepo.com.png',
+                                width: 24.w,
+                                height: 24.w,
+                                fit: BoxFit.contain,
+                              ),
+                              SizedBox(width: 8.w),
+                              Text(
+                                'Reports',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF202020),
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
+                          ),
                           SizedBox(height: 12.h),
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: 20.w),
@@ -668,13 +694,15 @@ class _DialogDropdownCardState extends State<_DialogDropdownCard> {
                 children: [
                   Expanded(
                     child: Text(
-                      widget.value != null && widget.items.contains(widget.value)
+                      widget.value != null &&
+                              widget.items.contains(widget.value)
                           ? widget.value!
                           : widget.hint,
                       style: GoogleFonts.poppins(
                         fontSize: 11.sp,
                         fontWeight: FontWeight.w500,
-                        color: widget.value != null && widget.items.contains(widget.value)
+                        color: widget.value != null &&
+                                widget.items.contains(widget.value)
                             ? const Color(0xFF272A36)
                             : const Color(0xFFA2A4AA),
                       ),
@@ -799,7 +827,8 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
     setState(() => _isSharing = true);
     try {
       final provider = Provider.of<ReportProvider>(context, listen: false);
-      final reportDetail = await provider.fetchReportDetailFromApi(widget.report.id);
+      final reportDetail =
+          await provider.fetchReportDetailFromApi(widget.report.id);
       if (reportDetail == null) {
         if (mounted) setState(() => _isSharing = false);
         return;
@@ -868,7 +897,9 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                       children: [
                         SizedBox(height: 14.h),
                         Text(
-                          widget.report.name.isEmpty ? 'Report Name' : widget.report.name,
+                          widget.report.name.isEmpty
+                              ? 'Report Name'
+                              : widget.report.name,
                           style: GoogleFonts.poppins(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.w700,
@@ -888,294 +919,330 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                           maxLines: null,
                           overflow: TextOverflow.visible,
                         ),
-                    SizedBox(height: 14.h),
-                    FutureBuilder<ReportDetailModel?>(
-                      future: _reportDetailFuture,
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return SizedBox(
-                            height: 30.w,
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 16.w,
-                                  height: 16.w,
-                                  child: const CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF9CA3AF)),
-                                ),
-                                SizedBox(width: 8.w),
-                                Text(
-                                  'Loading...',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFF9CA3AF),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-
-                        if (snapshot.hasError) {
-                          debugPrint('❌ Card FutureBuilder error: ${snapshot.error}');
-                          return Text(
-                            'Error loading',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFFE81E25),
-                            ),
-                          );
-                        }
-                        
-                        if (!snapshot.hasData || snapshot.data == null || snapshot.data!.reportItems.isEmpty) {
-                          return Text(
-                            'No images',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFF9CA3AF),
-                            ),
-                          );
-                        }
-                        
-                        final items = snapshot.data!.reportItems.where((item) => item.image.isNotEmpty).toList();
-                        if (items.isEmpty) {
-                          return Text(
-                            'No images',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w500,
-                              color: const Color(0xFF9CA3AF),
-                            ),
-                          );
-                        }
-                        
-                        final displayCount = items.length > 5 ? 5 : items.length;
-                        final remaining = items.length - displayCount;
-                        
-                        return Row(
-                          children: [
-                            ...List.generate(displayCount, (index) {
-                              final imageUrl = items[index].image;
-                              final isNetworkImage = imageUrl.startsWith('http');
-                              return Padding(
-                                padding: EdgeInsets.only(right: 4.w),
-                                child: Container(
-                                  width: 30.w,
-                                  height: 30.w,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: const Color(0xFF2C3454), width: 1),
-                                  ),
-                                  child: ClipOval(
-                                    child: isNetworkImage
-                                        ? Image.network(
-                                            imageUrl,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return Container(
-                                                color: const Color(0xFFE5E7EB),
-                                                child: Icon(Icons.image, size: 16.w, color: const Color(0xFF9CA3AF)),
-                                              );
-                                            },
-                                          )
-                                        : Image.file(
-                                            File(imageUrl),
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return Container(
-                                                color: const Color(0xFFE5E7EB),
-                                                child: Icon(Icons.image, size: 16.w, color: const Color(0xFF9CA3AF)),
-                                              );
-                                            },
-                                          ),
-                                  ),
+                        SizedBox(height: 14.h),
+                        FutureBuilder<ReportDetailModel?>(
+                          future: _reportDetailFuture,
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return SizedBox(
+                                height: 30.w,
+                                child: Row(
+                                  children: [
+                                    SizedBox(
+                                      width: 16.w,
+                                      height: 16.w,
+                                      child: const CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Color(0xFF9CA3AF)),
+                                    ),
+                                    SizedBox(width: 8.w),
+                                    Text(
+                                      'Loading...',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 12.sp,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF9CA3AF),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               );
-                            }),
-                            if (remaining > 0) ...[
-                              SizedBox(width: 4.w),
-                              Text(
-                                '+$remaining',
+                            }
+
+                            if (snapshot.hasError) {
+                              debugPrint(
+                                  '❌ Card FutureBuilder error: ${snapshot.error}');
+                              return Text(
+                                'Error loading',
                                 style: GoogleFonts.poppins(
                                   fontSize: 12.sp,
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF27304E),
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFFE81E25),
                                 ),
-                              ),
-                            ],
-                          ],
-                        );
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(
-                width: 164.w,
-                height: 90.h,
-                child: Stack(
-                  clipBehavior: Clip.hardEdge,
-                  children: [
-                    // Chart image
-                    Positioned(
-                      top: 0.h,
-                      right: 0,
-                      child: SizedBox(
-                        width: 164.w,
-                        height: 90.h,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8.r),
-                          child: Image.asset(
-                            'assets/png/r2.png',
-                            fit: BoxFit.cover,
-                            alignment: Alignment.topRight,
-                          ),
-                        ),
-                      ),
-                    ),
-                    // Icons without background
-                    Positioned(
-                      top: 4.h,
-                      right: 10.w,
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Theme(
-                            data: Theme.of(context).copyWith(
-                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                            ),
-                            child: PopupMenuButton<String>(
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              splashRadius: 16,
-                              icon: Icon(
-                                Icons.more_vert,
-                                size: 22.w,
-                                color: const Color(0xFF27304E),
-                              ),
-                              onSelected: (value) async {
-                                if (value == 'rename') {
-                                  await showRenameReport(
-                                    context,
-                                    report: widget.report,
-                                  );
-                                  widget.onReportUpdated?.call();
-                                } else if (value == 'delete') {
-                                  final confirmed = await showDialog<bool>(
-                                    context: context,
-                                    builder: (ctx) => AlertDialog(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(16.r),
+                              );
+                            }
+
+                            if (!snapshot.hasData ||
+                                snapshot.data == null ||
+                                snapshot.data!.reportItems.isEmpty) {
+                              return Text(
+                                'No images',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF9CA3AF),
+                                ),
+                              );
+                            }
+
+                            final items = snapshot.data!.reportItems
+                                .where((item) => item.image.isNotEmpty)
+                                .toList();
+                            if (items.isEmpty) {
+                              return Text(
+                                'No images',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF9CA3AF),
+                                ),
+                              );
+                            }
+
+                            final displayCount =
+                                items.length > 5 ? 5 : items.length;
+                            final remaining = items.length - displayCount;
+
+                            return Row(
+                              children: [
+                                ...List.generate(displayCount, (index) {
+                                  final imageUrl = items[index].image;
+                                  final isNetworkImage =
+                                      imageUrl.startsWith('http');
+                                  return Padding(
+                                    padding: EdgeInsets.only(right: 4.w),
+                                    child: Container(
+                                      width: 30.w,
+                                      height: 30.w,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                            color: const Color(0xFF2C3454),
+                                            width: 1),
                                       ),
-                                      title: Text(
-                                        'Delete Report',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 18.sp,
-                                          fontWeight: FontWeight.w600,
-                                          color: const Color(0xFF27304E),
-                                        ),
+                                      child: ClipOval(
+                                        child: isNetworkImage
+                                            ? Image.network(
+                                                imageUrl,
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error,
+                                                    stackTrace) {
+                                                  return Container(
+                                                    color:
+                                                        const Color(0xFFE5E7EB),
+                                                    child: Icon(Icons.image,
+                                                        size: 16.w,
+                                                        color: const Color(
+                                                            0xFF9CA3AF)),
+                                                  );
+                                                },
+                                              )
+                                            : Image.file(
+                                                File(imageUrl),
+                                                fit: BoxFit.cover,
+                                                errorBuilder: (context, error,
+                                                    stackTrace) {
+                                                  return Container(
+                                                    color:
+                                                        const Color(0xFFE5E7EB),
+                                                    child: Icon(Icons.image,
+                                                        size: 16.w,
+                                                        color: const Color(
+                                                            0xFF9CA3AF)),
+                                                  );
+                                                },
+                                              ),
                                       ),
-                                      content: Text(
-                                        'Are you sure you want to delete this report?',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 14.sp,
-                                          color: const Color(0xFF27304E),
-                                        ),
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(ctx, false),
-                                          child: Text(
-                                            'Cancel',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 14.sp,
-                                              fontWeight: FontWeight.w600,
-                                              color: const Color(0xFF27304E),
-                                            ),
-                                          ),
-                                        ),
-                                        TextButton(
-                                          onPressed: () => Navigator.pop(ctx, true),
-                                          child: Text(
-                                            'Delete',
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 14.sp,
-                                              fontWeight: FontWeight.w600,
-                                              color: const Color(0xFFE81E25),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
                                     ),
                                   );
-                                  if (confirmed == true) {
-                                    final provider = Provider.of<ReportProvider>(context, listen: false);
-                                    await provider.deleteReport(reportId: widget.report.id);
-                                    widget.onReportUpdated?.call();
-                                  }
-                                }
-                              },
-                              itemBuilder: (context) => [
-                                PopupMenuItem<String>(
-                                  value: 'rename',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.edit_outlined, size: 20.w, color: const Color(0xFF27304E)),
-                                      SizedBox(width: 8.w),
-                                      Text(
-                                        'Rename',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 14.sp,
-                                          fontWeight: FontWeight.w500,
-                                          color: const Color(0xFF27304E),
+                                }),
+                                if (remaining > 0) ...[
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    '+$remaining',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12.sp,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF27304E),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    width: 164.w,
+                    height: 90.h,
+                    child: Stack(
+                      clipBehavior: Clip.hardEdge,
+                      children: [
+                        // Chart image
+                        Positioned(
+                          top: 0.h,
+                          right: 0,
+                          child: SizedBox(
+                            width: 164.w,
+                            height: 90.h,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8.r),
+                              child: Image.asset(
+                                'assets/png/r2.png',
+                                fit: BoxFit.cover,
+                                alignment: Alignment.topRight,
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Icons without background
+                        Positioned(
+                            top: 4.h,
+                            right: 10.w,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Theme(
+                                  data: Theme.of(context).copyWith(
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    visualDensity: const VisualDensity(
+                                        horizontal: -4, vertical: -4),
+                                  ),
+                                  child: PopupMenuButton<String>(
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    splashRadius: 16,
+                                    icon: Icon(
+                                      Icons.more_vert,
+                                      size: 22.w,
+                                      color: const Color(0xFF27304E),
+                                    ),
+                                    onSelected: (value) async {
+                                      if (value == 'rename') {
+                                        await showRenameReport(
+                                          context,
+                                          report: widget.report,
+                                        );
+                                        widget.onReportUpdated?.call();
+                                      } else if (value == 'delete') {
+                                        final confirmed =
+                                            await showDialog<bool>(
+                                          context: context,
+                                          builder: (ctx) => AlertDialog(
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(16.r),
+                                            ),
+                                            title: Text(
+                                              'Delete Report',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 18.sp,
+                                                fontWeight: FontWeight.w600,
+                                                color: const Color(0xFF27304E),
+                                              ),
+                                            ),
+                                            content: Text(
+                                              'Are you sure you want to delete this report?',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14.sp,
+                                                color: const Color(0xFF27304E),
+                                              ),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () =>
+                                                    Navigator.pop(ctx, false),
+                                                child: Text(
+                                                  'Cancel',
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 14.sp,
+                                                    fontWeight: FontWeight.w600,
+                                                    color:
+                                                        const Color(0xFF27304E),
+                                                  ),
+                                                ),
+                                              ),
+                                              TextButton(
+                                                onPressed: () =>
+                                                    Navigator.pop(ctx, true),
+                                                child: Text(
+                                                  'Delete',
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 14.sp,
+                                                    fontWeight: FontWeight.w600,
+                                                    color:
+                                                        const Color(0xFFE81E25),
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                        if (confirmed == true) {
+                                          final provider =
+                                              Provider.of<ReportProvider>(
+                                                  context,
+                                                  listen: false);
+                                          await provider.deleteReport(
+                                              reportId: widget.report.id);
+                                          widget.onReportUpdated?.call();
+                                        }
+                                      }
+                                    },
+                                    itemBuilder: (context) => [
+                                      PopupMenuItem<String>(
+                                        value: 'rename',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.edit_outlined,
+                                                size: 20.w,
+                                                color: const Color(0xFF27304E)),
+                                            SizedBox(width: 8.w),
+                                            Text(
+                                              'Rename',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14.sp,
+                                                fontWeight: FontWeight.w500,
+                                                color: const Color(0xFF27304E),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      PopupMenuItem<String>(
+                                        value: 'delete',
+                                        child: Row(
+                                          children: [
+                                            Icon(Icons.delete_outline,
+                                                size: 20.w,
+                                                color: const Color(0xFFE81E25)),
+                                            SizedBox(width: 8.w),
+                                            Text(
+                                              'Delete',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14.sp,
+                                                fontWeight: FontWeight.w500,
+                                                color: const Color(0xFFE81E25),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                PopupMenuItem<String>(
-                                  value: 'delete',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.delete_outline, size: 20.w, color: const Color(0xFFE81E25)),
-                                      SizedBox(width: 8.w),
-                                      Text(
-                                        'Delete',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 14.sp,
-                                          fontWeight: FontWeight.w500,
-                                          color: const Color(0xFFE81E25),
-                                        ),
-                                      ),
-                                    ],
+                                SizedBox(width: 0.5.w),
+                                ReorderableDragStartListener(
+                                  index: widget.index,
+                                  child: Icon(
+                                    Icons.list,
+                                    size: 22.w,
+                                    color: const Color(0xFF27304E),
                                   ),
                                 ),
                               ],
-                            ),
-                          ),
-                          SizedBox(width: 0.5.w),
-                          ReorderableDragStartListener(
-                            index: widget.index,
-                            child: Icon(
-                              Icons.list,
-                              size: 22.w,
-                              color: const Color(0xFF27304E),
-                            ),
-                          ),
-                        ],
-                      )
-
+                            )),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
           // Share button - bottom right
           Positioned(
             bottom: 18.h,
@@ -1233,7 +1300,9 @@ class _ReportPhotosDialog extends StatefulWidget {
 }
 
 class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
-  final List<_PhotoItem> _photoItems = [_PhotoItem()]; // Initialize with one item to avoid RangeError
+  final List<_PhotoItem> _photoItems = [
+    _PhotoItem()
+  ]; // Initialize with one item to avoid RangeError
   int _currentIndex = 0;
   final ImagePicker _picker = ImagePicker();
   bool _showValidationError = false;
@@ -1253,18 +1322,22 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
       try {
         final provider = Provider.of<ReportProvider>(context, listen: false);
         debugPrint('🔍 Loading report detail for ID: ${widget.report!.id}');
-        final detail = await provider.fetchReportDetailFromApi(widget.report!.id);
-        debugPrint('🔍 Report detail result: ${detail != null ? 'Found ${detail.reportItems.length} items' : 'null'}');
+        final detail =
+            await provider.fetchReportDetailFromApi(widget.report!.id);
+        debugPrint(
+            '🔍 Report detail result: ${detail != null ? 'Found ${detail.reportItems.length} items' : 'null'}');
         if (detail != null && detail.reportItems.isNotEmpty) {
           if (mounted) {
             setState(() {
               _photoItems.clear();
               for (final item in detail.reportItems) {
-                debugPrint('🔍 Item: id=${item.id}, image=${item.image}, location=${item.location}');
+                debugPrint(
+                    '🔍 Item: id=${item.id}, image=${item.image}, location=${item.location}');
                 final photoItem = _PhotoItem();
                 photoItem.itemId = item.id;
                 photoItem.imagePath = item.image.isNotEmpty ? item.image : null;
-                photoItem.location = item.location.isNotEmpty ? item.location : null;
+                photoItem.location =
+                    item.location.isNotEmpty ? item.location : null;
                 photoItem.locationController.text = item.location;
                 photoItem.description = item.description;
                 photoItem.descriptionController.text = item.description;
@@ -1297,79 +1370,79 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
         child: SizedBox(
           width: 200.w,
           child: Container(
-          padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 16.w),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF1B1F26), Color(0xFF1A1A53)],
-              stops: [0.72, 1.0],
+            padding: EdgeInsets.symmetric(vertical: 18.h, horizontal: 16.w),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFF1B1F26), Color(0xFF1A1A53)],
+                stops: [0.72, 1.0],
+              ),
+              borderRadius: BorderRadius.circular(16.r),
             ),
-            borderRadius: BorderRadius.circular(16.r),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _pickImage(ImageSource.camera);
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/svg/camera_svgrepo.svg',
-                        width: 36.sp,
-                        height: 36.sp,
-                        colorFilter: const ColorFilter.mode(
-                            Colors.white, BlendMode.srcIn),
-                      ),
-                      SizedBox(height: 8.h),
-                      Text(
-                        'Camera',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickImage(ImageSource.camera);
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/svg/camera_svgrepo.svg',
+                          width: 36.sp,
+                          height: 36.sp,
+                          colorFilter: const ColorFilter.mode(
+                              Colors.white, BlendMode.srcIn),
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 8.h),
+                        Text(
+                          'Camera',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.pop(ctx);
-                    _pickImage(ImageSource.gallery);
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/svg/gallery_svgrepo.svg',
-                        width: 36.sp,
-                        height: 36.sp,
-                        colorFilter: const ColorFilter.mode(
-                            Colors.white, BlendMode.srcIn),
-                      ),
-                      SizedBox(height: 8.h),
-                      Text(
-                        'Gallery',
-                        style: GoogleFonts.poppins(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _pickImage(ImageSource.gallery);
+                    },
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SvgPicture.asset(
+                          'assets/svg/gallery_svgrepo.svg',
+                          width: 36.sp,
+                          height: 36.sp,
+                          colorFilter: const ColorFilter.mode(
+                              Colors.white, BlendMode.srcIn),
                         ),
-                      ),
-                    ],
+                        SizedBox(height: 8.h),
+                        Text(
+                          'Gallery',
+                          style: GoogleFonts.poppins(
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );
@@ -1415,13 +1488,13 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
 
   void _addNewPhotoItem() {
     final currentItem = _photoItems[_currentIndex];
-    
+
     // Check if current item has all required data
     if (currentItem.imagePath == null) {
       _showImageSourceDialog();
       return;
     }
-    
+
     if (currentItem.description.isEmpty || currentItem.location == null) {
       // Show error message inside dialog
       setState(() {
@@ -1437,7 +1510,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
       });
       return;
     }
-    
+
     // All data is filled, create new item
     setState(() {
       _showValidationError = false;
@@ -1481,12 +1554,14 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF27304E),
-                      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: 16.w, vertical: 10.h),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10.r),
                       ),
                     ),
-                    icon: Icon(Icons.camera_alt, size: 18.w, color: Colors.white),
+                    icon:
+                        Icon(Icons.camera_alt, size: 18.w, color: Colors.white),
                     label: Text(
                       'Add Pictures',
                       style: GoogleFonts.poppins(
@@ -1521,14 +1596,17 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                   children: [
                     // Image Container
                     GestureDetector(
-                      onTap: currentItem.imagePath == null ? _showImageSourceDialog : null,
+                      onTap: currentItem.imagePath == null
+                          ? _showImageSourceDialog
+                          : null,
                       child: Container(
                         width: double.infinity,
                         height: 200.h,
                         decoration: BoxDecoration(
                           color: const Color(0xFFF0F0F0),
                           borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(color: const Color(0xFFE0E0E0), width: 1),
+                          border: Border.all(
+                              color: const Color(0xFFE0E0E0), width: 1),
                         ),
                         child: currentItem.imagePath == null
                             ? Column(
@@ -1553,15 +1631,20 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                 children: [
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(16.r),
-                                    child: currentItem.imagePath!.startsWith('http')
+                                    child: currentItem.imagePath!
+                                            .startsWith('http')
                                         ? Image.network(
                                             currentItem.imagePath!,
                                             width: double.infinity,
                                             height: double.infinity,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) {
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
                                               return Center(
-                                                child: Icon(Icons.broken_image, size: 50.w, color: const Color(0xFFB0B0B0)),
+                                                child: Icon(Icons.broken_image,
+                                                    size: 50.w,
+                                                    color: const Color(
+                                                        0xFFB0B0B0)),
                                               );
                                             },
                                           )
@@ -1582,7 +1665,8 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                           width: 32.w,
                                           height: 32.w,
                                           decoration: BoxDecoration(
-                                            color: Colors.white.withOpacity(0.9),
+                                            color:
+                                                Colors.white.withOpacity(0.9),
                                             shape: BoxShape.circle,
                                           ),
                                           child: IconButton(
@@ -1600,8 +1684,10 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                           width: 32.w,
                                           height: 32.w,
                                           decoration: BoxDecoration(
-                                            color: Colors.white.withOpacity(0.9),
-                                            borderRadius: BorderRadius.circular(8.r),
+                                            color:
+                                                Colors.white.withOpacity(0.9),
+                                            borderRadius:
+                                                BorderRadius.circular(8.r),
                                           ),
                                           child: IconButton(
                                             padding: EdgeInsets.zero,
@@ -1612,32 +1698,44 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                               color: const Color(0xFF6A6D78),
                                             ),
                                             onPressed: () async {
-                                              if (currentItem.imagePath == null) return;
+                                              if (currentItem.imagePath == null)
+                                                return;
                                               // Only allow drawing on local files
-                                              String filePath = currentItem.imagePath!;
+                                              String filePath =
+                                                  currentItem.imagePath!;
                                               if (filePath.startsWith('http')) {
                                                 // Download to temp file first
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(content: Text('Please re-take the photo to edit it')),
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  const SnackBar(
+                                                      content: Text(
+                                                          'Please re-take the photo to edit it')),
                                                 );
                                                 return;
                                               }
-                                              final result = await Navigator.push<Uint8List>(
+                                              final result = await Navigator
+                                                  .push<Uint8List>(
                                                 context,
                                                 MaterialPageRoute(
-                                                  builder: (_) => ImageEditingScreen(image: filePath),
+                                                  builder: (_) =>
+                                                      ImageEditingScreen(
+                                                          image: filePath),
                                                 ),
                                               );
                                               if (result != null && mounted) {
                                                 // Save edited image to a new path to avoid cache
-                                                final dir = File(filePath).parent.path;
-                                                final newPath = '$dir/edited_${DateTime.now().millisecondsSinceEpoch}.jpg';
-                                                await File(newPath).writeAsBytes(result);
+                                                final dir =
+                                                    File(filePath).parent.path;
+                                                final newPath =
+                                                    '$dir/edited_${DateTime.now().millisecondsSinceEpoch}.jpg';
+                                                await File(newPath)
+                                                    .writeAsBytes(result);
                                                 // Clear image cache to force reload
                                                 imageCache.clear();
                                                 imageCache.clearLiveImages();
                                                 setState(() {
-                                                  currentItem.imagePath = newPath;
+                                                  currentItem.imagePath =
+                                                      newPath;
                                                 });
                                               }
                                             },
@@ -1654,7 +1752,8 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                       width: 32.w,
                                       height: 32.w,
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFFE81E25).withOpacity(0.9),
+                                        color: const Color(0xFFE81E25)
+                                            .withOpacity(0.9),
                                         shape: BoxShape.circle,
                                       ),
                                       child: IconButton(
@@ -1692,9 +1791,11 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                         children: [
                           IconButton(
                             onPressed: _currentIndex > 0
-                                ? () => WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    if (mounted) setState(() => _currentIndex--);
-                                  })
+                                ? () => WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                      if (mounted)
+                                        setState(() => _currentIndex--);
+                                    })
                                 : null,
                             icon: Icon(
                               Icons.arrow_back_ios,
@@ -1716,9 +1817,11 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                           SizedBox(width: 12.w),
                           IconButton(
                             onPressed: _currentIndex < _photoItems.length - 1
-                                ? () => WidgetsBinding.instance.addPostFrameCallback((_) {
-                                    if (mounted) setState(() => _currentIndex++);
-                                  })
+                                ? () => WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                      if (mounted)
+                                        setState(() => _currentIndex++);
+                                    })
                                 : null,
                             icon: Icon(
                               Icons.arrow_forward_ios,
@@ -1789,38 +1892,52 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                   // Save edited photo items via API
                                   if (widget.report != null) {
                                     setState(() => _isUploading = true);
-                                    final provider = Provider.of<ReportProvider>(context, listen: false);
+                                    final provider =
+                                        Provider.of<ReportProvider>(context,
+                                            listen: false);
                                     bool allSuccess = true;
-                                    
-                                    for (int i = 0; i < _photoItems.length; i++) {
+
+                                    for (int i = 0;
+                                        i < _photoItems.length;
+                                        i++) {
                                       final photoItem = _photoItems[i];
-                                      if (photoItem.imagePath != null && photoItem.imagePath!.isNotEmpty) {
-                                        final isNetworkUrl = photoItem.imagePath!.startsWith('http');
+                                      if (photoItem.imagePath != null &&
+                                          photoItem.imagePath!.isNotEmpty) {
+                                        final isNetworkUrl = photoItem
+                                            .imagePath!
+                                            .startsWith('http');
                                         if (photoItem.itemId != null) {
-                                          final result = await provider.updateReportItem(
+                                          final result =
+                                              await provider.updateReportItem(
                                             reportId: widget.report!.id,
                                             itemId: photoItem.itemId!,
                                             location: photoItem.location ?? '',
                                             description: photoItem.description,
-                                            imageFile: isNetworkUrl ? null : File(photoItem.imagePath!),
+                                            imageFile: isNetworkUrl
+                                                ? null
+                                                : File(photoItem.imagePath!),
                                             index: i,
                                           );
-                                          if (result == null) allSuccess = false;
+                                          if (result == null)
+                                            allSuccess = false;
                                         } else if (!isNetworkUrl) {
-                                          final result = await provider.addReportItem(
+                                          final result =
+                                              await provider.addReportItem(
                                             reportId: widget.report!.id,
-                                            imageFile: File(photoItem.imagePath!),
+                                            imageFile:
+                                                File(photoItem.imagePath!),
                                             location: photoItem.location ?? '',
                                             description: photoItem.description,
                                             index: i,
                                           );
-                                          if (result == null) allSuccess = false;
+                                          if (result == null)
+                                            allSuccess = false;
                                         }
                                       }
                                     }
-                                    
+
                                     setState(() => _isUploading = false);
-                                    
+
                                     if (allSuccess) {
                                       if (widget.onReportCreated != null) {
                                         widget.onReportCreated!();
@@ -1828,11 +1945,14 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                       Navigator.pop(context);
                                     } else {
                                       setState(() {
-                                        _uploadErrorMessage = 'Failed to upload some items. Please try again.';
+                                        _uploadErrorMessage =
+                                            'Failed to upload some items. Please try again.';
                                       });
-                                      Future.delayed(const Duration(seconds: 4), () {
+                                      Future.delayed(const Duration(seconds: 4),
+                                          () {
                                         if (mounted) {
-                                          setState(() => _uploadErrorMessage = null);
+                                          setState(
+                                              () => _uploadErrorMessage = null);
                                         }
                                       });
                                     }
@@ -1854,13 +1974,13 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                   ),
                                 )
                               : Text(
-                            'Submit',
-                            style: GoogleFonts.poppins(
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
+                                  'Submit',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
                         ),
                       ),
                     if (widget.isEditing)
@@ -1871,52 +1991,61 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                           onPressed: _isUploading
                               ? null
                               : () async {
-                            // Create report via API
-                            try {
-                              setState(() => _isUploading = true);
-                              final provider = Provider.of<ReportProvider>(context, listen: false);
-                              await provider.createReport(
-                                title: widget.reportName,
-                                folderID: widget.folderId!,
-                                reportType: widget.reportType,
-                              );
-                              
-                              // Upload photo items to server via API
-                              final createdReport = provider.reports.first;
-                              for (int i = 0; i < _photoItems.length; i++) {
-                                final photoItem = _photoItems[i];
-                                if (photoItem.imagePath != null && photoItem.imagePath!.isNotEmpty) {
-                                  await provider.addReportItem(
-                                    reportId: createdReport.id,
-                                    imageFile: File(photoItem.imagePath!),
-                                    location: photoItem.location ?? '',
-                                    description: photoItem.description,
-                                    index: i,
-                                  );
-                                }
-                              }
-                              
-                              setState(() => _isUploading = false);
-                              
-                              // Call callback to reload reports
-                              if (widget.onReportCreated != null) {
-                                widget.onReportCreated!();
-                              }
-                              
-                              Navigator.pop(context);
-                            } catch (e) {
-                              // Show error inside dialog
-                              setState(() {
-                                _isUploading = false;
-                                _uploadErrorMessage = 'Failed to create report. Please try again.';
-                              });
-                              Future.delayed(const Duration(seconds: 4), () {
-                                if (mounted) {
-                                  setState(() => _uploadErrorMessage = null);
-                                }
-                              });
-                            }
-                          },
+                                  // Create report via API
+                                  try {
+                                    setState(() => _isUploading = true);
+                                    final provider =
+                                        Provider.of<ReportProvider>(context,
+                                            listen: false);
+                                    await provider.createReport(
+                                      title: widget.reportName,
+                                      folderID: widget.folderId!,
+                                      reportType: widget.reportType,
+                                    );
+
+                                    // Upload photo items to server via API
+                                    final createdReport =
+                                        provider.reports.first;
+                                    for (int i = 0;
+                                        i < _photoItems.length;
+                                        i++) {
+                                      final photoItem = _photoItems[i];
+                                      if (photoItem.imagePath != null &&
+                                          photoItem.imagePath!.isNotEmpty) {
+                                        await provider.addReportItem(
+                                          reportId: createdReport.id,
+                                          imageFile: File(photoItem.imagePath!),
+                                          location: photoItem.location ?? '',
+                                          description: photoItem.description,
+                                          index: i,
+                                        );
+                                      }
+                                    }
+
+                                    setState(() => _isUploading = false);
+
+                                    // Call callback to reload reports
+                                    if (widget.onReportCreated != null) {
+                                      widget.onReportCreated!();
+                                    }
+
+                                    Navigator.pop(context);
+                                  } catch (e) {
+                                    // Show error inside dialog
+                                    setState(() {
+                                      _isUploading = false;
+                                      _uploadErrorMessage =
+                                          'Failed to create report. Please try again.';
+                                    });
+                                    Future.delayed(const Duration(seconds: 4),
+                                        () {
+                                      if (mounted) {
+                                        setState(
+                                            () => _uploadErrorMessage = null);
+                                      }
+                                    });
+                                  }
+                                },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF27304E),
                             shape: RoundedRectangleBorder(
@@ -1933,13 +2062,13 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                   ),
                                 )
                               : Text(
-                            'Generate Report',
-                            style: GoogleFonts.poppins(
-                              fontSize: 15.sp,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
+                                  'Generate Report',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 15.sp,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
                         ),
                       ),
 
@@ -2108,9 +2237,10 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
             child: ColorFiltered(
               colorFilter: isActive
                   ? const ColorFilter.mode(Colors.white, BlendMode.srcIn)
-                  : const ColorFilter.mode(Colors.transparent, BlendMode.srcOver),
-              child:
-                  Image.asset('assets/png/paragraphIcon.png', fit: BoxFit.contain),
+                  : const ColorFilter.mode(
+                      Colors.transparent, BlendMode.srcOver),
+              child: Image.asset('assets/png/paragraphIcon.png',
+                  fit: BoxFit.contain),
             ),
           ),
         ),
@@ -2130,7 +2260,9 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
     // Remove bullet/number prefixes from ALL lines
     final lines = text.split('\n');
     final cleanedLines = lines.map((line) {
-      return line.replaceFirst(RegExp(r'^\s*•\s?'), '').replaceFirst(RegExp(r'^\s*\d+\.\s?'), '');
+      return line
+          .replaceFirst(RegExp(r'^\s*•\s?'), '')
+          .replaceFirst(RegExp(r'^\s*\d+\.\s?'), '');
     }).toList();
 
     final newText = cleanedLines.join('\n');
@@ -2199,8 +2331,9 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
   void _insertPrefixForNewMode(_PhotoItem item, {required String prefix}) {
     final text = item.descriptionController.text;
     final selection = item.descriptionController.selection;
-    final cursor =
-        selection.isValid && selection.baseOffset >= 0 ? selection.baseOffset : text.length;
+    final cursor = selection.isValid && selection.baseOffset >= 0
+        ? selection.baseOffset
+        : text.length;
 
     final before = text.substring(0, cursor);
     final after = text.substring(cursor);
@@ -2211,7 +2344,8 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
 
     item.descriptionController.value = TextEditingValue(
       text: newText,
-      selection: TextSelection.collapsed(offset: before.length + insertion.length),
+      selection:
+          TextSelection.collapsed(offset: before.length + insertion.length),
     );
     item.description = newText;
   }

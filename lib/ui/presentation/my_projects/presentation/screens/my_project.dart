@@ -2,9 +2,11 @@ import 'dart:async';
 
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/my_projects/data/datasources/project_remote_datasource.dart';
+import 'package:el_race/ui/presentation/my_projects/data/models/project_manager_filter_item.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/user_project_model.dart';
 import 'package:el_race/ui/presentation/my_projects/data/models/user_projects_response.dart';
 import 'package:el_race/ui/presentation/my_projects/data/repositories/project_repository_impl.dart';
+import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_by_filters_usecase.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_by_partner_usecase.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_usecase.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_bloc.dart';
@@ -130,7 +132,46 @@ class _MyProjectState extends State<MyProject> {
   bool _isLoading = false;
   String? _error;
   List<UserProjectModel> _projects = [];
-  int? _selectedCompanyId;
+
+  ProjectListBloc _buildProjectsBloc() {
+    final repo = ProjectRepositoryImpl(ProjectRemoteDataSource());
+    return ProjectListBloc(
+      getProjectsUseCase: GetProjectsUseCase(repository: repo),
+      getProjectAttachmentsUseCase:
+          GetProjectAttachmentsUseCase(repository: repo),
+      getProjectsByPartnerUseCase:
+          GetProjectsByPartnerUseCase(repository: repo),
+      getProjectsByFiltersUseCase:
+          GetProjectsByFiltersUseCase(repository: repo),
+    );
+  }
+
+  Future<void> _openProjectManagerScreen() async {
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const _ProjectManagersScreen(),
+      ),
+    );
+  }
+
+  Future<void> _openClientsScreen() async {
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const _ClientsScreen(),
+      ),
+    );
+  }
+
+  Future<void> _openCitiesScreen() async {
+    if (!mounted) return;
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => const _CitiesScreen(),
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -150,10 +191,6 @@ class _MyProjectState extends State<MyProject> {
 
       setState(() {
         _projects = response.projects;
-        if (_selectedCompanyId != null &&
-            !_projects.any((p) => p.projectId == _selectedCompanyId)) {
-          _selectedCompanyId = null;
-        }
         _isLoading = false;
       });
     } catch (e) {
@@ -164,75 +201,131 @@ class _MyProjectState extends State<MyProject> {
     }
   }
 
-  List<UserProjectModel> get _filteredProjects {
-    if (_selectedCompanyId == null) {
-      return _projects;
-    }
-    return _projects
-        .where((p) => p.projectId == _selectedCompanyId)
-        .toList(growable: false);
-  }
-
-  Widget _buildCompanyFilterTabs() {
-    const unfocusedStart = Color(0xFFD6D6D6);
-    const unfocusedEnd = Color(0xFFADB2BD);
-    const focusedStart = Color(0xB81B1F26);
-    const focusedEnd = Color(0xFF717171);
-
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      padding: EdgeInsets.symmetric(horizontal: 12.w),
-      child: Row(
-        children: List.generate(_projects.length + 1, (index) {
-          final bool isAllTab = index == 0;
-          final UserProjectModel? company =
-              isAllTab ? null : _projects[index - 1];
-          final bool isSelected = isAllTab
-              ? _selectedCompanyId == null
-              : _selectedCompanyId == company!.projectId;
-
-          return Padding(
-            padding:
-                EdgeInsetsDirectional.only(end: index == _projects.length ? 0 : 6.w),
-            child: InkWell(
-              borderRadius: BorderRadius.circular(22.r),
-              onTap: () {
-                setState(() {
-                  _selectedCompanyId = isAllTab ? null : company!.projectId;
-                });
-              },
-              child: Container(
-                constraints: BoxConstraints(minWidth: 84.w, maxWidth: 210.w),
-                height: 36.h,
-                padding: EdgeInsets.symmetric(horizontal: 12.w),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(22.r),
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: isSelected
-                        ? const [focusedStart, focusedEnd]
-                        : const [unfocusedStart, unfocusedEnd],
-                  ),
+  Future<void> _showFilterPopup() async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (ctx) {
+        Widget filterField(String text, {VoidCallback? onTap}) {
+          return InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(10.r),
+            child: Container(
+              height: 58.h,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(10.r),
+                border: Border.all(
+                  color: const Color(0xFF8F8F8F),
+                  width: 1.3,
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  isAllTab ? 'ALL' : company!.projectName.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.koulen(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.white,
-                    letterSpacing: 0.8,
-                  ),
+              ),
+              child: Text(
+                text,
+                style: GoogleFonts.poppins(
+                  fontSize: 36.sp / 2,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF7A7A7A),
                 ),
               ),
             ),
           );
-        }),
-      ),
+        }
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.symmetric(horizontal: 22.w, vertical: 24.h),
+          child: Container(
+            padding: EdgeInsets.fromLTRB(18.w, 16.h, 18.w, 20.h),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F1F1),
+              borderRadius: BorderRadius.circular(34.r),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    const Spacer(),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          'assets/newapp/filter.png',
+                          height: 24.sp,
+                          width: 24.sp,
+                        ),
+                        SizedBox(width: 6.w),
+                        Text(
+                          'Filter',
+                          style: GoogleFonts.poppins(
+                            fontSize: 40.sp / 2,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF1E2365),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    InkWell(
+                      onTap: () => Navigator.pop(ctx),
+                      borderRadius: BorderRadius.circular(20.r),
+                      child: Container(
+                        width: 30.w,
+                        height: 30.w,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFFE53935),
+                            width: 1.2,
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          color: const Color(0xFFE53935),
+                          size: 16.sp,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 18.h),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 22.w),
+                  child: Column(
+                    children: [
+                      filterField(
+                        'Project Manager',
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _openProjectManagerScreen();
+                        },
+                      ),
+                      SizedBox(height: 12.h),
+                      filterField(
+                        'Clients',
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _openClientsScreen();
+                        },
+                      ),
+                      SizedBox(height: 12.h),
+                      filterField(
+                        'City',
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          _openCitiesScreen();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -252,30 +345,51 @@ class _MyProjectState extends State<MyProject> {
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16.w),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Image.asset(
-                        "assets/newapp/my_projects.png",
-                        height: 24.w,
-                        width: 24.w,
+                      const Spacer(),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(
+                            "assets/newapp/my_projects.png",
+                            height: 24.w,
+                            width: 24.w,
+                          ),
+                          SizedBox(width: 4.w),
+                          Text(
+                            translate('home.projects'),
+                            style: GoogleFonts.koulen(
+                              fontSize: 22.sp,
+                              fontWeight: FontWeight.w500,
+                              color: appFontColor,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(width: 4.w),
-                      Text(
-                        translate('home.projects'),
-                        style: GoogleFonts.koulen(
-                          fontSize: 22.sp,
-                          fontWeight: FontWeight.w500,
-                          color: appFontColor,
+                      const Spacer(),
+                      InkWell(
+                        onTap: _showFilterPopup,
+                        borderRadius: BorderRadius.circular(20.r),
+                        child: Container(
+                          width: 30.w,
+                          height: 30.w,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.transparent,
+                          ),
+                          child: Center(
+                            child: Image.asset(
+                              'assets/newapp/filter.png',
+                              height: 24.sp,
+                              width: 24.sp,
+                            ),
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 5),
-                if (!_isLoading && _error == null && _projects.isNotEmpty) ...[
-                  _buildCompanyFilterTabs(),
-                  const SizedBox(height: 8),
-                ],
+                const SizedBox(height: 8),
               ],
             ),
           ),
@@ -292,7 +406,7 @@ class _MyProjectState extends State<MyProject> {
                             style: const TextStyle(color: Colors.red)),
                       ),
                     )
-                  : _filteredProjects.isEmpty
+                  : _projects.isEmpty
                       ? const SliverFillRemaining(
                           child: Center(
                             child: Text('No projects found for this company'),
@@ -301,7 +415,7 @@ class _MyProjectState extends State<MyProject> {
                       : SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
-                              final project = _filteredProjects[index];
+                              final project = _projects[index];
 
                               final id = project.projectId;
                               final name = project.projectName;
@@ -311,19 +425,7 @@ class _MyProjectState extends State<MyProject> {
 
                               return GestureDetector(
                                 onTap: () {
-                                  final repo = ProjectRepositoryImpl(
-                                      ProjectRemoteDataSource());
-                                  final bloc = ProjectListBloc(
-                                    getProjectsUseCase: GetProjectsUseCase(
-                                      repository: repo,
-                                    ),
-                                    getProjectAttachmentsUseCase:
-                                        GetProjectAttachmentsUseCase(
-                                            repository: repo),
-                                    getProjectsByPartnerUseCase:
-                                        GetProjectsByPartnerUseCase(
-                                            repository: repo),
-                                  );
+                                  final bloc = _buildProjectsBloc();
 
                                   Navigator.push(
                                     context,
@@ -350,7 +452,7 @@ class _MyProjectState extends State<MyProject> {
                                 ),
                               );
                             },
-                            childCount: _filteredProjects.length,
+                            childCount: _projects.length,
                           ),
                         ),
           // Bottom padding
@@ -603,4 +705,731 @@ Widget buildProjectCard({
       ),
     ),
   );
+}
+
+class _ProjectManagersScreen extends StatefulWidget {
+  const _ProjectManagersScreen();
+
+  @override
+  State<_ProjectManagersScreen> createState() => _ProjectManagersScreenState();
+}
+
+class _ProjectManagersScreenState extends State<_ProjectManagersScreen> {
+  bool _isLoading = true;
+  String? _error;
+  List<ProjectManagerFilterItem> _managers = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadManagers();
+  }
+
+  Future<void> _loadManagers() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final data = await ProjectRemoteDataSource().fetchProjectManagersList();
+      if (!mounted) return;
+      setState(() {
+        _managers = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _lastUpdateText(String? rawDate) {
+    if (rawDate == null || rawDate.trim().isEmpty) {
+      return 'Last updates recently';
+    }
+
+    final parsed = DateTime.tryParse(rawDate.trim());
+    if (parsed == null) return 'Last updates recently';
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final date = DateTime(parsed.year, parsed.month, parsed.day);
+    final diff = today.difference(date).inDays;
+
+    if (diff <= 0) return 'Last updates today';
+    if (diff == 1) return 'Last updates yesterday';
+    return 'Last updates ${DateFormat('dd/MM/yyyy').format(parsed)}';
+  }
+
+  ProjectListBloc _buildProjectsBloc() {
+    final repo = ProjectRepositoryImpl(ProjectRemoteDataSource());
+    return ProjectListBloc(
+      getProjectsUseCase: GetProjectsUseCase(repository: repo),
+      getProjectAttachmentsUseCase:
+          GetProjectAttachmentsUseCase(repository: repo),
+      getProjectsByPartnerUseCase:
+          GetProjectsByPartnerUseCase(repository: repo),
+      getProjectsByFiltersUseCase:
+          GetProjectsByFiltersUseCase(repository: repo),
+    );
+  }
+
+  void _openManagerProjects(ProjectManagerFilterItem manager) {
+    final bloc = _buildProjectsBloc();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: bloc,
+          child: ProjectListScreen(
+            bloc: bloc,
+            projectManagerId: manager.id,
+            partnerName: manager.name,
+            partnerPhoto: manager.photoUrl ?? '',
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2F2F2),
+      appBar: const HeaderWidget(),
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.account_circle_outlined,
+                  color: const Color(0xFF202020),
+                  size: 27.sp,
+                ),
+                SizedBox(width: 6.w),
+                Text(
+                  'Project Manager',
+                  style: GoogleFonts.poppins(
+                    fontSize: 36.sp / 2,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF202020),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? Center(
+                        child: Text(
+                          _error!,
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFFBA1719),
+                            fontSize: 12.sp,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: EdgeInsets.only(
+                          left: 14.w,
+                          right: 14.w,
+                          top: 6.h,
+                          bottom: 20.h,
+                        ),
+                        itemCount: _managers.length,
+                        separatorBuilder: (_, __) => Divider(
+                          height: 1,
+                          color: const Color(0xFFD5D5D5),
+                          thickness: 1,
+                          indent: 10.w,
+                          endIndent: 10.w,
+                        ),
+                        itemBuilder: (context, index) {
+                          final manager = _managers[index];
+                          final avatarUrl = manager.photoUrl;
+
+                          return InkWell(
+                            onTap: () => _openManagerProjects(manager),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 4.w,
+                                vertical: 10.h,
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 27.r,
+                                    backgroundColor: Colors.white,
+                                    child: CircleAvatar(
+                                      radius: 25.r,
+                                      backgroundColor: const Color(0xFFE8E8E8),
+                                      backgroundImage: avatarUrl != null &&
+                                              avatarUrl.isNotEmpty
+                                          ? NetworkImage(avatarUrl)
+                                          : null,
+                                      child: (avatarUrl == null ||
+                                              avatarUrl.isEmpty)
+                                          ? Text(
+                                              manager.name.isEmpty
+                                                  ? 'M'
+                                                  : manager.name[0]
+                                                      .toUpperCase(),
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 18.sp,
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF5C5C5C),
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12.w),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          manager.name,
+                                          maxLines: 5,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 21.sp,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF3A3A3A),
+                                          ),
+                                        ),
+                                        SizedBox(height: 2.h),
+                                        Text(
+                                          _lastUpdateText(manager.lastUpdate),
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 15.sp,
+                                            fontWeight: FontWeight.w500,
+                                            color: const Color(0xFFA2A2A2),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 50.w,
+                                    height: 54.h,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Color(0xFF3C4C80),
+                                          Color(0xFF202F5C),
+                                        ],
+                                      ),
+                                    ),
+                                    child: Text(
+                                      manager.projectCount.toString(),
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ClientsScreen extends StatefulWidget {
+  const _ClientsScreen();
+
+  @override
+  State<_ClientsScreen> createState() => _ClientsScreenState();
+}
+
+class _ClientsScreenState extends State<_ClientsScreen> {
+  bool _isLoading = true;
+  String? _error;
+  List<ProjectManagerFilterItem> _clients = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadClients();
+  }
+
+  Future<void> _loadClients() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final data = await ProjectRemoteDataSource()
+          .fetchClientsGroupedList(groupBy: 'client');
+      if (!mounted) return;
+      setState(() {
+        _clients = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _lastUpdateText(String? rawDate) {
+    if (rawDate == null || rawDate.trim().isEmpty) {
+      return 'Last updates recently';
+    }
+
+    final parsed = DateTime.tryParse(rawDate.trim());
+    if (parsed == null) return 'Last updates recently';
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final date = DateTime(parsed.year, parsed.month, parsed.day);
+    final diff = today.difference(date).inDays;
+
+    if (diff <= 0) return 'Last updates today';
+    if (diff == 1) return 'Last updates yesterday';
+    return 'Last updates ${DateFormat('dd/MM/yyyy').format(parsed)}';
+  }
+
+  ProjectListBloc _buildProjectsBloc() {
+    final repo = ProjectRepositoryImpl(ProjectRemoteDataSource());
+    return ProjectListBloc(
+      getProjectsUseCase: GetProjectsUseCase(repository: repo),
+      getProjectAttachmentsUseCase:
+          GetProjectAttachmentsUseCase(repository: repo),
+      getProjectsByPartnerUseCase:
+          GetProjectsByPartnerUseCase(repository: repo),
+      getProjectsByFiltersUseCase:
+          GetProjectsByFiltersUseCase(repository: repo),
+    );
+  }
+
+  void _openClientProjects(ProjectManagerFilterItem client) {
+    final bloc = _buildProjectsBloc();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: bloc,
+          child: ProjectListScreen(
+            bloc: bloc,
+            partnerId: client.id,
+            partnerName: client.name,
+            partnerPhoto: client.photoUrl ?? '',
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2F2F2),
+      appBar: const HeaderWidget(),
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.handshake_outlined,
+                  color: const Color(0xFF202020),
+                  size: 27.sp,
+                ),
+                SizedBox(width: 6.w),
+                Text(
+                  'Client',
+                  style: GoogleFonts.poppins(
+                    fontSize: 36.sp / 2,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF202020),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? Center(
+                        child: Text(
+                          _error!,
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFFBA1719),
+                            fontSize: 12.sp,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: EdgeInsets.only(
+                          left: 14.w,
+                          right: 14.w,
+                          top: 6.h,
+                          bottom: 20.h,
+                        ),
+                        itemCount: _clients.length,
+                        separatorBuilder: (_, __) => Divider(
+                          height: 1,
+                          color: const Color(0xFFD5D5D5),
+                          thickness: 1,
+                          indent: 10.w,
+                          endIndent: 10.w,
+                        ),
+                        itemBuilder: (context, index) {
+                          final client = _clients[index];
+                          final avatarUrl = client.photoUrl;
+
+                          return InkWell(
+                            onTap: () => _openClientProjects(client),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 4.w,
+                                vertical: 10.h,
+                              ),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 27.r,
+                                    backgroundColor: Colors.white,
+                                    child: CircleAvatar(
+                                      radius: 25.r,
+                                      backgroundColor: const Color(0xFFE8E8E8),
+                                      backgroundImage: avatarUrl != null &&
+                                              avatarUrl.isNotEmpty
+                                          ? NetworkImage(avatarUrl)
+                                          : null,
+                                      child: (avatarUrl == null ||
+                                              avatarUrl.isEmpty)
+                                          ? Text(
+                                              client.name.isEmpty
+                                                  ? 'C'
+                                                  : client.name[0]
+                                                      .toUpperCase(),
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 18.sp,
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF5C5C5C),
+                                              ),
+                                            )
+                                          : null,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12.w),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          client.name,
+                                          maxLines: 5,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 21.sp,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF3A3A3A),
+                                          ),
+                                        ),
+                                        SizedBox(height: 2.h),
+                                        Text(
+                                          _lastUpdateText(client.lastUpdate),
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 15.sp,
+                                            fontWeight: FontWeight.w500,
+                                            color: const Color(0xFFA2A2A2),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 50.w,
+                                    height: 54.h,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Color(0xFF3C4C80),
+                                          Color(0xFF202F5C),
+                                        ],
+                                      ),
+                                    ),
+                                    child: Text(
+                                      client.projectCount.toString(),
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CitiesScreen extends StatefulWidget {
+  const _CitiesScreen();
+
+  @override
+  State<_CitiesScreen> createState() => _CitiesScreenState();
+}
+
+class _CitiesScreenState extends State<_CitiesScreen> {
+  bool _isLoading = true;
+  String? _error;
+  List<ProjectManagerFilterItem> _cities = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCities();
+  }
+
+  Future<void> _loadCities() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final data = await ProjectRemoteDataSource()
+          .fetchClientsGroupedList(groupBy: 'city');
+      if (!mounted) return;
+      setState(() {
+        _cities = data;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _lastUpdateText(String? rawDate) {
+    if (rawDate == null || rawDate.trim().isEmpty) {
+      return 'Last updates recently';
+    }
+
+    final parsed = DateTime.tryParse(rawDate.trim());
+    if (parsed == null) return 'Last updates recently';
+
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final date = DateTime(parsed.year, parsed.month, parsed.day);
+    final diff = today.difference(date).inDays;
+
+    if (diff <= 0) return 'Last updates today';
+    if (diff == 1) return 'Last updates yesterday';
+    return 'Last updates ${DateFormat('dd/MM/yyyy').format(parsed)}';
+  }
+
+  ProjectListBloc _buildProjectsBloc() {
+    final repo = ProjectRepositoryImpl(ProjectRemoteDataSource());
+    return ProjectListBloc(
+      getProjectsUseCase: GetProjectsUseCase(repository: repo),
+      getProjectAttachmentsUseCase:
+          GetProjectAttachmentsUseCase(repository: repo),
+      getProjectsByPartnerUseCase:
+          GetProjectsByPartnerUseCase(repository: repo),
+      getProjectsByFiltersUseCase:
+          GetProjectsByFiltersUseCase(repository: repo),
+    );
+  }
+
+  void _openCityProjects(ProjectManagerFilterItem city) {
+    final bloc = _buildProjectsBloc();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider.value(
+          value: bloc,
+          child: ProjectListScreen(
+            bloc: bloc,
+            cityId: city.id,
+            partnerName: city.name,
+            partnerPhoto: city.photoUrl ?? '',
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2F2F2),
+      appBar: const HeaderWidget(),
+      body: Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 10.h),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.location_on_outlined,
+                  color: const Color(0xFF202020),
+                  size: 27.sp,
+                ),
+                SizedBox(width: 6.w),
+                Text(
+                  'City',
+                  style: GoogleFonts.poppins(
+                    fontSize: 36.sp / 2,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF202020),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? Center(
+                        child: Text(
+                          _error!,
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFFBA1719),
+                            fontSize: 12.sp,
+                          ),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: EdgeInsets.only(
+                          left: 14.w,
+                          right: 14.w,
+                          top: 6.h,
+                          bottom: 20.h,
+                        ),
+                        itemCount: _cities.length,
+                        separatorBuilder: (_, __) => Divider(
+                          height: 1,
+                          color: const Color(0xFFD5D5D5),
+                          thickness: 1,
+                          indent: 10.w,
+                          endIndent: 10.w,
+                        ),
+                        itemBuilder: (context, index) {
+                          final city = _cities[index];
+
+                          return InkWell(
+                            onTap: () => _openCityProjects(city),
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 4.w,
+                                vertical: 10.h,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on,
+                                    color: const Color(0xFFD61518),
+                                    size: 40.sp,
+                                  ),
+                                  SizedBox(width: 8.w),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          city.name,
+                                          maxLines: 5,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 21.sp,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF3A3A3A),
+                                          ),
+                                        ),
+                                        SizedBox(height: 2.h),
+                                        Text(
+                                          _lastUpdateText(city.lastUpdate),
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 15.sp,
+                                            fontWeight: FontWeight.w500,
+                                            color: const Color(0xFFA2A2A2),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  Container(
+                                    width: 50.w,
+                                    height: 54.h,
+                                    alignment: Alignment.center,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12.r),
+                                      gradient: const LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Color(0xFF3C4C80),
+                                          Color(0xFF202F5C),
+                                        ],
+                                      ),
+                                    ),
+                                    child: Text(
+                                      city.projectCount.toString(),
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 20.sp,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
 }

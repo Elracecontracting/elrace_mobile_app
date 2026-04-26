@@ -1,5 +1,6 @@
 import 'package:el_race/ui/presentation/my_projects/domain/entities/attachment_entity.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/entities/project_entity.dart';
+import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_by_filters_usecase.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_by_partner_usecase.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_usecase.dart';
 import 'package:el_race/ui/presentation/my_projects/presentation/bloc/project_list_event.dart';
@@ -13,6 +14,7 @@ class ProjectListBloc extends Bloc<ProjectListEvent, ProjectListState> {
   final GetProjectsUseCase getProjectsUseCase;
   final GetProjectAttachmentsUseCase getProjectAttachmentsUseCase;
   final GetProjectsByPartnerUseCase? getProjectsByPartnerUseCase;
+  final GetProjectsByFiltersUseCase? getProjectsByFiltersUseCase;
 
   List<ProjectEntity> projects = [];
   List<AttachmentEntity> projectAttacmentList = [];
@@ -25,6 +27,7 @@ class ProjectListBloc extends Bloc<ProjectListEvent, ProjectListState> {
     required this.getProjectsUseCase,
     required this.getProjectAttachmentsUseCase,
     this.getProjectsByPartnerUseCase,
+    this.getProjectsByFiltersUseCase,
   }) : super(ProjectListInitial()) {
     // on<LoadProjectsEvent>((event, emit) async {
     //   if(projects.isNotEmpty && !event.refresh)return;
@@ -39,6 +42,7 @@ class ProjectListBloc extends Bloc<ProjectListEvent, ProjectListState> {
 
     on<LoadProjectsEvent>(_onLoadProjects);
     on<LoadProjectsByPartnerEvent>(_onLoadProjectsByPartner);
+    on<LoadProjectsByFiltersEvent>(_onLoadProjectsByFilters);
     on<LoadMoreProjectsEvent>(_onLoadMoreProjects);
 
     on<GetProjectAttachmentsEvent>(
@@ -50,8 +54,9 @@ class ProjectListBloc extends Bloc<ProjectListEvent, ProjectListState> {
       debugPrint("===============================");
       emit(ProjectAttachmentsLoading());
       try {
-        projectAttacmentList =
-            await getProjectAttachmentsUseCase(event.projectId, folderType: event.folderType);
+        projectAttacmentList = await getProjectAttachmentsUseCase(
+            event.projectId,
+            folderType: event.folderType);
         emit(const ProjectAttachmentsLoaded());
       } catch (e) {
         emit(ProjectAttachmentsError(e.toString()));
@@ -84,6 +89,30 @@ class ProjectListBloc extends Bloc<ProjectListEvent, ProjectListState> {
         emit(ProjectListLoaded());
       } else {
         emit(ProjectListError('Partner projects use case not available'));
+      }
+    } catch (e) {
+      emit(ProjectListError(e.toString()));
+    }
+  }
+
+  Future<void> _onLoadProjectsByFilters(
+      LoadProjectsByFiltersEvent event, Emitter emit) async {
+    if (_allProjects.isNotEmpty && !event.refresh) return;
+    emit(ProjectListLoading());
+    try {
+      if (getProjectsByFiltersUseCase != null) {
+        _allProjects = await getProjectsByFiltersUseCase!(
+          agreementId: event.agreementId,
+          partnerId: event.partnerId,
+          projectManagerId: event.projectManagerId,
+          cityId: event.cityId,
+          keyword: event.keyword,
+        );
+        _currentPage = 1;
+        visibleProjects = _allProjects.take(_pageSize).toList();
+        emit(ProjectListLoaded());
+      } else {
+        emit(ProjectListError('Projects filters use case not available'));
       }
     } catch (e) {
       emit(ProjectListError(e.toString()));

@@ -30,9 +30,10 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
-  Future<List<AttachmentEntity>> getProjectAttachement(String projectID, {String? folderType}) async {
-    final List<AttachmentEntity> models =
-        await remoteDataSource.fetchProjectAttachments(projectID, folderType: folderType);
+  Future<List<AttachmentEntity>> getProjectAttachement(String projectID,
+      {String? folderType}) async {
+    final List<AttachmentEntity> models = await remoteDataSource
+        .fetchProjectAttachments(projectID, folderType: folderType);
     return models
         .map((model) => AttachmentEntity(
               name: model.name,
@@ -68,6 +69,40 @@ class ProjectRepositoryImpl implements ProjectRepository {
   Future<List<ProjectEntity>> getProjectsByPartnerId(int partnerId) async {
     final List<ProjectModel> models =
         await remoteDataSource.fetchProjectsByPartnerId(partnerId);
+    return models
+        .map((model) => ProjectEntity(
+              projectId: model.projectId,
+              partnerId: model.partnerId,
+              agreementId: model.agreementId,
+              woRefNo: model.woRefNo,
+              name: model.name,
+              woAmount: model.woAmount,
+              projectStatus: model.projectStatus,
+              date: model.date,
+              dateStart: model.dateStart,
+              differenceDays: model.differenceDays,
+              projectManagerPhoto: model.projectManagerPhoto,
+            ))
+        .toList();
+  }
+
+  @override
+  Future<List<ProjectEntity>> getProjectsByFilters({
+    int? agreementId,
+    int? partnerId,
+    int? projectManagerId,
+    int? cityId,
+    String? keyword,
+  }) async {
+    final List<ProjectModel> models =
+        await remoteDataSource.fetchProjectsByFilters(
+      agreementId: agreementId,
+      partnerId: partnerId,
+      projectManagerId: projectManagerId,
+      cityId: cityId,
+      keyword: keyword,
+    );
+
     return models
         .map((model) => ProjectEntity(
               projectId: model.projectId,

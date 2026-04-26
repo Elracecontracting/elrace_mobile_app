@@ -409,32 +409,6 @@ class _CompanyDocumentsTabState extends State<CompanyDocumentsTab> {
     );
   }
 
-  Widget _buildPagerDots() {
-    if (_folders.length <= 1) {
-      return SizedBox(height: 12.h);
-    }
-
-    return Padding(
-      padding: EdgeInsets.only(top: 6.h, bottom: 8.h),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(_folders.length, (index) {
-          final selected = index == _currentFolderPage;
-          return Container(
-            width: 12.w,
-            height: 12.w,
-            margin: EdgeInsets.symmetric(horizontal: 5.w),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color:
-                  selected ? const Color(0xFF8A8A8A) : const Color(0xFFCFCFCF),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
   Widget _buildNoOfFilesCard() {
     final totalFiles = _folders.isEmpty ? 0 : _totalFilesAcrossFolders;
 
@@ -660,7 +634,6 @@ class _CompanyDocumentsTabState extends State<CompanyDocumentsTab> {
                 children: [
                   _buildTopFoldersHeader(),
                   _buildFoldersPager(),
-                  _buildPagerDots(),
                   _buildNoOfFilesCard(),
                 ],
               ),
