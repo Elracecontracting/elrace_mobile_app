@@ -82,7 +82,7 @@ class _HrScreenState extends State<HrScreen> {
                       padding: EdgeInsets.only(top: 30.h),
                       child: Text(
                         'No actions available.',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5A5A5A),
@@ -146,7 +146,7 @@ class _ActionsHeader extends StatelessWidget {
           SizedBox(width: 8.w),
           Text(
             title,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 16.sp,
               fontWeight: FontWeight.w800,
               color: const Color(0xFF171A2E),
@@ -207,9 +207,9 @@ class _HrRequestCard extends StatelessWidget {
                           Center(
                             child: Text(
                               requestNo.trim().isEmpty ? 'REQ/-' : requestNo,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.inter(
+                              maxLines: null,
+                              overflow: TextOverflow.visible,
+                              style: GoogleFonts.poppins(
                                 fontSize: 17.sp,
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFF0D3E7F),
@@ -219,8 +219,8 @@ class _HrRequestCard extends StatelessWidget {
                           SizedBox(height: 8.h),
                           Text(
                             title.toUpperCase(),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            maxLines: null,
+                            overflow: TextOverflow.visible,
                             style: GoogleFonts.poppins(
                               fontSize: 13.sp,
                               fontWeight: FontWeight.w700,
@@ -230,9 +230,9 @@ class _HrRequestCard extends StatelessWidget {
                           SizedBox(height: 2.h),
                           Text(
                             employeeName,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.lexendDeca(
+                            maxLines: null,
+                            overflow: TextOverflow.visible,
+                            style: GoogleFonts.poppins(
                               fontSize: 11.sp,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF484848).withOpacity(0.72),
@@ -241,7 +241,7 @@ class _HrRequestCard extends StatelessWidget {
                           SizedBox(height: 1.h),
                           Text(
                             requestId,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 14.sp,
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFF686868),
@@ -255,7 +255,7 @@ class _HrRequestCard extends StatelessWidget {
                               children: [
                                 Text(
                                   'Last Updated',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 12.sp,
                                     fontWeight: FontWeight.w700,
                                     color: const Color(0xFFB1B1B1),
@@ -263,7 +263,7 @@ class _HrRequestCard extends StatelessWidget {
                                 ),
                                 Text(
                                   updatedAt,
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 12.sp,
                                     fontWeight: FontWeight.w700,
                                     color: const Color(0xFFB1B1B1),

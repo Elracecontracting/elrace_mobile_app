@@ -35,7 +35,7 @@ class _UserModeStatusWidgetState extends State<UserModeStatusWidget> {
         // Status Text
         Text(
           isOnline ? 'you are now online' : 'you are now offline',
-          style: GoogleFonts.adventPro(
+          style: GoogleFonts.poppins(
             fontSize: 17.sp,
             fontWeight: FontWeight.bold,
             fontStyle: FontStyle.italic,

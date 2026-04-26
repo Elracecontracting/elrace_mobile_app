@@ -1,6 +1,9 @@
+import 'package:el_race/core/services/update_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/firebase_service.dart';
+import 'package:el_race/main.dart' show appInitCompleter;
 import 'package:el_race/ui/presentation/signin/sign_in_screen.dart';
+import 'package:el_race/ui/widgets/update_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:el_race/ui/presentation/home_screen/screens/home_screen.dart';
 import 'package:el_race/utils/Util.dart';
@@ -8,6 +11,8 @@ import 'package:el_race/core/services/app_config_service.dart';
 import 'package:el_race/core/security/device_security_service.dart';
 import 'package:provider/provider.dart';
 import 'package:el_race/ui/presentation/qr_survey/providers/qr_survey_data_provider.dart';
+import 'package:video_player/video_player.dart';
+import 'package:el_race/resources/app_colors.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -19,13 +24,29 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   bool _isSecurityCheckComplete = false;
   bool _isDeviceSecure = true;
+  bool _didScheduleNavigation = false;
+  late VideoPlayerController _videoController;
+  bool _isVideoReady = false;
 
   @override
   void initState() {
     super.initState();
-    _performSecurityCheck();
-    // Clear any QR data from previous sessions
+
+    // Initialize video player (uses hardware decoder, not main thread)
+    _videoController = VideoPlayerController.asset('assets/mp4/intro.mp4')
+      ..initialize().then((_) {
+        if (mounted) {
+          setState(() => _isVideoReady = true);
+          _videoController.play();
+        }
+      }).catchError((e) {
+        print('⚠️ Video init error: $e');
+      });
+
+    // Defer security check & QR clear to after the first frame so
+    // the splash background paints immediately without any blocking work.
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _performSecurityCheck();
       final provider =
           Provider.of<QrSurveyDataProvider>(context, listen: false);
       provider.clearData();
@@ -68,57 +89,95 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   void didChangeDependencies() {
-    // Splash screen duration: 6 seconds (wait for security check too)
-    Future.delayed(const Duration(seconds: 6), () {
-      if (!mounted) return;
-
-      // Don't navigate if device is not secure
-      if (!_isDeviceSecure && _isSecurityCheckComplete) {
-        print('🚫 Navigation blocked - device not secure');
-        return;
-      }
-
-      // Wait for security check if not complete yet
-      if (!_isSecurityCheckComplete) {
-        print('⏳ Waiting for security check to complete...');
-        _waitForSecurityCheckAndNavigate();
-        return;
-      }
-
-      _navigateToNextScreen();
-    });
-
-    // Safety timeout - force navigation after 15 seconds if nothing happened
-    Future.delayed(const Duration(seconds: 15), () {
-      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
-        print('⚠️ Splash timeout reached - forcing navigation');
-        if (_isDeviceSecure || !_isSecurityCheckComplete) {
-          _navigateToNextScreen();
-        }
-      }
-    });
-
     super.didChangeDependencies();
+
+    // Only schedule navigation once (didChangeDependencies can be called many times)
+    if (_didScheduleNavigation) return;
+    _didScheduleNavigation = true;
+
+    _waitForInitAndNavigate();
   }
 
-  /// Wait for security check to complete then navigate
-  Future<void> _waitForSecurityCheckAndNavigate() async {
-    // Wait up to 5 more seconds for security check
-    for (int i = 0; i < 10; i++) {
-      await Future.delayed(const Duration(milliseconds: 500));
-      if (_isSecurityCheckComplete) {
-        if (_isDeviceSecure) {
-          _navigateToNextScreen();
-        }
-        return;
-      }
+  /// Wait for both: 1) minimum 3-second splash, 2) heavy init complete,
+  /// 3) security check, then navigate.
+  Future<void> _waitForInitAndNavigate() async {
+    // Run minimum splash delay and heavy init wait in parallel
+    await Future.wait([
+      Future.delayed(const Duration(seconds: 3)),
+      appInitCompleter.future.timeout(
+        const Duration(seconds: 12),
+        onTimeout: () {
+          print('⚠️ Heavy init timeout in splash – continuing anyway');
+        },
+      ),
+    ]);
+
+    if (!mounted) return;
+
+    // Check security
+    if (!_isDeviceSecure && _isSecurityCheckComplete) {
+      print('🚫 Navigation blocked - device not secure');
+      return;
     }
-    // Timeout - navigate anyway
+
+    // Wait for security check if not complete yet
+    if (!_isSecurityCheckComplete) {
+      print('⏳ Waiting for security check...');
+      await _waitForSecurityCheck();
+    }
+
+    if (!mounted) return;
+    if (!_isDeviceSecure) return;
+
     _navigateToNextScreen();
   }
 
-  /// Navigate to the appropriate screen after security check
+  /// Wait for security check to complete (up to 5 seconds)
+  Future<void> _waitForSecurityCheck() async {
+    for (int i = 0; i < 10; i++) {
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (_isSecurityCheckComplete) return;
+    }
+    // Timeout - allow to proceed
+    print('⚠️ Security check timeout – proceeding');
+  }
+
+  /// Navigate to the appropriate screen after security check.
+  /// Runs the update check first, then proceeds with routing.
   void _navigateToNextScreen() {
+    if (!mounted) return;
+    _checkForUpdateThenNavigate();
+  }
+
+  Future<void> _checkForUpdateThenNavigate() async {
+    if (!mounted) return;
+
+    try {
+      // Keep in sync with version in pubspec.yaml
+      const String currentVersion = '1.0.10';
+
+      final updateResult =
+          await UpdateService.instance.checkForUpdate(currentVersion);
+
+      if (!mounted) return;
+
+      final blocked = await UpdateDialog.showIfNeeded(
+        context,
+        updateResult,
+        isRtl: Directionality.of(context) == TextDirection.rtl,
+      );
+
+      // Force-update: block navigation until user updates the app
+      if (blocked) return;
+    } catch (e) {
+      print('⚠️ Update check error (ignored): $e');
+    }
+
+    if (!mounted) return;
+    _doNavigate();
+  }
+
+  void _doNavigate() {
     if (!mounted) return;
 
     try {
@@ -180,12 +239,25 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Image.asset(
-        'assets/mp4/intro.gif',
-        fit: BoxFit.cover,
-        width: double.infinity,
-        height: double.infinity,
-      ),
+      backgroundColor: AppColors.primaryColor,
+      body: _isVideoReady
+          ? SizedBox.expand(
+              child: FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: _videoController.value.size.width,
+                  height: _videoController.value.size.height,
+                  child: VideoPlayer(_videoController),
+                ),
+              ),
+            )
+          : const SizedBox.expand(),  // Dark bg while video loads (< 100ms)
     );
+  }
+
+  @override
+  void dispose() {
+    _videoController.dispose();
+    super.dispose();
   }
 }

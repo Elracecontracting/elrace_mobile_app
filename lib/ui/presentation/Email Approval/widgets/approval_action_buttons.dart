@@ -185,7 +185,10 @@ class ApprovalActionButtons extends StatelessWidget {
                         await _showCommentDialog(context, label);
 
                     if (!context.mounted) return;
-                    final finalComment = comment ?? '..';
+                    if (comment == null) {
+                      return;
+                    }
+                    final finalComment = comment;
 
                     if (context.mounted) {
                       showDialog(
@@ -255,7 +258,7 @@ class ApprovalActionButtons extends StatelessWidget {
             ),
             child: Text(
               label,
-              style: GoogleFonts.koulen(
+              style: GoogleFonts.poppins(
                 fontSize: 20.sp,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 1.2,
@@ -365,7 +368,10 @@ class ApprovalActionButtons extends StatelessWidget {
                           await _showCommentDialog(context, label);
 
                       if (!context.mounted) return;
-                      finalComment = comment ?? '..';
+                      if (comment == null) {
+                        return;
+                      }
+                      finalComment = comment;
                     }
 
                     if (context.mounted) {
@@ -437,7 +443,7 @@ class ApprovalActionButtons extends StatelessWidget {
             child: Text(
               '${label.substring(0, 1)}${label.substring(1).toLowerCase()}',
               style: pillTextStyle ??
-                  GoogleFonts.koulen(
+                  GoogleFonts.poppins(
                     fontSize: 18.sp,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 1.0,
@@ -554,7 +560,7 @@ class ApprovalActionButtons extends StatelessWidget {
                     Text(
                       'Are you sure you want to $actionText ?',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w700,
                         color: const Color(0xFF1F1F1F),
@@ -565,7 +571,7 @@ class ApprovalActionButtons extends StatelessWidget {
                       children: [
                         Text(
                           'Comments',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 13.sp,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF555555),
@@ -574,7 +580,7 @@ class ApprovalActionButtons extends StatelessWidget {
                         const Spacer(),
                         Text(
                           '${commentController.text.length}/50',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF9E9E9E),
@@ -648,7 +654,7 @@ class ApprovalActionButtons extends StatelessWidget {
                                       },
                                       child: Text(
                                         'No',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 14.sp,
                                           fontWeight: FontWeight.w700,
                                           color: const Color(0xFFBA1719),
@@ -667,7 +673,7 @@ class ApprovalActionButtons extends StatelessWidget {
                                       },
                                       child: Text(
                                         'Yes',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 14.sp,
                                           fontWeight: FontWeight.w700,
                                           color: const Color(0xFF009859),
@@ -826,9 +832,10 @@ class ApprovalActionButtons extends StatelessWidget {
 
                   // If user cancelled the dialog or context is no longer valid, don't proceed
                   if (!context.mounted) return;
+                  if (comment == null) return;
 
                   // Use comment if provided, otherwise use default
-                  final finalComment = comment ?? '..';
+                  final finalComment = comment;
 
                   // Show loading immediately after comment is submitted
                   if (context.mounted) {
@@ -1086,7 +1093,7 @@ class _AnimatedCircleButtonState extends State<AnimatedCircleButton>
         SizedBox(height: 8.w),
         Text(
           "HOLD TO ${widget.label}",
-          style: GoogleFonts.koulen(
+          style: GoogleFonts.poppins(
             fontSize: 14.sp,
             fontWeight: FontWeight.w500,
             letterSpacing: 1.0,

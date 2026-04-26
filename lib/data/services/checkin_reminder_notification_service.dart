@@ -454,19 +454,23 @@ class CheckInReminderNotificationService {
       return;
     }
 
-    final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
+    final effectiveCheckedInState = _hasActiveCheckInState();
+    print('📱 updateReminders: effectiveCheckedInState=$effectiveCheckedInState');
 
-    if (isCheckedIn) {
-      // المستخدم عامل check in - جدول تذكيرات check out وألغي تذكيرات check in
+    if (effectiveCheckedInState) {
+      // المستخدم عامل check in:
+      // - ألغي تذكيرات check in (ما لازم توصلو لأنو خلاص عمل check in)
+      // - جدول تذكيرات check out (لتذكيره يعمل check out)
       await cancelCheckInReminders();
       await scheduleCheckOutReminders();
-      // print('📱 Updated: Scheduled check-out reminders (user is checked in)');
+      print('📱 Updated: Cancelled check-in reminders, scheduled check-out reminders (user IS checked in)');
     } else {
-      // المستخدم ما عامل check in - جدول تذكيرات check in وألغي تذكيرات check out
+      // المستخدم ما عامل check in (أو عمل check out):
+      // - ألغي تذكيرات check out (ما لازم توصلو لأنو خلاص عمل check out)
+      // - جدول تذكيرات check in (لتذكيره يعمل check in)
       await cancelCheckOutReminders();
       await scheduleCheckInReminders();
-      print(
-          '📱 Updated: Scheduled check-in reminders (user is NOT checked in)');
+      print('📱 Updated: Cancelled check-out reminders, scheduled check-in reminders (user is NOT checked in)');
     }
   }
 
@@ -518,5 +522,37 @@ class CheckInReminderNotificationService {
     } catch (e) {
       // print('❌ Error sending test notification: $e');
     }
+  }
+
+  bool _hasActiveCheckInState() {
+    final isCheckedIn = SharedPref().getPreferenceBoolean('isCheckedIn');
+    final checkInRecordId = SharedPref().getPreferenceInt('checkInRecordId');
+    final checkInTime = SharedPref().getPreferenceInt('checkInTime');
+    final checkInDisplayTime =
+        SharedPref().getPreferenceString('checkInDisplayTime');
+    final checkOutDisplayTime =
+        SharedPref().getPreferenceString('checkOutDisplayTime');
+
+    final hasCheckInEvidence =
+        isCheckedIn ||
+        checkInRecordId > 0 ||
+        checkInTime > 0 ||
+        _isMeaningfulDisplayTime(checkInDisplayTime);
+    final hasCheckOutEvidence = _isMeaningfulDisplayTime(checkOutDisplayTime);
+
+    print(
+      '📱 Reminder state: '
+      'isCheckedIn=$isCheckedIn, '
+      'checkInRecordId=$checkInRecordId, '
+      'checkInTime=$checkInTime, '
+      'checkInDisplayTime=$checkInDisplayTime, '
+      'checkOutDisplayTime=$checkOutDisplayTime',
+    );
+
+    return hasCheckInEvidence && !hasCheckOutEvidence;
+  }
+
+  bool _isMeaningfulDisplayTime(String value) {
+    return value.isNotEmpty && value != '00:00:00' && value != '--:--';
   }
 }

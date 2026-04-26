@@ -1,5 +1,5 @@
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/report_module/presentation/screens/report_listing/report_app_home_screen.dart';
+import 'package:el_race/report_module/presentation/screens/report_listing/project_reports_screen.dart';
 import 'package:el_race/ui/presentation/Attendace_list/attendance_page.dart';
 import 'package:el_race/ui/presentation/PettyCash/PettyCashScreen.dart';
 import 'package:el_race/ui/presentation/home_screen/data/widget_model.dart';
@@ -174,7 +174,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                 padding: EdgeInsets.only(bottom: 6.h),
                 child: Text(
                   timesheetCount,
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     color: Colors.black,
                     fontSize: 19.w,
                     fontWeight: FontWeight.w400,
@@ -622,7 +622,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
           top: 16,
           child: Text(
             translate('home.media').toUpperCase(),
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               color: Colors.white,
               fontSize: 24.w,
               fontWeight: FontWeight.w400,
@@ -648,7 +648,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
       backgroundImagePath: 'assets/newapp/my_report_widget_background.png',
       onClick: (isReorderMode || isDisabled)
           ? null
-          : () => Util.pushPage(const ReportAppHomeScreen(), context),
+          : () => Util.pushPage(const ProjectReportsScreen(), context),
       topPadding: true,
       childWidget: const SizedBox.shrink(),
       // childWidget: Container(
@@ -799,7 +799,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
                                   SizedBox(width: 4.w),
                                   Text(
                                     monthAbbrev,
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                       color: const Color(0xFF2B2F6B),
                                       fontSize: 12.sp,
                                       fontWeight: FontWeight.w800,

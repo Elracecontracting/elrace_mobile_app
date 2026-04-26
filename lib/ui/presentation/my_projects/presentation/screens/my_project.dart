@@ -341,11 +341,12 @@ class _MyProjectState extends State<MyProject> {
                                   );
                                 },
                                 child: buildProjectCard(
-                                  id: '$id',
+                                  id: project.agreementNo ?? '$id',
                                   name: name,
                                   photoUrl: photoUrl ?? '',
                                   projectsCount: totalProjects,
                                   amountAed: totalAmount,
+                                  cityId: project.cityId ?? '',
                                 ),
                               );
                             },
@@ -371,6 +372,7 @@ Widget buildProjectCard({
   required int projectsCount,
   required double amountAed,
   String location = '',
+  String cityId = '',
 }) {
   String? normalizedPhotoUrl = photoUrl.trim();
   if (normalizedPhotoUrl.isEmpty) normalizedPhotoUrl = null;
@@ -536,7 +538,11 @@ Widget buildProjectCard({
                     SizedBox(width: 4.w),
                     Flexible(
                       child: Text(
-                        location.trim().isNotEmpty ? location.trim() : '-',
+                        cityId.trim().isNotEmpty
+                            ? cityId.trim()
+                            : location.trim().isNotEmpty
+                                ? location.trim()
+                                : '-',
                         style: GoogleFonts.inter(
                           fontSize: 11.5.sp,
                           fontWeight: FontWeight.w700,

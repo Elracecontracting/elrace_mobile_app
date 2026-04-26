@@ -316,8 +316,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                                 color: Colors.white,
                                 fontWeight: FontWeight.w700,
                               ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                              maxLines: null,
+                              overflow: TextOverflow.visible,
                             ),
                             if (widget.chatType == ChatType.dm &&
                                 widget.peerUid != null)
@@ -787,7 +787,7 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
               fit: BoxFit.scaleDown,
               child: Text(
                 token,
-                maxLines: 1,
+                maxLines: null,
                 overflow: TextOverflow.visible,
                 style: const TextStyle(
                   fontSize: 48,
@@ -940,8 +940,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                         ? const Color(0xFF1D2449)
                         : const Color(0xFF2DD65B),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -950,8 +950,8 @@ class _ChatScreenState extends State<ChatScreen> with WidgetsBindingObserver {
                     fontSize: 13,
                     color: Color(0xFF8E8E93),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                 ),
               ],
             ),

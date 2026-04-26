@@ -17,8 +17,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hexcolor/hexcolor.dart';
-import 'package:el_race/core/biometric/face_recognition/face_recognition_di.dart';
-import 'package:el_race/core/biometric/face_recognition/data/services/face_embedding_storage_service.dart';
 import 'package:el_race/core/services/app_config_service.dart';
 import 'package:el_race/core/services/attendance_status_sync_service.dart';
 
@@ -73,50 +71,6 @@ class _SignInScreenState extends State<SignInScreen> {
   }
 
   // Register face and print embeddings
-  Future<void> _printEmbeddings(String userId) async {
-    // Wait a bit for registration to complete
-    await Future.delayed(const Duration(seconds: 2));
-
-    try {
-      final storageService =
-          FaceRecognitionDI.get<FaceEmbeddingStorageService>();
-      final embeddings = await storageService.getEmbeddings(userId);
-
-      if (embeddings.isNotEmpty) {
-        final embedding = embeddings.first;
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('✅ FACE REGISTERED SUCCESSFULLY!');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('👤 User ID: $userId');
-        print('📅 Created At: ${embedding.createdAt}');
-        print('🏷️  Label: ${embedding.label ?? "primary"}');
-        print('📊 Embedding Dimensions: ${embedding.embedding.length}');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('🔢 FACE EMBEDDING VALUES:');
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-
-        // Print embeddings in groups of 8 for readability
-        for (int i = 0; i < embedding.embedding.length; i += 8) {
-          final end = (i + 8 < embedding.embedding.length)
-              ? i + 8
-              : embedding.embedding.length;
-          final group = embedding.embedding.sublist(i, end);
-          final formatted = group.map((v) => v.toStringAsFixed(6)).join(', ');
-          print('[$i-${end - 1}]: $formatted');
-        }
-
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        print('💾 Full JSON:');
-        print(jsonEncode(embedding.toJson()));
-        print('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-      } else {
-        print('⚠️ No embeddings found for user: $userId');
-      }
-    } catch (e) {
-      print('⚠️ Error printing embeddings: $e');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final uaepassCubit = context.read<UaepassAuthCubit>();
@@ -215,18 +169,7 @@ class _SignInScreenState extends State<SignInScreen> {
           AttendanceStatusSyncService.refreshFromServer(reason: 'login')
               .catchError((_) => null);
 
-          // ✅ Face Recognition with LOCAL storage only
-          // Skip face verification if test mode OR faceIdEnabled=false from backend config
-          final skipFaceId = AppConfigService.instance.shouldSkipFaceId;
-          SharedPref()
-              .setPreferencesBoolean('pendingFaceVerification', !skipFaceId);
-          SharedPref()
-              .setPreferencesBoolean('isFaceRegistrationInProgress', false);
-          if (skipFaceId) {
-            print('🧪 Face ID disabled: Skipping face verification after login');
-          }
-
-          // Navigate to HomeScreen - face registration will be triggered
+          // Navigate to HomeScreen - PIN setup will be triggered if needed
           // Using pushAndRemoveUntil to remove all previous routes including login screen
           WidgetsBinding.instance.addPostFrameCallback((_) async {
             await Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
@@ -289,7 +232,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         // ),
                         Text(
                           'sign in to your Account',
-                          style: GoogleFonts.tajawal(
+                          style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w400,
                               fontSize: SizeConfig().getTextSize(20)),
                         ),
@@ -322,7 +265,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                 padding: const EdgeInsets.only(top: 2.0),
                                 child: Text(
                                   'Remember Password',
-                                  style: GoogleFonts.tajawal(
+                                  style: GoogleFonts.poppins(
                                       fontWeight: FontWeight.w600,
                                       color: const Color(0xff30309B),
                                       fontSize: 15),
@@ -423,7 +366,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         SizedBox(height: SizeConfig().getHeight(70)),
                         Text(
                           'Contact with Support',
-                          style: GoogleFonts.tajawal(
+                          style: GoogleFonts.poppins(
                               fontWeight: FontWeight.w600,
                               fontSize: SizeConfig().getTextSize(18)),
                         ),

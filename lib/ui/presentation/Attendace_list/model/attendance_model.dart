@@ -27,6 +27,8 @@ class Result {
   Result({
     required this.status,
     required this.mode,
+    this.userType,
+    this.role,
     this.employeeId,
     this.employeeName,
     this.employeeImageUrl,
@@ -36,6 +38,7 @@ class Result {
     this.totalPresentDays,
     this.records,
     this.data,
+    this.monthlyEmployees,
     this.total,
     this.limit,
     this.offset,
@@ -43,6 +46,10 @@ class Result {
 
   final String status;
   final String mode;
+
+  /// "manager", "management", or "user"
+  final String? userType;
+  final String? role;
 
   // For grouped mode (employee view)
   final int? employeeId;
@@ -54,35 +61,53 @@ class Result {
   final int? totalPresentDays;
   final List<AttendanceRecord>? records;
 
-  // For flat mode (manager view)
+  // For flat mode (manager/x_attendance view)
   final List<FlatAttendanceData>? data;
+
+  // For management list view (/api/attendance/list with employees array)
+  final List<EmployeeMonthlyAttendance>? monthlyEmployees;
+
   final int? total;
   final int? limit;
   final int? offset;
 
+  /// Returns true when the user is a manager or management role.
+  bool get isManagerRole {
+    final type = (userType ?? '').toLowerCase().trim();
+    final r = (role ?? '').toLowerCase().trim();
+    return type == 'manager' || type == 'management' ||
+        r == 'manager' || r == 'management';
+  }
+
   factory Result.fromJson(Map<String, dynamic> json) {
     final mode = json["mode"] ?? "grouped";
+    final userType = json["user_type"]?.toString();
+    final role = json["role"]?.toString();
 
-    // Management list view: mode=grouped, role=management, has employees array
+    // Management list view: has employees array (from /api/attendance/list)
     if (json["employees"] is List) {
       return Result(
         status: json["status"] ?? "",
         mode: mode,
+        userType: userType,
+        role: role,
         total: json["total_employees"] is int
             ? json["total_employees"]
             : int.tryParse(json["total_employees"]?.toString() ?? ''),
         limit: json["limit"],
         offset: json["offset"],
-        data: List<FlatAttendanceData>.from(
-            json["employees"].map((x) => FlatAttendanceData.fromJson(x))),
+        monthlyEmployees: List<EmployeeMonthlyAttendance>.from(
+            json["employees"].map((x) => EmployeeMonthlyAttendance.fromJson(x))),
       );
     }
 
     if (mode == "flat") {
-      // Manager view - flat list
+      // Manager view - flat list (legacy /api/x_attendance/list)
       return Result(
         status: json["status"] ?? "",
         mode: mode,
+        userType: userType,
+        role: role,
         total: json["total"],
         limit: json["limit"],
         offset: json["offset"],
@@ -96,6 +121,8 @@ class Result {
       return Result(
         status: json["status"] ?? "",
         mode: mode,
+        userType: userType,
+        role: role,
         employeeId: json["employee_id"] ?? 0,
         employeeName: json["employee_name"] ?? "",
         employeeImageUrl: json["employee_image_url"] ?? "",
@@ -116,6 +143,8 @@ class Result {
       return {
         "status": status,
         "mode": mode,
+        "user_type": userType,
+        "role": role,
         "total": total,
         "limit": limit,
         "offset": offset,
@@ -127,6 +156,8 @@ class Result {
       return {
         "status": status,
         "mode": mode,
+        "user_type": userType,
+        "role": role,
         "employee_id": employeeId,
         "employee_name": employeeName,
         "employee_image_url": employeeImageUrl,
@@ -142,6 +173,52 @@ class Result {
   }
 }
 
+/// Monthly attendance summary for a single employee (from /api/attendance/list).
+class EmployeeMonthlyAttendance {
+  EmployeeMonthlyAttendance({
+    required this.employeeId,
+    required this.employeeName,
+    required this.employeeImageUrl,
+    required this.month,
+    required this.year,
+    required this.totalWorkingDays,
+    required this.totalPresentDays,
+    required this.totalAbsentDays,
+  });
+
+  final int employeeId;
+  final String employeeName;
+  final String? employeeImageUrl;
+  final int month;
+  final int year;
+  final int totalWorkingDays;
+  final int totalPresentDays;
+  final int totalAbsentDays;
+
+  factory EmployeeMonthlyAttendance.fromJson(Map<String, dynamic> json) =>
+      EmployeeMonthlyAttendance(
+        employeeId: json["employee_id"] ?? 0,
+        employeeName: json["employee_name"] ?? "",
+        employeeImageUrl: json["employee_image_url"]?.toString(),
+        month: json["month"] ?? 0,
+        year: json["year"] ?? 0,
+        totalWorkingDays: json["total_working_days"] ?? 0,
+        totalPresentDays: json["total_present_days"] ?? 0,
+        totalAbsentDays: json["total_absent_days"] ?? 0,
+      );
+
+  Map<String, dynamic> toJson() => {
+        "employee_id": employeeId,
+        "employee_name": employeeName,
+        "employee_image_url": employeeImageUrl,
+        "month": month,
+        "year": year,
+        "total_working_days": totalWorkingDays,
+        "total_present_days": totalPresentDays,
+        "total_absent_days": totalAbsentDays,
+      };
+}
+
 // For flat mode (manager view)
 class FlatAttendanceData {
   FlatAttendanceData({
@@ -155,6 +232,7 @@ class FlatAttendanceData {
     this.status,
     this.checkInStatus,
     this.checkOutStatus,
+    this.attendanceType,
   });
 
   final String employeeName;
@@ -167,6 +245,7 @@ class FlatAttendanceData {
   final String? status;
   final String? checkInStatus;
   final String? checkOutStatus;
+  final String? attendanceType;
 
   factory FlatAttendanceData.fromJson(Map<String, dynamic> json) =>
       FlatAttendanceData(
@@ -192,6 +271,10 @@ class FlatAttendanceData {
           'checkout_status',
           'out_status',
         ], json),
+        attendanceType: _firstNonEmptyString(const [
+          'x_attendance_type',
+          'attendance_type',
+        ], json),
       );
 
   Map<String, dynamic> toJson() => {
@@ -205,6 +288,7 @@ class FlatAttendanceData {
         "status": status,
         "check_in_status": checkInStatus,
         "check_out_status": checkOutStatus,
+        "x_attendance_type": attendanceType,
       };
 }
 
@@ -217,6 +301,7 @@ class AttendanceRecord {
     this.status,
     this.checkInStatus,
     this.checkOutStatus,
+    this.attendanceType,
   });
 
   final String date;
@@ -226,6 +311,7 @@ class AttendanceRecord {
   final String? status;
   final String? checkInStatus;
   final String? checkOutStatus;
+  final String? attendanceType;
 
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) =>
       AttendanceRecord(
@@ -248,6 +334,10 @@ class AttendanceRecord {
           'checkout_status',
           'out_status',
         ], json),
+        attendanceType: _firstNonEmptyString(const [
+          'x_attendance_type',
+          'attendance_type',
+        ], json),
       );
 
   Map<String, dynamic> toJson() => {
@@ -258,6 +348,7 @@ class AttendanceRecord {
         "status": status,
         "check_in_status": checkInStatus,
         "check_out_status": checkOutStatus,
+        "x_attendance_type": attendanceType,
       };
 }
 

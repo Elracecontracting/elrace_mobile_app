@@ -315,16 +315,33 @@ class NotificationStorageService {
     await _writeCachedMuteSettings(prefs, optimistic);
 
     try {
-      await NotificationApiService.updateNotificationPreference(
+      final apiResponse =
+          await NotificationApiService.updateNotificationPreference(
         model: key,
         muted: muted,
       );
+      print('[MuteSettings][UpdateResponse][$key] $apiResponse');
       await _updateUnreadCount();
       onCountChanged?.call();
     } catch (e) {
       await _writeCachedMuteSettings(prefs, previous);
       throw Exception('Unable to update notification preference: $e');
     }
+  }
+
+  /// حفظ إعداد كتم محلي فقط (بدون مزامنة مع الـ API).
+  /// يُستخدم للفئات المحلية مثل chat_message, task, adhan.
+  static Future<void> setLocalMuteSetting(String channel, bool muted) async {
+    final key = _normalizeKey(channel);
+    if (key.isEmpty) return;
+
+    final prefs = await SharedPreferences.getInstance();
+    final previous = await getMuteSettings();
+    final currentValue = previous[key] == true;
+    if (currentValue == muted) return;
+
+    final optimistic = Map<String, bool>.from(previous)..[key] = muted;
+    await _writeCachedMuteSettings(prefs, optimistic);
   }
 
   static Future<bool> isChannelMuted(String channel) async {
@@ -418,10 +435,8 @@ class NotificationStorageService {
   static Future<List<Map<String, dynamic>>> getNotifications() async {
     try {
       final apiResult = await NotificationApiService.getNotifications(
-        page: 1,
-        perPage: 100,
-        category: 'all',
-        unreadOnly: false,
+        limit: 500,
+        offset: 0,
       );
 
       final normalized = apiResult.notifications
@@ -431,8 +446,10 @@ class NotificationStorageService {
       final prefs = await SharedPreferences.getInstance();
       await _saveStoredNotifications(normalized, prefs);
 
-      // Badge count should reflect list size from /api/notifications.
-      await prefs.setInt(_unreadCountKey, normalized.length);
+      // Badge count should reflect only unread items.
+      final unreadCount = normalized.where((n) => n['isRead'] != true).length;
+      await prefs.setInt(_unreadCountKey, unreadCount);
+      onCountChanged?.call();
 
       return normalized;
     } catch (_) {
@@ -440,11 +457,11 @@ class NotificationStorageService {
     }
   }
 
-  /// Get total notification records count (from /api/notifications list).
+  /// Get unread notification count (from /api/notifications list).
   static Future<int> getTotalCount() async {
     try {
       final notifications = await getNotifications();
-      final count = notifications.length;
+      final count = notifications.where((n) => n['isRead'] != true).length;
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_unreadCountKey, count);
       return count;

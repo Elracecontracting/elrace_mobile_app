@@ -246,9 +246,9 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                         horizontal: 13.5.w, vertical: 8.5.h),
                     child: Text(
                       '${_selectedFolder ?? 'Documents'}  |  ${docs.length + 1}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.aBeeZee(
+                      maxLines: null,
+                      overflow: TextOverflow.visible,
+                      style: GoogleFonts.poppins(
                         fontSize: 11,
                         fontWeight: FontWeight.w400,
                         fontStyle: FontStyle.italic,
@@ -292,7 +292,7 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                         SizedBox(height: 8.h),
                         Text(
                           'Add New',
-                          style: GoogleFonts.aBeeZee(
+                          style: GoogleFonts.poppins(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w400,
                             fontStyle: FontStyle.italic,
@@ -397,9 +397,9 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                             Text(
                               docName,
                               textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.aBeeZee(
+                              maxLines: null,
+                              overflow: TextOverflow.visible,
+                              style: GoogleFonts.poppins(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.black,
@@ -410,8 +410,8 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                               Text(
                                 dateText,
                                 textAlign: TextAlign.center,
-                                maxLines: 1,
-                                style: GoogleFonts.aBeeZee(
+                                maxLines: null,
+                                style: GoogleFonts.poppins(
                                   fontSize: 10.sp,
                                   fontWeight: FontWeight.w400,
                                   color: isExpired
@@ -442,7 +442,7 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
       return Center(
         child: Text(
           'No Documents found',
-          style: GoogleFonts.inter(
+          style: GoogleFonts.poppins(
             fontSize: 14.sp,
             fontWeight: FontWeight.w600,
             color: const Color(0xFF7A7A7A),
@@ -486,7 +486,7 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
             right: 35.w,
             child: Text(
               folder['name'],
-              style: GoogleFonts.aBeeZee(
+              style: GoogleFonts.poppins(
                 fontSize: 13.sp,
                 fontWeight: FontWeight.w700,
                 color: Colors.black87,
@@ -529,9 +529,9 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                         EdgeInsets.symmetric(horizontal: 13.5.w, vertical: 8.5.h),
                     child: Text(
                       '${_selectedFolder ?? 'Documents'}  |  ${docs.length + 1}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.aBeeZee(
+                      maxLines: null,
+                      overflow: TextOverflow.visible,
+                      style: GoogleFonts.poppins(
                         fontSize: 11,
                         fontWeight: FontWeight.w400,
                         fontStyle: FontStyle.italic,
@@ -579,7 +579,7 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                         SizedBox(height: 8.h),
                         Text(
                           'Add New',
-                          style: GoogleFonts.aBeeZee(
+                          style: GoogleFonts.poppins(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w400,
                             fontStyle: FontStyle.italic,
@@ -629,9 +629,9 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                           Text(
                             doc['name'] ?? '',
                             textAlign: TextAlign.center,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.aBeeZee(
+                            maxLines: null,
+                            overflow: TextOverflow.visible,
+                            style: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w700,
                               color: Colors.black,
@@ -643,9 +643,9 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                             Text(
                               doc['person_name'],
                               textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.aBeeZee(
+                              maxLines: null,
+                              overflow: TextOverflow.visible,
+                              style: GoogleFonts.poppins(
                                 fontSize: 10.sp,
                                 fontWeight: FontWeight.w400,
                                 color: const Color(0xff949494),
@@ -658,8 +658,8 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                             Text(
                               _formatDate(doc['expiry_date']),
                               textAlign: TextAlign.center,
-                              maxLines: 1,
-                              style: GoogleFonts.aBeeZee(
+                              maxLines: null,
+                              style: GoogleFonts.poppins(
                                 fontSize: 10.sp,
                                 fontWeight: FontWeight.w400,
                                 color: isEditable

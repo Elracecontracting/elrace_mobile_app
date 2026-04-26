@@ -111,7 +111,7 @@ class ReportItem extends StatelessWidget {
                                       SizedBox(width: 8.w),
                                       Text(
                                         isTextItem ? "TEXT ENTRY" : "PHOTO",
-                                        style: GoogleFonts.koulen(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w400,
                                           color: CustomColors.black,
@@ -128,7 +128,7 @@ class ReportItem extends StatelessWidget {
                                       child: Text(
                                         item.description,
                                         maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
+                                        overflow: TextOverflow.visible,
                                         style: CustomTextStyle.reportHeader
                                             .copyWith(
                                           fontWeight: FontWeight.normal,
@@ -182,10 +182,10 @@ class ReportItem extends StatelessWidget {
                                             fit: BoxFit.scaleDown,
                                             child: Text(
                                               day,
-                                              maxLines: 1,
+                                              maxLines: null,
                                               softWrap: false,
                                               textAlign: TextAlign.center,
-                                              style: GoogleFonts.inter(
+                                              style: GoogleFonts.poppins(
                                                 fontSize: 14.16,
                                                 fontWeight: FontWeight.w600,
                                               ),
@@ -195,9 +195,9 @@ class ReportItem extends StatelessWidget {
                                         const SizedBox(height: 4),
                                         Text(
                                           month,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: GoogleFonts.inter(
+                                          maxLines: null,
+                                          overflow: TextOverflow.visible,
+                                          style: GoogleFonts.poppins(
                                             fontSize: 9,
                                             fontWeight: FontWeight.bold,
                                             color: const Color(0xff1A1A53),
@@ -205,7 +205,7 @@ class ReportItem extends StatelessWidget {
                                         ),
                                         Text(
                                           year,
-                                          style: GoogleFonts.inter(
+                                          style: GoogleFonts.poppins(
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                             color: const Color(0xff1A1A53),

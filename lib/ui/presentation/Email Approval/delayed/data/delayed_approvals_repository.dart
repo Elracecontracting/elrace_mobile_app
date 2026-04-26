@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/delayed/models/delayed_approval_model.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 class DelayedAllPageResult {
@@ -50,10 +51,10 @@ class DelayedApprovalsRepository {
 
       final response = await http.Response.fromStream(await request.send());
 
-      print('=== DELAYED COUNTERS RESPONSE ===');
-      print('Status: ${response.statusCode}');
-      print('Body: ${response.body}');
-      print('=================================');
+      if (kDebugMode) {
+        debugPrint(
+            'DELAYED COUNTERS status=${response.statusCode} bytes=${response.body.length}');
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -88,10 +89,10 @@ class DelayedApprovalsRepository {
 
       final response = await http.Response.fromStream(await request.send());
 
-      print('=== DELAYED DETAILS RESPONSE ($type) ===');
-      print('Status: ${response.statusCode}');
-      print('Body: ${response.body}');
-      print('=========================================');
+      if (kDebugMode) {
+        debugPrint(
+            'DELAYED DETAILS($type) status=${response.statusCode} bytes=${response.body.length}');
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -107,13 +108,26 @@ class DelayedApprovalsRepository {
 
   // ─────────────────────────────────────────────────────────────
   // 3. ALL  →  /api/my_delayed_approvals/all
-  //    Optional – avoid unless absolutely necessary.
+  //    Supports pagination via limit/offset in params body.
   // ─────────────────────────────────────────────────────────────
-  Future<DelayedApprovalsResponse> fetchAll() async {
+  Future<DelayedApprovalsResponse> fetchAll({
+    int? limit,
+    int? offset,
+  }) async {
     final token = _requireToken();
-    final url = Uri.parse('$_baseUrl/my_delayed_approvals/all');
 
-    final body = jsonEncode({"jsonrpc": "2.0", "params": {}});
+    final queryParams = <String, String>{};
+    if (limit != null) queryParams['limit'] = '$limit';
+    if (offset != null) queryParams['offset'] = '$offset';
+
+    final url = Uri.parse('$_baseUrl/my_delayed_approvals/all')
+        .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
+    final params = <String, dynamic>{};
+    if (limit != null) params['limit'] = limit;
+    if (offset != null) params['offset'] = offset;
+
+    final body = jsonEncode({"jsonrpc": "2.0", "params": params});
 
     try {
       final request = http.Request('GET', url)
@@ -122,10 +136,10 @@ class DelayedApprovalsRepository {
 
       final response = await http.Response.fromStream(await request.send());
 
-      print('=== DELAYED ALL RESPONSE ===');
-      print('Status: ${response.statusCode}');
-      print('Body: ${response.body}');
-      print('============================');
+      if (kDebugMode) {
+        debugPrint(
+            'DELAYED ALL status=${response.statusCode} limit=$limit offset=$offset bytes=${response.body.length}');
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -173,11 +187,10 @@ class DelayedApprovalsRepository {
 
       final response = await http.Response.fromStream(await request.send());
 
-      print('=== DELAYED ALL PAGED RESPONSE ===');
-      print('Status: ${response.statusCode}');
-      print('Page: $page, PageSize: $pageSize');
-      print('Body: ${response.body}');
-      print('===================================');
+      if (kDebugMode) {
+        debugPrint(
+            'DELAYED ALL PAGED status=${response.statusCode} page=$page pageSize=$pageSize bytes=${response.body.length}');
+      }
 
       if (response.statusCode != 200) {
         throw Exception(

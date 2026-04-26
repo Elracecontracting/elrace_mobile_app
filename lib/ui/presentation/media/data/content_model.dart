@@ -8,6 +8,8 @@ class ContentModel {
   final String previewUrl;
   final String? thumbnailUrl;
   final DateTime? dateCreated;
+  /// Raw file type from API (e.g. 'pdf', 'image', 'video', mime type, etc.)
+  final String? fileType;
 
   const ContentModel({
     required this.id,
@@ -17,7 +19,22 @@ class ContentModel {
     required this.previewUrl,
     this.thumbnailUrl,
     this.dateCreated,
+    this.fileType,
   });
+
+  /// Whether this item is a PDF document
+  bool get isPdf {
+    // Check fileType field from API
+    final ft = (fileType ?? '').toLowerCase();
+    if (ft.contains('pdf')) return true;
+    // Check fileName extension
+    final fn = fileName.toLowerCase();
+    if (fn.endsWith('.pdf')) return true;
+    // Check previewUrl
+    final url = previewUrl.toLowerCase().split('?').first;
+    if (url.endsWith('.pdf')) return true;
+    return false;
+  }
 
   /// URL to use for image display (thumbnail preferred)
   String get displayImageUrl => (thumbnailUrl != null && thumbnailUrl!.isNotEmpty)
@@ -35,6 +52,7 @@ class ContentModel {
       is360View: json['is_360_view'] ?? false,
       previewUrl: previewUrls.isNotEmpty ? previewUrls.first : '',
       thumbnailUrl: (thumbnail != null && thumbnail.isNotEmpty) ? thumbnail : null,
+      fileType: _extractFileType(json),
       dateCreated: _parseDateTime(json['date_created']) ??
           _parseDateTime(json['uploaded_on']) ??
           _parseDateTime(json['created_at']) ??
@@ -64,6 +82,7 @@ class ContentModel {
         _parseDateTime(json['created_at']) ??
         _parseDateTime(json['create_date']) ??
         _parseDateTime(json['date']);
+    final fileType = _extractFileType(json);
 
     // If no preview URLs, create a single item using thumbnail as previewUrl
     if (urls.isEmpty) {
@@ -75,6 +94,7 @@ class ContentModel {
           is360View: is360View,
           previewUrl: thumbnailUrl!,
           thumbnailUrl: thumbnailUrl,
+          fileType: fileType,
           dateCreated: parsedDate,
         )
       ];
@@ -89,6 +109,7 @@ class ContentModel {
         is360View: is360View,
         previewUrl: urls[index],
         thumbnailUrl: thumbnailUrl,
+        fileType: fileType,
         dateCreated: parsedDate,
       );
     });
@@ -115,6 +136,14 @@ class ContentModel {
     }
 
     return urls.toSet().toList(growable: false);
+  }
+
+  static String? _extractFileType(Map<String, dynamic> json) {
+    for (final key in const ['file_type', 'type', 'content_type', 'mime_type', 'format', 'media_type']) {
+      final v = json[key]?.toString().trim();
+      if (v != null && v.isNotEmpty) return v;
+    }
+    return null;
   }
 
   static DateTime? _parseDateTime(dynamic value) {
@@ -158,6 +187,7 @@ class ContentModel {
     String? previewUrl,
     String? thumbnailUrl,
     DateTime? dateCreated,
+    String? fileType,
   }) {
     return ContentModel(
       id: id ?? this.id,
@@ -167,6 +197,7 @@ class ContentModel {
       previewUrl: previewUrl ?? this.previewUrl,
       thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
       dateCreated: dateCreated ?? this.dateCreated,
+      fileType: fileType ?? this.fileType,
     );
   }
 
@@ -241,17 +272,12 @@ class ContentsResponse {
       _sortNewestFirst(photosList);
       _sortNewestFirst(view360List);
 
-      print(
-          '✅ ContentsResponse parsed: ${photosList.length} photos (${photoGroupsList.length} groups), ${view360List.length} 360 views');
-
       return ContentsResponse(
         photos: photosList,
         photoGroups: photoGroupsList,
         view360: view360List,
       );
     } catch (e) {
-      print('❌ Error parsing ContentsResponse: $e');
-      print('📦 JSON data: $json');
       rethrow;
     }
   }

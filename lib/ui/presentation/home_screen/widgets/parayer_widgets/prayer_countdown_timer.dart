@@ -102,7 +102,7 @@ class _PrayerCountdownTimerState extends State<PrayerCountdownTimer> {
         fontSize: 16,
         fontWeight: FontWeight.w600,
         color: Colors.white,
-        fontFamily: 'monospace',
+        fontFamily: 'Poppins',
       ),
       textDirection: TextDirection.ltr,
     );

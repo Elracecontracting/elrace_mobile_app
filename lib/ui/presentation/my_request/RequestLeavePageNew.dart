@@ -68,9 +68,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   }
 
   void _initializeMinimumDate() {
-    // For SHORT and ANNUAL leave, minimum start date is 20 days from today
-    // This enforces the 20-day advance notice requirement
-    if (widget.leaveType == 'SHORT' || widget.leaveType == 'ANNUAL') {
+    // Only annual leave requires 20-day advance notice.
+    if (widget.leaveType == 'ANNUAL') {
       minimumStartDate = DateTime.now().add(const Duration(days: 20));
     } else {
       minimumStartDate = DateTime.now();
@@ -165,18 +164,12 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
 
   Future<void> _fetchLeaveBalance() async {
     try {
-      final loginResp = await userRepo.getLoginResponse();
-      if (loginResp?.result?.data?.leaveBalance != null) {
-        setState(() {
-          leaveBalance = loginResp!.result!.data!.leaveBalance;
-        });
-        debugPrint('✅ Leave Balance fetched: $leaveBalance');
-      } else {
-        debugPrint('⚠️ Leave Balance is null in response');
-        setState(() {
-          leaveBalance = '0';
-        });
-      }
+      final loginData = SharedPref.getLoginData();
+      final balance = loginData.result?.data?.leaveBalance?.toString();
+      setState(() {
+        leaveBalance = (balance != null && balance.isNotEmpty) ? balance : '0';
+      });
+      debugPrint('✅ Leave Balance fetched: $leaveBalance');
     } catch (e) {
       debugPrint('❌ Error fetching leave balance: $e');
       setState(() {
@@ -221,12 +214,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   }
 
   bool _isDateSelectable(DateTime date) {
-    // Sick leave supports selecting past dates (retroactive request use case).
-    if (widget.leaveType == 'SICK') {
-      return true;
-    }
-
-    // Cannot select past dates
+    // Cannot select past dates (applies to all leave types including SICK)
     final today = _dateOnly(DateTime.now());
     if (_dateOnly(date).isBefore(today)) {
       debugPrint('🔴 Date not selectable: $date (Past date)');
@@ -244,15 +232,6 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
     if (_isHoliday(date)) {
       debugPrint('🔴 Date not selectable: $date (Holiday)');
       return false;
-    }
-
-    // Cannot select dates within 3 days before or after a holiday
-    // This applies to both ANNUAL and SHORT leave
-    if (widget.leaveType == 'ANNUAL' || widget.leaveType == 'SHORT') {
-      if (_isWithin3DaysOfHoliday(date)) {
-        debugPrint('🔴 Date not selectable: $date (Within 3 days of holiday)');
-        return false;
-      }
     }
 
     debugPrint('🟢 Date selectable: $date');
@@ -308,6 +287,14 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   }
 
   Future<void> _submitRequest() async {
+    // If only a start date is selected (1-day leave), treat end date as the same day.
+    if (startDate != null && endDate == null) {
+      setState(() {
+        endDate = startDate;
+        duration = '1';
+      });
+    }
+
     if (startDate == null || endDate == null || description.trim().isEmpty) {
       _showErrorDialog('Please fill in all required fields.');
       return;
@@ -316,23 +303,6 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
     if (widget.leaveType == 'SICK' && certificateNo.trim().isEmpty) {
       _showErrorDialog('Please enter certificate number for sick leave.');
       return;
-    }
-
-    // Backdated sick leave can only be submitted within 3 days
-    // after the last sick day (assumes return-to-work is next day).
-    if (widget.leaveType == 'SICK') {
-      final today = _dateOnly(DateTime.now());
-      final selectedEndDate = _dateOnly(endDate!);
-
-      if (selectedEndDate.isBefore(today)) {
-        final lastAllowedSubmitDate =
-            selectedEndDate.add(const Duration(days: 3));
-        if (today.isAfter(lastAllowedSubmitDate)) {
-          _showErrorDialog(
-              'Late sick leave can only be submitted within 3 days after returning to work.');
-          return;
-        }
-      }
     }
 
     // SHORT leave specific validations
@@ -377,21 +347,32 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
         'Authorization': 'Bearer $token'
       };
 
+      debugPrint('[LeaveRequest][${widget.leaveType}][RequestBody] $body');
       final response = await http.post(url, body: body, headers: headers);
+      debugPrint(
+          '[LeaveRequest][${widget.leaveType}][ResponseStatus] ${response.statusCode}');
+      debugPrint(
+          '[LeaveRequest][${widget.leaveType}][ResponseBody] ${response.body}');
+
       final data = jsonDecode(response.body);
 
       if (!mounted) return;
 
       if (response.statusCode == 200 &&
           data['result']?['status'] == 'success') {
+        debugPrint('[LeaveRequest][${widget.leaveType}][Result] SUCCESS');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Request submitted successfully!')),
         );
         Navigator.pop(context, true);
       } else {
-        _showErrorDialog(data['result']?['message'] ?? 'Request failed');
+        final backendErrorMessage = _extractBackendErrorMessage(data);
+        debugPrint(
+            '[LeaveRequest][${widget.leaveType}][Result] FAILURE: $backendErrorMessage');
+        _showErrorDialog(backendErrorMessage);
       }
     } catch (e) {
+      debugPrint('[LeaveRequest][${widget.leaveType}][Exception] $e');
       if (mounted) {
         _showErrorDialog('An error occurred. Please try again.');
       }
@@ -417,6 +398,43 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
     );
   }
 
+  String _extractBackendErrorMessage(dynamic data) {
+    if (data is Map<String, dynamic>) {
+      final result = data['result'];
+      if (result is Map<String, dynamic>) {
+        final resultMessage = result['message'];
+        if (resultMessage is String && resultMessage.trim().isNotEmpty) {
+          return resultMessage;
+        }
+      }
+
+      final error = data['error'];
+      if (error is Map<String, dynamic>) {
+        final errorMessage = error['message'];
+        if (errorMessage is String && errorMessage.trim().isNotEmpty) {
+          final details = error['data'];
+          if (details is Map<String, dynamic>) {
+            final detailsMessage = details['message'];
+            if (detailsMessage is String && detailsMessage.trim().isNotEmpty) {
+              return '$errorMessage: $detailsMessage';
+            }
+            final name = details['name'];
+            if (name is String && name.trim().isNotEmpty) {
+              return '$errorMessage ($name)';
+            }
+            final debug = details['debug'];
+            if (debug is String && debug.trim().isNotEmpty) {
+              return '$errorMessage\n$debug';
+            }
+          }
+          return errorMessage;
+        }
+      }
+    }
+
+    return 'Request failed';
+  }
+
   String _getPageTitle() {
     switch (widget.leaveType) {
       case 'SICK':
@@ -433,7 +451,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   String _getNoticeText() {
     switch (widget.leaveType) {
       case 'SICK':
-        return 'Sick leave requires a certificate number. Backdated sick leave must be submitted within 3 days after returning to work.';
+        return 'Sick leave requires a certificate number.';
       case 'SHORT':
         return 'Please be aware that you are eligible for 4 leaves per year';
       case 'ANNUAL':
@@ -474,7 +492,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
               padding: EdgeInsets.symmetric(vertical: 16.h),
               child: Text(
                 _getPageTitle(),
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 18.sp,
                   fontWeight: FontWeight.w400,
                   letterSpacing: 1.5,
@@ -503,8 +521,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
                   padding: EdgeInsets.only(
-                      bottom:
-                          MediaQuery.of(context).viewInsets.bottom),
+                      bottom: MediaQuery.of(context).viewInsets.bottom),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -530,7 +547,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                       // Description
                       Text(
                         'Description',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 12.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.grey[600],
@@ -663,7 +680,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                           Expanded(
                             child: Text(
                               _getNoticeText(),
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 9.sp,
                                 color: Colors.black87,
                                 fontWeight: FontWeight.w600,
@@ -699,7 +716,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                                 )
                               : Text(
                                   'SUBMIT',
-                                  style: GoogleFonts.koulen(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 16.sp,
                                     letterSpacing: 1.5,
                                     color: Colors.white,
@@ -836,7 +853,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
           date.isBefore(endDate!);
 
       final isSelectable = _isDateSelectable(date);
-      final bool enforceHolidayBlocks = widget.leaveType != 'SICK';
+      const bool enforceHolidayBlocks = false;
       final isHolidayDate = enforceHolidayBlocks && _isHoliday(date);
       final isNearHoliday =
           enforceHolidayBlocks && _isWithin3DaysOfHoliday(date);
@@ -918,7 +935,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 12.sp,
               fontWeight: FontWeight.w700,
               color: _primary,
@@ -940,7 +957,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
           else
             Text(
               value,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 12.sp,
                 fontWeight: FontWeight.w500,
                 color: Colors.black54,

@@ -220,8 +220,8 @@ class LinkedTasksList extends StatelessWidget {
                                 ? TextDecoration.lineThrough
                                 : TextDecoration.none,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
                         ),
                         SizedBox(height: 4.h),
                         Text(
@@ -240,8 +240,8 @@ class LinkedTasksList extends StatelessWidget {
                             fontSize: 11.sp,
                             color: Colors.grey[600],
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
                         ),
                         if (createdDate != null) ...[
                           SizedBox(height: 4.h),

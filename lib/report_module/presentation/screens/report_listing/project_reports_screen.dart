@@ -8,6 +8,7 @@ import 'package:el_race/report_module/data/models/report_model.dart';
 import 'package:el_race/report_module/data/models/report_detail_model.dart';
 import 'package:el_race/report_module/data/models/report_item_model.dart';
 import 'package:el_race/report_module/data/provider/reports_provider.dart';
+import 'package:el_race/report_module/data/repositories/company_repository.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/report_detail.dart';
 import 'package:el_race/report_module/presentation/screens/add_report_photos/add_report_photos_screen.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
@@ -27,9 +28,9 @@ import 'package:el_race/report_module/presentation/dialogs/rename_report_dialog.
 import 'package:el_race/report_module/presentation/screens/report_detail/pdf_history_screen.dart';
 
 class ProjectReportsScreen extends StatefulWidget {
-  final FolderModel folder;
+  final FolderModel? folder;
 
-  const ProjectReportsScreen({super.key, required this.folder});
+  const ProjectReportsScreen({super.key, this.folder});
 
   @override
   State<ProjectReportsScreen> createState() => _ProjectReportsScreenState();
@@ -41,6 +42,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
   bool _isCameraButtonExpanded = false;
   List<ReportModel> _reports = [];
   bool _isScrolled = false;
+  FolderModel? _folder;
 
   Future<void> _showTakePicturesDialog() async {
     final TextEditingController reportNameController = TextEditingController();
@@ -49,6 +51,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
       'Site report'
     ];
     String selectedReportType = reportTypes.first;
+    final outerContext = context;
 
     await showDialog<void>(
       context: context,
@@ -113,11 +116,11 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                         onPressed: () async {
                           // Validate report name
                           if (reportNameController.text.trim().isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            ScaffoldMessenger.of(outerContext).showSnackBar(
                               SnackBar(
                                 content: Text(
                                   'Please enter report name',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 13.sp,
                                     color: Colors.white,
                                   ),
@@ -135,24 +138,40 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
 
                           try {
                             final provider =
-                                Provider.of<ReportProvider>(context,
+                                Provider.of<ReportProvider>(outerContext,
                                     listen: false);
+                            // Close dialog immediately
+                            Navigator.pop(dialogContext);
                             await provider.createReport(
                               title: reportNameController.text.trim(),
-                              folderID: widget.folder.id,
+                              folderID: _folder!.id,
                               reportType: selectedReportType,
                             );
                             await _loadReports();
                             if (mounted) {
-                              Navigator.pop(dialogContext);
+                              if (provider.reports.isNotEmpty) {
+                                Navigator.push(
+                                  outerContext,
+                                  MaterialPageRoute(
+                                    builder: (context) => ReportPhotosScreen(
+                                      report: provider.reports.first,
+                                      folderName: _folder?.name ?? '',
+                                      folderId: _folder?.id ?? '',
+                                      onReportUpdated: () async {
+                                        await _loadReports();
+                                      },
+                                    ),
+                                  ),
+                                );
+                              }
                             }
                           } catch (_) {
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              ScaffoldMessenger.of(outerContext).showSnackBar(
                                 SnackBar(
                                   content: Text(
                                     'Failed to create report. Please try again',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 13.sp,
                                       color: Colors.white,
                                     ),
@@ -187,7 +206,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                         ),
                         label: Text(
                           'Start',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 18.sp,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
@@ -208,6 +227,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
   @override
   void initState() {
     super.initState();
+    _folder = widget.folder;
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadReports());
   }
 
@@ -216,7 +236,19 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
     setState(() => _isLoading = true);
     try {
       final provider = Provider.of<ReportProvider>(context, listen: false);
-      await provider.fetchAllReports(folderID: widget.folder.id);
+      // If no folder was passed in, fetch the first available folder
+      if (_folder == null) {
+        await CompanyRepository().getCompany();
+        ReportProvider().init(base: "https://erp.elrace.com");
+        await provider.fetchAllFolders();
+        if (!mounted) return;
+        if (provider.folders.isEmpty) {
+          setState(() => _isLoading = false);
+          return;
+        }
+        _folder = provider.folders.first;
+      }
+      await provider.fetchAllReports(folderID: _folder!.id);
       if (!mounted) return;
       setState(() {
         _reports = provider.reports;
@@ -274,7 +306,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                 },
                 child: CustomScrollView(
                   slivers: [
-                    SliverToBoxAdapter(child: SizedBox(height: 150.h)),
+                    SliverToBoxAdapter(child: SizedBox(height: 100.h)),
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: EdgeInsets.only(left: 22.w, right: 4.w),
@@ -283,7 +315,7 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                             Expanded(
                               child: Text(
                                 'Projects Reports',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 13.sp,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF787B87),
@@ -341,9 +373,9 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                                                 start: 4.w),
                                             child: Text(
                                               'Create Report',
-                                              maxLines: 1,
+                                              maxLines: null,
                                               overflow: TextOverflow.clip,
-                                              style: GoogleFonts.inter(
+                                              style: GoogleFonts.poppins(
                                                 fontSize: 13.sp,
                                                 fontWeight: FontWeight.w700,
                                                 color: Colors.white,
@@ -385,8 +417,8 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                             child: _ProjectReportCard(
                               index: index,
                               report: report,
-                              folderName: widget.folder.name,
-                              folderId: widget.folder.id,
+                              folderName: _folder?.name ?? '',
+                              folderId: _folder?.id ?? '',
                               onReportUpdated: () async {
                                 await _loadReports();
                               },
@@ -428,31 +460,6 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                       ),
                       child: Column(
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                'assets/png/my-reports-frame.png',
-                                width: 22.w,
-                                height: 22.w,
-                                fit: BoxFit.contain,
-                                color: const Color(0xFF151A36),
-                                colorBlendMode: BlendMode.srcIn,
-                              ),
-                              SizedBox(width: 8.w),
-                              Text(
-                                widget.folder.name.isEmpty
-                                    ? 'Projects Name'
-                                    : widget.folder.name,
-                                 style: GoogleFonts.inter(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF151A36),
-                                  letterSpacing: 0.2,
-                                ),
-                              ),
-                            ],
-                          ),
                           SizedBox(height: 12.h),
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: 20.w),
@@ -474,14 +481,14 @@ class _ProjectReportsScreenState extends State<ProjectReportsScreen> {
                                       onChanged: (value) {
                                         setState(() => _searchQuery = value);
                                       },
-                                      style: GoogleFonts.inter(
+                                      style: GoogleFonts.poppins(
                                         fontSize: 16.sp,
                                         color: const Color(0xFF22263A),
                                       ),
                                       decoration: InputDecoration(
                                         hintText: 'Search',
                                         border: InputBorder.none,
-                                        hintStyle: GoogleFonts.inter(
+                                        hintStyle: GoogleFonts.poppins(
                                           fontSize: 16.sp,
                                           color: const Color(0xFFA3A6B1),
                                         ),
@@ -538,7 +545,7 @@ class _DialogTextFieldCard extends StatelessWidget {
         children: [
           Text(
             topLabel,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 11.sp,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF6A6D78),
@@ -546,7 +553,7 @@ class _DialogTextFieldCard extends StatelessWidget {
           ),
           Text(
             title,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 16.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF151A36),
@@ -563,7 +570,7 @@ class _DialogTextFieldCard extends StatelessWidget {
             ),
             child: TextField(
               controller: controller,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 11.sp,
                 fontWeight: FontWeight.w500,
                 color: const Color(0xFF272A36),
@@ -571,7 +578,7 @@ class _DialogTextFieldCard extends StatelessWidget {
               decoration: InputDecoration(
                 border: InputBorder.none,
                 hintText: hint,
-                hintStyle: GoogleFonts.inter(
+                hintStyle: GoogleFonts.poppins(
                   fontSize: 11.sp,
                   fontWeight: FontWeight.w500,
                   color: const Color(0xFFA2A4AA),
@@ -624,7 +631,7 @@ class _DialogDropdownCardState extends State<_DialogDropdownCard> {
         children: [
           Text(
             widget.topLabel,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 11.sp,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF6A6D78),
@@ -632,7 +639,7 @@ class _DialogDropdownCardState extends State<_DialogDropdownCard> {
           ),
           Text(
             widget.title,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 16.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF151A36),
@@ -664,14 +671,14 @@ class _DialogDropdownCardState extends State<_DialogDropdownCard> {
                       widget.value != null && widget.items.contains(widget.value)
                           ? widget.value!
                           : widget.hint,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 11.sp,
                         fontWeight: FontWeight.w500,
                         color: widget.value != null && widget.items.contains(widget.value)
                             ? const Color(0xFF272A36)
                             : const Color(0xFFA2A4AA),
                       ),
-                      overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.visible,
                     ),
                   ),
                   AnimatedRotation(
@@ -728,7 +735,7 @@ class _DialogDropdownCardState extends State<_DialogDropdownCard> {
                               horizontal: 14.w, vertical: 11.h),
                           child: Text(
                             item,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 11.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF272A36),
@@ -862,24 +869,24 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                         SizedBox(height: 14.h),
                         Text(
                           widget.report.name.isEmpty ? 'Report Name' : widget.report.name,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF27304E),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
                         ),
                         SizedBox(height: 4.h),
                         Text(
                           widget.report.reportType ?? 'Report Type',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w500,
                             color: const Color(0xFF27304E),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
                         ),
                     SizedBox(height: 14.h),
                     FutureBuilder<ReportDetailModel?>(
@@ -898,7 +905,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                 SizedBox(width: 8.w),
                                 Text(
                                   'Loading...',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 12.sp,
                                     fontWeight: FontWeight.w500,
                                     color: const Color(0xFF9CA3AF),
@@ -913,7 +920,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                           debugPrint('❌ Card FutureBuilder error: ${snapshot.error}');
                           return Text(
                             'Error loading',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFFE81E25),
@@ -924,7 +931,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                         if (!snapshot.hasData || snapshot.data == null || snapshot.data!.reportItems.isEmpty) {
                           return Text(
                             'No images',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF9CA3AF),
@@ -936,7 +943,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                         if (items.isEmpty) {
                           return Text(
                             'No images',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF9CA3AF),
@@ -991,7 +998,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                               SizedBox(width: 4.w),
                               Text(
                                 '+$remaining',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 12.sp,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF27304E),
@@ -1065,7 +1072,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                       ),
                                       title: Text(
                                         'Delete Report',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 18.sp,
                                           fontWeight: FontWeight.w600,
                                           color: const Color(0xFF27304E),
@@ -1073,7 +1080,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                       ),
                                       content: Text(
                                         'Are you sure you want to delete this report?',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 14.sp,
                                           color: const Color(0xFF27304E),
                                         ),
@@ -1083,7 +1090,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                           onPressed: () => Navigator.pop(ctx, false),
                                           child: Text(
                                             'Cancel',
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 14.sp,
                                               fontWeight: FontWeight.w600,
                                               color: const Color(0xFF27304E),
@@ -1094,7 +1101,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                           onPressed: () => Navigator.pop(ctx, true),
                                           child: Text(
                                             'Delete',
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 14.sp,
                                               fontWeight: FontWeight.w600,
                                               color: const Color(0xFFE81E25),
@@ -1120,7 +1127,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                       SizedBox(width: 8.w),
                                       Text(
                                         'Rename',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 14.sp,
                                           fontWeight: FontWeight.w500,
                                           color: const Color(0xFF27304E),
@@ -1137,7 +1144,7 @@ class _ProjectReportCardState extends State<_ProjectReportCard> {
                                       SizedBox(width: 8.w),
                                       Text(
                                         'Delete',
-                                        style: GoogleFonts.inter(
+                                        style: GoogleFonts.poppins(
                                           fontSize: 14.sp,
                                           fontWeight: FontWeight.w500,
                                           color: const Color(0xFFE81E25),
@@ -1321,7 +1328,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                       SizedBox(height: 8.h),
                       Text(
                         'Camera',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -1350,7 +1357,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                       SizedBox(height: 8.h),
                       Text(
                         'Gallery',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -1482,7 +1489,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                     icon: Icon(Icons.camera_alt, size: 18.w, color: Colors.white),
                     label: Text(
                       'Add Pictures',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 13.sp,
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
@@ -1535,7 +1542,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                   SizedBox(height: 8.h),
                                   Text(
                                     'Tap to add photo',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 12.sp,
                                       color: const Color(0xFFB0B0B0),
                                     ),
@@ -1700,7 +1707,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                           SizedBox(width: 12.w),
                           Text(
                             'Items no ${_currentIndex + 1}/${_photoItems.length}',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 14.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF6A6D78),
@@ -1741,7 +1748,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                               ? 'Failed to create report. Please try again'
                               : 'Please fill all data (Image, Location, Description) before adding new item',
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -1762,7 +1769,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                         child: Text(
                           _uploadErrorMessage!,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 12.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -1848,7 +1855,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                 )
                               : Text(
                             'Submit',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
@@ -1927,7 +1934,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
                                 )
                               : Text(
                             'Generate Report',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 15.sp,
                               fontWeight: FontWeight.w700,
                               color: Colors.white,
@@ -1960,7 +1967,7 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
         children: [
           Text(
             'Location',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF272A36),
@@ -1977,11 +1984,11 @@ class _ReportPhotosDialogState extends State<_ReportPhotosDialog> {
             child: TextField(
               controller: item.locationController,
               onChanged: (v) => item.location = v,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                   fontSize: 13.sp, color: const Color(0xFF272A36)),
               decoration: InputDecoration(
                 hintText: 'Enter location...',
-                hintStyle: GoogleFonts.inter(
+                hintStyle: GoogleFonts.poppins(
                     fontSize: 13.sp, color: const Color(0xFFB0B0B0)),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,

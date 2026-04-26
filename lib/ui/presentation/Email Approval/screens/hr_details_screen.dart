@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
 
 class HrDetailsScreen extends StatefulWidget {
   final String requestId;
@@ -75,6 +76,11 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
 
   static const Map<String, String> _caseByTypeCode = {
     'sim': 'sim',
+    'annual': 'annual',
+    'short': 'short',
+    'sick': 'sick',
+    'maternity': 'maternity',
+    'parental': 'parental',
     'annualleave_short': 'short',
     'annualleave_sick': 'sick',
     'annualleave_annual': 'annual',
@@ -135,6 +141,14 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
 
   String _normalizeToken(String value) {
     return value.trim().toLowerCase().replaceAll('-', '_').replaceAll(' ', '_');
+  }
+
+  bool _isValidAttachmentUrl(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return false;
+    final uri = Uri.tryParse(trimmed);
+    if (uri == null || !uri.hasScheme) return false;
+    return uri.scheme == 'http' || uri.scheme == 'https';
   }
 
   String _titleCaseSimple(String value) {
@@ -207,11 +221,24 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
       return _caseByTypeId[caseId] ?? 'generic';
     }
 
+    final leaveSubtype = _pickFromMaps(requestMaps, [
+      'leave_request_subtype',
+      'leave_type',
+      'leave_type_code',
+      'holiday_status_name',
+    ]);
+    if (leaveSubtype.isNotEmpty) {
+      final normalizedLeaveSubtype = _normalizeToken(leaveSubtype);
+      final mappedLeaveSubtype = _caseByTypeCode[normalizedLeaveSubtype];
+      if (mappedLeaveSubtype != null) return mappedLeaveSubtype;
+    }
+
     final rawTypeCode = _pick([
       _pickFromMaps(requestMaps, [
         'request_type_code',
         'request_code',
         'type_code',
+        'leave_request_subtype',
         'leave_type_code',
         'request_type',
         'leave_type',
@@ -255,7 +282,11 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
     List<_DetailItem> makeItems(List<_FieldDef> defs) {
       final items = <_DetailItem>[];
       for (final def in defs) {
-        final value = _pickFromMaps(dataMaps, def.keys);
+        final hasLiteralDash = def.keys.contains('-');
+        final value = hasLiteralDash ? '-' : _pickFromMaps(dataMaps, def.keys);
+        if (def.label == 'Birth Attachment' && !_isValidAttachmentUrl(value)) {
+          continue;
+        }
         if (value.isNotEmpty) {
           items.add(_DetailItem(def.label, value, multiline: def.multiline));
         }
@@ -286,71 +317,63 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
         return makeItems([
           ...common,
           const _FieldDef('Start Date', ['start_date', 'request_date_from']),
-          const _FieldDef('Requested Duration', [
+          const _FieldDef('Duration', [
             'requested_duration',
             'duration',
             'number_of_days',
           ]),
-          const _FieldDef('Remaining Leave Days', [
-            'remaining_leave_days',
-            'balance_leave',
-            'leave_balance',
-          ]),
+          const _FieldDef('Available Days', ['-']),
+          const _FieldDef('End Date', ['-']),
           const _FieldDef('Allowed Sick Days', ['allowed_sick_days']),
           const _FieldDef('Sick Leave Reference No', [
+            'sick_leave_reference',
             'sick_leave_reference_no',
             'certificate_no',
           ]),
           const _FieldDef('Emirates ID', ['emirates_id']),
-          const _FieldDef('Review Validation URL', [
+          const _FieldDef('Validation', [
+            'review_validation',
             'review_validation_url',
             'validation_url',
             'review_url',
           ]),
-          const _FieldDef('Note', ['note', 'description'], multiline: true),
+          const _FieldDef('Reason', ['note', 'description'], multiline: true),
         ]);
       case 'short':
         return makeItems([
           ...common,
           const _FieldDef('Start Date', ['start_date', 'request_date_from']),
-          const _FieldDef('Requested Duration', [
+          const _FieldDef('Duration', [
             'requested_duration',
             'duration',
             'number_of_days',
           ]),
-          const _FieldDef('Remaining Leave Days', [
-            'remaining_leave_days',
-            'balance_leave',
-            'leave_balance',
-          ]),
+          const _FieldDef('End Date', ['-']),
+          const _FieldDef('Leave Balance', ['-']),
         ]);
       case 'annual':
-        return makeItems([
+        final annualItems = makeItems([
           ...common,
           const _FieldDef('Start Date', ['start_date', 'request_date_from']),
-          const _FieldDef('End Date', ['end_date', 'request_date_to']),
-          const _FieldDef('Requested Duration', [
+          const _FieldDef('Duration', [
             'requested_duration',
             'duration',
             'number_of_days',
           ]),
           const _FieldDef('Available Days', ['available_days']),
-          const _FieldDef('Remaining Leave Days', [
-            'remaining_leave_days',
-            'balance_leave',
-            'leave_balance',
-          ]),
-          const _FieldDef('Annual Short Leaves Remaining', [
+          const _FieldDef('End Date', ['end_date', 'request_date_to']),
+          const _FieldDef('Annual/Short Usage', [
             'annual_short_leaves_remaining',
           ]),
-          const _FieldDef('Note', ['note', 'description'], multiline: true),
         ]);
+        annualItems.add(const _DetailItem('Leave Balance', '-'));
+        return annualItems;
       case 'parental':
         return makeItems([
           ...common,
           const _FieldDef('Start Date', ['start_date', 'request_date_from']),
           const _FieldDef('End Date', ['end_date', 'request_date_to']),
-          const _FieldDef('Requested Duration', [
+          const _FieldDef('Duration', [
             'requested_duration',
             'duration',
             'number_of_days',
@@ -361,12 +384,15 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
         return makeItems([
           ...common,
           const _FieldDef('Start Date', ['start_date', 'request_date_from']),
-          const _FieldDef('End Date', ['end_date', 'request_date_to']),
-          const _FieldDef('Requested Duration', [
+          const _FieldDef('Duration', [
             'requested_duration',
             'duration',
             'number_of_days',
           ]),
+          const _FieldDef('Available Days', ['-']),
+          const _FieldDef('End Date', ['end_date', 'request_date_to']),
+          const _FieldDef('Annual/Short Usage', ['-']),
+          const _FieldDef('Leave Balance', ['-']),
           const _FieldDef(
               'Discharge Report Attachment', ['discharge_report_attachment']),
         ]);
@@ -377,16 +403,20 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
           const _FieldDef('Duration Type', ['duration_type']),
           const _FieldDef('Job Mission Type', ['job_mission_type', 'job_type']),
           const _FieldDef('Only Afternoon', ['only_afternoon']),
-          const _FieldDef('Client Details', ['client_details']),
-          const _FieldDef('Project Details', ['project_details']),
-          const _FieldDef('Note', ['note', 'description'], multiline: true),
+          const _FieldDef('Reason', ['note', 'description'], multiline: true),
         ]);
       case 'temporary_permission':
         return makeItems([
-          ...common,
+          const _FieldDef('Request Date', [
+            'request_date',
+            'request_datetime',
+            'request_date_from',
+            'date',
+            'create_date',
+          ]),
           const _FieldDef('Start Date', ['start_date', 'request_date_from']),
-          const _FieldDef('End Date', ['end_date', 'request_date_to']),
           const _FieldDef('Available Days', ['available_days']),
+          const _FieldDef('End Date', ['end_date', 'request_date_to']),
           const _FieldDef('Leave Balance', [
             'remaining_leave_days',
             'leave_balance',
@@ -395,24 +425,33 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
           const _FieldDef(
               'Start Hour', ['start_time', 'hour_from', 'temp_hours']),
           const _FieldDef('Duration Type', ['duration_type', 'temp_selection']),
-          const _FieldDef('Note', ['note', 'description'], multiline: true),
         ]);
       case 'clearance':
         return makeItems([
           ...common,
           const _FieldDef('Last Work Date', ['last_work_date', 'end_date']),
           const _FieldDef(
-              'Reason For Leaving', ['reason_for_leaving', 'reason']),
+              'Reason for Leaving', ['reason_for_leaving', 'reason'],
+              multiline: true),
         ]);
       case 'effective_date':
         return makeItems([
-          ...common,
-          const _FieldDef('Joined Date', ['joined_date', 'join_date']),
-          const _FieldDef('Discipline Reason', [
-            'discipline_reason',
-            'e_reason',
-            'reason',
+          const _FieldDef('Request Date', [
+            'request_date',
+            'request_datetime',
+            'request_date_from',
+            'date',
+            'create_date',
           ]),
+          const _FieldDef('Joined Date', ['joined_date', 'join_date']),
+          const _FieldDef(
+              'Reason',
+              [
+                'discipline_reason',
+                'e_reason',
+                'reason',
+              ],
+              multiline: true),
         ]);
       case 'salary_certificate':
       case 'certificate_request':
@@ -421,12 +460,12 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
           const _FieldDef(
               'Certificate Type', ['certificate_type', 'document_type']),
           const _FieldDef('Language', ['certificate_language', 'language']),
-          const _FieldDef('Note', ['note', 'description'], multiline: true),
+          const _FieldDef('Reason', ['note', 'description'], multiline: true),
         ]);
       case 'loan':
         return makeItems([
           ...common,
-          const _FieldDef('EOS Date', ['eos_date']),
+          const _FieldDef('Effective Date', ['eos_date']),
           const _FieldDef('Loan Type', ['loan_type']),
           const _FieldDef('Net Worked Days', ['net_worked_days']),
           const _FieldDef('Years', ['years']),
@@ -436,14 +475,19 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
               'Loan Amount', ['loan_amount', 'amount', 'requested_amount']),
         ]);
       case 'promotion':
-        return makeItems([
+        final promotionItems = makeItems([
           ...common,
           const _FieldDef('Effective Date', ['effective_date']),
-          const _FieldDef('New Job', ['new_job']),
-          const _FieldDef('Old Manager', ['old_manager']),
-          const _FieldDef('New Manager', ['new_manager']),
-          const _FieldDef('Overall Score', ['overall_score']),
+          const _FieldDef('New Job Position', ['new_job']),
         ]);
+        final newManagerValue = _pickFromMaps(dataMaps, ['new_manager']);
+        promotionItems.add(_DetailItem(
+            'New Manager', newManagerValue.isEmpty ? '-' : newManagerValue));
+        promotionItems.addAll(makeItems([
+          const _FieldDef('Current Manager', ['old_manager']),
+          const _FieldDef('Evaluation Score %', ['overall_score']),
+        ]));
+        return promotionItems;
       case 'increment':
       case 'salary_increment':
         return makeItems([
@@ -457,8 +501,8 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
           const _FieldDef('Suggested By Manager', ['manager_suggested_salary']),
           const _FieldDef('New Salary', [
             'new_salary',
-            'salary_max',
             'suggested_total',
+            'salary_max',
           ]),
           const _FieldDef('Evaluation Score%', [
             'evaluation_score',
@@ -472,31 +516,44 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
           const _FieldDef(
               'Notice Period Start Date', ['notice_period_start_date']),
           const _FieldDef('Resignation Type', ['resignation_type']),
-          const _FieldDef(
-              'Expected Relieving Date', ['expected_relieving_date']),
+          const _FieldDef('Last Day of Employee', ['expected_relieving_date']),
           const _FieldDef('Notice Period', ['notice_period']),
           const _FieldDef('Reason', ['reason', 'note'], multiline: true),
         ]);
       case 'termination':
         return makeItems([
-          ...common,
-          const _FieldDef('Termination Type', ['termination_type']),
-          const _FieldDef('Termination Reason', ['termination_reason']),
-          const _FieldDef('Employee Last Day', ['emp_last_day']),
-          const _FieldDef('Company No.', ['company_no']),
-          const _FieldDef('Note', ['note', 'description'], multiline: true),
+          const _FieldDef('Requested By',
+              ['requested_by', 'requester_name', 'employee_name']),
+          const _FieldDef('Company Number', ['company_no']),
+          const _FieldDef('Request Date', [
+            'request_date',
+            'request_datetime',
+            'request_date_from',
+            'date',
+            'create_date',
+          ]),
+          const _FieldDef('Termination type', ['termination_type']),
+          const _FieldDef('Reason', ['termination_reason', 'reason']),
+          const _FieldDef('Expected Last day of Employee', [
+            'emp_last_day',
+            'expected_relieving_date',
+          ]),
         ]);
       case 'transfer':
-        return makeItems([
+        final transferItems = makeItems([
           ...common,
-          const _FieldDef('Effective Date', ['effective_date']),
-          const _FieldDef('Transfer Type', ['transfer_type']),
-          const _FieldDef('New Manager', ['new_manager']),
+          const _FieldDef('Type', ['transfer_type']),
+        ]);
+        final newManagerValue = _pickFromMaps(dataMaps, ['new_manager']);
+        transferItems.add(_DetailItem('New Transfer Manager',
+            newManagerValue.isEmpty ? '-' : newManagerValue));
+        transferItems.addAll(makeItems([
           const _FieldDef('Transfer From', ['transfer_from']),
           const _FieldDef('Transfer To', ['transfer_to']),
           const _FieldDef('Forman', ['forman']),
           const _FieldDef('Reason', ['reason', 'note'], multiline: true),
-        ]);
+        ]));
+        return transferItems;
       case 'passport':
         return makeItems([
           ...common,
@@ -504,31 +561,30 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
           const _FieldDef('Issue Date', ['issue_date']),
           const _FieldDef('Expiry Date', ['expiry_date']),
           const _FieldDef('Return Date', ['return_date']),
-          const _FieldDef('Note', ['note', 'description'], multiline: true),
+          const _FieldDef('Reason', ['note', 'description'], multiline: true),
         ]);
       case 'leave_encashment':
         return makeItems([
           ...common,
+          const _FieldDef('Start Date', ['-']),
           const _FieldDef(
               'Encashment Days', ['encashment_days', 'encash_days']),
           const _FieldDef('Available Days', ['available_days']),
-          const _FieldDef('Request Date To', ['request_date_to']),
-          const _FieldDef('Remaining Leave Days', [
+          const _FieldDef('End Date', ['request_date_to', 'end_date']),
+          const _FieldDef('Leave Balance', [
             'remaining_leave_days',
             'available_balance',
             'leave_balance',
           ]),
           const _FieldDef('GM Attachment', ['gm_attachment']),
-          const _FieldDef('Note', ['note', 'description'], multiline: true),
         ]);
       case 'car_rent':
         return makeItems([
           ...common,
+          const _FieldDef('Company Name', ['company_no']),
           const _FieldDef('Car Request Type', ['car_req_type']),
           const _FieldDef('Rent Type', ['rent_type']),
-          const _FieldDef('Rent Duration', ['rent_duration']),
-          const _FieldDef('Company No.', ['company_no']),
-          const _FieldDef('Note', ['note', 'description'], multiline: true),
+          const _FieldDef('Comment', ['note', 'description'], multiline: true),
         ]);
       default:
         return makeItems([
@@ -540,7 +596,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
             'number_of_days',
           ]),
           const _FieldDef('End Date', ['end_date', 'request_date_to']),
-          const _FieldDef('Note', ['note', 'description'], multiline: true),
+          const _FieldDef('Reason', ['note', 'description'], multiline: true),
         ]);
     }
   }
@@ -677,7 +733,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
     return Text(
       text,
       textAlign: align,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.poppins(
         fontSize: 11.sp,
         fontWeight: FontWeight.w700,
         color: const Color(0xFFB0B0B0),
@@ -691,14 +747,14 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
     return Text(
       text,
       textAlign: align,
-      style: GoogleFonts.inter(
+      style: GoogleFonts.poppins(
         fontSize: size ?? 13.sp,
         fontWeight: weight ?? FontWeight.w600,
         color: color ?? const Color(0xFF0E0E0E),
         letterSpacing: 0.1,
       ),
       maxLines: 2,
-      overflow: TextOverflow.ellipsis,
+      overflow: TextOverflow.visible,
     );
   }
 
@@ -759,19 +815,38 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
   }
 
   Widget _detailRow(String label, String value) {
+    final isRequestedBy = label.toLowerCase() == 'requested by';
+    final requestedByShouldStartLeft =
+        isRequestedBy && value.trim().length > 22;
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 13.w),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _value(label, size: 13.sp, weight: FontWeight.w600),
-          _value(
-            value,
-            size: 13.sp,
-            weight: FontWeight.w900,
-            color: _isOrangeValueLabel(label)
-                ? const Color(0xFFFF8A00)
-                : const Color(0xFF0E0E0E),
+          Expanded(
+            flex: 4,
+            child: _value(label, size: 13.sp, weight: FontWeight.w600),
+          ),
+          SizedBox(width: 12.w),
+          Expanded(
+            flex: 5,
+            child: Text(
+              value,
+              textAlign:
+                  requestedByShouldStartLeft ? TextAlign.left : TextAlign.right,
+              textDirection: TextDirection.ltr,
+              softWrap: true,
+              maxLines: 3,
+              overflow: TextOverflow.visible,
+              style: GoogleFonts.poppins(
+                fontSize: 13.sp,
+                fontWeight: FontWeight.w900,
+                color: _isOrangeValueLabel(label)
+                    ? const Color(0xFFFF8A00)
+                    : const Color(0xFF0E0E0E),
+                letterSpacing: 0.1,
+              ),
+            ),
           ),
         ],
       ),
@@ -784,6 +859,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
   }
 
   Widget _detailDescriptionBox(String label, String value) {
+    final boxHeading = label == 'Comment' ? 'Comment' : 'Description';
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 13.w),
       child: Column(
@@ -796,13 +872,200 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
             padding: EdgeInsets.all(10.w),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10.r),
-              border: Border.all(color: const Color(0xFFD4D4D4)),
-              color: const Color(0xFFF8F8F8),
+              border: Border.all(color: const Color(0xFFC8C8C8)),
+              color: const Color(0xFFF5F5F5),
             ),
-            child: _value(value,
-                size: 12.sp,
-                weight: FontWeight.w500,
-                color: const Color(0xFF333333)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  boxHeading,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.sp,
+                    fontWeight: FontWeight.w500,
+                    color: const Color(0xFF8E8E8E),
+                  ),
+                ),
+                SizedBox(height: 8.w),
+                Container(
+                  width: double.infinity,
+                  constraints: BoxConstraints(minHeight: 60.w),
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 10.w, vertical: 8.w),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10.r),
+                    border: Border.all(color: const Color(0xFFD4D4D4)),
+                    color: const Color(0xFFF5F5F5),
+                  ),
+                  child: Text(
+                    value,
+                    textDirection: TextDirection.ltr,
+                    softWrap: true,
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF333333),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _openValidationUrl(String rawUrl) async {
+    final url = rawUrl.trim();
+    if (url.isEmpty) return;
+
+    final parsed = Uri.tryParse(url);
+    if (parsed == null) return;
+
+    final canLaunch = await canLaunchUrl(parsed);
+    if (!canLaunch) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open validation link')),
+      );
+      return;
+    }
+
+    final openedInApp =
+        await launchUrl(parsed, mode: LaunchMode.inAppBrowserView);
+    if (!openedInApp) {
+      await launchUrl(parsed, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Future<void> _openAttachmentUrl(String rawValue) async {
+    final value = rawValue.trim();
+    if (value.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Attachment is empty or invalid')),
+      );
+      return;
+    }
+
+    final parsed = Uri.tryParse(value);
+    final isValidWebUrl = parsed != null &&
+        parsed.hasScheme &&
+        (parsed.scheme == 'http' || parsed.scheme == 'https');
+    if (!isValidWebUrl) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Attachment link is invalid')),
+      );
+      return;
+    }
+
+    final canLaunch = await canLaunchUrl(parsed);
+    if (!canLaunch) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Unable to open attachment')),
+      );
+      return;
+    }
+
+    final openedInApp =
+        await launchUrl(parsed, mode: LaunchMode.inAppBrowserView);
+    if (!openedInApp) {
+      await launchUrl(parsed, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  Widget _validationActionBox(String url) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 13.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _value('Validation', size: 13.sp, weight: FontWeight.w600),
+          SizedBox(height: 10.w),
+          SizedBox(
+            width: double.infinity,
+            child: InkWell(
+              onTap: () => _openValidationUrl(url),
+              borderRadius: BorderRadius.circular(12.r),
+              child: Container(
+                alignment: Alignment.center,
+                padding: EdgeInsets.symmetric(vertical: 13.w),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12.r),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFF6F737B), Color(0xFF565A62)],
+                  ),
+                ),
+                child: Text(
+                  'Review Sick Leave',
+                  style: GoogleFonts.poppins(
+                    fontSize: 13.sp,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    decoration: TextDecoration.underline,
+                    decorationColor: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _attachmentActionBox(String value, {String label = 'GM Attachment'}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 13.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _value(label, size: 13.sp, weight: FontWeight.w600),
+          SizedBox(height: 10.w),
+          SizedBox(
+            width: double.infinity,
+            child: InkWell(
+              onTap: () => _openAttachmentUrl(value),
+              borderRadius: BorderRadius.circular(12.r),
+              child: Container(
+                alignment: Alignment.center,
+                padding: EdgeInsets.symmetric(vertical: 13.w),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12.r),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFF6F737B), Color(0xFF565A62)],
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.attach_file_rounded,
+                      color: Colors.white,
+                      size: 17.sp,
+                    ),
+                    SizedBox(width: 4.w),
+                    Text(
+                      'View Attachments',
+                      style: GoogleFonts.poppins(
+                        fontSize: 13.sp,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -829,7 +1092,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
         children: [
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 11.sp,
               fontWeight: FontWeight.w500,
               color: const Color(0xFFACACAC),
@@ -843,8 +1106,8 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
               child: Text(
                 value,
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
+                overflow: TextOverflow.visible,
+                style: GoogleFonts.poppins(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFF111111),
@@ -982,7 +1245,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                       padding: EdgeInsets.all(16.w),
                       child: Text(
                         _error,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.red,
@@ -1003,7 +1266,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                               Text(
                                 'HR REQUEST',
                                 textAlign: TextAlign.center,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 20.sp,
                                   fontWeight: FontWeight.w900,
                                   color: const Color(0xFF0E0E0E),
@@ -1052,7 +1315,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                                         children: [
                                           Text(
                                             employeeName,
-                                            style: GoogleFonts.inter(
+                                            style: GoogleFonts.poppins(
                                               fontSize: 16.sp,
                                               fontWeight: FontWeight.w900,
                                               color: Colors.white,
@@ -1061,7 +1324,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                                           if (secondaryName.isNotEmpty)
                                             Text(
                                               secondaryName,
-                                              style: GoogleFonts.inter(
+                                              style: GoogleFonts.poppins(
                                                 fontSize: 14.sp,
                                                 fontWeight: FontWeight.w600,
                                                 color: Colors.white
@@ -1139,15 +1402,35 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                                       for (int i = 0;
                                           i < requestDetailItems.length;
                                           i++) ...[
-                                        requestDetailItems[i].multiline
-                                            ? _detailDescriptionBox(
-                                                requestDetailItems[i].label,
+                                        requestDetailItems[i].label ==
+                                                'Validation'
+                                            ? _validationActionBox(
                                                 requestDetailItems[i].value,
                                               )
-                                            : _detailRow(
-                                                requestDetailItems[i].label,
-                                                requestDetailItems[i].value,
-                                              ),
+                                            : requestDetailItems[i].label ==
+                                                        'GM Attachment' ||
+                                                    requestDetailItems[i]
+                                                            .label ==
+                                                        'Birth Attachment'
+                                                ? _attachmentActionBox(
+                                                    requestDetailItems[i].value,
+                                                    label: requestDetailItems[i]
+                                                        .label,
+                                                  )
+                                                : requestDetailItems[i]
+                                                        .multiline
+                                                    ? _detailDescriptionBox(
+                                                        requestDetailItems[i]
+                                                            .label,
+                                                        requestDetailItems[i]
+                                                            .value,
+                                                      )
+                                                    : _detailRow(
+                                                        requestDetailItems[i]
+                                                            .label,
+                                                        requestDetailItems[i]
+                                                            .value,
+                                                      ),
                                         if (i != requestDetailItems.length - 1)
                                           const Divider(
                                             color: Color(0xFFE0E0E0),
@@ -1177,7 +1460,7 @@ class _HrDetailsScreenState extends State<HrDetailsScreen> {
                               pillHeight: 36.w,
                               pillSpacing: 24.w,
                               pillBorderRadius: BorderRadius.circular(20.r),
-                              pillTextStyle: GoogleFonts.inter(
+                              pillTextStyle: GoogleFonts.poppins(
                                 fontSize: 17.sp,
                                 fontWeight: FontWeight.w500,
                                 color: Colors.white,

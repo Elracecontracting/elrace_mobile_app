@@ -23,6 +23,7 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:http/http.dart' as http;
 import 'package:el_race/report_module/core/utils/directory_operation.dart';
 import 'package:el_race/report_module/data/models/report_pdf_model.dart';
+import 'package:el_race/report_module/data/repositories/company_repository.dart';
 import 'package:el_race/report_module/presentation/screens/report_detail/pdf_preview_screen.dart';
 import 'package:el_race/report_module/presentation/bottom_sheets/show_option_sheet.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -211,7 +212,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
                         SizedBox(height: 8.h),
                         Text(
                           'Camera',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -240,7 +241,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
                         SizedBox(height: 8.h),
                         Text(
                           'Gallery',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -391,7 +392,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
                     Expanded(
                       child: Text(
                         'Photos',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 18.sp,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF878B98),
@@ -502,7 +503,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
         child: Text(
           label,
           textAlign: TextAlign.right,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.poppins(
             fontSize: 13.sp,
             fontWeight: FontWeight.w700,
             color: Colors.white,
@@ -527,7 +528,7 @@ class _ReportPhotosScreenState extends State<ReportPhotosScreen> {
             SizedBox(height: 12.h),
             Text(
               'Add Pictures',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 16.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF9AA0A6),
@@ -671,10 +672,19 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
   bool _isLoadingPdfs = false;
   List<ReportPdfModel> _pdfs = [];
 
+  static const _companies = [
+    'RCC',
+    'El Race Cons. & Gen. Cont. Co. L.C.C',
+    'Al Hewar Contracting & Irrigation Est.',
+  ];
+  late String _selectedCompany;
+
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.folderName);
+    final currentCompany = CompanyRepository.company?.companyName ?? '';
+    _selectedCompany = _companies.contains(currentCompany) ? currentCompany : _companies.first;
     _loadPdfHistory();
   }
 
@@ -760,6 +770,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
       final pdfBytes = await PdfService().generateReportPdf(
         report: detail,
         projectName: widget.folderName,
+        companyName: _selectedCompany,
       );
 
       if (mounted) {
@@ -825,7 +836,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
         shape:
             RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
         title: Text('Rename File',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
                 fontWeight: FontWeight.w700, color: const Color(0xFF27304E))),
         content: TextField(
           controller: controller,
@@ -896,7 +907,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                   SizedBox(width: 4.w),
                   Text(
                     widget.reportItemsCount.toString(),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFFAEAEAE),
@@ -913,18 +924,70 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                 children: [
                   Text(
                     'Type of Report',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF6A6D78),
                     ),
                   ),
                   SizedBox(height: 10.h),
-                  _buildReportTypeButton('Site report'),
+                  Center(child: _buildReportTypeButton('Site report')),
                   SizedBox(height: 8.h),
-                  _buildReportTypeButton('Transfer report'),
+                  Center(child: _buildReportTypeButton('Transfer report')),
                   SizedBox(height: 8.h),
-                  _buildReportTypeButton('Incident report'),
+                  Center(child: _buildReportTypeButton('Incident report')),
+                  SizedBox(height: 16.h),
+                  Text(
+                    'Company Name',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF6A6D78),
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Container(
+                    height: 44.h,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(18.r),
+                      border: Border.all(color: const Color(0xFFD0D0D0), width: .9),
+                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 12.w),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton2<String>(
+                        value: _selectedCompany,
+                        isExpanded: true,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.sp,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF27304E),
+                        ),
+                        iconStyleData: IconStyleData(
+                          icon: Icon(Icons.keyboard_arrow_down_rounded,
+                              color: const Color(0xFF27304E), size: 22.w),
+                        ),
+                        dropdownStyleData: DropdownStyleData(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16.r),
+                            color: Colors.white,
+                          ),
+                        ),
+                        items: _companies
+                            .map((c) => DropdownMenuItem(
+                                  value: c,
+                                  child: Text(c,
+                                      style: GoogleFonts.poppins(
+                                          fontSize: 13.sp,
+                                          color: const Color(0xFF27304E))),
+                                ))
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) setState(() => _selectedCompany = v);
+                        },
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -946,7 +1009,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                 children: [
                   Text(
                     'File Name',
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 13.sp,
                       fontWeight: FontWeight.w500,
                       color: const Color(0xFF6A6D78),
@@ -967,7 +1030,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                           padding: EdgeInsets.symmetric(horizontal: 16.w),
                           child: TextField(
                             controller: _nameController,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 14.sp,
                               color: const Color(0xFF27304E),
                             ),
@@ -975,7 +1038,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                               border: InputBorder.none,
                               isDense: true,
                               hintText: '',
-                              hintStyle: GoogleFonts.inter(
+                              hintStyle: GoogleFonts.poppins(
                                 fontSize: 14.sp,
                                 color: const Color(0xFFB0B0B0),
                               ),
@@ -1017,7 +1080,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                     SizedBox(height: 6.h),
                     Text(
                       '${_generationStatus.isEmpty ? 'Processing...' : _generationStatus} ${_generationProgress.round()}%',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF6A6D78),
@@ -1046,7 +1109,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                       padding: EdgeInsets.fromLTRB(20.w, 18.h, 20.w, 10.h),
                       child: Text(
                         'Recent Files',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 32.sp,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
@@ -1065,7 +1128,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                               ? Center(
                                   child: Text(
                                     'No generated PDFs yet',
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 13.sp,
                                       color: Colors.white54,
                                     ),
@@ -1136,9 +1199,9 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                 children: [
                   Text(
                     pdf.fileName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
+                    style: GoogleFonts.poppins(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.w700,
                       color: Colors.white,
@@ -1147,7 +1210,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                   SizedBox(height: 2.h),
                   Text(
                     _formatPdfDate(pdf.createdAt),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 13.sp,
                       color: Colors.white.withValues(alpha: 0.7),
                     ),
@@ -1208,7 +1271,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                           size: 18.sp, color: const Color(0xFF27304E)),
                       SizedBox(width: 10.w),
                       Text('Share',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                               fontSize: 14.sp, color: const Color(0xFF27304E))),
                     ],
                   ),
@@ -1221,7 +1284,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                           size: 18.sp, color: const Color(0xFF27304E)),
                       SizedBox(width: 10.w),
                       Text('Rename',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                               fontSize: 14.sp, color: const Color(0xFF27304E))),
                     ],
                   ),
@@ -1234,7 +1297,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                           size: 18.sp, color: Colors.red),
                       SizedBox(width: 10.w),
                       Text('Delete',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                               fontSize: 14.sp, color: Colors.red)),
                     ],
                   ),
@@ -1262,7 +1325,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
         ),
         child: Text(
           title,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.poppins(
             fontSize: 15.sp,
             fontWeight: FontWeight.w700,
             color: const Color(0xFF27304E),
@@ -1369,7 +1432,7 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
                         SizedBox(height: 8.h),
                         Text(
                           'Camera',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -1398,7 +1461,7 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
                         SizedBox(height: 8.h),
                         Text(
                           'Gallery',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 14.sp,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -1622,7 +1685,7 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
                           SizedBox(width: 12.w),
                           Text(
                             'Items no ${_currentIndex + 1}/${widget.photoItems.length}',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 14.sp,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF6A6D78),
@@ -1690,7 +1753,7 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
         children: [
           Text(
             'Location',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 14.sp,
               fontWeight: FontWeight.w600,
               color: const Color(0xFF272A36),
@@ -1707,11 +1770,11 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
             child: TextField(
               controller: item.locationController,
               onChanged: (v) => item.location = v,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                   fontSize: 13.sp, color: const Color(0xFF272A36)),
               decoration: InputDecoration(
                 hintText: 'Enter location...',
-                hintStyle: GoogleFonts.inter(
+                hintStyle: GoogleFonts.poppins(
                     fontSize: 13.sp, color: const Color(0xFFB0B0B0)),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,
@@ -1739,7 +1802,7 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
             children: [
               Text(
                 'Description',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
                   color: const Color(0xFF272A36),
@@ -1772,11 +1835,11 @@ class _PhotoDetailDialogState extends State<_PhotoDetailDialog> {
               onChanged: (v) {
                 item.description = v;
               },
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                   fontSize: 13.sp, color: const Color(0xFF272A36)),
               decoration: InputDecoration(
                 hintText: 'Enter description...',
-                hintStyle: GoogleFonts.inter(
+                hintStyle: GoogleFonts.poppins(
                     fontSize: 13.sp, color: const Color(0xFFB0B0B0)),
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.zero,

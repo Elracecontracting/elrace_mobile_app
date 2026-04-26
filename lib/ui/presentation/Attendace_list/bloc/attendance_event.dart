@@ -10,16 +10,18 @@ abstract class AttendanceEvent extends Equatable {
 class GetAttendanceListET extends AttendanceEvent {
   final String? keyword;
   final int? month;
+  final int? year;
   final int requestId;
 
   const GetAttendanceListET({
     this.keyword,
     this.month,
+    this.year,
     this.requestId = 0,
   });
 
   @override
-  List<Object?> get props => [keyword, month, requestId];
+  List<Object?> get props => [keyword, month, year, requestId];
 }
 
 /// Event for non-manager: fetch own attendance via /api/attendance/detail

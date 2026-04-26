@@ -464,7 +464,7 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
                                   child: Text(
                                     u.name,
                                     style: const TextStyle(fontSize: 14),
-                                    overflow: TextOverflow.ellipsis,
+                                    overflow: TextOverflow.visible,
                                   ),
                                 ))
                             .toList(),
@@ -496,7 +496,7 @@ class _CreateTaskFromReportSheetState extends State<CreateTaskFromReportSheet> {
                     icon: const Icon(Icons.attach_file),
                     label: Text(
                       _attachmentFilename ?? 'Add file',
-                      overflow: TextOverflow.ellipsis,
+                      overflow: TextOverflow.visible,
                       style: CustomTextStyle.reportTitle.copyWith(
                         fontSize: 13.sp,
                         color: Colors.grey[800],

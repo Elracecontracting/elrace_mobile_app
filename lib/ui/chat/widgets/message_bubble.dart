@@ -855,7 +855,7 @@ class _FileContent extends StatelessWidget {
                       fontSize: 14,
                     ),
                     maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                    overflow: TextOverflow.visible,
                   ),
                   if (message.fileSize != null)
                     Text(
@@ -966,8 +966,8 @@ class _ReplyToPreview extends StatelessWidget {
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxLines: null,
+            overflow: TextOverflow.visible,
           ),
           const SizedBox(height: 2),
           Text(
@@ -977,7 +977,7 @@ class _ReplyToPreview extends StatelessWidget {
               fontSize: 13,
             ),
             maxLines: 2,
-            overflow: TextOverflow.ellipsis,
+            overflow: TextOverflow.visible,
           ),
         ],
       ),

@@ -43,26 +43,26 @@ class FolderTile extends StatelessWidget {
                   SizedBox(height: 10.h),
                   Text(
                     folder.name.isEmpty ? 'Project Name' : folder.name,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 18.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF27304E),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
                   ),
                   SizedBox(height: 4.h),
                   Text(
                     folder.description.isEmpty
                         ? 'Company Name'
                         : folder.description,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w400,
                       color: const Color(0xFF8A8D97),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
                   ),
                 ],
               ),
@@ -107,7 +107,7 @@ class FolderTile extends StatelessWidget {
                                 SizedBox(width: 8.w),
                                 Text(
                                   'Rename',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 14.sp,
                                     fontWeight: FontWeight.w500,
                                     color: const Color(0xFF27304E),
@@ -128,7 +128,7 @@ class FolderTile extends StatelessWidget {
                                 SizedBox(width: 8.w),
                                 Text(
                                   'Delete',
-                                  style: GoogleFonts.inter(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 14.sp,
                                     fontWeight: FontWeight.w500,
                                     color: const Color(0xFFE81E25),
@@ -161,7 +161,7 @@ class FolderTile extends StatelessWidget {
                             bottom: 2.h,
                             child: Text(
                               folder.reportCount.toString(),
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 12.sp,
                                 fontWeight: FontWeight.w700,
                                 color: const Color(0xFF27304E),

@@ -18,6 +18,8 @@ import 'package:el_race/ui/presentation/my_projects/data/repositories/project_re
 import 'package:el_race/ui/presentation/my_projects/data/datasources/project_remote_datasource.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_usecase.dart';
 import 'package:el_race/ui/presentation/my_projects/domain/usecases/get_projects_by_partner_usecase.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/widgets/project_documents_dialog.dart';
+import 'package:el_race/ui/presentation/my_projects/presentation/screens/project_list_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 
@@ -483,7 +485,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                     _buildHighlightedText(
                       item.title,
                       keyword,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 15.sp,
                         fontWeight: FontWeight.w600,
                         color: appFontColor,
@@ -494,12 +496,12 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                       SizedBox(height: 4.h),
                       Text(
                         item.subtitle!,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           color: Colors.grey[600],
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: null,
+                        overflow: TextOverflow.visible,
                       ),
                     ],
 
@@ -518,7 +520,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                       ),
                       child: Text(
                         item.displayCategory,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w600,
                           color: _getCategoryColor(item.category),
@@ -585,7 +587,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     return RichText(
       text: TextSpan(style: style, children: spans),
       maxLines: 2,
-      overflow: TextOverflow.ellipsis,
+      overflow: TextOverflow.visible,
     );
   }
 
@@ -605,7 +607,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             SizedBox(height: 16.h),
             Text(
               title,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[700],
@@ -615,7 +617,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 14.sp,
                 color: Colors.grey[500],
               ),
@@ -641,7 +643,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             SizedBox(height: 16.h),
             Text(
               'Oops!',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w600,
                 color: Colors.grey[700],
@@ -651,7 +653,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 14.sp,
                 color: Colors.grey[500],
               ),
@@ -891,8 +893,27 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
             '')
         .toString();
 
+    // Extract project_id: prefer data['project_id'], fallback to item.id
+    final int projectId = int.tryParse(
+            (data['project_id'] ?? item.id).toString()) ??
+        0;
+
     return GestureDetector(
-      onTap: () => _navigateToDetail(item),
+      onTap: () {
+        final repo = ProjectRepositoryImpl(ProjectRemoteDataSource());
+        final bloc = ProjectListBloc(
+          getProjectsUseCase: GetProjectsUseCase(repository: repo),
+          getProjectAttachmentsUseCase:
+              GetProjectAttachmentsUseCase(repository: repo),
+          getProjectsByPartnerUseCase:
+              GetProjectsByPartnerUseCase(repository: repo),
+        );
+        ProjectDocumentsDialog.show(
+          context,
+          projectId: projectId,
+          bloc: bloc,
+        );
+      },
       child: buildProjectCard(
         id: cardId,
         name: item.title,
@@ -964,9 +985,9 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                     Center(
                       child: Text(
                         requestNoRaw,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
+                        maxLines: null,
+                        overflow: TextOverflow.visible,
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFF0A3887),
@@ -976,8 +997,8 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                     SizedBox(height: 26.h),
                     Text(
                       titleRaw.toUpperCase(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: null,
+                      overflow: TextOverflow.visible,
                       style: GoogleFonts.poppins(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w700,
@@ -993,7 +1014,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                           child: Center(
                             child: Text(
                               amount,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 22.sp,
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFF073A85),
@@ -1008,7 +1029,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                             children: [
                               Text(
                                 'Last Updated',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 9.sp,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFFB8B8B8),
@@ -1016,7 +1037,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                               ),
                               Text(
                                 lastUpdated,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 9.sp,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFFB8B8B8),
@@ -1122,7 +1143,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                   _buildHighlightedText(
                     item.title,
                     keyword,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF0D3E7F),
@@ -1132,13 +1153,13 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                     SizedBox(height: 2.h),
                     Text(
                       reference,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 12.sp,
                         fontWeight: FontWeight.w500,
                         color: Colors.grey[600],
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: null,
+                      overflow: TextOverflow.visible,
                     ),
                   ],
                   SizedBox(height: 4.h),
@@ -1151,12 +1172,12 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                         Flexible(
                           child: Text(
                             employeeName,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 11.sp,
                               color: Colors.grey[600],
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            maxLines: null,
+                            overflow: TextOverflow.visible,
                           ),
                         ),
                       ],
@@ -1171,7 +1192,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                           ),
                           child: Text(
                             requestType,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 10.sp,
                               fontWeight: FontWeight.w600,
                               color: const Color(0xFF1A2540),
@@ -1185,10 +1206,10 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                     SizedBox(height: 2.h),
                     Text(
                       vendor,
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                           fontSize: 11.sp, color: Colors.grey[500]),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      maxLines: null,
+                      overflow: TextOverflow.visible,
                     ),
                   ],
                 ],
@@ -1204,7 +1225,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                     NumberFormat.decimalPattern().format(amountTotal is num
                         ? amountTotal
                         : double.tryParse(amountTotal.toString()) ?? 0),
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 14.sp,
                       fontWeight: FontWeight.w800,
                       color: const Color(0xFF0D3E7F),
@@ -1213,7 +1234,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                 SizedBox(height: 4.h),
                 Text(
                   formattedDate,
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                       fontSize: 11.sp, color: Colors.grey[500]),
                 ),
                 SizedBox(height: 4.h),
@@ -1225,7 +1246,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
                   ),
                   child: Text(
                     statusBadge,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 10.sp,
                       fontWeight: FontWeight.w700,
                       color: statusColor,

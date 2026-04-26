@@ -25,11 +25,18 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
 
   String _statusBadgeAsset(String status) {
     switch (status.trim().toLowerCase()) {
+      case 'approve':
       case 'approved':
+      case 'validate':
+      case 'validate2':
+      case 'done':
         return 'assets/newapp/approvedBadge.png';
-      case 'pending':
-        return 'assets/newapp/warningBadge.png';
+      case 'refuse':
+      case 'refused':
       case 'rejected':
+      case 'cancel':
+      case 'cancelled':
+      case 'canceled':
         return 'assets/newapp/rejectBadge.png';
       default:
         return 'assets/newapp/warningBadge.png';
@@ -62,7 +69,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
               return Center(
                 child: Text(
                   'Failed to load requests',
-                  style: GoogleFonts.inter(
+                  style: GoogleFonts.poppins(
                     fontSize: 14.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF5A5A5A),
@@ -89,7 +96,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
                       SizedBox(width: 8.w),
                       Text(
                         'MY REQUESTS',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w800,
                           color: const Color(0xFF171A2E),
@@ -105,7 +112,7 @@ class _MyRequestsScreenState extends State<MyRequestsScreen> {
                       padding: EdgeInsets.only(top: 30.h),
                       child: Text(
                         'No requests available.',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5A5A5A),
@@ -186,9 +193,9 @@ class _MyRequestCard extends StatelessWidget {
                 Center(
                   child: Text(
                     requestNo.trim().isEmpty ? 'REQ/-' : requestNo,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
+                    style: GoogleFonts.poppins(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF0D3E7F),
@@ -198,8 +205,8 @@ class _MyRequestCard extends StatelessWidget {
                 SizedBox(height: 8.h),
                 Text(
                   title.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                   style: GoogleFonts.poppins(
                     fontSize: 13.sp,
                     fontWeight: FontWeight.w700,
@@ -209,9 +216,9 @@ class _MyRequestCard extends StatelessWidget {
                 SizedBox(height: 2.h),
                 Text(
                   employeeName.trim().isEmpty ? '-' : employeeName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.lexendDeca(
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
+                  style: GoogleFonts.poppins(
                     fontSize: 11.sp,
                     fontWeight: FontWeight.w600,
                     color: const Color(0xFF484848).withAlpha(184),
@@ -220,9 +227,9 @@ class _MyRequestCard extends StatelessWidget {
                 if (employeeFileId.trim().isNotEmpty)
                   Text(
                     'File ID: $employeeFileId',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
+                    style: GoogleFonts.poppins(
                       fontSize: 11.sp,
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF686868),
@@ -236,7 +243,7 @@ class _MyRequestCard extends StatelessWidget {
                     children: [
                       Text(
                         'Last Updated',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFFB1B1B1),
@@ -244,7 +251,7 @@ class _MyRequestCard extends StatelessWidget {
                       ),
                       Text(
                         updatedAt,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 11.sp,
                           fontWeight: FontWeight.w700,
                           color: const Color(0xFFB1B1B1),

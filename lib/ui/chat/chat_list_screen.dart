@@ -377,7 +377,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                 ),
                                 // Tab content (horizontal bubbles)
                                 SizedBox(
-                                  height: 82,
+                                  height: 100,
                                   child: tabIndex == 0
                                       // ── Groups tab ──
                                       ? (groups.isEmpty
@@ -845,9 +845,10 @@ class _ChatListTile extends StatelessWidget {
                               future: UserRepository.instance
                                   .getUser(userChat.peerUid!),
                               builder: (context, snap) {
-                                final displayName = snap.data?.name ??
+                                final rawName = snap.data?.name ??
                                     userChat.title ??
                                     'Chat';
+                                final displayName = _limitToTwoWords(rawName);
                                 return Text(
                                   displayName,
                                   style:
@@ -862,7 +863,7 @@ class _ChatListTile extends StatelessWidget {
                             )
                           else
                             Text(
-                              userChat.title ?? 'Chat',
+                              _limitToTwoWords(userChat.title ?? 'Chat'),
                               style: theme.textTheme.titleMedium?.copyWith(
                                 color: const Color(0xFF171717),
                                 fontWeight: FontWeight.w700,
@@ -1062,8 +1063,8 @@ class _ChatListTile extends StatelessWidget {
     if (lastMessage == null) {
       return const Text(
         'No messages',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+        maxLines: null,
+        overflow: TextOverflow.visible,
       );
     }
 
@@ -1088,8 +1089,8 @@ class _ChatListTile extends StatelessWidget {
 
     return Text(
       text,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+      maxLines: null,
+      overflow: TextOverflow.visible,
     );
   }
 
@@ -1341,6 +1342,12 @@ class _InlineUserTile extends StatelessWidget {
   }
 }
 
+/// Returns at most the first two words of [name].
+String _limitToTwoWords(String name) {
+  final parts = name.trim().split(RegExp(r'\s+'));
+  return parts.take(2).join(' ');
+}
+
 class _SecondaryChatBar extends StatelessWidget {
   final VoidCallback onMessagesTap;
 
@@ -1416,7 +1423,7 @@ class _GroupQuickItem extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.only(right: 14),
         child: SizedBox(
-          width: 64,
+          width: 88,
           child: Column(
             children: [
               Container(
@@ -1439,14 +1446,18 @@ class _GroupQuickItem extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 5),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+              Flexible(
+                child: Text(
+                  _limitToTwoWords(label),
+                  maxLines: 2,
+                  softWrap: true,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    height: 1.2,
+                  ),
                 ),
               ),
             ],
@@ -1503,7 +1514,7 @@ class _SupportGroupQuickItem extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.only(right: 14),
         child: SizedBox(
-          width: 64,
+          width: 88,
           child: Column(
             children: [
               Container(
@@ -1526,14 +1537,18 @@ class _SupportGroupQuickItem extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 5),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
+              Flexible(
+                child: Text(
+                  _limitToTwoWords(label),
+                  maxLines: 2,
+                  softWrap: true,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    height: 1.2,
+                  ),
                 ),
               ),
             ],

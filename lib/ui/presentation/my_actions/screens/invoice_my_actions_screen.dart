@@ -81,7 +81,7 @@ class _InvoiceMyActionsScreenState extends State<InvoiceMyActionsScreen> {
                       SizedBox(height: 16.h),
                       Text(
                         'Service not available',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 16.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5A5A5A),
@@ -91,7 +91,7 @@ class _InvoiceMyActionsScreenState extends State<InvoiceMyActionsScreen> {
                       Text(
                         'This feature is currently unavailable.\nPlease try again later.',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           color: const Color(0xFF9AA0A6),
                         ),
@@ -146,7 +146,7 @@ class _InvoiceMyActionsScreenState extends State<InvoiceMyActionsScreen> {
                         SizedBox(width: 8.w),
                         Text(
                           'INVOICE',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 18.sp,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF101C36),
@@ -163,7 +163,7 @@ class _InvoiceMyActionsScreenState extends State<InvoiceMyActionsScreen> {
                     child: Center(
                       child: Text(
                         'No actions available.',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 13.sp,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF5A5A5A),
@@ -220,9 +220,9 @@ class _InvoiceRequestCard extends StatelessWidget {
                 Center(
                   child: Text(
                     item.requestNo,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.inter(
+                    maxLines: null,
+                    overflow: TextOverflow.visible,
+                    style: GoogleFonts.poppins(
                       fontSize: 13.sp,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF0A3887),
@@ -233,7 +233,7 @@ class _InvoiceRequestCard extends StatelessWidget {
                 Text(
                   item.title.toUpperCase(),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  overflow: TextOverflow.visible,
                   style: GoogleFonts.poppins(
                     fontSize: 11.sp,
                     fontWeight: FontWeight.w700,
@@ -244,9 +244,9 @@ class _InvoiceRequestCard extends StatelessWidget {
                 SizedBox(height: 2.h),
                 Text(
                   item.workOrder,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
+                  style: GoogleFonts.poppins(
                     fontSize: 10.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF777777),
@@ -254,9 +254,9 @@ class _InvoiceRequestCard extends StatelessWidget {
                 ),
                 Text(
                   item.employeeName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.inter(
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
+                  style: GoogleFonts.poppins(
                     fontSize: 10.sp,
                     fontWeight: FontWeight.w700,
                     color: const Color(0xFF777777),
@@ -270,7 +270,7 @@ class _InvoiceRequestCard extends StatelessWidget {
                       child: Center(
                         child: Text(
                           item.amount,
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 22.sp,
                             fontWeight: FontWeight.w800,
                             color: const Color(0xFF073A85),
@@ -285,7 +285,7 @@ class _InvoiceRequestCard extends StatelessWidget {
                         children: [
                           Text(
                             'Last Updated',
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 9.sp,
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFFB8B8B8),
@@ -293,7 +293,7 @@ class _InvoiceRequestCard extends StatelessWidget {
                           ),
                           Text(
                             item.lastUpdated,
-                            style: GoogleFonts.inter(
+                            style: GoogleFonts.poppins(
                               fontSize: 9.sp,
                               fontWeight: FontWeight.w700,
                               color: const Color(0xFFB8B8B8),

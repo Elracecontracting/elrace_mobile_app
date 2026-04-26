@@ -297,7 +297,7 @@ class TypingTextWidget extends StatelessWidget {
               color: const Color(0xFF25D366),
               fontStyle: FontStyle.italic,
             ),
-            overflow: TextOverflow.ellipsis,
+            overflow: TextOverflow.visible,
           ),
         ),
       ],

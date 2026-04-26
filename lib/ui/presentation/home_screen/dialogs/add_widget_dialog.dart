@@ -121,7 +121,7 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
                 padding: EdgeInsets.only(bottom: 6.h),
                 child: Text(
                   '250',
-                  style: GoogleFonts.koulen(
+                  style: GoogleFonts.poppins(
                     color: Colors.black,
                     fontSize: 22.w,
                     fontWeight: FontWeight.w400,
@@ -492,7 +492,7 @@ class _AddWidgetDialogState extends State<AddWidgetDialog> {
                       padding: const EdgeInsets.symmetric(vertical: 20),
                       child: Text(
                         'All widgets are already added',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 14.sp,
                           color: const Color(0xFF858585),
                         ),

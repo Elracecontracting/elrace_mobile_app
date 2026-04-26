@@ -10,6 +10,7 @@ class AllApprovalsOverview extends StatelessWidget {
   final int hrCount;
   final int delayedCount;
   final VoidCallback? onDelayedTap;
+  final VoidCallback? onHrTestCasesTap;
 
   const AllApprovalsOverview({
     super.key,
@@ -19,6 +20,7 @@ class AllApprovalsOverview extends StatelessWidget {
     required this.hrCount,
     required this.delayedCount,
     this.onDelayedTap,
+    this.onHrTestCasesTap,
   });
 
   @override
@@ -55,6 +57,10 @@ class AllApprovalsOverview extends StatelessWidget {
             ),
             SizedBox(height: 14.h),
             _DelayedRequestCard(value: delayedCount, onTap: onDelayedTap),
+            if (onHrTestCasesTap != null) ...[
+              SizedBox(height: 14.h),
+              _HrTestCasesCard(onTap: onHrTestCasesTap!),
+            ],
           ],
         ),
       ),
@@ -62,7 +68,72 @@ class AllApprovalsOverview extends StatelessWidget {
   }
 }
 
-class _CategoryRingsRow extends StatelessWidget {
+class _HrTestCasesCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _HrTestCasesCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18.r),
+        child: Ink(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 14.h),
+          decoration: BoxDecoration(
+            color: const Color(0xFFFDFDFD),
+            borderRadius: BorderRadius.circular(18.r),
+            border: Border.all(color: const Color(0xFF5E7CC8), width: 1.2),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.science_outlined,
+                color: const Color(0xFF2A4FA8),
+                size: 22.sp,
+              ),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'HR Request Test Cases',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14.sp,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1D2D57),
+                      ),
+                    ),
+                    SizedBox(height: 2.h),
+                    Text(
+                      'Open all 19 hardcoded scenarios',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.sp,
+                        fontWeight: FontWeight.w500,
+                        color: const Color(0xFF5C6991),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: const Color(0xFF7A88AE),
+                size: 24.sp,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryRingsRow extends StatefulWidget {
   final int rfqCount;
   final int hrCount;
   final int totalCount;
@@ -78,62 +149,101 @@ class _CategoryRingsRow extends StatelessWidget {
   });
 
   @override
+  State<_CategoryRingsRow> createState() => _CategoryRingsRowState();
+}
+
+class _CategoryRingsRowState extends State<_CategoryRingsRow> {
+  bool _isExpanded = false;
+
+  void _toggleSpread() {
+    setState(() => _isExpanded = !_isExpanded);
+  }
+
+  Widget _animatedRing({
+    required double collapsedLeft,
+    required double expandedLeft,
+    required double top,
+    required Widget child,
+  }) {
+    return AnimatedPositioned(
+      duration: const Duration(milliseconds: 430),
+      curve: Curves.easeInOutCubic,
+      left: _isExpanded ? expandedLeft : collapsedLeft,
+      top: top,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _toggleSpread,
+        child: child,
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 84.h,
       child: Center(
         child: SizedBox(
           width: 310.w,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Positioned(
-                left: 0,
-                top: 7.h,
-                child: _CountRing(
-                  label: 'RFQ',
-                  value: rfqCount,
-                  borderColor: const Color(0xFFF0A21E),
+          child: GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: _toggleSpread,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                _animatedRing(
+                  collapsedLeft: 0,
+                  expandedLeft: -40.w,
+                  top: 7.h,
+                  child: _CountRing(
+                    label: 'RFQ',
+                    value: widget.rfqCount,
+                    borderColor: const Color(0xFFF0A21E),
+                  ),
                 ),
-              ),
-              Positioned(
-                left: 56.w,
-                top: 7.h,
-                child: _CountRing(
-                  label: 'HR',
-                  value: hrCount,
-                  borderColor: const Color(0xFFD4334D),
+                _animatedRing(
+                  collapsedLeft: 56.w,
+                  expandedLeft: 36.w,
+                  top: 7.h,
+                  child: _CountRing(
+                    label: 'HR',
+                    value: widget.hrCount,
+                    borderColor: const Color(0xFFD4334D),
+                  ),
                 ),
-              ),
-              Positioned(
-                left: 238.w,
-                top: 7.h,
-                child: _CountRing(
-                  label: 'Invoice',
-                  value: invoiceCount,
-                  borderColor: const Color(0xFF2CBF6F),
+                _animatedRing(
+                  collapsedLeft: 238.w,
+                  expandedLeft: 276.w,
+                  top: 7.h,
+                  child: _CountRing(
+                    label: 'Invoice',
+                    value: widget.invoiceCount,
+                    borderColor: const Color(0xFF2CBF6F),
+                  ),
                 ),
-              ),
-              Positioned(
-                left: 182.w,
-                top: 7.h,
-                child: _CountRing(
-                  label: 'Pettycash',
-                  value: pettyCashCount,
-                  borderColor: const Color(0xFF25B5B3),
+                _animatedRing(
+                  collapsedLeft: 182.w,
+                  expandedLeft: 200.w,
+                  top: 7.h,
+                  child: _CountRing(
+                    label: 'Pettycash',
+                    value: widget.pettyCashCount,
+                    borderColor: const Color(0xFF25B5B3),
+                  ),
                 ),
-              ),
-              Positioned(
-                left: 112.w,
-                top: 2.h,
-                child: _CountRing(
-                  label: 'Total',
-                  value: totalCount,
-                  borderColor: const Color(0xFF4BA0D9),
-                  isPrimary: true,
+                _animatedRing(
+                  collapsedLeft: 112.w,
+                  expandedLeft: 112.w,
+                  top: 2.h,
+                  child: _CountRing(
+                    label: 'Total',
+                    value: widget.totalCount,
+                    borderColor: const Color(0xFF4BA0D9),
+                    isPrimary: true,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -181,7 +291,7 @@ class _CountRing extends StatelessWidget {
         children: [
           Text(
             value.toString(),
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: isPrimary ? 18.sp : 15.5.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF444444),
@@ -191,7 +301,7 @@ class _CountRing extends StatelessWidget {
           SizedBox(height: 3.h),
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: isPrimary ? 11.sp : 9.2.sp,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF8E8E8E),
@@ -253,7 +363,7 @@ class _RorCard extends StatelessWidget {
               SizedBox(width: 8.w),
               Text(
                 'ROR',
-                style: GoogleFonts.inter(
+                style: GoogleFonts.poppins(
                   fontSize: 21.sp,
                   fontWeight: FontWeight.w800,
                   color: const Color(0xFF1A1A1A),
@@ -266,7 +376,7 @@ class _RorCard extends StatelessWidget {
           Text(
             'Here, you can review your Response Rate regarding the actions\n'
             'taken on the requests.',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 10.4.sp,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF676767),
@@ -320,7 +430,7 @@ class _RorCard extends StatelessWidget {
                   children: [
                     Text(
                       '$ror%',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 18.sp,
                         fontWeight: FontWeight.w800,
                         color: const Color(0xFF111111),
@@ -330,7 +440,7 @@ class _RorCard extends StatelessWidget {
                     SizedBox(height: 6.h),
                     Text(
                       'The percentage of\nROR in the past\nweek.',
-                      style: GoogleFonts.inter(
+                      style: GoogleFonts.poppins(
                         fontSize: 8.2.sp,
                         fontWeight: FontWeight.w500,
                         color: const Color(0xFF616161),
@@ -441,13 +551,13 @@ class _RorNeedle extends StatelessWidget {
           child: Text(
             label,
             textAlign: TextAlign.center,
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 9.sp,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF171717),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxLines: null,
+            overflow: TextOverflow.visible,
           ),
         ),
       ],
@@ -472,7 +582,7 @@ class _ValueBubble extends StatelessWidget {
       child: Text(
         value.toString(),
         textAlign: TextAlign.center,
-        style: GoogleFonts.inter(
+        style: GoogleFonts.poppins(
           fontSize: 8.sp,
           fontWeight: FontWeight.w700,
           color: Colors.white,
@@ -482,80 +592,211 @@ class _ValueBubble extends StatelessWidget {
   }
 }
 
-class _DelayedRequestCard extends StatelessWidget {
+class _DelayedRequestCard extends StatefulWidget {
   final int value;
   final VoidCallback? onTap;
 
   const _DelayedRequestCard({required this.value, this.onTap});
 
   @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18.r),
-        child: Ink(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 22.w, vertical: 16.h),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFDFDFD),
-            borderRadius: BorderRadius.circular(18.r),
-            border: Border.all(color: const Color(0xFFD44B4B), width: 1.2),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Text(
-                    'Delayed Request',
-                    style: GoogleFonts.inter(
-                      fontSize: 21.sp,
-                      fontWeight: FontWeight.w700,
-                      color: const Color(0xFF1A1A1A),
-                      height: 1,
-                    ),
-                  ),
-                  if (onTap != null) ...[
-                    SizedBox(width: 6.w),
-                    Icon(
-                      Icons.chevron_right,
-                      color: const Color(0xFF1A1A1A),
-                      size: 23.sp,
-                    ),
-                  ],
-                ],
-              ),
-              SizedBox(height: 14.h),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 7.w,
-                    height: 30.h,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFC81616),
-                      borderRadius: BorderRadius.circular(7.r),
-                    ),
-                  ),
-                  SizedBox(width: 12.w),
-                  Text(
-                    value.toString(),
-                    style: GoogleFonts.inter(
-                      fontSize: 30.sp,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.black,
-                      height: 1.0,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+  State<_DelayedRequestCard> createState() => _DelayedRequestCardState();
+}
+
+class _DelayedRequestCardState extends State<_DelayedRequestCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
     );
+    _pulse = CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    );
+    _syncPulseState();
+  }
+
+  @override
+  void didUpdateWidget(covariant _DelayedRequestCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.value != widget.value) {
+      _syncPulseState();
+    }
+  }
+
+  void _syncPulseState() {
+    if (widget.value > 0) {
+      if (!_pulseController.isAnimating) {
+        _pulseController.repeat(reverse: true);
+      }
+    } else {
+      _pulseController.stop();
+      _pulseController.value = 0;
+    }
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final hasDelayedRequests = widget.value > 0;
+    final borderRadius = BorderRadius.circular(18.r);
+
+    return AnimatedBuilder(
+      animation: _pulse,
+      builder: (context, child) {
+        final glowFactor =
+            hasDelayedRequests ? (0.35 + (_pulse.value * 0.65)) : 0.0;
+        final borderGlowColor =
+            const Color(0xFFD44B4B).withOpacity(0.24 + (0.26 * glowFactor));
+
+        return Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: borderRadius,
+            child: Ink(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFFDFDFD),
+                borderRadius: borderRadius,
+                border: Border.all(color: const Color(0xFFD44B4B), width: 1.2),
+              ),
+              child: CustomPaint(
+                foregroundPainter: hasDelayedRequests
+                    ? _RRectGlowPainter(
+                        strokeWidth: 2.2,
+                        radius: 18.r,
+                        color: borderGlowColor,
+                        blurSigma: 6.2 + (4.0 * glowFactor),
+                      )
+                    : null,
+                child: Padding(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 22.w, vertical: 16.h),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Delayed Request',
+                            style: GoogleFonts.poppins(
+                              fontSize: 21.sp,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1A1A1A),
+                              height: 1,
+                            ),
+                          ),
+                          if (widget.onTap != null) ...[
+                            SizedBox(width: 6.w),
+                            Icon(
+                              Icons.chevron_right,
+                              color: const Color(0xFF1A1A1A),
+                              size: 23.sp,
+                            ),
+                          ],
+                        ],
+                      ),
+                      SizedBox(height: 14.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 7.w,
+                            height: 30.h,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFC81616),
+                              borderRadius: BorderRadius.circular(7.r),
+                              boxShadow: hasDelayedRequests
+                                  ? [
+                                      BoxShadow(
+                                        color: const Color(0xFFC81616)
+                                            .withOpacity(
+                                                0.20 + (0.30 * glowFactor)),
+                                        blurRadius: 4 + (8 * glowFactor),
+                                        spreadRadius: 0.1 + (0.6 * glowFactor),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                          ),
+                          SizedBox(width: 12.w),
+                          Text(
+                            widget.value.toString(),
+                            style: GoogleFonts.poppins(
+                              fontSize: 30.sp,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black,
+                              height: 1.0,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _RRectGlowPainter extends CustomPainter {
+  final double strokeWidth;
+  final double radius;
+  final Color color;
+  final double blurSigma;
+
+  const _RRectGlowPainter({
+    required this.strokeWidth,
+    required this.radius,
+    required this.color,
+    required this.blurSigma,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final rrect = RRect.fromRectAndRadius(
+      rect.deflate(strokeWidth / 2),
+      Radius.circular(radius),
+    );
+
+    final softHalo = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth + 1.1
+      ..color = color.withOpacity((color.opacity * 0.82).clamp(0.0, 1.0))
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, blurSigma);
+
+    final coreGlow = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..color = color
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, blurSigma * 0.58);
+
+    canvas.drawRRect(rrect, softHalo);
+    canvas.drawRRect(rrect, coreGlow);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RRectGlowPainter oldDelegate) {
+    return oldDelegate.strokeWidth != strokeWidth ||
+        oldDelegate.radius != radius ||
+        oldDelegate.color != color ||
+        oldDelegate.blurSigma != blurSigma;
   }
 }

@@ -39,7 +39,7 @@ class SaveConfirmationDialog extends StatelessWidget {
             
             Text(
               'Save Changes',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 18.sp,
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF000F42),
@@ -49,7 +49,7 @@ class SaveConfirmationDialog extends StatelessWidget {
             
             Text(
               'Do you want to save your widget changes?',
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 fontSize: 14.sp,
                 color: const Color(0xFF858585),
               ),
@@ -70,7 +70,7 @@ class SaveConfirmationDialog extends StatelessWidget {
                       ),
                       child: Text(
                         'Cancel',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -92,7 +92,7 @@ class SaveConfirmationDialog extends StatelessWidget {
                       ),
                       child: Text(
                         'Save',
-                        style: GoogleFonts.inter(
+                        style: GoogleFonts.poppins(
                           fontSize: 14.sp,
                           fontWeight: FontWeight.w600,
                           color: white,

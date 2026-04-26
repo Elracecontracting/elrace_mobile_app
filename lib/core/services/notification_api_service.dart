@@ -362,21 +362,23 @@ class NotificationApiService {
   }
 
   static Future<NotificationApiResult> getNotifications({
-    int page = 1,
-    int perPage = 50,
-    String category = 'all',
-    bool unreadOnly = false,
+    int limit = 500,
+    int offset = 0,
   }) async {
-    final uri = Uri.parse('$_baseUrl/notifications').replace(
-      queryParameters: {
-        'page': '$page',
-        'per_page': '$perPage',
-        'category': category,
-        'unread_only': unreadOnly ? 'true' : 'false',
-      },
+    final uri = Uri.parse('$_baseUrl/notifications');
+
+    final response = await http.post(
+      uri,
+      headers: _headers(),
+      body: jsonEncode({
+        'jsonrpc': '2.0',
+        'params': {
+          'limit': limit,
+          'offset': offset,
+        },
+      }),
     );
 
-    final response = await http.get(uri, headers: _headers());
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception('Failed to fetch notifications: ${response.statusCode}');
     }
@@ -386,24 +388,29 @@ class NotificationApiService {
       throw Exception('Invalid notifications response format');
     }
 
-    dynamic data = decoded['data'];
-    if (data == null && decoded['result'] is Map<String, dynamic>) {
-      data = (decoded['result'] as Map<String, dynamic>)['data'] ??
-          decoded['result'];
-    }
+    // Odoo jsonrpc response: { "jsonrpc": "2.0", "result": [...] | {...} }
+    dynamic result = decoded['result'];
 
     List<dynamic> rawNotifications = const [];
     int? unreadCount;
 
-    if (data is Map<String, dynamic>) {
-      final notificationsValue =
-          data['notifications'] ?? data['items'] ?? data['data'];
+    if (result is List) {
+      rawNotifications = result;
+    } else if (result is Map<String, dynamic>) {
+      final notificationsValue = result['notifications'] ??
+          result['records'] ??
+          result['items'] ??
+          result['data'];
       if (notificationsValue is List) {
         rawNotifications = notificationsValue;
+      } else if (notificationsValue == null) {
+        // Treat the whole result map as single notification? — no, skip.
+        rawNotifications = const [];
       }
-      unreadCount = _toIntOrNull(data['unread_count']);
-    } else if (data is List) {
-      rawNotifications = data;
+      unreadCount = _toIntOrNull(result['unread_count']) ??
+          _toIntOrNull(result['total_unread']);
+    } else if (decoded['data'] is List) {
+      rawNotifications = decoded['data'] as List<dynamic>;
     } else if (decoded['notifications'] is List) {
       rawNotifications = decoded['notifications'] as List<dynamic>;
     }
@@ -451,37 +458,22 @@ class NotificationApiService {
     final id = notificationId.trim();
     if (id.isEmpty) return false;
 
-    final attempts = <Future<http.Response>>[
-      http.put(
-        Uri.parse('$_baseUrl/notifications/read'),
-        headers: _headers(),
-        body: jsonEncode({'id': id}),
-      ),
-      http.post(
-        Uri.parse('$_baseUrl/notifications/read'),
-        headers: _headers(),
-        body: jsonEncode({'id': id}),
-      ),
-      http.put(
-        Uri.parse('$_baseUrl/notifications/$id/read'),
-        headers: _headers(),
-      ),
-      http.post(
-        Uri.parse('$_baseUrl/notifications/$id/read'),
-        headers: _headers(),
-      ),
-    ];
+    // Try numeric id first (notification_user_id), fallback to string id
+    final numericId = int.tryParse(id);
 
-    for (final attempt in attempts) {
-      try {
-        final response = await attempt;
-        if (_looksSuccessful(response)) {
-          return true;
-        }
-      } catch (_) {
-        // Try next endpoint shape
-      }
-    }
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/notifications/read'),
+        headers: _headers(),
+        body: jsonEncode({
+          'jsonrpc': '2.0',
+          'params': {
+            'notification_user_id': numericId ?? id,
+          },
+        }),
+      );
+      if (_looksSuccessful(response)) return true;
+    } catch (_) {}
 
     return false;
   }

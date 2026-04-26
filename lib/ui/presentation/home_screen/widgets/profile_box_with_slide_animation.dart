@@ -3,7 +3,11 @@ import 'dart:typed_data';
 import 'package:el_race/core/services/notification_api_service.dart';
 import 'package:el_race/core/services/notification_storage_service.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/main.dart';
+import 'package:el_race/data/services/hive_service.dart';
+import 'package:el_race/data/services/prayer_notification_service.dart';
+import 'package:el_race/ui/presentation/home_screen/bloc/home_bloc.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:el_race/main.dart' show appInitCompleter, navKey;
 import 'package:el_race/providers/profile_box_provider.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/profile_widgets/app_settings_widget.dart';
 import 'package:el_race/ui/presentation/home_screen/widgets/profile_widgets/profile_paint_widgets.dart';
@@ -31,7 +35,7 @@ class _ProfileBoxWithSlideAnimationState
   bool _isLoadingQr = true;
   String? _qrErrorMessage;
   bool _isMutePopupVisible = false;
-  bool _isMutePopupSaving = false;
+  final Set<String> _savingMuteKeys = <String>{};
   List<_MuteChannelConfig> _muteChannels = <_MuteChannelConfig>[];
   Map<String, bool> _muteValueByKey = <String, bool>{};
 
@@ -44,7 +48,11 @@ class _ProfileBoxWithSlideAnimationState
     super.initState();
     print('🎬 Profile Box: initState called');
 
-    _loadQrCode();
+    // Defer QR code load until heavy init is complete to avoid
+    // blocking the main thread during splash screen.
+    appInitCompleter.future.then((_) {
+      if (mounted) _loadQrCode();
+    });
 
     // Initialize animation controller for moving numbers
     _numbersAnimationController = AnimationController(
@@ -61,8 +69,8 @@ class _ProfileBoxWithSlideAnimationState
       curve: Curves.linear,
     ));
 
-    // Start infinite continuous animation without looping back
-    _numbersAnimationController.repeat();
+    // Animation will be started when the profile box becomes visible.
+    // Don't start here to avoid 60fps repaints while the drawer is hidden.
   }
 
   @override
@@ -138,18 +146,26 @@ class _ProfileBoxWithSlideAnimationState
     return candidates.first.trim().toLowerCase();
   }
 
+  /// Local-only categories that are not returned by the API.
+  static const List<_MuteChannelConfig> _localOnlyChannels = [
+    _MuteChannelConfig(label: 'Chat', key: 'chat_message'),
+    _MuteChannelConfig(label: 'Tasks', key: 'task'),
+    _MuteChannelConfig(label: 'Adhan', key: 'adhan'),
+  ];
+
   Future<void> _openMuteControlPopup() async {
     final results = await Future.wait([
       NotificationStorageService.getMuteSettings(),
       NotificationStorageService.getNotificationCategories(),
+      HiveService.isPrayerSoundMuted(),
     ]);
     if (!mounted) return;
 
     final settings = results[0] as Map<String, bool>;
-    final apiCategories =
-        results[1] as List<NotificationCategoryApiModel>;
+    final apiCategories = results[1] as List<NotificationCategoryApiModel>;
+    final adhanMuted = results[2] as bool;
 
-    final channels = apiCategories
+    final apiChannels = apiCategories
         .where((c) => c.model.trim().isNotEmpty)
         .map(
           (c) => _MuteChannelConfig(
@@ -157,28 +173,60 @@ class _ProfileBoxWithSlideAnimationState
             key: c.model.trim().toLowerCase(),
           ),
         )
-        .toList(growable: false);
+        .toList();
+
+    // Merge: add local-only channels that are not already in the API list
+    final existingKeys = apiChannels.map((c) => c.key).toSet();
+    for (final local in _localOnlyChannels) {
+      if (!existingKeys.contains(local.key)) {
+        apiChannels.add(local);
+      }
+    }
 
     setState(() {
-      _muteChannels = channels;
+      _muteChannels = apiChannels;
       _muteValueByKey = <String, bool>{
-        for (final channel in channels)
-          channel.key: settings[channel.key] == true,
+        for (final channel in apiChannels)
+          channel.key: channel.key == 'adhan'
+              ? adhanMuted
+              : (settings[channel.key] == true),
       };
       _isMutePopupVisible = true;
-      _isMutePopupSaving = false;
+      _savingMuteKeys.clear();
     });
   }
 
+  /// Whether this key is a local-only category (not synced to API).
+  static bool _isLocalOnlyKey(String key) {
+    return _localOnlyChannels.any((c) => c.key == key);
+  }
+
   Future<void> _updateMuteChannel(_MuteChannelConfig item, bool value) async {
+    if (_savingMuteKeys.contains(item.key)) return;
+
     final previous = _muteValueByKey[item.key] ?? false;
     setState(() {
       _muteValueByKey[item.key] = value;
-      _isMutePopupSaving = true;
+      _savingMuteKeys.add(item.key);
     });
 
     try {
-      await NotificationStorageService.setMuteSetting(item.key, value);
+      if (_isLocalOnlyKey(item.key)) {
+        // Local-only: handle adhan separately via HiveService
+        if (item.key == 'adhan') {
+          await HiveService.setPrayerSoundMuted(value);
+          if (value) {
+            await PrayerNotificationService().cancelAllPendingAdhan();
+          }
+          // Sync prayer widget icon immediately
+          if (mounted) {
+            context.read<HomeBloc>().add(const LoadPrayerMuteStateEvent());
+          }
+        }
+        await NotificationStorageService.setLocalMuteSetting(item.key, value);
+      } else {
+        await NotificationStorageService.setMuteSetting(item.key, value);
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -193,7 +241,7 @@ class _ProfileBoxWithSlideAnimationState
     } finally {
       if (!mounted) return;
       setState(() {
-        _isMutePopupSaving = false;
+        _savingMuteKeys.remove(item.key);
       });
     }
   }
@@ -202,7 +250,7 @@ class _ProfileBoxWithSlideAnimationState
     if (!mounted) return;
     setState(() {
       _isMutePopupVisible = false;
-      _isMutePopupSaving = false;
+      _savingMuteKeys.clear();
     });
   }
 
@@ -316,7 +364,7 @@ class _ProfileBoxWithSlideAnimationState
                         const SizedBox(height: 16),
                         Text(
                           certificateData?['error'] ?? 'No certificate found',
-                          style: GoogleFonts.inter(
+                          style: GoogleFonts.poppins(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                           ),
@@ -338,7 +386,7 @@ class _ProfileBoxWithSlideAnimationState
                             ),
                             child: Text(
                               'OK',
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 color: Colors.white,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -484,6 +532,20 @@ class _ProfileBoxWithSlideAnimationState
         final isAuthenticated = SharedPref.isUserAuthenticated();
         if (isAuthenticated == false) return const SizedBox.shrink();
 
+        // ── Fast path: skip ALL heavy work when the drawer is hidden ──
+        if (!profileBoxProvider.isProfileVisible && !_isMutePopupVisible) {
+          // Stop animation when hidden to avoid 60fps repaints
+          if (_numbersAnimationController.isAnimating) {
+            _numbersAnimationController.stop();
+          }
+          return const SizedBox.shrink();
+        }
+
+        // Start animation when visible (if not already running)
+        if (!_numbersAnimationController.isAnimating) {
+          _numbersAnimationController.repeat();
+        }
+
         final screenWidth = MediaQuery.of(context).size.width;
         final drawerWidth = screenWidth * 0.75;
 
@@ -492,34 +554,6 @@ class _ProfileBoxWithSlideAnimationState
             base64Image.isNotEmpty && Util.isValidBase64(base64Image);
 
         final loginData = SharedPref.getLoginData();
-
-        // Debug: print FULL user data to the log so we can inspect it
-        try {
-          print('DEBUG: ===== FULL USER DATA FROM STORAGE =====');
-          print('DEBUG: Full stored JSON:');
-          final storedJson = SharedPref().getPreferenceString('loginResponse');
-          if (storedJson.isNotEmpty) {
-            print(JsonEncoder.withIndent('  ').convert(jsonDecode(storedJson)));
-          } else {
-            print('DEBUG: No stored login data found!');
-          }
-          print('DEBUG: ==========================================');
-          print('DEBUG: Parsed fields from model:');
-          print('DEBUG: name = ${loginData.result?.data?.name}');
-          print('DEBUG: emp_name = ${loginData.result?.data?.emp_name}');
-          print('DEBUG: username = ${loginData.result?.data?.username}');
-          print(
-              'DEBUG: partnerDisplayName = ${loginData.result?.data?.partnerDisplayName}');
-          print('DEBUG: job_id = ${loginData.result?.data?.job_id}');
-          print('DEBUG: emp_id = ${loginData.result?.data?.emp_id}');
-          print('DEBUG: uid = ${loginData.result?.data?.uid}');
-          print('DEBUG: qr_status = ${loginData.result?.data?.qr_status}');
-          print(
-              'DEBUG: image_url length = ${loginData.result?.data?.image_url?.length ?? 0}');
-          print('DEBUG: ==========================================');
-        } catch (e) {
-          print('DEBUG: user data read error: $e');
-        }
 
         return Stack(
           children: [
@@ -614,7 +648,7 @@ class _ProfileBoxWithSlideAnimationState
                                 }
                                 return translate('profile.name_not_available');
                               }(),
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                   fontWeight: FontWeight.w700, fontSize: 11.26),
                             ),
                             const SizedBox(height: 1),
@@ -630,7 +664,7 @@ class _ProfileBoxWithSlideAnimationState
                                 return translate(
                                     'profile.job_id_not_available');
                               }(),
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                   fontSize: 11.26, fontWeight: FontWeight.w400),
                             ),
                             const SizedBox(height: 1),
@@ -645,7 +679,7 @@ class _ProfileBoxWithSlideAnimationState
                                 }
                                 return translate('profile.id_not_available');
                               }(),
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                   fontSize: 11.26, fontWeight: FontWeight.w400),
                             ),
                             const SizedBox(height: 1),
@@ -680,7 +714,7 @@ class _ProfileBoxWithSlideAnimationState
                                 loginData.result?.data?.qr_status == true
                                     ? 'Status : Active'
                                     : 'Status : Not Active',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                     fontSize: 11.26,
                                     fontWeight: FontWeight.bold,
                                     color: loginData.result?.data?.qr_status ==
@@ -868,7 +902,9 @@ class _ProfileBoxWithSlideAnimationState
                   color: Colors.black54,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: _isMutePopupSaving ? null : _closeMuteControlPopup,
+                    onTap: _savingMuteKeys.isNotEmpty
+                        ? null
+                        : _closeMuteControlPopup,
                     child: Center(
                       child: GestureDetector(
                         onTap: () {},
@@ -902,27 +938,35 @@ class _ProfileBoxWithSlideAnimationState
                                         width: 58,
                                         child: Transform.scale(
                                           scale: 0.86,
-                                          child: Switch(
-                                            materialTapTargetSize:
-                                                MaterialTapTargetSize
-                                                    .shrinkWrap,
-                                            value: _muteValueByKey[item.key] ??
-                                                false,
-                                            onChanged: _isMutePopupSaving
-                                                ? null
-                                                : (value) => _updateMuteChannel(
-                                                    item, value),
-                                            activeThumbColor:
-                                                const Color(0xFFE53935),
-                                            activeTrackColor:
-                                                const Color(0xFFEF9A9A),
-                                            inactiveThumbColor:
-                                                const Color(0xFF43A047),
-                                            inactiveTrackColor:
-                                                const Color(0xFFA5D6A7),
-                                            trackOutlineColor:
-                                                const WidgetStatePropertyAll(
-                                              Colors.transparent,
+                                          child: Directionality(
+                                            textDirection: TextDirection.ltr,
+                                            child: Switch(
+                                              materialTapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                              value:
+                                                  !(_muteValueByKey[item.key] ??
+                                                      false),
+                                              onChanged: _savingMuteKeys
+                                                      .contains(item.key)
+                                                  ? null
+                                                  : (value) =>
+                                                      _updateMuteChannel(
+                                                        item,
+                                                        !value,
+                                                      ),
+                                              activeThumbColor:
+                                                  const Color(0xFF43A047),
+                                              activeTrackColor:
+                                                  const Color(0xFFA5D6A7),
+                                              inactiveThumbColor:
+                                                  const Color(0xFFE53935),
+                                              inactiveTrackColor:
+                                                  const Color(0xFFEF9A9A),
+                                              trackOutlineColor:
+                                                  const WidgetStatePropertyAll(
+                                                Colors.transparent,
+                                              ),
                                             ),
                                           ),
                                         ),
@@ -934,7 +978,7 @@ class _ProfileBoxWithSlideAnimationState
                               SizedBox(
                                 height: 30,
                                 child: ElevatedButton.icon(
-                                  onPressed: _isMutePopupSaving
+                                  onPressed: _savingMuteKeys.isNotEmpty
                                       ? null
                                       : _closeMuteControlPopup,
                                   style: ElevatedButton.styleFrom(
@@ -1203,7 +1247,7 @@ class _MuteChannelConfig {
                                     //                     translate(
                                     //                         'profile.mute_notifications'),
                                     //                     style:
-                                    //                         GoogleFonts.inter(
+                                    //                         GoogleFonts.poppins(
                                     //                             fontSize: 11)),
                                     //                 const Spacer(),
                                     //                 SizedBox(

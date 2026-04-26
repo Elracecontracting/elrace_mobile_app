@@ -18,6 +18,7 @@ class PdfService {
   Future<Uint8List> generateReportPdf({
     required ReportDetailModel report,
     required String projectName,
+    String? companyName,
   }) async {
     final pdf = pw.Document();
     // Always refresh company from storage so the correct logo is used

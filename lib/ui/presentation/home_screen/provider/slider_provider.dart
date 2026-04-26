@@ -55,25 +55,17 @@ class SliderProvider extends ChangeNotifier {
 
   List<String> get titles {
     if (_bannerDetails.isEmpty) {
-      // print('📋 Using fallback titles');
-      return _fallbackTitles.map((text) {
-        return text.length > 30 ? '${text.substring(0, 30)}...' : text;
-      }).toList();
+      return _fallbackTitles;
     }
 
-    final result = _bannerDetails.map((detail) {
-      String text = detail.announcementText.isNotEmpty
-          ? detail.announcementText.trim() // Clean whitespace
-          : detail.title.isNotEmpty
-              ? detail.title.trim() // Clean whitespace
-              : "Announcement";
-      // Limit to 30 characters
-      final displayText =
-          text.length > 30 ? '${text.substring(0, 30)}...' : text;
-      return displayText;
+    return _bannerDetails.map((detail) {
+      if (detail.announcementText.isNotEmpty) {
+        return detail.announcementText.trim();
+      } else if (detail.title.isNotEmpty) {
+        return detail.title.trim();
+      }
+      return "Announcement";
     }).toList();
-
-    return result;
   }
 
   List<AnnouncementModel> get announcements => _announcements;

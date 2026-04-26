@@ -113,7 +113,7 @@ class ApproveCard extends StatelessWidget {
                           const SizedBox(width: 8),
                           Text(
                             type,
-                            style: GoogleFonts.koulen(
+                            style: GoogleFonts.poppins(
                               fontSize: 20,
                               fontWeight: FontWeight.w500,
                               color: appFontColor,
@@ -134,7 +134,7 @@ class ApproveCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     name,
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: Colors.red,
@@ -151,7 +151,7 @@ class ApproveCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     requesterName,
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                       color: Colors.blue,
@@ -161,7 +161,7 @@ class ApproveCard extends StatelessWidget {
                   const SizedBox(width: 4),
                   Text(
                     "- $requesterRole",
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                       color: Colors.orange,
@@ -178,7 +178,7 @@ class ApproveCard extends StatelessWidget {
                   const SizedBox(width: 8),
                   Text(
                     location,
-                    style: GoogleFonts.koulen(
+                    style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: appFontColor,
                       letterSpacing: 1.0,
@@ -204,13 +204,13 @@ class ApproveCard extends StatelessWidget {
                     Expanded(
                       child: Text(
                         approver,
-                        style: GoogleFonts.koulen(
+                        style: GoogleFonts.poppins(
                           fontSize: 12,
                           color: appFontColor,
                           letterSpacing: 1.0,
                         ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
+                        overflow: TextOverflow.visible,
+                        maxLines: null,
                         softWrap: false,
                       ),
                     ),
@@ -240,7 +240,7 @@ class ApproveCard extends StatelessWidget {
                               ),
                               child: Text(
                                 day,
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -249,7 +249,7 @@ class ApproveCard extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               month,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 8,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.red,
@@ -257,7 +257,7 @@ class ApproveCard extends StatelessWidget {
                             ),
                             Text(
                               year,
-                              style: GoogleFonts.inter(
+                              style: GoogleFonts.poppins(
                                 fontSize: 8,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.red,

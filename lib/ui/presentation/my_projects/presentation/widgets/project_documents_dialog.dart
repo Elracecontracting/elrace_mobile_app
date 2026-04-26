@@ -142,7 +142,7 @@ class ProjectDocumentsDialog extends StatelessWidget {
                       SizedBox(width: 8.w),
                       Text(
                         'Project Documents',
-                        style: GoogleFonts.koulen(
+                        style: GoogleFonts.poppins(
                           fontSize: 18.sp,
                           fontWeight: FontWeight.w500,
                           color: const Color(0xFF151544),
@@ -244,7 +244,7 @@ class ProjectDocumentsDialog extends StatelessWidget {
                   SizedBox(width: 12.w),
                   Text(
                     label,
-                    style: GoogleFonts.inter(
+                    style: GoogleFonts.poppins(
                       fontSize: 15.sp,
                       fontWeight: FontWeight.w600,
                       color: const Color(0xFF151544),

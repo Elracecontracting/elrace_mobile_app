@@ -142,7 +142,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
       );
     }
 
-    final numberStyle = GoogleFonts.koulen(
+    final numberStyle = GoogleFonts.poppins(
       fontSize: baseStyle.fontSize,
       fontWeight: baseStyle.fontWeight,
       color: baseStyle.color,
@@ -274,13 +274,13 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                           widget.partnerName != null
                               ? widget.partnerName!.toUpperCase()
                               : 'ABU DHABI POLICE',
-                          style: GoogleFonts.koulen(
+                          style: GoogleFonts.poppins(
                             fontSize: 22.sp,
                             fontWeight: FontWeight.w500,
                             color: appFontColor,
                           ),
                           textAlign: TextAlign.center,
-                          overflow: TextOverflow.ellipsis,
+                          overflow: TextOverflow.visible,
                           maxLines: 2,
                         ),
                       ),
@@ -380,14 +380,14 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
           alignment: Alignment.center,
           child: Text(
             text,
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 16.sp,
-              fontWeight: FontWeight.w400,
+              fontWeight: FontWeight.w500,
               color: Colors.white,
               letterSpacing: 1.2,
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            maxLines: null,
+            overflow: TextOverflow.visible,
           ),
         ),
       );
@@ -453,13 +453,13 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
               right: 0,
               child: _digitsInKoulen(
                 statusCount,
-                baseStyle: GoogleFonts.inter(
+                baseStyle: GoogleFonts.poppins(
                   fontSize: 16.sp,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.w500,
                   color: _getStatusColor(statusCount),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
+                maxLines: null,
+                overflow: TextOverflow.visible,
               ),
             ),
             Column(
@@ -469,25 +469,25 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                 _digitsInKoulen(
                   woNo,
                   textAlign: TextAlign.center,
-                  baseStyle: GoogleFonts.inter(
+                  baseStyle: GoogleFonts.poppins(
                     fontSize: 13.sp,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                     color: const Color(0xFF6B6B6B),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: null,
+                  overflow: TextOverflow.visible,
                 ),
                 SizedBox(height: 4.h),
                 _digitsInKoulen(
                   woName,
                   textAlign: TextAlign.center,
-                  baseStyle: GoogleFonts.inter(
+                  baseStyle: GoogleFonts.poppins(
                     fontSize: 16.sp,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.w500,
                     color: const Color(0xFF1B1F26),
                   ),
                   maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                  overflow: TextOverflow.visible,
                 ),
                 SizedBox(height: 12.h),
                 Container(
@@ -511,13 +511,13 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                             Flexible(
                               child: _digitsInKoulen(
                                 formattedAmount,
-                                baseStyle: GoogleFonts.inter(
+                                baseStyle: GoogleFonts.poppins(
                                   fontSize: 14.sp,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w500,
                                   color: const Color(0xFF1B1F26),
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                maxLines: null,
+                                overflow: TextOverflow.visible,
                               ),
                             ),
                             SizedBox(width: 8.w),
@@ -556,9 +556,9 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                                   },
                                   errorBuilder: (_, __, ___) => Text(
                                     _getInitials(project.agreementId),
-                                    style: GoogleFonts.koulen(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 11.sp,
-                                      fontWeight: FontWeight.w800,
+                                      fontWeight: FontWeight.w500,
                                       color: const Color(0xFF1B1F26),
                                     ),
                                   ),
@@ -566,9 +566,9 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                               )
                             : Text(
                                 _getInitials(project.agreementId),
-                                style: GoogleFonts.koulen(
+                                style: GoogleFonts.poppins(
                                   fontSize: 11.sp,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w500,
                                   color: const Color(0xFF1B1F26),
                                 ),
                               ),
@@ -578,13 +578,13 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                           alignment: Alignment.centerRight,
                           child: _digitsInKoulen(
                             formattedDate,
-                            baseStyle: GoogleFonts.inter(
+                            baseStyle: GoogleFonts.poppins(
                               fontSize: 14.sp,
-                              fontWeight: FontWeight.w800,
+                              fontWeight: FontWeight.w500,
                               color: const Color(0xFF1B1F26),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                            maxLines: null,
+                            overflow: TextOverflow.visible,
                           ),
                         ),
                       ),

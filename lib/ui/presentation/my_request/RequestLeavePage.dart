@@ -340,7 +340,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                 children: [
                                   Text(
                                     'DURATION  :  ',
-                                    style: GoogleFonts.koulen(
+                                    style: GoogleFonts.poppins(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500,
                                       color: appFontColor,
@@ -391,7 +391,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                   const EdgeInsets.symmetric(horizontal: 50.0),
                               child: Text(
                                 translate('common.balance_leave'),
-                                style: GoogleFonts.koulen(
+                                style: GoogleFonts.poppins(
                                   fontSize: 16, // You can adjust size as needed
                                   fontWeight: FontWeight.w500,
                                   color: appFontColor,
@@ -407,7 +407,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                     horizontal: 50.0),
                                 child: Text(
                                   translate('common.description'),
-                                  style: GoogleFonts.koulen(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 17, // Adjust as needed
                                     fontWeight: FontWeight.w500,
                                     color: const Color(
@@ -508,7 +508,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                   children: [
                                     Text(
                                       'CERTIFICATE NO  :',
-                                      style: GoogleFonts.koulen(
+                                      style: GoogleFonts.poppins(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w500,
                                         color: appFontColor,
@@ -569,7 +569,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                                   child: Text(
                                     translate(
                                         'notification.annual_leave_notice'),
-                                    style: GoogleFonts.inter(
+                                    style: GoogleFonts.poppins(
                                       color: Colors.black87,
                                       fontSize: 9,
                                       fontWeight: FontWeight.bold,
@@ -642,7 +642,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
           children: [
             Text(
               value,
-              style: GoogleFonts.inter(
+              style: GoogleFonts.poppins(
                 color: Colors.black,
                 fontSize: 10,
                 fontWeight: FontWeight.w500,
@@ -683,7 +683,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
         children: [
           Text(
             title,
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 13,
               fontWeight: FontWeight.bold,
               color: isSelected ? Colors.white : appFontColor,
@@ -692,7 +692,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
           ),
           Text(
             subtitle,
-            style: GoogleFonts.koulen(
+            style: GoogleFonts.poppins(
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: isSelected ? Colors.white : appFontColor,

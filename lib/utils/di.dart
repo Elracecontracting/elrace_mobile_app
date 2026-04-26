@@ -82,29 +82,28 @@ Future<void> initDI() async {
     // Data sources
     // sl.registerLazySingleton<ProjectRemoteDataSource>(() => ProjectRemoteDataSource());
 
-    // Register Blocs
-    _registerSingletonIfNeeded<SignInBloc>(SignInBloc());
-    _registerSingletonIfNeeded<ContactBloc>(ContactBloc());
-    _registerSingletonIfNeeded<CheckInBloc>(CheckInBloc());
-    _registerSingletonIfNeeded<CheckOutBloc>(CheckOutBloc());
-    _registerSingletonIfNeeded<AttendanceBloc>(AttendanceBloc());
-    _registerSingletonIfNeeded<HomeBloc>(HomeBloc());
-    _registerSingletonIfNeeded<RequestsBloc>(RequestsBloc());
-    _registerSingletonIfNeeded<ApprovalBloc>(ApprovalBloc());
-    _registerSingletonIfNeeded<UaepassAuthCubit>(
-      UaepassAuthCubit(
+    // Register Blocs as LAZY singletons – they are only created when first
+    // accessed (e.g. when their screen opens), not during splash.
+    _registerLazySingletonIfNeeded<SignInBloc>(() => SignInBloc());
+    _registerLazySingletonIfNeeded<ContactBloc>(() => ContactBloc());
+    _registerLazySingletonIfNeeded<CheckInBloc>(() => CheckInBloc());
+    _registerLazySingletonIfNeeded<CheckOutBloc>(() => CheckOutBloc());
+    _registerLazySingletonIfNeeded<AttendanceBloc>(() => AttendanceBloc());
+    _registerLazySingletonIfNeeded<HomeBloc>(() => HomeBloc());
+    _registerLazySingletonIfNeeded<RequestsBloc>(() => RequestsBloc());
+    _registerLazySingletonIfNeeded<ApprovalBloc>(() => ApprovalBloc());
+    _registerLazySingletonIfNeeded<UaepassAuthCubit>(
+      () => UaepassAuthCubit(
         authService: sl<UaepassAuthService>(),
         config: sl<UaepassConfig>(),
       ),
     );
-    
-    // These depend on repositories, so check if they exist
-    if (!sl.isRegistered<NotesBloc>()) {
-      sl.registerSingleton<NotesBloc>(NotesBloc(notesRepository: sl()));
-    }
-    if (!sl.isRegistered<MediaBloc>()) {
-      sl.registerSingleton<MediaBloc>(MediaBloc(mediaRepository: sl()));
-    }
+    _registerLazySingletonIfNeeded<NotesBloc>(
+      () => NotesBloc(notesRepository: sl()),
+    );
+    _registerLazySingletonIfNeeded<MediaBloc>(
+      () => MediaBloc(mediaRepository: sl()),
+    );
 
     // Temporarily comment out problematic bloc for iOS simulator
     // sl.registerFactory(() => ProjectListBloc(

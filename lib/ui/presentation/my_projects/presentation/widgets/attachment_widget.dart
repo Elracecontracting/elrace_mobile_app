@@ -48,7 +48,7 @@ class AttachmentWidget extends StatelessWidget {
             Text(
               item.name,
               maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              overflow: TextOverflow.visible,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),

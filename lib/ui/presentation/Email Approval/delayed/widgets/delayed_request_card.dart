@@ -65,39 +65,50 @@ class DelayedRequestCard extends StatelessWidget {
                       Row(
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Container(
-                            width: 36.w,
-                            height: 36.w,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: const Color(0xFFE7EBEF),
-                                width: 1.3,
-                              ),
-                            ),
-                            child: ClipOval(
-                              child: _buildEmployeeImage(36.w),
-                            ),
-                          ),
-                          SizedBox(width: 12.w),
                           Expanded(
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                alignment: Alignment.centerLeft,
-                                child: Text(
-                                  reqNo,
-                                  style: GoogleFonts.nunito(
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.w900,
-                                    color: const Color(0xFF0B2D5E),
-                                    letterSpacing: 0.2,
+                            child: SizedBox(
+                              height: 36.w,
+                              child: Stack(
+                                children: [
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Container(
+                                      width: 36.w,
+                                      height: 36.w,
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        border: Border.all(
+                                          color: const Color(0xFFE7EBEF),
+                                          width: 1.3,
+                                        ),
+                                      ),
+                                      child: ClipOval(
+                                        child: _buildEmployeeImage(36.w),
+                                      ),
+                                    ),
                                   ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.start,
-                                ),
+                                  Padding(
+                                    padding:
+                                        EdgeInsets.symmetric(horizontal: 40.w),
+                                    child: Center(
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          reqNo,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 16.sp,
+                                            fontWeight: FontWeight.w900,
+                                            color: const Color(0xFF0B2D5E),
+                                            letterSpacing: 0.2,
+                                          ),
+                                          maxLines: null,
+                                          overflow: TextOverflow.visible,
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -105,16 +116,16 @@ class DelayedRequestCard extends StatelessWidget {
                       ),
                       SizedBox(height: 6.w),
                       Padding(
-                        padding: EdgeInsets.only(left: 10.w),
+                        padding: EdgeInsets.only(left: 2.w),
                         child: Text(
                           requestType,
-                          style: GoogleFonts.nunito(
+                          style: GoogleFonts.poppins(
                             fontSize: 13.sp,
                             fontWeight: FontWeight.w900,
                             color: const Color(0xFF121212),
                           ),
                           maxLines: 3,
-                          overflow: TextOverflow.ellipsis,
+                          overflow: TextOverflow.visible,
                         ),
                       ),
                       SizedBox(height: 2.w),
@@ -122,13 +133,13 @@ class DelayedRequestCard extends StatelessWidget {
                         padding: EdgeInsets.only(left: 2.w),
                         child: Text(
                           employeeName,
-                          style: GoogleFonts.nunito(
+                          style: GoogleFonts.poppins(
                             fontSize: 11.sp,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF6C7075),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
                         ),
                       ),
                       SizedBox(height: 1.5.w),
@@ -136,13 +147,13 @@ class DelayedRequestCard extends StatelessWidget {
                         padding: EdgeInsets.only(left: 2.w),
                         child: Text(
                           empCode,
-                          style: GoogleFonts.nunito(
+                          style: GoogleFonts.poppins(
                             fontSize: 11.sp,
                             fontWeight: FontWeight.w700,
                             color: const Color(0xFF565B61),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
                         ),
                       ),
                       const Spacer(),
@@ -150,13 +161,13 @@ class DelayedRequestCard extends StatelessWidget {
                         padding: EdgeInsets.only(left: 2.w),
                         child: Text(
                           requestDate,
-                          style: GoogleFonts.nunito(
+                          style: GoogleFonts.poppins(
                             fontSize: 9.sp,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF70757C),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          maxLines: null,
+                          overflow: TextOverflow.visible,
                         ),
                       ),
                     ],
@@ -194,8 +205,8 @@ class DelayedRequestCard extends StatelessWidget {
                               child: Text(
                                 'Days Delayed',
                                 textAlign: TextAlign.center,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                                maxLines: null,
+                                overflow: TextOverflow.visible,
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,

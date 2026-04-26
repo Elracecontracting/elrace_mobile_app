@@ -16,7 +16,7 @@ class HomCheckIn extends StatelessWidget {
           style: const TextStyle(
             fontSize: 12,
             color: Color(0xFF1A1A53),
-            fontFamily: 'Koulen',
+            fontFamily: 'Poppins',
             letterSpacing: 0,
             fontWeight: FontWeight.w700,
           ),

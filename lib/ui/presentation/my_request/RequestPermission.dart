@@ -102,7 +102,7 @@ class _RequestPermissionState extends State<RequestPermission> {
               padding: EdgeInsets.symmetric(vertical: 16.h),
               child: Text(
                 'TEMPORARY PERMISSION',
-                style: GoogleFonts.koulen(
+                style: GoogleFonts.poppins(
                   fontSize: 18.sp,
                   fontWeight: FontWeight.w400,
                   letterSpacing: 1.5,
@@ -137,7 +137,7 @@ class _RequestPermissionState extends State<RequestPermission> {
                       Center(
                         child: Text(
                           'Select Day',
-                          style: GoogleFonts.koulen(
+                          style: GoogleFonts.poppins(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.w400,
                             letterSpacing: 1.5,
@@ -165,7 +165,7 @@ class _RequestPermissionState extends State<RequestPermission> {
                               ),
                               Text(
                                 'Today',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.black,
@@ -190,7 +190,7 @@ class _RequestPermissionState extends State<RequestPermission> {
                               ),
                               Text(
                                 'Tomorrow',
-                                style: GoogleFonts.inter(
+                                style: GoogleFonts.poppins(
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w500,
                                   color: Colors.black,
@@ -204,7 +204,7 @@ class _RequestPermissionState extends State<RequestPermission> {
                       Center(
                         child: Text(
                           'Select Hour',
-                          style: GoogleFonts.koulen(
+                          style: GoogleFonts.poppins(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.w400,
                             letterSpacing: 1.5,
@@ -245,7 +245,7 @@ class _RequestPermissionState extends State<RequestPermission> {
                                     SizedBox(width: 4.w),
                                     Text(
                                       '${selectedHour.toString().padLeft(2, '0')}:00',
-                                      style: GoogleFonts.inter(
+                                      style: GoogleFonts.poppins(
                                         fontSize: 13.sp,
                                         fontWeight: FontWeight.w700,
                                       ),
@@ -277,7 +277,7 @@ class _RequestPermissionState extends State<RequestPermission> {
                       Center(
                         child: Text(
                           'Duration type',
-                          style: GoogleFonts.koulen(
+                          style: GoogleFonts.poppins(
                             fontSize: 16.sp,
                             fontWeight: FontWeight.w400,
                             letterSpacing: 1.5,
@@ -327,7 +327,7 @@ class _RequestPermissionState extends State<RequestPermission> {
                                 )
                               : Text(
                                   'SUBMIT',
-                                  style: GoogleFonts.koulen(
+                                  style: GoogleFonts.poppins(
                                     fontSize: 16.sp,
                                     letterSpacing: 1.5,
                                     color: Colors.white,
@@ -360,7 +360,7 @@ class _RequestPermissionState extends State<RequestPermission> {
         ),
         child: Text(
           period,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.poppins(
             fontSize: 12.sp,
             fontWeight: FontWeight.w600,
             color: isSelected ? Colors.white : Colors.black,
@@ -382,7 +382,7 @@ class _RequestPermissionState extends State<RequestPermission> {
         ),
         Text(
           value,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.poppins(
             fontSize: 14.sp,
             fontWeight: FontWeight.w500,
           ),
@@ -498,7 +498,7 @@ class _RequestPermissionState extends State<RequestPermission> {
         Expanded(
           child: Text(
             'Maximum Hours per month is 6 Hours',
-            style: GoogleFonts.inter(
+            style: GoogleFonts.poppins(
               fontSize: 9.sp,
               color: Colors.black87,
               fontWeight: FontWeight.w600,

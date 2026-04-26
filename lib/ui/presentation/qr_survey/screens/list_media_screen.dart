@@ -67,7 +67,7 @@ class _ListMediaScreenState extends State<ListMediaScreen> {
         ),
         title: Text(
           media.name,
-          style: GoogleFonts.inter(
+          style: GoogleFonts.poppins(
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -75,9 +75,9 @@ class _ListMediaScreenState extends State<ListMediaScreen> {
         subtitle: media.description != null
             ? Text(
                 media.description!,
-                style: GoogleFonts.inter(fontSize: 14),
+                style: GoogleFonts.poppins(fontSize: 14),
                 maxLines: 2,
-                overflow: TextOverflow.ellipsis,
+                overflow: TextOverflow.visible,
               )
             : null,
         trailing: const Icon(Icons.play_circle, size: 32),

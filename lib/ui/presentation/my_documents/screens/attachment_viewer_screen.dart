@@ -18,8 +18,8 @@ class AttachmentViewerScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           title.isEmpty ? 'Attachment' : title,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
+          maxLines: null,
+          overflow: TextOverflow.visible,
         ),
       ),
       body: SfPdfViewer.network(
