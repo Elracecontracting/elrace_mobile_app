@@ -19,16 +19,19 @@ class PdfService {
     required ReportDetailModel report,
     required String projectName,
     String? companyName,
+    String templateType = 'template1',
   }) async {
     final pdf = pw.Document();
-    // Always refresh company from storage so the correct logo is used
-    final CompanyModel companyData = await CompanyRepository().getCompany();
+    final logoPath = _resolveCompanyLogoPath(
+      companyName,
+      fallbackPath: CompanyRepository.company?.logo,
+    );
 
     // Run all async operations in parallel
     final results = await Future.wait([
       userRepo.getLoginResponse(),
       loadReportImages(report.reportItems),
-      _loadAssetAsBytes(companyData.logo),
+      _loadAssetAsBytes(logoPath),
       rootBundle.load("assets/fonts/arbicsupport.ttf"),
     ]);
 
@@ -44,22 +47,56 @@ class PdfService {
       pw.MultiPage(
         pageTheme: pw.PageTheme(
           pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.only(
-              left: 32, right: 32, bottom: 20, top: 5),
+          margin:
+              const pw.EdgeInsets.only(left: 32, right: 32, bottom: 20, top: 5),
         ),
-        header: (context) =>
-            _buildHeader(context, logo, report, projectName, notoSanArabic),
+        header: (context) => _buildHeader(
+          context, logo, report, projectName, notoSanArabic, templateType),
         footer: (context) => _buildFooter(context, userName),
-        build: (context) => _buildBody(
-            context, logo, report, imageMap, userData, notoSanArabic),
+        build: (context) => _buildBody(context, logo, report, imageMap,
+            userData, notoSanArabic, templateType),
       ),
     );
 
     return pdf.save();
   }
 
-  _buildHeader(context, logo, ReportDetailModel report, String projectName,
-      pw.Font font) {
+  String _resolveCompanyLogoPath(String? companyName, {String? fallbackPath}) {
+    final normalized = (companyName ?? '').trim().toLowerCase();
+
+    if (normalized == 'colors') {
+      return 'assets/newapp/Colors.png';
+    }
+    if (normalized == 'hcni') {
+      return 'assets/newapp/HCNI NBG.png';
+    }
+    if (normalized == '85 eighty five' ||
+        normalized == '85' ||
+        normalized == 'eighty five') {
+      return 'assets/newapp/png-logo-85.png';
+    }
+
+    if (normalized == 'rcc' || normalized.contains('el race')) {
+      return 'assets/logo/logo.png';
+    }
+    if (normalized.contains('al hewar')) {
+      return 'assets/logo/logo2.png';
+    }
+
+    if (fallbackPath != null && fallbackPath.trim().isNotEmpty) {
+      return fallbackPath;
+    }
+    return 'assets/logo/logo.png';
+  }
+
+    _buildHeader(
+      context,
+      logo,
+      ReportDetailModel report,
+      String projectName,
+      pw.Font font,
+      String templateType,
+      ) {
     CompanyModel companyData = CompanyRepository.company!;
     bool needToShowCover =
         (context.pageNumber == 1 && report.coverPage != null);
@@ -200,7 +237,7 @@ class PdfService {
         ),
 
         pw.SizedBox(height: 20),
-        if (!needToShowCover) _buildTableHeader()
+        if (!needToShowCover) _buildTableHeader(templateType)
       ],
     );
   }
@@ -265,8 +302,14 @@ class PdfService {
     }
   }
 
-  _buildBody(pw.Context context, logo, ReportDetailModel reportDetail,
-      Map imageMap, LoginResponseModel? userData, pw.Font font) {
+  _buildBody(
+      pw.Context context,
+      logo,
+      ReportDetailModel reportDetail,
+      Map imageMap,
+      LoginResponseModel? userData,
+      pw.Font font,
+      String templateType) {
     List<pw.Widget> content = [];
     // CompanyModel companyData = CompanyRepository.company!;
 
@@ -440,7 +483,7 @@ class PdfService {
                       ])),
                 ),
                 pw.SizedBox(height: 20),
-                if (!needToShowCover) _buildTableHeader()
+                if (!needToShowCover) _buildTableHeader(templateType)
               ],
             ),
             pw.SizedBox(height: 20),
@@ -469,8 +512,209 @@ class PdfService {
       ));
       // content.add(pw.PageBreak());
     }
-    content.add(buildTableBody(reportDetail, imageMap, font));
+    content.add(_buildTemplateBody(templateType, reportDetail, imageMap, font));
     return content;
+  }
+
+  pw.Widget _buildTemplateBody(String templateType, ReportDetailModel report,
+      Map imageMap, pw.Font font) {
+    switch (templateType) {
+      case 'template2':
+        return _buildTemplate2Body(report, imageMap, font);
+      case 'template3':
+        return _buildTemplate3Body(report, imageMap, font);
+      case 'template4':
+        return _buildTemplate4Body(report, imageMap, font);
+      case 'template1':
+      default:
+        return _buildTemplate1Body(report, imageMap, font);
+    }
+  }
+
+  pw.Widget _buildTemplate1Body(
+      ReportDetailModel reportDetail, Map imageMap, pw.Font font) {
+    final items = reportDetail.reportItems;
+
+    return pw.Column(
+      children: [
+        for (int i = 0; i < items.length; i++)
+          pw.Container(
+            margin: const pw.EdgeInsets.only(bottom: 12),
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey400),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Item ${i + 1}',
+                    style: pw.TextStyle(
+                        fontSize: 11,
+                        fontWeight: pw.FontWeight.bold,
+                        font: font)),
+                pw.SizedBox(height: 6),
+                _buildReportImage(items[i], imageMap, height: 190),
+                pw.SizedBox(height: 8),
+                _buildTemplateText(items[i], font),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  pw.Widget _buildTemplate2Body(
+      ReportDetailModel reportDetail, Map imageMap, pw.Font font) {
+    final items = reportDetail.reportItems;
+
+    return pw.Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: [
+        for (int i = 0; i < items.length; i++)
+          pw.Container(
+            width: 250,
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey400),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Item ${i + 1}',
+                    style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                        font: font)),
+                pw.SizedBox(height: 4),
+                _buildReportImage(items[i], imageMap, height: 130),
+                pw.SizedBox(height: 6),
+                _buildTemplateText(items[i], font),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  pw.Widget _buildTemplate3Body(
+      ReportDetailModel reportDetail, Map imageMap, pw.Font font) {
+    final items = reportDetail.reportItems;
+
+    return pw.Column(
+      children: [
+        for (int i = 0; i < items.length; i++)
+          pw.Container(
+            margin: const pw.EdgeInsets.only(bottom: 10),
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey400),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.SizedBox(
+                  width: 190,
+                  child: _buildReportImage(items[i], imageMap, height: 130),
+                ),
+                pw.SizedBox(width: 10),
+                pw.Expanded(child: _buildTemplateText(items[i], font)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  pw.Widget _buildTemplate4Body(
+      ReportDetailModel reportDetail, Map imageMap, pw.Font font) {
+    final items = reportDetail.reportItems;
+
+    return pw.Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (int i = 0; i < items.length; i++)
+          pw.Container(
+            width: 170,
+            padding: const pw.EdgeInsets.all(6),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey400),
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Item ${i + 1}',
+                    style: pw.TextStyle(
+                        fontSize: 10,
+                        fontWeight: pw.FontWeight.bold,
+                        font: font)),
+                pw.SizedBox(height: 4),
+                _buildReportImage(items[i], imageMap, height: 95),
+                pw.SizedBox(height: 6),
+                _buildTemplateText(items[i], font),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  pw.Widget _buildReportImage(ReportItemModel item, Map imageMap,
+      {required double height}) {
+    final image = imageMap[item.image];
+    if (item.type == 'text' || image == null) {
+      return pw.Container(
+        height: height,
+        alignment: pw.Alignment.center,
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: PdfColors.grey300),
+          color: PdfColors.grey100,
+        ),
+        child: pw.Text('No image'),
+      );
+    }
+    return pw.Container(
+      height: height,
+      width: double.infinity,
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300),
+      ),
+      child: pw.Image(
+        image,
+        fit: pw.BoxFit.cover,
+      ),
+    );
+  }
+
+  pw.Widget _buildTemplateText(ReportItemModel item, pw.Font font) {
+    final location = item.location.trim();
+    final description = item.description.trim();
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        if (location.isNotEmpty) ...[
+          pw.Text('Location:',
+              style: pw.TextStyle(
+                  fontSize: 10, fontWeight: pw.FontWeight.bold, font: font)),
+          _buildBulletList(location, font),
+          pw.SizedBox(height: 4),
+        ],
+        if (description.isNotEmpty) ...[
+          pw.Text('Description:',
+              style: pw.TextStyle(
+                  fontSize: 10, fontWeight: pw.FontWeight.bold, font: font)),
+          _buildBulletList(description, font),
+        ],
+        if (location.isEmpty && description.isEmpty)
+          pw.Text('-', style: pw.TextStyle(fontSize: 10, font: font)),
+      ],
+    );
   }
 
   _buildFooter(context, String userName) {
@@ -572,14 +816,16 @@ class PdfService {
                 height: rowHeight,
                 alignment: pw.Alignment.topLeft,
                 padding: const pw.EdgeInsets.all(6),
-                child: _buildBulletList(reportDetail.reportItems[i].location, font),
+                child: _buildBulletList(
+                    reportDetail.reportItems[i].location, font),
               ),
               // Content column with created date, title, and description.
               pw.Container(
                 height: rowHeight,
                 padding: const pw.EdgeInsets.all(6),
                 alignment: pw.Alignment.topLeft,
-                child: _buildBulletList(reportDetail.reportItems[i].description, font),
+                child: _buildBulletList(
+                    reportDetail.reportItems[i].description, font),
               ),
             ],
           ),
@@ -633,15 +879,28 @@ class PdfService {
     );
   }
 
-  pw.Widget _buildTableHeader() {
+  pw.Widget _buildTableHeader(String templateType) {
+    final isCompactTemplate =
+        templateType == 'template1' ||
+        templateType == 'template2' ||
+        templateType == 'template4';
+
+    final columnWidths = isCompactTemplate
+        ? {
+            0: const pw.FixedColumnWidth(30),
+            1: const pw.FlexColumnWidth(1.5),
+            2: const pw.FlexColumnWidth(2),
+          }
+        : {
+            0: const pw.FixedColumnWidth(30),
+            1: const pw.FlexColumnWidth(1.5),
+            2: const pw.FlexColumnWidth(1),
+            3: const pw.FlexColumnWidth(1),
+          };
+
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey),
-      columnWidths: {
-        0: const pw.FixedColumnWidth(30),
-        1: const pw.FlexColumnWidth(1.5),
-        2: const pw.FlexColumnWidth(1),
-        3: const pw.FlexColumnWidth(1),
-      },
+      columnWidths: columnWidths,
       children: [
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.grey300),
@@ -661,15 +920,16 @@ class PdfService {
             pw.Container(
               padding: const pw.EdgeInsets.all(4),
               alignment: pw.Alignment.center,
-              child: pw.Text("Location",
+              child: pw.Text(isCompactTemplate ? "Details" : "Location",
                   style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
             ),
-            pw.Container(
-              padding: const pw.EdgeInsets.all(4),
-              alignment: pw.Alignment.center,
-              child: pw.Text("Description",
-                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-            ),
+            if (!isCompactTemplate)
+              pw.Container(
+                padding: const pw.EdgeInsets.all(4),
+                alignment: pw.Alignment.center,
+                child: pw.Text("Description",
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+              ),
           ],
         ),
       ],

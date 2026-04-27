@@ -1137,11 +1137,38 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
   String _generationStatus = '';
   bool _isLoadingPdfs = false;
   List<ReportPdfModel> _pdfs = [];
+  String _selectedTemplateType = 'template1';
+
+  static const List<Map<String, String>> _reportTemplates = [
+    {
+      'id': 'template1',
+      'title': 'IMAGE TEMPLATE',
+      'asset': 'assets/newapp/IMAGE TEMPLATE.png',
+    },
+    {
+      'id': 'template2',
+      'title': 'IMAGE TEMPLATE 2 (2)',
+      'asset': 'assets/newapp/IMAGE TEMPLATE 2 .png',
+    },
+    {
+      'id': 'template3',
+      'title': 'image template 3',
+      'asset': 'assets/newapp/image template 3.png',
+    },
+    {
+      'id': 'template4',
+      'title': 'image template 4',
+      'asset': 'assets/newapp/image template 4.png',
+    },
+  ];
 
   static const _companies = [
     'RCC',
     'El Race Cons. & Gen. Cont. Co. L.C.C',
     'Al Hewar Contracting & Irrigation Est.',
+    'Colors',
+    'HCNI',
+    '85 Eighty Five',
   ];
   late String _selectedCompany;
 
@@ -1238,6 +1265,7 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
         report: detail,
         projectName: widget.folderName,
         companyName: _selectedCompany,
+        templateType: _selectedTemplateType,
       );
 
       if (mounted) {
@@ -1398,11 +1426,55 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
                     ),
                   ),
                   SizedBox(height: 10.h),
-                  Center(child: _buildReportTypeButton('Site report')),
-                  SizedBox(height: 8.h),
-                  Center(child: _buildReportTypeButton('Transfer report')),
-                  SizedBox(height: 8.h),
-                  Center(child: _buildReportTypeButton('Incident report')),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: _reportTemplates.map((template) {
+                        final id = template['id']!;
+                        final asset = template['asset']!;
+                        final selected = _selectedTemplateType == id;
+
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() => _selectedTemplateType = id);
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            margin: EdgeInsets.only(right: 8.w),
+                            width: 84.w,
+                            height: 68.h,
+                            padding: EdgeInsets.all(3.w),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(6.r),
+                              border: Border.all(
+                                color: selected
+                                    ? const Color(0xFF27304E)
+                                    : const Color(0xFFD2D2D2),
+                                width: selected ? 1.8 : 1,
+                              ),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4.r),
+                              child: Image.asset(
+                                asset,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: const Color(0xFFEAEAEA),
+                                  alignment: Alignment.center,
+                                  child: Icon(
+                                    Icons.image_outlined,
+                                    color: const Color(0xFF9A9A9A),
+                                    size: 18.w,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
                   SizedBox(height: 16.h),
                   Text(
                     'Company Name',
@@ -1774,31 +1846,6 @@ class _PdfGenerationPageState extends State<PdfGenerationPage> {
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildReportTypeButton(String title) {
-    return SizedBox(
-      width: 205.w,
-      height: 36.h,
-      child: OutlinedButton(
-        onPressed: () {},
-        style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: Color(0xFF27304E), width: 1.6),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24.r),
-          ),
-          backgroundColor: Colors.white,
-        ),
-        child: Text(
-          title,
-          style: GoogleFonts.poppins(
-            fontSize: 15.sp,
-            fontWeight: FontWeight.w700,
-            color: const Color(0xFF27304E),
-          ),
         ),
       ),
     );
