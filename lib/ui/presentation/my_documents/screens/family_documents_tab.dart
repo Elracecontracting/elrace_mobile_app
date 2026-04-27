@@ -550,6 +550,8 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
       'person_name',
       'family_member_name',
       'name',
+      'employee',
+      'family_member',
       'title',
     ]) {
       final value = (doc[key] ?? '').toString().trim();
@@ -613,7 +615,12 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
 
   String _requestedNationality(Map<String, dynamic> doc) => _stringField(
         doc,
-        const ['nationality', 'family_member_nationality', 'nationality_name'],
+        const [
+          'nationality',
+          'family_member_nationality',
+          'family_member_nationality_id',
+          'nationality_name'
+        ],
       );
 
   String _requestedBirthDate(Map<String, dynamic> doc) {
@@ -679,10 +686,16 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.assignment_ind_outlined,
-                size: 30.sp,
-                color: Colors.black,
+              Image.asset(
+                'assets/newapp/newicon/document_requested.png',
+                width: 30.w,
+                height: 30.w,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => Icon(
+                  Icons.assignment_outlined,
+                  size: 30.sp,
+                  color: Colors.black,
+                ),
               ),
               SizedBox(width: 10.w),
               Text(
@@ -821,6 +834,8 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                     ],
                   ),
                 ),
+                SizedBox(width: 8.w),
+                _requestedExpiryColumn(passportExpiry, eidExpiry),
               ],
             ),
             SizedBox(height: 10.h),
@@ -832,24 +847,12 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _requestedInfoRow('Passport No', passportNo),
-                      SizedBox(height: 4.h),
+                      SizedBox(height: 6.h),
                       _requestedInfoRow('EID No', eidNo),
-                      SizedBox(height: 4.h),
+                      SizedBox(height: 6.h),
                       _requestedInfoRow('Nationality', nationality),
-                      SizedBox(height: 4.h),
-                      _requestedInfoRow('Birth of date', birthDate),
-                    ],
-                  ),
-                ),
-                SizedBox(width: 10.w),
-                SizedBox(
-                  width: 126.w,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _requestedExpiryText(passportExpiry),
-                      SizedBox(height: 11.h),
-                      _requestedExpiryText(eidExpiry),
+                      SizedBox(height: 6.h),
+                      _requestedInfoRow('Birth date', birthDate),
                     ],
                   ),
                 ),
@@ -865,12 +868,12 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
     return Row(
       children: [
         SizedBox(
-          width: 62.w,
+          width: 94.w,
           child: Text(
             label,
             style: GoogleFonts.poppins(
-              fontSize: 11.sp,
-              fontWeight: FontWeight.w500,
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w600,
               color: Colors.black,
             ),
           ),
@@ -878,8 +881,8 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
         Text(
           '|',
           style: GoogleFonts.poppins(
-            fontSize: 11.sp,
-            fontWeight: FontWeight.w500,
+            fontSize: 12.sp,
+            fontWeight: FontWeight.w600,
             color: Colors.black,
           ),
         ),
@@ -888,9 +891,10 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
           child: Text(
             value,
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+            softWrap: false,
+            overflow: TextOverflow.fade,
             style: GoogleFonts.poppins(
-              fontSize: 11.sp,
+              fontSize: 12.sp,
               fontWeight: FontWeight.w500,
               color: Colors.black,
             ),
@@ -900,14 +904,32 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
     );
   }
 
-  Widget _requestedExpiryText(String dateText) {
+  Widget _requestedExpiryColumn(String passportExpiry, String eidExpiry) {
+    final hasPassport = passportExpiry.trim().isNotEmpty;
+    final hasEid = eidExpiry.trim().isNotEmpty;
+    if (!hasPassport && !hasEid) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        if (hasPassport)
+          _requestedExpiryText(passportExpiry, rightAligned: true),
+        if (hasPassport && hasEid) SizedBox(height: 2.h),
+        if (hasEid) _requestedExpiryText(eidExpiry, rightAligned: true),
+      ],
+    );
+  }
+
+  Widget _requestedExpiryText(String dateText, {bool rightAligned = false}) {
     return Text(
       'Expiry date | $dateText',
       maxLines: 1,
-      overflow: TextOverflow.ellipsis,
+      softWrap: false,
+      overflow: TextOverflow.fade,
+      textAlign: rightAligned ? TextAlign.right : TextAlign.start,
       style: GoogleFonts.poppins(
-        fontSize: 11.sp,
-        fontWeight: FontWeight.w500,
+        fontSize: 12.sp,
+        fontWeight: FontWeight.w600,
         color: const Color(0xFFCC3A3A),
       ),
     );
@@ -1150,6 +1172,46 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
     );
   }
 
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 18.w, vertical: 10.h),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            size: 42.sp,
+            color: const Color(0xFF3B4352),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 15.sp,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF3B4352),
+            ),
+          ),
+          SizedBox(height: 6.h),
+          Text(
+            subtitle,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF7B8290),
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   // ── Folders Grid (Main view) ──
   Widget _buildFoldersList(List<Map<String, dynamic>> liveDocs) {
     final folders = _effectiveFolders(liveDocs);
@@ -1355,45 +1417,6 @@ class _FamilyDocumentsTabState extends State<FamilyDocumentsTab> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildEmptyState({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 8.w),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            size: 60.sp,
-            color: const Color(0xFF98A0AE),
-          ),
-          SizedBox(height: 10.h),
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 15.sp,
-              fontWeight: FontWeight.w700,
-              color: const Color(0xFF3B4352),
-            ),
-          ),
-          SizedBox(height: 6.h),
-          Text(
-            subtitle,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.poppins(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF7B8290),
-              height: 1.35,
-            ),
-          ),
-        ],
-      ),
     );
   }
 

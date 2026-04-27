@@ -50,8 +50,8 @@ class PdfService {
           margin:
               const pw.EdgeInsets.only(left: 32, right: 32, bottom: 20, top: 5),
         ),
-        header: (context) => _buildHeader(
-          context, logo, report, projectName, notoSanArabic, templateType),
+        header: (context) =>
+            _buildHeader(context, logo, report, projectName, notoSanArabic),
         footer: (context) => _buildFooter(context, userName),
         build: (context) => _buildBody(context, logo, report, imageMap,
             userData, notoSanArabic, templateType),
@@ -89,14 +89,8 @@ class PdfService {
     return 'assets/logo/logo.png';
   }
 
-    _buildHeader(
-      context,
-      logo,
-      ReportDetailModel report,
-      String projectName,
-      pw.Font font,
-      String templateType,
-      ) {
+  _buildHeader(context, logo, ReportDetailModel report, String projectName,
+      pw.Font font) {
     CompanyModel companyData = CompanyRepository.company!;
     bool needToShowCover =
         (context.pageNumber == 1 && report.coverPage != null);
@@ -237,7 +231,7 @@ class PdfService {
         ),
 
         pw.SizedBox(height: 20),
-        if (!needToShowCover) _buildTableHeader(templateType)
+        if (!needToShowCover) _buildTableHeader()
       ],
     );
   }
@@ -483,7 +477,7 @@ class PdfService {
                       ])),
                 ),
                 pw.SizedBox(height: 20),
-                if (!needToShowCover) _buildTableHeader(templateType)
+                if (!needToShowCover) _buildTableHeader()
               ],
             ),
             pw.SizedBox(height: 20),
@@ -879,28 +873,15 @@ class PdfService {
     );
   }
 
-  pw.Widget _buildTableHeader(String templateType) {
-    final isCompactTemplate =
-        templateType == 'template1' ||
-        templateType == 'template2' ||
-        templateType == 'template4';
-
-    final columnWidths = isCompactTemplate
-        ? {
-            0: const pw.FixedColumnWidth(30),
-            1: const pw.FlexColumnWidth(1.5),
-            2: const pw.FlexColumnWidth(2),
-          }
-        : {
-            0: const pw.FixedColumnWidth(30),
-            1: const pw.FlexColumnWidth(1.5),
-            2: const pw.FlexColumnWidth(1),
-            3: const pw.FlexColumnWidth(1),
-          };
-
+  pw.Widget _buildTableHeader() {
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey),
-      columnWidths: columnWidths,
+      columnWidths: {
+        0: const pw.FixedColumnWidth(30),
+        1: const pw.FlexColumnWidth(1.5),
+        2: const pw.FlexColumnWidth(1),
+        3: const pw.FlexColumnWidth(1),
+      },
       children: [
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.grey300),
@@ -920,16 +901,15 @@ class PdfService {
             pw.Container(
               padding: const pw.EdgeInsets.all(4),
               alignment: pw.Alignment.center,
-              child: pw.Text(isCompactTemplate ? "Details" : "Location",
+              child: pw.Text("Location",
                   style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
             ),
-            if (!isCompactTemplate)
-              pw.Container(
-                padding: const pw.EdgeInsets.all(4),
-                alignment: pw.Alignment.center,
-                child: pw.Text("Description",
-                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
-              ),
+            pw.Container(
+              padding: const pw.EdgeInsets.all(4),
+              alignment: pw.Alignment.center,
+              child: pw.Text("Description",
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+            ),
           ],
         ),
       ],

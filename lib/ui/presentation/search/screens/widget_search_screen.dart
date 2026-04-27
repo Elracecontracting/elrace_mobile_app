@@ -253,7 +253,11 @@ class _WidgetSearchScreenState extends State<WidgetSearchScreen> {
     final url = Uri.parse('https://erp.elrace.com/api/get_employee_documents');
     final body = jsonEncode({
       'jsonrpc': '2.0',
-      'params': {'keyword': query},
+      'params': {
+        'keyword': query,
+        'family_only': true,
+        'doc_type': 'requested',
+      },
     });
 
     final response = await http.post(url, headers: headers, body: body);

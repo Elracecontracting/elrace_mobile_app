@@ -20,6 +20,7 @@ import 'package:dropdown_button2/dropdown_button2.dart';
 
 import '../../../widgets/custom_slider_button.dart';
 import 'attachment_viewer_screen.dart';
+import 'family_insurance_request_screen.dart';
 import 'family_documents_tab.dart';
 import 'company_documents_tab.dart';
 import 'share_documents_tab.dart';
@@ -484,7 +485,7 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
 
       final Map<String, dynamic> params = {
         'family_only': familyOnly,
-        'doc_type': normalizedDocType,
+        if (normalizedDocType != null) 'doc_type': normalizedDocType,
       };
 
       final body = jsonEncode({'jsonrpc': '2.0', 'params': params});
@@ -654,11 +655,16 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                 'family_member': map['family_member'],
                 'family_member_label': map['family_member_label'],
                 'relation': map['relation'],
-                'person_name': map['person_name'] ?? map['family_member_name'],
+                'person_name': map['person_name'] ??
+                    map['family_member_name'] ??
+                    map['family_member'] ??
+                    map['employee'],
                 'family_member_name': map['family_member_name'],
                 'passport_no': map['passport_no'] ?? map['passport_number'],
                 'eid_no': map['eid_no'] ?? map['emirates_id_no'],
-                'nationality': map['nationality'] ?? map['nationality_name'],
+                'nationality': map['nationality'] ??
+                    map['family_member_nationality_id'] ??
+                    map['nationality_name'],
                 'birth_date': map['birth_date'] ?? map['family_member_dob'],
                 'passport_expiry_date':
                     map['passport_expiry_date'] ?? map['expiry_date'],
@@ -703,11 +709,16 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
               'family_member': map['family_member'],
               'family_member_label': map['family_member_label'],
               'relation': map['relation'],
-              'person_name': map['person_name'] ?? map['family_member_name'],
+              'person_name': map['person_name'] ??
+                  map['family_member_name'] ??
+                  map['family_member'] ??
+                  map['employee'],
               'family_member_name': map['family_member_name'],
               'passport_no': map['passport_no'] ?? map['passport_number'],
               'eid_no': map['eid_no'] ?? map['emirates_id_no'],
-              'nationality': map['nationality'] ?? map['nationality_name'],
+              'nationality': map['nationality'] ??
+                  map['family_member_nationality_id'] ??
+                  map['nationality_name'],
               'birth_date': map['birth_date'] ?? map['family_member_dob'],
               'passport_expiry_date':
                   map['passport_expiry_date'] ?? map['expiry_date'],
@@ -1294,6 +1305,25 @@ class _MyDocumentsScreenState extends State<MyDocumentsScreen> {
                           onAddDocument: () {
                             _showDocumentDialogByType(
                                 DocumentDialogType.family);
+                          },
+                          onAddNewRequest: () {
+                            unawaited(() async {
+                              final result =
+                                  await Navigator.of(context).push<bool>(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const FamilyInsuranceRequestScreen(),
+                                ),
+                              );
+
+                              if (result == true && mounted) {
+                                final keyword = _searchController.text.trim();
+                                await _fetchMyDocuments(
+                                  keyword: keyword.isEmpty ? null : keyword,
+                                  docType: _activeFamilyDocType,
+                                );
+                              }
+                            }());
                           },
                         ),
                         CompanyDocumentsTab(
