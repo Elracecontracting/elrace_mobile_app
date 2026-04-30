@@ -129,11 +129,11 @@ android {
 
     buildTypes {
         debug {
+            // TODO: Add your own signing config for the release build.
+            // Signing with the debug keys for now, so flutter run --release works.
             signingConfig = signingConfigs.debug
             minifyEnabled false
             shrinkResources false
-            applicationIdSuffix ".test"
-            resValue "string", "app_name", "El Race Test"
         }
         release {
             signingConfig = signingConfigs.release
@@ -161,9 +161,9 @@ android.packagingOptions {
 }
 
 dependencies {
+    implementation 'androidx.core:core-splashscreen:1.0.1'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
     implementation 'androidx.multidex:multidex:2.0.1'
-    implementation 'androidx.core:core-ktx:1.12.0'
     implementation("com.google.firebase:firebase-analytics")
     implementation 'com.google.firebase:firebase-crashlytics:18.3.2'
     implementation 'com.google.firebase:firebase-messaging:23.1.0'

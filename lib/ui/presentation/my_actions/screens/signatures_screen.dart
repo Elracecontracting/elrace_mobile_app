@@ -334,13 +334,14 @@ class _SignaturesScreenState extends State<SignaturesScreen> {
     List<MyActionItem> timesheets = const <MyActionItem>[];
 
     try {
-      directSignatures = await _repo.fetchByType(MyActionsType.signatures);
+      directSignatures =
+          await _fetchAllMyActionsPages(MyActionsType.signatures);
     } catch (e) {
       debugPrint('Signatures API failed: $e');
     }
 
     try {
-      timesheets = await _repo.fetchByType(MyActionsType.timesheet);
+      timesheets = await _fetchAllMyActionsPages(MyActionsType.timesheet);
     } catch (e) {
       debugPrint('Timesheet API failed for signature merge: $e');
     }
@@ -363,6 +364,28 @@ class _SignaturesScreenState extends State<SignaturesScreen> {
     final list = merged.values.toList(growable: false);
     list.sort((a, b) => (b.date ?? '').compareTo(a.date ?? ''));
     return list;
+  }
+
+  Future<List<MyActionItem>> _fetchAllMyActionsPages(MyActionsType type) async {
+    final items = <MyActionItem>[];
+    var page = 1;
+    const maxPages = 100;
+
+    while (page <= maxPages) {
+      final pageItems = await _repo.fetchByType(
+        type,
+        page: page,
+        perPage: MyActionsRepository.defaultPerPage,
+      );
+      items.addAll(pageItems);
+
+      if (pageItems.length < MyActionsRepository.defaultPerPage) {
+        break;
+      }
+      page++;
+    }
+
+    return items;
   }
 
   @override

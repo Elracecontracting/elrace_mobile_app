@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math' show min, max;
 
 import 'package:cookie_jar/cookie_jar.dart';
@@ -8,12 +7,9 @@ import 'package:dio/dio.dart';
 import 'package:dio_cookie_manager/dio_cookie_manager.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../core/app_globals.dart' show navKey;
-import '../../ui/chat/chat_screen.dart';
 import '../../utils/urll_utils.dart';
 import '../models/models.dart';
 import '../repositories/chat_repository.dart';
@@ -552,44 +548,12 @@ class FirebaseChatAuthService {
   /// or if reauthentication succeeded. Returns false if token expired
   /// and needs fresh token from backend.
 
-  /// Wire up notification tap to navigate to ChatScreen
+  /// Notification taps are routed by FirebaseService. This callback is kept
+  /// for chat-module integrations that still observe tap events directly.
   void _wireChatNotificationTap() {
     ChatNotificationService.instance.onNotificationTap =
         (chatId, chatTitle, chatType) {
-      print('🔔 FirebaseChatAuth: Notification tapped → $chatId');
-      final ctx = navKey.currentContext;
-      if (ctx == null) return;
-
-      // Determine peerUid for DM chats
-      String? peerUid;
-      if (chatType == ChatType.dm) {
-        final currentUid = _auth.currentUser?.uid;
-        if (currentUid != null) {
-          // DM chat IDs are dm_{uid1}_{uid2} (sorted)
-          final parts = chatId.replaceFirst('dm_', '').split('_');
-          // parts might be ['920', 'odoo', '4291'] if uid contains underscore
-          // Reconstruct UIDs by finding the split point
-          final allParts = chatId.substring(3); // remove 'dm_'
-          // The two UIDs in the chatId are sorted; one is currentUid
-          if (allParts.startsWith('${currentUid}_')) {
-            peerUid = allParts.substring(currentUid.length + 1);
-          } else if (allParts.endsWith('_$currentUid')) {
-            peerUid =
-                allParts.substring(0, allParts.length - currentUid.length - 1);
-          }
-        }
-      }
-
-      Navigator.of(ctx).push(
-        MaterialPageRoute(
-          builder: (_) => ChatScreen(
-            chatId: chatId,
-            title: chatTitle,
-            chatType: chatType,
-            peerUid: peerUid,
-          ),
-        ),
-      );
+      print('🔔 FirebaseChatAuth: Chat notification tapped → $chatId');
     };
   }
 
@@ -764,32 +728,32 @@ class FirebaseChatAuthService {
 }
 
 // ============== Push Notification Trigger Notes ==============
-// 
+//
 // The client-side FCM token storage and topic subscription is implemented above.
 // Actual push notification sending should be done via Cloud Functions.
-// 
+//
 // Example Cloud Function (Node.js) for sending DM notifications:
-// 
+//
 // ```javascript
 // exports.onNewMessage = functions.firestore
 //   .document('chats/{chatId}/messages/{messageId}')
 //   .onCreate(async (snap, context) => {
 //     const message = snap.data();
 //     const chatId = context.params.chatId;
-//     
+//
 //     // Get chat document
 //     const chatDoc = await admin.firestore().collection('chats').doc(chatId).get();
 //     const chat = chatDoc.data();
-//     
+//
 //     if (chat.type === 'dm') {
 //       // For DM: Send to other user's device tokens
 //       const otherUid = chat.dm_pair.find(uid => uid !== message.sender_id);
 //       const tokensSnapshot = await admin.firestore()
 //         .collection('users').doc(otherUid).collection('fcm_tokens').get();
-//       
+//
 //       const tokens = tokensSnapshot.docs.map(doc => doc.id);
 //       if (tokens.length === 0) return;
-//       
+//
 //       const payload = {
 //         notification: {
 //           title: senderName,
@@ -800,7 +764,7 @@ class FirebaseChatAuthService {
 //           type: 'dm',
 //         },
 //       };
-//       
+//
 //       await admin.messaging().sendToDevice(tokens, payload);
 //     } else if (chat.type === 'role') {
 //       // For role chat: Send to topic
@@ -815,7 +779,7 @@ class FirebaseChatAuthService {
 //           type: 'role',
 //         },
 //       };
-//       
+//
 //       await admin.messaging().sendToTopic(topic, payload);
 //     }
 //   });

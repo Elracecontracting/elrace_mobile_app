@@ -1,9 +1,8 @@
 import 'dart:convert';
 
-import 'package:dio/dio.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_action_buttons.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/widgets/file_binary.dart';
+import 'package:el_race/ui/presentation/lpo/screens/lpo_pdf_viewer_screen.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -33,7 +32,6 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
   bool _isLoading = true;
   String _error = '';
   Map<String, dynamic> _formData = {};
-  List<String> _attachmentIds = [];
 
   bool get _isLocalFakeRequest => widget.requestId == _localFakeRfqRequestId;
 
@@ -61,10 +59,6 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
     if (_isLocalFakeRequest) {
       final fake = _buildLocalFakeRfqData();
       _formData = fake;
-      final rawAttachments = fake['attachment_ids'];
-      if (rawAttachments is List) {
-        _attachmentIds = rawAttachments.map((e) => e.toString()).toList();
-      }
       _isLoading = false;
       return;
     }
@@ -175,6 +169,21 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
     return const <String>[];
   }
 
+  Map<String, dynamic> _extractRfqFormData(Map result) {
+    final rawData = result['data'];
+    if (rawData is! Map) return const <String, dynamic>{};
+
+    final data = Map<String, dynamic>.from(rawData);
+    final formView = data['form_view'];
+
+    final flattened = Map<String, dynamic>.from(data);
+    if (formView is Map) {
+      flattened.addAll(Map<String, dynamic>.from(formView));
+    }
+
+    return flattened;
+  }
+
   Future<void> _fetchRfqDetails() async {
     final token = SharedPref.getLoginData().result?.token;
     final headers = {
@@ -202,14 +211,12 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
 
       if (data['result'] != null) {
         final result = data['result'] as Map;
-        final formData = result['data'] as Map? ?? {};
-        final attachmentList = result['attachment_ids'] as List? ?? [];
+        final formData = _extractRfqFormData(result);
 
         setState(() {
           final merged = Map<String, dynamic>.from(_formData);
-          merged.addAll(Map<String, dynamic>.from(formData));
+          merged.addAll(formData);
           _formData = merged;
-          _attachmentIds = attachmentList.map((e) => e.toString()).toList();
           _isLoading = false;
         });
       } else {
@@ -231,9 +238,18 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
   }
 
   Future<void> _viewAttachment() async {
-    if (_attachmentIds.isEmpty) return;
+    final poId = int.tryParse(widget.requestId);
+    if (poId == null || poId <= 0) {
+      Fluttertoast.showToast(
+        msg: 'Invalid RFQ id.',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.CENTER,
+        backgroundColor: Colors.black,
+        textColor: Colors.white,
+      );
+      return;
+    }
 
-    final attachmentId = int.tryParse(_attachmentIds.first) ?? 0;
     final token = SharedPref.getLoginData().result?.token;
 
     final headers = {
@@ -245,7 +261,7 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
     final data = {
       'jsonrpc': '2.0',
       'params': {
-        'attachment_id': attachmentId,
+        'po_id': poId,
       },
     };
 
@@ -256,29 +272,19 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
     );
 
     try {
-      final response = await Dio().fetch(
-        RequestOptions(
-          method: 'GET',
-          path: 'https://erp.elrace.com/api/get_attachment_details',
-          headers: headers,
-          data: data,
-          responseType: ResponseType.json,
-        ),
+      final response = await http.post(
+        Uri.parse('https://erp.elrace.com/api/po/report_url'),
+        headers: headers,
+        body: jsonEncode(data),
       );
 
       if (mounted && Navigator.canPop(context)) {
         Navigator.of(context).pop();
       }
 
-      final resData = response.data as Map;
-      final result = resData['result'] as Map?;
-      final dataMap = result?['data'] as Map?;
-      final binaryBase64 = dataMap?['attachment_binary_data']?.toString() ?? '';
-      final fileName = dataMap?['attachment_name']?.toString() ?? '';
-
-      if (binaryBase64.isEmpty) {
+      if (response.statusCode != 200) {
         Fluttertoast.showToast(
-          msg: 'No binary data found.',
+          msg: 'Failed to load PDF: HTTP ${response.statusCode}',
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.CENTER,
           backgroundColor: Colors.black,
@@ -287,13 +293,39 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
         return;
       }
 
-      final pdfBytes = base64Decode(binaryBase64);
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final result = decoded['result'] as Map?;
+      final pdfUrl = result?['report_url']?.toString() ?? '';
+
+      if (pdfUrl.isEmpty) {
+        final error = decoded['error'] as Map?;
+        final errorData = error?['data'] as Map?;
+        Fluttertoast.showToast(
+          msg: result?['message']?.toString() ??
+              result?['error']?.toString() ??
+              errorData?['message']?.toString() ??
+              error?['message']?.toString() ??
+              'Failed to retrieve PDF URL.',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
+        );
+        return;
+      }
+
       if (!mounted) return;
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => AttachmentPdfViewer(
-            pdfBytes: pdfBytes,
-            attchmentName: fileName,
+          builder: (_) => LpoPdfViewerScreen(
+            pdfUrl: pdfUrl,
+            title: 'RFQ ${_pick([
+                  _formData['title'],
+                  _formData['request_no'],
+                  _formData['rfq_no_code'],
+                  _formData['rfq_no'],
+                  _formData['name'],
+                ], fallback: widget.requestId)}',
           ),
         ),
       );
@@ -437,6 +469,7 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
       _formData['request_no'],
       _formData['rfq_no_code'],
       _formData['rfq_no'],
+      _formData['title'],
       _formData['name'],
       _formData['ref_no'],
     ], fallback: widget.requestId);
@@ -488,6 +521,7 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
       _formData['wo_no'],
       _formData['wono'],
       _formData['wo_no#'],
+      _formData['wo'],
     ]);
 
     final totalAmount = _pick([
@@ -529,7 +563,7 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
       _formData['rfq_tag'],
     ]).take(4).toList();
 
-    final hasAttachments = _attachmentIds.isNotEmpty;
+    final canViewReport = int.tryParse(widget.requestId) != null;
 
     final userId =
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
@@ -943,7 +977,7 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                   ],
                                 ),
                               ),
-                              if (hasAttachments) ...[
+                              if (canViewReport) ...[
                                 SizedBox(height: 16.w),
                                 SizedBox(
                                   width: 0.88.sw,
@@ -1013,6 +1047,7 @@ class _RfqDetailsScreenState extends State<RfqDetailsScreen> {
                                 type: widget.type,
                                 userIds: [userId],
                                 variant: ApprovalActionButtonsVariant.pill,
+                                showHrApproveConfirmation: true,
                                 pillWidth: pillWidth,
                                 pillHeight: 36.w,
                                 pillSpacing: 24.w,

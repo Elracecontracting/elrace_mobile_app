@@ -159,6 +159,11 @@ class _AttendancePageState extends State<AttendancePage> {
     return raw.replaceAll('_', ' ').toUpperCase();
   }
 
+  int _daysInMonth(int year, int month) {
+    if (month < 1 || month > 12) return 0;
+    return DateTime(year, month + 1, 0).day;
+  }
+
   String _actionTitleForRecord(AttendanceRecord record) {
     // Always show x_attendance_type if available
     if (record.attendanceType != null &&
@@ -842,10 +847,17 @@ class _AttendancePageState extends State<AttendancePage> {
           final records =
               _managerEmployeeRecords[empKey] ?? const <AttendanceRecord>[];
 
-          final attendanceRatio =
-              employee.totalWorkingDays > 0
-                  ? employee.totalPresentDays / employee.totalWorkingDays
-                  : 0.0;
+            final monthDays = _daysInMonth(
+            employee.year > 0 ? employee.year : selectedYear,
+            employee.month > 0
+              ? employee.month
+              : selectedMonth ?? DateTime.now().month,
+            );
+            final absentDays =
+              (monthDays - employee.totalPresentDays).clamp(0, monthDays);
+            final attendanceRatio = monthDays > 0
+              ? employee.totalPresentDays / monthDays
+              : 0.0;
           final ratioColor = attendanceRatio >= 0.8
               ? const Color(0xFF009859)
               : attendanceRatio >= 0.6
@@ -890,7 +902,7 @@ class _AttendancePageState extends State<AttendancePage> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              '${employee.totalPresentDays}/${employee.totalWorkingDays}',
+                              '${employee.totalPresentDays}/$monthDays',
                               style: GoogleFonts.inter(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -898,7 +910,7 @@ class _AttendancePageState extends State<AttendancePage> {
                               ),
                             ),
                             Text(
-                              '${employee.totalAbsentDays} absent',
+                              '$absentDays absent',
                               style: GoogleFonts.inter(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w500,

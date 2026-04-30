@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/ui/presentation/signin/data/repository.dart';
+import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -23,7 +23,6 @@ class RequestLeavePageNew extends StatefulWidget {
 }
 
 class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
-  final UserRepo userRepo = UserRepo();
   static const Color _primary = Color(0xFF151544);
   static const Color _accentGrey = Color(0xFF5E5E5E);
   DateTime? startDate;
@@ -47,8 +46,6 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
 
   // SHORT leave restrictions
   static const int maxShortLeaveDays = 7; // Maximum 7 days for SHORT leave
-  static const int shortLeaveGapDays =
-      30; // Minimum 30 days gap between SHORT leaves
 
   // Text formatting states
   bool isBold = false;
@@ -58,13 +55,14 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   final TextEditingController _descController = TextEditingController();
 
   DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
+  bool get _showHolidayBlockStyling => false;
 
   @override
   void initState() {
     super.initState();
     _initializeMinimumDate();
     _fetchHolidaysFromAPI();
-    _initAsync();
+    _loadLeaveBalanceFromLoginResponse();
   }
 
   void _initializeMinimumDate() {
@@ -158,24 +156,12 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
     setState(() => isLoadingHolidays = false);
   }
 
-  Future<void> _initAsync() async {
-    await _fetchLeaveBalance();
-  }
-
-  Future<void> _fetchLeaveBalance() async {
-    try {
-      final loginData = SharedPref.getLoginData();
-      final balance = loginData.result?.data?.leaveBalance?.toString();
-      setState(() {
-        leaveBalance = (balance != null && balance.isNotEmpty) ? balance : '0';
-      });
-      debugPrint('✅ Leave Balance fetched: $leaveBalance');
-    } catch (e) {
-      debugPrint('❌ Error fetching leave balance: $e');
-      setState(() {
-        leaveBalance = '0';
-      });
-    }
+  void _loadLeaveBalanceFromLoginResponse() {
+    final loginData = widget.loginResponseModel is LoginResponseModel
+        ? widget.loginResponseModel as LoginResponseModel
+        : SharedPref.getLoginData();
+    final balance = loginData.result?.data?.leaveBalance?.trim();
+    leaveBalance = (balance != null && balance.isNotEmpty) ? balance : null;
   }
 
   void _onDateSelected(DateTime date) {
@@ -853,10 +839,9 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
           date.isBefore(endDate!);
 
       final isSelectable = _isDateSelectable(date);
-      const bool enforceHolidayBlocks = false;
-      final isHolidayDate = enforceHolidayBlocks && _isHoliday(date);
+      final isHolidayDate = _showHolidayBlockStyling && _isHoliday(date);
       final isNearHoliday =
-          enforceHolidayBlocks && _isWithin3DaysOfHoliday(date);
+          _showHolidayBlockStyling && _isWithin3DaysOfHoliday(date);
 
       days.add(
         GestureDetector(

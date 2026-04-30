@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:el_race/core/services/update_service.dart';
 import 'package:el_race/core/app_globals.dart' show appInitCompleter;
 import 'package:el_race/core/utils/shared_pref.dart';
@@ -27,6 +29,7 @@ class _SplashScreenState extends State<SplashScreen> {
   bool _didScheduleNavigation = false;
   late VideoPlayerController _videoController;
   bool _isVideoReady = false;
+  final Completer<void> _videoCompletedCompleter = Completer<void>();
 
   @override
   void initState() {
@@ -37,10 +40,12 @@ class _SplashScreenState extends State<SplashScreen> {
       ..initialize().then((_) {
         if (mounted) {
           setState(() => _isVideoReady = true);
+          _videoController.addListener(_onVideoProgress);
           _videoController.play();
         }
       }).catchError((e) {
         print('⚠️ Video init error: $e');
+        _completeVideoIfNeeded();
       });
 
     // Defer security check & QR clear to after the first frame so
@@ -101,13 +106,18 @@ class _SplashScreenState extends State<SplashScreen> {
   /// Wait for both: 1) minimum 3-second splash, 2) heavy init complete,
   /// 3) security check, then navigate.
   Future<void> _waitForInitAndNavigate() async {
-    // Run minimum splash delay and heavy init wait in parallel
-    await Future.wait([
-      Future.delayed(const Duration(seconds: 3)),
+    // Wait for BOTH heavy init and intro video completion.
+    await Future.wait<void>([
       appInitCompleter.future.timeout(
         const Duration(seconds: 12),
         onTimeout: () {
           print('⚠️ Heavy init timeout in splash – continuing anyway');
+        },
+      ),
+      _videoCompletedCompleter.future.timeout(
+        const Duration(seconds: 20),
+        onTimeout: () {
+          print('⚠️ Video completion timeout in splash – continuing anyway');
         },
       ),
     ]);
@@ -130,6 +140,25 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!_isDeviceSecure) return;
 
     _navigateToNextScreen();
+  }
+
+  void _onVideoProgress() {
+    if (!_videoController.value.isInitialized) return;
+
+    final duration = _videoController.value.duration;
+    final position = _videoController.value.position;
+
+    if (duration == Duration.zero) return;
+
+    if (position >= duration - const Duration(milliseconds: 100)) {
+      _completeVideoIfNeeded();
+    }
+  }
+
+  void _completeVideoIfNeeded() {
+    if (!_videoCompletedCompleter.isCompleted) {
+      _videoCompletedCompleter.complete();
+    }
   }
 
   /// Wait for security check to complete (up to 5 seconds)
@@ -257,6 +286,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   void dispose() {
+    _videoController.removeListener(_onVideoProgress);
     _videoController.dispose();
     super.dispose();
   }

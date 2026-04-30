@@ -1,9 +1,8 @@
 import 'dart:convert';
 
-import 'package:dio/dio.dart';
 import 'package:el_race/core/utils/shared_pref.dart';
 import 'package:el_race/ui/presentation/Email%20Approval/widgets/approval_action_buttons.dart';
-import 'package:el_race/ui/presentation/Email%20Approval/widgets/file_binary.dart';
+import 'package:el_race/ui/presentation/lpo/screens/lpo_pdf_viewer_screen.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -35,7 +34,6 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
   String _error = '';
 
   Map<String, dynamic> _formData = const {};
-  List<dynamic> _attachmentIds = const [];
 
   bool get _isLocalFakeRequest =>
       widget.requestId == _localFakeInvoiceRequestId;
@@ -72,19 +70,11 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     if (_isLocalFakeRequest) {
       final fake = _buildLocalFakeInvoiceData();
       _formData = fake;
-      final rawAttachments = fake['attachment_ids'];
-      if (rawAttachments is List) {
-        _attachmentIds = rawAttachments;
-      }
       _isLoading = false;
       return;
     }
     if (widget.initialData != null) {
       _formData = Map<String, dynamic>.from(widget.initialData!);
-      final rawAttachments = widget.initialData!['attachment_ids'];
-      if (rawAttachments is List) {
-        _attachmentIds = rawAttachments;
-      }
     }
     _fetchInvoiceDetails();
   }
@@ -229,14 +219,12 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       final formView =
           (result?['form_view'] as Map?)?.cast<String, dynamic>() ??
               <String, dynamic>{};
-      final attachmentIds = (result?['attachment_ids'] as List?) ?? const [];
 
       if (!mounted) return;
       setState(() {
         final merged = Map<String, dynamic>.from(_formData);
         merged.addAll(formView);
         _formData = merged;
-        _attachmentIds = attachmentIds;
         _isLoading = false;
         _error = '';
       });
@@ -250,31 +238,10 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
   }
 
   Future<void> _viewAttachment() async {
-    if (_attachmentIds.isEmpty) {
+    final invoiceId = int.tryParse(widget.requestId);
+    if (invoiceId == null || invoiceId <= 0) {
       Fluttertoast.showToast(
-        msg: 'No attachment found.',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.CENTER,
-        backgroundColor: Colors.black,
-        textColor: Colors.white,
-      );
-      return;
-    }
-
-    dynamic attachmentId;
-    final firstAttachment = _attachmentIds.first;
-    if (firstAttachment is Map) {
-      attachmentId = firstAttachment['attachment_id'] ??
-          firstAttachment['id'] ??
-          firstAttachment['res_id'];
-    } else {
-      attachmentId = firstAttachment;
-    }
-
-    final parsedAttachmentId = int.tryParse(_safe(attachmentId));
-    if (parsedAttachmentId == null || parsedAttachmentId <= 0) {
-      Fluttertoast.showToast(
-        msg: 'Invalid attachment id.',
+        msg: 'Invalid invoice id.',
         toastLength: Toast.LENGTH_SHORT,
         gravity: ToastGravity.CENTER,
         backgroundColor: Colors.black,
@@ -293,7 +260,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     final data = {
       'jsonrpc': '2.0',
       'params': {
-        'attachment_id': parsedAttachmentId,
+        'invoice_id': invoiceId,
       },
     };
 
@@ -304,34 +271,19 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
     );
 
     try {
-      final response = await Dio().fetch(
-        RequestOptions(
-          method: 'GET',
-          path: 'https://erp.elrace.com/api/get_attachment_details',
-          headers: headers,
-          data: data,
-          responseType: ResponseType.json,
-        ),
+      final response = await http.post(
+        Uri.parse('https://erp.elrace.com/api/invoice/report_url'),
+        headers: headers,
+        body: jsonEncode(data),
       );
 
       if (mounted && Navigator.canPop(context)) {
         Navigator.of(context).pop();
       }
 
-      final resData = response.data as Map;
-      final result = resData['result'] as Map?;
-      final dataMap = result?['data'] as Map?;
-      final binaryBase64 = _pick([
-        dataMap?['attachment_binary_data'],
-        dataMap?['attachment_binary'],
-        dataMap?['datas'],
-        dataMap?['file_data'],
-      ]);
-      final fileName = dataMap?['attachment_name']?.toString() ?? '';
-
-      if (binaryBase64.isEmpty) {
+      if (response.statusCode != 200) {
         Fluttertoast.showToast(
-          msg: 'Attachment exists but binary data is empty from API.',
+          msg: 'Failed to load PDF: HTTP ${response.statusCode}',
           toastLength: Toast.LENGTH_SHORT,
           gravity: ToastGravity.CENTER,
           backgroundColor: Colors.black,
@@ -340,13 +292,38 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
         return;
       }
 
-      final pdfBytes = base64Decode(binaryBase64);
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      final result = decoded['result'] as Map?;
+      final pdfUrl = result?['report_url']?.toString() ?? '';
+
+      if (pdfUrl.isEmpty) {
+        final error = decoded['error'] as Map?;
+        final errorData = error?['data'] as Map?;
+        Fluttertoast.showToast(
+          msg: result?['message']?.toString() ??
+              result?['error']?.toString() ??
+              errorData?['message']?.toString() ??
+              error?['message']?.toString() ??
+              'Failed to retrieve PDF URL.',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+          backgroundColor: Colors.black,
+          textColor: Colors.white,
+        );
+        return;
+      }
+
       if (!mounted) return;
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (_) => AttachmentPdfViewer(
-            pdfBytes: pdfBytes,
-            attchmentName: fileName,
+          builder: (_) => LpoPdfViewerScreen(
+            pdfUrl: pdfUrl,
+            title: 'Invoice ${_pick([
+                  _formData['request_no'],
+                  _formData['invoice_no_code'],
+                  _formData['invoice_no'],
+                  _formData['name'],
+                ], fallback: widget.requestId)}',
           ),
         ),
       );
@@ -674,14 +651,6 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       _formData['supplier'],
     ]);
 
-    final materialType = _pick([
-      _formData['material_type'],
-      _formData['material_type_name'],
-      _formData['material'],
-      _formData['item_type'],
-      _formData['product_type'],
-    ]);
-
     final invoiceAmount = _formatAmount(_pick([
       _formData['invoice_amount'],
       _formData['total_amount'],
@@ -749,7 +718,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
       _formData['description'],
     ]);
 
-    final hasAttachments = _attachmentIds.isNotEmpty;
+    final canViewReport = int.tryParse(widget.requestId) != null;
 
     final userId =
         SharedPref.getLoginData().result?.data?.uid?.toString() ?? '';
@@ -1107,7 +1076,7 @@ class _InvoiceDetailsScreenState extends State<InvoiceDetailsScreen> {
                                   ],
                                 ),
                               ),
-                              if (hasAttachments) ...[
+                              if (canViewReport) ...[
                                 SizedBox(height: 16.w),
                                 SizedBox(
                                   width: 0.88.sw,

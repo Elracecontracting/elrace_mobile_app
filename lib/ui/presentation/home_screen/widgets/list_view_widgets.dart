@@ -625,7 +625,7 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
             style: GoogleFonts.poppins(
               color: Colors.white,
               fontSize: 24.w,
-              fontWeight: FontWeight.w400,
+              fontWeight: FontWeight.w700,
               letterSpacing: 1.9,
             ),
           ),

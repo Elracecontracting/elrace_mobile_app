@@ -108,14 +108,20 @@ class DeviceSecurityService {
         // Android: use vpn_connection_detector
         try {
           if (Platform.isIOS) {
+            print('🔒 iOS: Calling VPN check via platform channel...');
             isUsingVpn =
                 await _vpnChannel.invokeMethod<bool>('isVpnActive') ?? false;
+            print('🔒 iOS: VPN check result: $isUsingVpn');
           } else {
+            print('🔒 Android: Calling VPN detector...');
             isUsingVpn = await VpnConnectionDetector.isVpnActive();
+            print('🔒 Android: VPN check result: $isUsingVpn');
           }
-          print('🔒 VPN check: $isUsingVpn');
         } catch (e) {
           print('⚠️ Error checking VPN: $e');
+          print('⚠️ VPN check failed, defaulting to: isUsingVpn=false');
+          // Don't fail the security check if VPN detection fails
+          isUsingVpn = false;
         }
       }
 

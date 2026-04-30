@@ -1,5 +1,5 @@
 import 'package:el_race/ui/presentation/my_actions/data/my_actions_models.dart';
-import 'package:el_race/ui/presentation/my_actions/data/my_actions_repository.dart';
+import 'package:el_race/ui/presentation/my_actions/widgets/my_actions_pagination_mixin.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -13,16 +13,24 @@ class RfqScreen extends StatefulWidget {
   State<RfqScreen> createState() => _RfqScreenState();
 }
 
-class _RfqScreenState extends State<RfqScreen> {
-  final MyActionsRepository _repo = MyActionsRepository();
-  late final Future<List<MyActionItem>> _future;
+class _RfqScreenState extends State<RfqScreen>
+    with MyActionsPaginationMixin<RfqScreen> {
   final DateFormat _sectionDateFormat = DateFormat('dd/MM/yyyy');
   final DateFormat _updatedDateFormat = DateFormat('MM/dd/yyyy');
 
   @override
+  MyActionsType get actionsType => MyActionsType.rfq;
+
+  @override
   void initState() {
     super.initState();
-    _future = _repo.fetchByType(MyActionsType.rfq);
+    initActionsPagination();
+  }
+
+  @override
+  void dispose() {
+    disposeActionsPagination();
+    super.dispose();
   }
 
   String _statusBadgeAsset(String status) {
@@ -72,14 +80,13 @@ class _RfqScreenState extends State<RfqScreen> {
       appBar: const HeaderWidget(),
       body: SafeArea(
         top: false,
-        child: FutureBuilder<List<MyActionItem>>(
-          future: _future,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
+        child: Builder(
+          builder: (context) {
+            if (actionsInitialLoading) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            if (snapshot.hasError) {
+            if (actionsError != null && actionItems.isEmpty) {
               return Center(
                 child: Padding(
                   padding: EdgeInsets.all(20.w),
@@ -106,13 +113,18 @@ class _RfqScreenState extends State<RfqScreen> {
                           color: const Color(0xFF9AA0A6),
                         ),
                       ),
+                      SizedBox(height: 14.h),
+                      TextButton(
+                        onPressed: retryInitialActionsLoad,
+                        child: const Text('Retry'),
+                      ),
                     ],
                   ),
                 ),
               );
             }
 
-            final items = snapshot.data ?? const <MyActionItem>[];
+            final items = List<MyActionItem>.from(actionItems);
             final sectionItems = items.map((item) {
               final updatedDate = _parseDate(item.date);
               return _RfqRequestItem(
@@ -128,12 +140,6 @@ class _RfqScreenState extends State<RfqScreen> {
                 updatedDate: updatedDate,
               );
             }).toList();
-
-            sectionItems.sort((a, b) {
-              final aDate = a.updatedDate ?? DateTime(1970, 1, 1);
-              final bDate = b.updatedDate ?? DateTime(1970, 1, 1);
-              return bDate.compareTo(aDate);
-            });
 
             final grouped = <String, List<_RfqRequestItem>>{};
             final orderedTitles = <String>[];
@@ -151,65 +157,71 @@ class _RfqScreenState extends State<RfqScreen> {
                     _RfqSection(title: title, items: grouped[title]!))
                 .toList();
 
-            return ListView(
-              padding: EdgeInsets.only(top: 8.h, bottom: 80.h),
-              children: [
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: 10.h),
-                  child: Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Image.asset(
-                          'assets/newapp/newicon/rfq_header.png',
-                          width: 26.w,
-                          height: 26.w,
-                          fit: BoxFit.contain,
-                        ),
-                        SizedBox(width: 8.w),
-                        Text(
-                          'RFQ',
-                          style: GoogleFonts.poppins(
-                            fontSize: 18.sp,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF101C36),
-                            letterSpacing: 0.2,
+            return RefreshIndicator(
+              onRefresh: refreshActions,
+              child: ListView(
+                controller: actionsScrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: EdgeInsets.only(top: 8.h, bottom: 80.h),
+                children: [
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: 10.h),
+                    child: Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(
+                            'assets/newapp/newicon/rfq_header.png',
+                            width: 26.w,
+                            height: 26.w,
+                            fit: BoxFit.contain,
                           ),
-                        ),
-                      ],
+                          SizedBox(width: 8.w),
+                          Text(
+                            'RFQ',
+                            style: GoogleFonts.poppins(
+                              fontSize: 18.sp,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF101C36),
+                              letterSpacing: 0.2,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                if (sectionItems.isEmpty)
-                  Padding(
-                    padding: EdgeInsets.only(top: 24.h),
-                    child: Center(
-                      child: Text(
-                        'No actions available.',
-                        style: GoogleFonts.poppins(
-                          fontSize: 13.sp,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF5A5A5A),
+                  if (sectionItems.isEmpty)
+                    Padding(
+                      padding: EdgeInsets.only(top: 24.h),
+                      child: Center(
+                        child: Text(
+                          'No actions available.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF5A5A5A),
+                          ),
                         ),
                       ),
-                    ),
-                  )
-                else
-                  ...sections.expand((section) {
-                    return [
-                      _SectionHeader(title: section.title),
-                      SizedBox(height: 10.h),
-                      ...section.items.map(
-                        (item) => Padding(
-                          padding: EdgeInsets.symmetric(
-                              horizontal: 16.w, vertical: 7.h),
-                          child: _RfqRequestCard(item: item),
+                    )
+                  else
+                    ...sections.expand((section) {
+                      return [
+                        _SectionHeader(title: section.title),
+                        SizedBox(height: 10.h),
+                        ...section.items.map(
+                          (item) => Padding(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 16.w, vertical: 7.h),
+                            child: _RfqRequestCard(item: item),
+                          ),
                         ),
-                      ),
-                      SizedBox(height: 14.h),
-                    ];
-                  }),
-              ],
+                        SizedBox(height: 14.h),
+                      ];
+                    }),
+                  buildActionsPaginationFooter(),
+                ],
+              ),
             );
           },
         ),
