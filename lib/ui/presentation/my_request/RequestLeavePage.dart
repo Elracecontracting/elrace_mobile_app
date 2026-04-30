@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import 'package:el_race/utils/color_utils.dart';
 import '../../widgets/custom_slider_button.dart';
-import 'package:el_race/ui/presentation/signin/data/model.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 
 class RequestDetailsPage extends StatefulWidget {
@@ -183,12 +182,10 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     return DateFormat('dd/MM/yyyy').format(date);
   }
 
-  void _loadLeaveBalanceFromLoginResponse() {
-    final loginData = widget.loginResponseModel is LoginResponseModel
-        ? widget.loginResponseModel as LoginResponseModel
-        : SharedPref.getLoginData();
-    final balance = loginData.result?.data?.leaveBalance?.trim();
-    leaveBalance = (balance != null && balance.isNotEmpty) ? balance : null;
+  Future<void> fetchleaveBalance() async {
+    setState(() {
+      leaveBalance = SharedPref.getCachedLeaveBalance();
+    });
   }
 
   @override
@@ -373,7 +370,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 50.0),
                               child: Text(
-                                '${translate('common.balance_leave')}: ${leaveBalance ?? '-'}',
+                                '${translate('common.balance_leave')}: ${leaveBalance ?? SharedPref.getCachedLeaveBalance()} days',
                                 style: GoogleFonts.poppins(
                                   fontSize: 16, // You can adjust size as needed
                                   fontWeight: FontWeight.w500,

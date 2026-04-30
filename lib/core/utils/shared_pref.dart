@@ -126,6 +126,40 @@ class SharedPref {
     return loginData ?? LoginResponseModel();
   }
 
+  static String getCachedLeaveBalance({String fallback = '0'}) {
+    final modeled = getLoginData().result?.data?.leaveBalance?.toString().trim();
+    if (modeled != null &&
+        modeled.isNotEmpty &&
+        modeled.toLowerCase() != 'null' &&
+        modeled.toLowerCase() != 'false') {
+      return modeled;
+    }
+
+    final loginJson = sharedPreferences.getString('loginResponse') ??
+        sharedPreferences.getString('LOGIN_RESPONSE');
+    if (loginJson == null || loginJson.isEmpty) {
+      return fallback;
+    }
+
+    try {
+      final decoded = jsonDecode(loginJson) as Map<String, dynamic>;
+      final data = decoded['result']?['data'];
+      if (data is! Map<String, dynamic>) return fallback;
+
+      final raw = data['leave_balance'] ?? data['leaveBalance'];
+      final value = raw?.toString().trim();
+      if (value == null ||
+          value.isEmpty ||
+          value.toLowerCase() == 'null' ||
+          value.toLowerCase() == 'false') {
+        return fallback;
+      }
+      return value;
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   static LoginResponseModel? getLoginDataOrNull() {
     final data = checkLoginAndRegistration();
     return data['loginResponse'] as LoginResponseModel?;

@@ -340,13 +340,24 @@ class _ParayerWidgetState extends State<ParayerWidget>
                           children: [
                             Row(
                               children: [
-                                Text(translate('home.prayer_times'),
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 20.sp,
-                                      fontWeight: FontWeight.w400,
-                                      color: Colors.white,
-                                    )),
-                                const Spacer(),
+                                Expanded(
+                                  child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      translate('home.prayer_times')
+                                          .toUpperCase(),
+                                      maxLines: 1,
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 1.9,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 10.w),
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [

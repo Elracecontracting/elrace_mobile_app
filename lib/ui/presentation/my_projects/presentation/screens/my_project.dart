@@ -16,6 +16,7 @@ import 'package:el_race/utils/color_utils.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_translate/flutter_translate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -251,8 +252,8 @@ class _MyProjectState extends State<MyProject> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Image.asset(
-                          'assets/newapp/filter.png',
+                        SvgPicture.asset(
+                          'assets/newapp/newicon/my_projects_filter_icon.svg',
                           height: 24.sp,
                           width: 24.sp,
                         ),
@@ -378,8 +379,8 @@ class _MyProjectState extends State<MyProject> {
                             color: Colors.transparent,
                           ),
                           child: Center(
-                            child: Image.asset(
-                              'assets/newapp/filter.png',
+                            child: SvgPicture.asset(
+                              'assets/newapp/newicon/my_projects_filter_icon.svg',
                               height: 24.sp,
                               width: 24.sp,
                             ),
@@ -434,6 +435,7 @@ class _MyProjectState extends State<MyProject> {
                                         value: bloc,
                                         child: ProjectListScreen(
                                           bloc: bloc,
+                                          agreementId: project.agreementId,
                                           partnerId: id,
                                           partnerName: name,
                                           partnerPhoto: photoUrl ?? '',
