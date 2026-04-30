@@ -32,21 +32,12 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   String certificateNo = '';
   String description = '';
   bool isLoading = false;
-
-  // Holiday list includes:
-  // Only official public holidays (NOT weekends)
-  // Weekends are regular working days that can be selected
   final Set<DateTime> holidays = {};
-  final Set<DateTime> officialHolidays = {}; // Official holidays from API
+  final Set<DateTime> officialHolidays = {};
   bool isLoadingHolidays = false;
-
-  // Minimum start date (20 days from now for SHORT leave)
-  late DateTime minimumStartDate;
 
   // SHORT leave restrictions
   static const int maxShortLeaveDays = 7; // Maximum 7 days for SHORT leave
-  static const int shortLeaveGapDays =
-      30; // Minimum 30 days gap between SHORT leaves
 
   // Text formatting states
   bool isBold = false;
@@ -55,25 +46,13 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   bool isNumberedList = false;
   final TextEditingController _descController = TextEditingController();
 
-  DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
-
   @override
   void initState() {
     super.initState();
-    _initializeMinimumDate();
-    _fetchHolidaysFromAPI();
     _initAsync();
   }
 
-  void _initializeMinimumDate() {
-    // Only annual leave requires 20-day advance notice.
-    if (widget.leaveType == 'ANNUAL') {
-      minimumStartDate = DateTime.now().add(const Duration(days: 20));
-    } else {
-      minimumStartDate = DateTime.now();
-    }
-  }
-
+  // ignore: unused_element
   Future<void> _fetchHolidaysFromAPI() async {
     setState(() => isLoadingHolidays = true);
 
@@ -175,25 +154,6 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
   }
 
   void _onDateSelected(DateTime date) {
-    // Check if date is selectable
-    if (!_isDateSelectable(date)) {
-      String errorMessage = 'Selected date is not available. ';
-
-      if (_isHoliday(date)) {
-        errorMessage += 'Cannot select a holiday.';
-      } else if (_isWithin3DaysOfHoliday(date)) {
-        errorMessage +=
-            'Cannot select dates within 3 days before or 4 days after official holidays.';
-      } else if (date.isBefore(minimumStartDate)) {
-        errorMessage += 'Must be at least 20 days from request date.';
-      } else {
-        errorMessage += 'Please choose a valid working day.';
-      }
-
-      _showErrorDialog(errorMessage);
-      return;
-    }
-
     setState(() {
       if (startDate == null || (endDate != null)) {
         startDate = date;
@@ -209,58 +169,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
     });
   }
 
-  bool _isDateSelectable(DateTime date) {
-    // Cannot select past dates (applies to all leave types including SICK)
-    final today = _dateOnly(DateTime.now());
-    if (_dateOnly(date).isBefore(today)) {
-      debugPrint('🔴 Date not selectable: $date (Past date)');
-      return false;
-    }
-
-    // Cannot select dates before minimum start date
-    if (_dateOnly(date).isBefore(_dateOnly(minimumStartDate))) {
-      debugPrint(
-          '🔴 Date not selectable: $date (Before minimum: $minimumStartDate)');
-      return false;
-    }
-
-    // Cannot select holidays
-    if (_isHoliday(date)) {
-      debugPrint('🔴 Date not selectable: $date (Holiday)');
-      return false;
-    }
-
-    debugPrint('🟢 Date selectable: $date');
-    return true;
-  }
-
   bool _isHoliday(DateTime date) {
     return holidays.any((holiday) => _isSameDay(holiday, date));
-  }
-
-  bool _isWithin3DaysOfHoliday(DateTime date) {
-    // Check if date is within restricted days before or after any OFFICIAL holiday
-    // Restriction: 3 days BEFORE holiday + 4 days AFTER holiday
-    // This prevents employees from applying leave close to official holidays
-    // NOTE: This applies to official holidays only, NOT weekends
-    for (final holiday in officialHolidays) {
-      final daysDifference = date.difference(holiday).inDays;
-
-      // Check if date is 3 days before the holiday (negative difference)
-      if (daysDifference < 0 && daysDifference >= -3) {
-        debugPrint(
-            '🔴 Date blocked: $date (${daysDifference.abs()} days before holiday)');
-        return true;
-      }
-
-      // Check if date is 4 days after the holiday (positive difference)
-      if (daysDifference > 0 && daysDifference <= 4) {
-        debugPrint(
-            '🔴 Date blocked: $date ($daysDifference days after holiday)');
-        return true;
-      }
-    }
-    return false;
   }
 
   int _calculateWorkingDays(DateTime start, DateTime end) {
@@ -451,7 +361,7 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
       case 'SHORT':
         return 'Please be aware that you are eligible for 4 leaves per year';
       case 'ANNUAL':
-        return 'Must submit 20 days in advance. Blocked 3 days before & 4 days after official holidays.';
+        return 'Please select your leave dates and submit your request.';
       default:
         return 'Please be aware that you have to submit your request 15 days prior your leave start date.';
     }
@@ -459,24 +369,6 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
 
   @override
   Widget build(BuildContext context) {
-    // Show loading indicator while holidays are being fetched
-    if (isLoadingHolidays) {
-      return Scaffold(
-        backgroundColor: const Color(0xFFF5F5F5),
-        appBar: const HeaderWidget(),
-        body: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Loading holidays...'),
-            ],
-          ),
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
       appBar: const HeaderWidget(),
@@ -848,15 +740,9 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
           date.isAfter(startDate!) &&
           date.isBefore(endDate!);
 
-      final isSelectable = _isDateSelectable(date);
-      const bool enforceHolidayBlocks = false;
-      final isHolidayDate = enforceHolidayBlocks && _isHoliday(date);
-      final isNearHoliday =
-          enforceHolidayBlocks && _isWithin3DaysOfHoliday(date);
-
       days.add(
         GestureDetector(
-          onTap: isSelectable ? () => _onDateSelected(date) : null,
+          onTap: () => _onDateSelected(date),
           child: Container(
             width: 32.w,
             height: 32.w,
@@ -866,34 +752,16 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
                   ? _accentGrey
                   : isInRange
                       ? _accentGrey.withAlpha(64)
-                      : isHolidayDate
-                          ? Colors.red.withAlpha(25)
-                          : isNearHoliday
-                              ? Colors.orange.withAlpha(25)
-                              : Colors.transparent,
+                      : Colors.transparent,
               shape: BoxShape.circle,
-              border: !isSelectable && !isHolidayDate && !isNearHoliday
-                  ? Border.all(color: Colors.grey.withAlpha(50), width: 1)
-                  : null,
             ),
             alignment: Alignment.center,
             child: Text(
               '$day',
               style: TextStyle(
                 fontSize: 12.sp,
-                color: isSelected
-                    ? Colors.white
-                    : !isSelectable
-                        ? Colors.grey.withAlpha(128)
-                        : isHolidayDate
-                            ? Colors.red
-                            : isNearHoliday
-                                ? Colors.orange
-                                : Colors.black,
+                color: isSelected ? Colors.white : Colors.black,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                decoration: (isHolidayDate || isNearHoliday) && !isSelected
-                    ? TextDecoration.lineThrough
-                    : null,
               ),
             ),
           ),
