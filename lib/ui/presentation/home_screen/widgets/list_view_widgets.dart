@@ -624,8 +624,8 @@ class _ListViewWidgetsState extends State<ListViewWidgets> {
             translate('home.media').toUpperCase(),
             style: GoogleFonts.poppins(
               color: Colors.white,
-              fontSize: 24.w,
-              fontWeight: FontWeight.w400,
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
               letterSpacing: 1.9,
             ),
           ),

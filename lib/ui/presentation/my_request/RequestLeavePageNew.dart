@@ -1,6 +1,5 @@
 import 'dart:convert';
 import 'package:el_race/core/utils/shared_pref.dart';
-import 'package:el_race/ui/presentation/signin/data/repository.dart';
 import 'package:el_race/ui/widgets/header_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -23,7 +22,6 @@ class RequestLeavePageNew extends StatefulWidget {
 }
 
 class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
-  final UserRepo userRepo = UserRepo();
   static const Color _primary = Color(0xFF151544);
   static const Color _accentGrey = Color(0xFF5E5E5E);
   DateTime? startDate;
@@ -164,10 +162,8 @@ class _RequestLeavePageNewState extends State<RequestLeavePageNew> {
 
   Future<void> _fetchLeaveBalance() async {
     try {
-      final loginData = SharedPref.getLoginData();
-      final balance = loginData.result?.data?.leaveBalance?.toString();
       setState(() {
-        leaveBalance = (balance != null && balance.isNotEmpty) ? balance : '0';
+        leaveBalance = SharedPref.getCachedLeaveBalance();
       });
       debugPrint('✅ Leave Balance fetched: $leaveBalance');
     } catch (e) {

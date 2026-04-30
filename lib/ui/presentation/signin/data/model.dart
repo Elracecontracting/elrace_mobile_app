@@ -286,7 +286,7 @@ class Data {
         "company_id": companyId,
         "branch_id": branchId,
         "partner_id": partnerId,
-        "leaveBalance": leaveBalance,
+        "leave_balance": leaveBalance,
         "web.base.url": webBaseUrl,
         "user_companies": userCompanies?.toJson(),
         "user_branches": userBranches?.toJson(),

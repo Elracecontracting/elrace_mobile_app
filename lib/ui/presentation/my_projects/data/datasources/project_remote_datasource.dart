@@ -207,6 +207,7 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
       "jsonrpc": "2.0",
       "method": "call",
       "params": {
+        "agreement": agreementId,
         "agreement_id": agreementId,
         "partner_id": partnerId,
         "project_manager_id": projectManagerId,
@@ -229,17 +230,21 @@ class ProjectRemoteDataSource implements ProjectRemoteDataSourceImpl {
 
         final List<ProjectModel> allProjects = [];
         for (final partnerData in data) {
-          final projectsList = partnerData is Map
-              ? partnerData['projects'] as List<dynamic>?
-              : null;
-          if (projectsList == null) continue;
-          for (final projectJson in projectsList) {
-            if (projectJson is Map<String, dynamic>) {
-              allProjects.add(ProjectModel.fromJson(projectJson));
-            } else if (projectJson is Map) {
-              allProjects.add(ProjectModel.fromJson(
-                  Map<String, dynamic>.from(projectJson)));
+          if (partnerData is! Map) continue;
+
+          final partnerMap = Map<String, dynamic>.from(partnerData);
+          final projectsList = partnerMap['projects'];
+          if (projectsList is List) {
+            for (final projectJson in projectsList) {
+              if (projectJson is Map<String, dynamic>) {
+                allProjects.add(ProjectModel.fromJson(projectJson));
+              } else if (projectJson is Map) {
+                allProjects.add(ProjectModel.fromJson(
+                    Map<String, dynamic>.from(projectJson)));
+              }
             }
+          } else if (partnerMap.containsKey('project_id')) {
+            allProjects.add(ProjectModel.fromJson(partnerMap));
           }
         }
 

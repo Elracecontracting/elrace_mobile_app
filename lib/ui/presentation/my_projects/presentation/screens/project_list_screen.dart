@@ -14,6 +14,7 @@ import 'package:intl/intl.dart';
 
 class ProjectListScreen extends StatefulWidget {
   final ProjectListBloc bloc;
+  final int? agreementId;
   final int? partnerId;
   final int? projectManagerId;
   final int? cityId;
@@ -23,6 +24,7 @@ class ProjectListScreen extends StatefulWidget {
   const ProjectListScreen({
     super.key,
     required this.bloc,
+    this.agreementId,
     this.partnerId,
     this.projectManagerId,
     this.cityId,
@@ -50,7 +52,14 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
     bloc = widget.bloc;
 
     // Load projects based on selected drill-down filter.
-    if (widget.projectManagerId != null) {
+    if (widget.agreementId != null) {
+      bloc.add(LoadProjectsByFiltersEvent(
+        agreementId: widget.agreementId,
+        partnerId: widget.partnerId,
+        projectManagerId: widget.projectManagerId,
+        cityId: widget.cityId,
+      ));
+    } else if (widget.projectManagerId != null) {
       bloc.add(LoadProjectsByFiltersEvent(
         projectManagerId: widget.projectManagerId,
       ));
