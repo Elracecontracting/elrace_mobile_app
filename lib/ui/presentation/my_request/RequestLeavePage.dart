@@ -41,7 +41,7 @@ class _RequestDetailsPageState extends State<RequestDetailsPage> {
     if (initial == 'SICK' || initial == 'SHORT' || initial == 'ANNUAL') {
       selectedLeaveType = initial!;
     }
-    _loadLeaveBalanceFromLoginResponse();
+    fetchleaveBalance();
   }
 
   // End date is readonly; calculated from startDate + duration (if both present)
